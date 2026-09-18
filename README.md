@@ -1,6 +1,6 @@
 # Registry Intelligence Hub
 
-Phase 0 foundation for a source-backed ICANN application intelligence experience. The runnable slice lives at `/tools/registry-intelligence-hub` and includes a curated Command Center, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
+Phase 0 foundation for a source-backed ICANN application intelligence experience. The runnable browser experience includes a frozen v1 Command Center, a composable Explore research backbone, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
 
 The fixture is explicitly synthetic rehearsal data. It must not be treated as the official 2026 Reveal Day publication.
 
@@ -13,7 +13,12 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/tools/registry-intelligence-hub`. State rehearsals are available with `?state=loading`, `?state=empty`, and `?state=error`.
+Open:
+
+- `http://localhost:3000/tools/registry-intelligence-hub` for Command Center.
+- `http://localhost:3000/tools/registry-intelligence-hub/explore` for Explore.
+
+State rehearsals are available on either route with `?state=loading`, `?state=empty`, and `?state=error`.
 
 ## Verify
 

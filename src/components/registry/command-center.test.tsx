@@ -77,4 +77,47 @@ describe("Command Center interactions", () => {
 
     expect(search).toHaveFocus();
   });
+
+  it("freezes the Command Center terminology while preserving Watch actions", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+
+    expect(screen.getByText("APPLICANTS WORTH INVESTIGATING")).toBeInTheDocument();
+    expect(screen.queryByText("APPLICANTS TO WATCH")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View intelligence for Atlas Digital investigation profile" }));
+    expect(screen.getByRole("button", { name: "Watch" })).toBeInTheDocument();
+  });
+});
+
+describe("Explore interactions", () => {
+  it("composes filters, updates counts, and writes shareable URL state", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" />);
+
+    expect(screen.getByText("12 applications results · 12 applications")).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter by IDN" }), "idn");
+
+    expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
+    expect(window.location.search).toContain("idn=idn");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Browse by" }), "organizations");
+    expect(screen.getByText("2 organizations results · 2 applications")).toBeInTheDocument();
+  });
+
+  it("restores initial URL filters and opens records in the shared drawer", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" exploreParams={{ category: "Identity", status: "returning" }} />);
+
+    expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /View intelligence for \.secure/ }));
+
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Compare" })).toBeInTheDocument();
+  });
+
+  it("shows a clear empty research state", () => {
+    render(<CommandCenter view="explore" exploreParams={{ q: "no-such-record" }} />);
+
+    expect(screen.getByText("No records match this research view")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Clear filters" }).length).toBeGreaterThan(0);
+  });
 });

@@ -103,9 +103,8 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  <div key={item} className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm ${index === 0 ? "bg-emerald-50 font-semibold text-[#006a56]" : "text-slate-400"}`}>
-                    {item}{index !== 0 && <Badge variant="secondary">Planned</Badge>}
-                  </div>
+                  index < 2 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : "/tools/registry-intelligence-hub/explore"} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
+                  <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
                 ))}
               </nav>
             </SheetContent>
@@ -116,19 +115,24 @@ function ShellHeader() {
   );
 }
 
-function HubNav() {
+function HubNav({ active = "Command Center" }: { active?: string }) {
   return (
     <div className="border-b bg-white">
       <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {navItems.map((item, index) => (
-          <button
-            key={item}
-            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${index === 0 ? "border-[#007d65] text-[#006a56]" : "cursor-not-allowed border-transparent text-slate-400 opacity-70"}`}
-            disabled={index !== 0}
-            title={index === 0 ? undefined : "Planned for a later slice"}
-          >
-            {item}{index !== 0 && <span className="ml-1 text-[10px] font-normal uppercase tracking-wide">(planned)</span>}
-          </button>
+          index < 2 ? (
+            <Link
+              key={item}
+              href={index === 0 ? "/tools/registry-intelligence-hub" : "/tools/registry-intelligence-hub/explore"}
+              className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
+            >
+              {item}
+            </Link>
+          ) : (
+            <button key={item} className="shrink-0 cursor-not-allowed border-b-2 border-transparent px-3 py-3 text-sm font-medium text-slate-400 opacity-70" disabled title="Planned for a later slice">
+              {item}<span className="ml-1 text-[10px] font-normal uppercase tracking-wide">(planned)</span>
+            </button>
+          )
         ))}
       </div>
     </div>
@@ -182,6 +186,7 @@ function IntelligenceDrawer({
   const isDerived = item?.kind === "signal";
   const canAct = item && !["coverage", "dataset"].includes(item.kind);
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
+  const fullHref = item ? `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}` : "#";
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
@@ -196,7 +201,7 @@ function IntelligenceDrawer({
             <div className="space-y-6 px-6 pb-8">
               {canAct && (
                 <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" onClick={() => setShowFull(true)}><Eye />View full</Button>
+                  <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>
                   <Button variant="outline" disabled={compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 2} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>
                   <Button variant={watchedIds.has(item.id) ? "secondary" : "outline"} onClick={() => toggleWatch(item)}><Star />{watchedIds.has(item.id) ? "Watching" : "Watch"}</Button>
                 </div>
@@ -365,7 +370,145 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
   );
 }
 
-export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
+export type ExploreParams = {
+  q?: string;
+  entity?: string;
+  category?: string;
+  region?: string;
+  status?: string;
+  contention?: string;
+  idn?: string;
+  sort?: string;
+  ids?: string;
+};
+
+function ExploreContent({ state, initial }: { state: ViewState; initial: ExploreParams }) {
+  const [filters, setFilters] = useState({
+    q: initial.q ?? "",
+    entity: initial.entity ?? "applications",
+    category: initial.category ?? "all",
+    region: initial.region ?? "all",
+    status: initial.status ?? "all",
+    contention: initial.contention ?? "all",
+    idn: initial.idn ?? "all",
+    sort: initial.sort ?? "applications-desc",
+    ids: initial.ids ?? "",
+  });
+  const searchRef = useRef<HTMLInputElement>(null);
+  const categories = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.category))].sort(), []);
+  const regions = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.region))].sort(), []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && !["all", "applications", "applications-desc"].includes(value)) params.set(key, value);
+    });
+    window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+  }, [filters]);
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if (event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  const applications = useMemo(() => {
+    const selectedIds = new Set(filters.ids.split(",").filter(Boolean));
+    return registryFixture.applications.filter((item) => {
+      const matchesQuery = [item.id, item.string, item.applicant, item.organization, item.category, item.region, item.country].some((value) => value.toLowerCase().includes(filters.q.toLowerCase()));
+      return matchesQuery
+        && (!selectedIds.size || selectedIds.has(item.id))
+        && (filters.category === "all" || item.category === filters.category)
+        && (filters.region === "all" || item.region === filters.region)
+        && (filters.status === "all" || (filters.status === "returning" ? item.returning : !item.returning))
+        && (filters.contention === "all" || (filters.contention === "in" ? Boolean(item.contentionSet) : !item.contentionSet))
+        && (filters.idn === "all" || (filters.idn === "idn" ? item.idn : !item.idn));
+    });
+  }, [filters]);
+
+  const rows = useMemo(() => {
+    type ExploreRow = { id: string; name: string; detail: string; records: Application[] };
+    let built: ExploreRow[];
+    if (filters.entity === "applications") {
+      built = applications.map((item) => ({ id: item.id, name: `.${item.string}`, detail: `${item.id} · ${item.applicant}`, records: [item] }));
+    } else {
+      const keyFor = (item: Application) => filters.entity === "organizations" ? item.organization : filters.entity === "strings" ? item.string : item.category;
+      const grouped = new Map<string, Application[]>();
+      applications.forEach((item) => grouped.set(keyFor(item), [...(grouped.get(keyFor(item)) ?? []), item]));
+      built = [...grouped.entries()].map(([name, records]) => ({ id: `${filters.entity}-${name}`, name: filters.entity === "strings" ? `.${name}` : name, detail: `${records.length} supporting application${records.length === 1 ? "" : "s"}`, records }));
+    }
+    return built.sort((a, b) => {
+      if (filters.sort === "name-asc") return a.name.localeCompare(b.name);
+      if (filters.sort === "contention-desc") return b.records.filter((item) => item.contentionSet).length - a.records.filter((item) => item.contentionSet).length || a.name.localeCompare(b.name);
+      return b.records.length - a.records.length || a.name.localeCompare(b.name);
+    });
+  }, [applications, filters.entity, filters.sort]);
+
+  const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
+  const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
+  const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
+
+  return (
+    <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Search and compose evidence-backed filters across applications, organizations, strings, categories, regions, participation, contention, and IDNs.</p></div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture only</div>
+      </div>
+
+      <div className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
+        <label className="relative block">
+          <Search className="absolute left-3 top-3 size-4 text-slate-600" />
+          <input ref={searchRef} value={filters.q} onChange={(event) => update("q", event.target.value)} aria-label="Search all registry records" aria-keyshortcuts="/ Control+K Meta+K" placeholder="Search applications, organizations, strings, categories, regions…" className="h-10 w-full rounded-lg border border-slate-400 pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65]" />
+          <kbd className="pointer-events-none absolute right-2 top-2.5 rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
+        </label>
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+          <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></select></label>
+          <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Region<select aria-label="Filter by region" value={filters.region} onChange={(event) => update("region", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label className="text-xs font-bold text-slate-700">Participation<select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} className={`${selectClass} mt-1`}><option value="all">New + returning</option><option value="new">New</option><option value="returning">Returning</option></select></label>
+          <label className="text-xs font-bold text-slate-700">Contention<select aria-label="Filter by contention" value={filters.contention} onChange={(event) => update("contention", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All states</option><option value="in">In initial contention</option><option value="out">Not in contention</option></select></label>
+          <label className="text-xs font-bold text-slate-700">IDN<select aria-label="Filter by IDN" value={filters.idn} onChange={(event) => update("idn", event.target.value)} className={`${selectClass} mt-1`}><option value="all">IDN + non-IDN</option><option value="idn">IDN only</option><option value="non-idn">Non-IDN</option></select></label>
+          <label className="text-xs font-bold text-slate-700">Sort<select aria-label="Sort records" value={filters.sort} onChange={(event) => update("sort", event.target.value)} className={`${selectClass} mt-1`}><option value="applications-desc">Applications, high to low</option><option value="name-asc">Name, A–Z</option><option value="contention-desc">Contention first</option></select></label>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{rows.length} {filters.entity} result{rows.length === 1 ? "" : "s"} · {applications.length} application{applications.length === 1 ? "" : "s"}</p>
+        <div className="flex items-center gap-3"><span className="text-xs font-semibold text-slate-600">URL state updates automatically</span><Button variant="outline" onClick={clear}>Clear filters</Button></div>
+      </div>
+
+      {state === "loading" ? <LoadingState /> : state === "error" ? (
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/tools/registry-intelligence-hub/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+      ) : state === "empty" || !rows.length ? (
+        <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
+      ) : (
+        <section className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th></tr></thead>
+              <tbody>{rows.map((row) => {
+                const returning = row.records.filter((item) => item.returning).length;
+                const contention = row.records.filter((item) => item.contentionSet).length;
+                const idn = row.records.filter((item) => item.idn).length;
+                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet id={`explore-${row.id}`} kind={filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric"} label={row.name} records={row.records} triggerClassName="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td></tr>;
+              })}</tbody>
+            </table>
+          </div>
+          <div className="divide-y md:hidden">{rows.map((row) => <ProvenanceSheet key={row.id} id={`explore-mobile-${row.id}`} kind={filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric"} label={row.name} records={row.records} triggerClassName="group block w-full p-4 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} />)}</div>
+        </section>
+      )}
+
+      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Snapshot {registryFixture.snapshotId}</span><span>Field-level provenance · fixture coverage disclosed · no unavailable value shown as zero</span></footer>
+    </main>
+  );
+}
+
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {} }: { state?: ViewState; view?: "command" | "explore"; exploreParams?: ExploreParams }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
@@ -413,7 +556,8 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
-      <HubNav />
+      <HubNav active={view === "explore" ? "Explore" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
@@ -574,8 +718,8 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
 
                 <Card className="border-slate-300 shadow-sm">
                   <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANTS TO WATCH</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">Ranked signals, not lead scores or recommendations</p></div>
-                    <ProvenanceSheet kind="metric" label="Applicants to Watch method" records={registryFixture.applications} />
+                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANTS WORTH INVESTIGATING</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">Ranked signals, not lead scores or recommendations</p></div>
+                    <ProvenanceSheet kind="metric" label="Applicants Worth Investigating method" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {applicantsToWatch.map((item, index) => (
@@ -627,6 +771,7 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
           </>
         )}
       </main>
+      )}
       <IntelligenceDrawer item={investigation} onClose={() => setInvestigation(null)} />
       <ComparisonTray />
     </div>
