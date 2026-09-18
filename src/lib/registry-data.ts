@@ -3,8 +3,99 @@ import fixture from "@/data/fixtures/registry-applications.json";
 export type Application = (typeof fixture.applications)[number];
 export type HistoricalContext = typeof fixture.historicalContext;
 export type EvidenceKind = "authoritative" | "calculated";
+export type EntityType = "organizations" | "applications" | "categories";
 
 export const registryFixture = fixture;
+
+export function listEntityOptions(entityType: EntityType, applications: Application[] = fixture.applications) {
+  if (entityType === "applications") {
+    return applications.map((record) => ({ key: record.id, label: `.${record.string} · ${record.id}`, records: [record] }));
+  }
+  const values = entityType === "organizations"
+    ? [...new Set(applications.map((record) => record.organization))]
+    : [...new Set(applications.map((record) => record.category))];
+  return values.sort().map((value) => ({
+    key: value,
+    label: value,
+    records: applications.filter((record) => entityType === "organizations" ? record.organization === value : record.category === value),
+  }));
+}
+
+export function recordsForEntity(entityType: EntityType, entityKey: string, applications: Application[] = fixture.applications) {
+  if (entityType === "applications") return applications.filter((record) => record.id === entityKey);
+  if (entityType === "organizations") return applications.filter((record) => record.organization === entityKey);
+  return applications.filter((record) => record.category === entityKey);
+}
+
+export type ExploreFilterState = {
+  q: string;
+  category: string;
+  region: string;
+  status: string;
+  contention: string;
+  idn: string;
+  ids: string;
+};
+
+export function filterApplicationsByExplore(applications: Application[], filters: ExploreFilterState) {
+  const selectedIds = new Set(filters.ids.split(",").filter(Boolean));
+  return applications.filter((item) => {
+    const matchesQuery = [item.id, item.string, item.applicant, item.organization, item.category, item.region, item.country].some((value) => value.toLowerCase().includes(filters.q.toLowerCase()));
+    return matchesQuery
+      && (!selectedIds.size || selectedIds.has(item.id))
+      && (filters.category === "all" || item.category === filters.category)
+      && (filters.region === "all" || item.region === filters.region)
+      && (filters.status === "all" || (filters.status === "returning" ? item.returning : !item.returning))
+      && (filters.contention === "all" || (filters.contention === "in" ? Boolean(item.contentionSet) : !item.contentionSet))
+      && (filters.idn === "all" || (filters.idn === "idn" ? item.idn : !item.idn));
+  });
+}
+
+const exploreFilterDefaults: Record<string, string> = {
+  entity: "applications",
+  category: "all",
+  region: "all",
+  status: "all",
+  contention: "all",
+  idn: "all",
+  sort: "applications-desc",
+};
+
+const exploreFilterLabels: Record<string, (value: string) => string> = {
+  entity: (value) => `Browse by ${value}`,
+  category: (value) => `${value} category`,
+  region: (value) => `${value} region`,
+  status: (value) => value === "returning" ? "Returning only" : "New only",
+  contention: (value) => value === "in" ? "In initial contention" : "Not in contention",
+  idn: (value) => value === "idn" ? "IDN only" : "Non-IDN only",
+  sort: (value) => value === "name-asc" ? "Sorted A–Z" : value === "contention-desc" ? "Sorted by contention" : "Sorted by applications",
+};
+
+export function describeExploreFilters(filters: Record<string, string>) {
+  const parts: string[] = [];
+  if (filters.q) parts.push(`Search “${filters.q}”`);
+  if (filters.ids) parts.push("Explicit record selection");
+  for (const [key, defaultValue] of Object.entries(exploreFilterDefaults)) {
+    const value = filters[key];
+    if (value && value !== defaultValue) parts.push(exploreFilterLabels[key](value));
+  }
+  return parts.length ? parts.join(" · ") : "All applications, no filters applied";
+}
+
+export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(filters).filter(([key, value]) => {
+      if (!value) return false;
+      if (key === "q" || key === "ids") return true;
+      return exploreFilterDefaults[key] !== undefined && value !== exploreFilterDefaults[key];
+    })
+  );
+}
+
+export function describeCompareSelection(entityType: EntityType, labels: string[]) {
+  const singular = entityType === "categories" ? "category" : entityType.slice(0, -1);
+  return `Compare ${labels.length} ${labels.length === 1 ? singular : entityType}: ${labels.join(", ")}`;
+}
 
 export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;

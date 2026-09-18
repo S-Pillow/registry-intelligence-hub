@@ -3,10 +3,17 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CommandCenter } from "./command-center";
 
-afterEach(cleanup);
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 describe("Command Center interactions", () => {
   it("changes the intelligence set when the View lens changes", async () => {
@@ -166,5 +173,37 @@ describe("Compare interactions", () => {
 
     rerender(<CommandCenter view="compare" state="error" />);
     expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
+  });
+});
+
+describe("Saved navigation and one-click Watch", () => {
+  it("enables the Saved navigation link while Briefings and Data Health remain planned", () => {
+    render(<CommandCenter />);
+
+    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/saved");
+    expect(screen.getByText("Briefings").closest("button")).toBeDisabled();
+    expect(screen.getByText("Data Health").closest("button")).toBeDisabled();
+  });
+
+  it("one-click Watches an entity from Explore and reflects the same watched state from the intelligence drawer", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+
+    await user.click(screen.getAllByRole("button", { name: "Watch Atlas Digital" })[0]);
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Watching Atlas Digital" }).length).toBeGreaterThan(0));
+
+    await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
+    expect(await screen.findByRole("button", { name: "Watching" })).toBeInTheDocument();
+  });
+
+  it("does not persist a watch action for non-entity metric or signal cards", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 12" }));
+    await user.click(screen.getByRole("button", { name: "Watch" }));
+    expect(screen.getByRole("button", { name: "Watching" })).toBeInTheDocument();
+
+    expect(window.localStorage.getItem("registry-hub:watchlists:v1")).toBeNull();
   });
 });

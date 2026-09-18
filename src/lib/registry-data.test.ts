@@ -10,6 +10,12 @@ import {
   buildCategoryMix,
   buildPortfolioRanking,
   buildRoundPulse,
+  describeCompareSelection,
+  describeExploreFilters,
+  filterApplicationsByExplore,
+  listEntityOptions,
+  nonDefaultExploreFilterParams,
+  recordsForEntity,
 } from "./registry-data";
 
 describe("immutable registry fixture", () => {
@@ -72,5 +78,51 @@ describe("deterministic intelligence calculations", () => {
     expect(watched.map((item) => item.organization)).toEqual(["Atlas Digital", "Kizuna Registry", "Northstar Group"]);
     expect(watched[0].reasons).toEqual(["3-application portfolio", "2 categories", "1 application in initial contention", "returning participant"]);
     expect(watched.every((item) => item.reasons.length > 0)).toBe(true);
+  });
+});
+
+const emptyExploreFilters = { q: "", category: "all", region: "all", status: "all", contention: "all", idn: "all", ids: "" };
+
+describe("shared entity and Explore filter helpers used by Saved Research and Watchlists", () => {
+  it("resolves supporting records for each entity type consistently", () => {
+    expect(recordsForEntity("applications", "APP-26001", fixture.applications)).toHaveLength(1);
+    expect(recordsForEntity("organizations", "Atlas Digital", fixture.applications)).toHaveLength(3);
+    expect(recordsForEntity("categories", "Technology", fixture.applications)).toHaveLength(4);
+    expect(recordsForEntity("organizations", "Nonexistent", fixture.applications)).toHaveLength(0);
+  });
+
+  it("lists sorted, deduplicated entity options with their supporting records", () => {
+    const organizations = listEntityOptions("organizations", fixture.applications);
+
+    expect(organizations.map((item) => item.key)).toEqual([...organizations.map((item) => item.key)].sort());
+    expect(new Set(organizations.map((item) => item.key)).size).toBe(organizations.length);
+    expect(organizations.find((item) => item.key === "Atlas Digital")?.records).toHaveLength(3);
+  });
+
+  it("filters applications identically to the Explore view for reuse in Saved Research", () => {
+    const idnOnly = filterApplicationsByExplore(fixture.applications, { ...emptyExploreFilters, idn: "idn" });
+    expect(idnOnly).toHaveLength(2);
+
+    const noMatches = filterApplicationsByExplore(fixture.applications, { ...emptyExploreFilters, q: "no-such-record" });
+    expect(noMatches).toHaveLength(0);
+  });
+
+  it("describes the default Explore state plainly and named filters explicitly", () => {
+    expect(describeExploreFilters({ entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc" }))
+      .toBe("All applications, no filters applied");
+
+    expect(describeExploreFilters({ entity: "organizations", category: "Identity", region: "all", status: "returning", contention: "all", idn: "all", sort: "applications-desc" }))
+      .toBe("Browse by organizations · Identity category · Returning only");
+  });
+
+  it("excludes default values but keeps explicit search and selection state in saved params", () => {
+    const params = nonDefaultExploreFilterParams({ q: "atlas", entity: "applications", category: "all", region: "Europe", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
+
+    expect(params).toEqual({ q: "atlas", region: "Europe" });
+  });
+
+  it("describes a Compare selection with the correct singular/plural entity noun", () => {
+    expect(describeCompareSelection("organizations", ["Atlas Digital"])).toBe("Compare 1 organization: Atlas Digital");
+    expect(describeCompareSelection("categories", ["Technology", "Identity"])).toBe("Compare 2 categories: Technology, Identity");
   });
 });

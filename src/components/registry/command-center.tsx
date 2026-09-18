@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  BookmarkPlus,
   BookOpen,
   CheckCircle2,
   ChevronRight,
@@ -35,15 +36,32 @@ import {
   applicantsToWatch,
   biggestChanges,
   categoryMix,
+  describeCompareSelection,
+  describeExploreFilters,
+  filterApplicationsByExplore,
+  listEntityOptions,
+  nonDefaultExploreFilterParams,
   portfolioRanking,
   registryFixture,
   roundPulse,
   standoutInsights,
   type Application,
 } from "@/lib/registry-data";
+import { useSavedWork } from "@/lib/use-saved-work";
+import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
+
+export type { SavedParams };
+import {
+  InvestigationContext,
+  useInvestigation,
+  type CompareEntityType,
+  type InvestigationContextValue,
+  type InvestigationItem,
+  type InvestigationKind,
+} from "@/components/registry/investigation-context";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
-type CompareEntityType = "organizations" | "applications" | "categories";
+export type { CompareEntityType };
 
 const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
 const lensInterpretations: Record<string, string> = {
@@ -52,33 +70,6 @@ const lensInterpretations: Record<string, string> = {
   strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
-
-type InvestigationKind = "application" | "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
-type InvestigationItem = {
-  id: string;
-  label: string;
-  kind: InvestigationKind;
-  records: readonly Application[];
-  entityType?: CompareEntityType;
-  entityKey?: string;
-};
-
-type InvestigationContextValue = {
-  investigate: (item: InvestigationItem) => void;
-  addCompare: (item: InvestigationItem) => void;
-  removeCompare: (id: string) => void;
-  toggleWatch: (item: InvestigationItem) => void;
-  compareItems: InvestigationItem[];
-  watchedIds: Set<string>;
-};
-
-const InvestigationContext = createContext<InvestigationContextValue | null>(null);
-
-function useInvestigation() {
-  const value = useContext(InvestigationContext);
-  if (!value) throw new Error("Investigation controls require CommandCenter context");
-  return value;
-}
 
 function ShellHeader() {
   return (
@@ -109,7 +100,7 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  index < 3 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
+                  index < 4 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
                   <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
                 ))}
               </nav>
@@ -126,7 +117,7 @@ function HubNav({ active = "Command Center" }: { active?: string }) {
     <div className="border-b bg-white">
       <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {navItems.map((item, index) => (
-          index < 3 ? (
+          index < 4 ? (
             <Link
               key={item}
               href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`}
@@ -198,6 +189,85 @@ function QuickCompareButton({ item, className = "" }: { item: InvestigationItem;
   );
 }
 
+function QuickWatchButton({ item, className = "" }: { item: InvestigationItem; className?: string }) {
+  const { savedWork } = useInvestigation();
+  const { entityType, entityKey } = item;
+  if (!entityType || !entityKey) return null;
+  const watching = savedWork.isEntityWatched(entityType, entityKey);
+  return (
+    <button
+      type="button"
+      onClick={() => savedWork.toggleEntityWatch(entityType, entityKey, item.label, item.records.length)}
+      className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold hover:bg-amber-50 ${watching ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300 bg-white text-slate-700 hover:border-amber-400"} ${className}`}
+      aria-label={`${watching ? "Watching" : "Watch"} ${item.label}`}
+    >
+      <Star className={`size-3.5 ${watching ? "fill-amber-500" : ""}`} />{watching ? "Watching" : "Watch"}
+    </button>
+  );
+}
+
+function SaveResearchButton({
+  kind,
+  defaultName,
+  summary,
+  recordCount,
+  buildParams,
+  disabled,
+}: {
+  kind: "explore-view" | "compare-config";
+  defaultName: string;
+  summary: string;
+  recordCount: number;
+  buildParams: () => Record<string, string>;
+  disabled?: boolean;
+}) {
+  const { savedWork } = useInvestigation();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(defaultName);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  if (confirmation) {
+    return (
+      <p role="status" className="flex items-center gap-2 text-xs font-semibold text-[#005c49]">
+        Saved “{confirmation}” to Saved Research. <Link href="/tools/registry-intelligence-hub/saved?tab=research" className="underline">View in Saved</Link>
+        <button type="button" className="text-slate-500 underline" onClick={() => setConfirmation(null)}>Dismiss</button>
+      </p>
+    );
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" disabled={disabled} onClick={() => { setName(defaultName); setOpen(true); }}>
+        <BookmarkPlus />{kind === "explore-view" ? "Save this view" : "Save this comparison"}
+      </Button>
+    );
+  }
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const created = savedWork.createSavedResearch({ kind, name, summary, params: buildParams(), recordCountAtSave: recordCount });
+        setConfirmation(created.name);
+        setOpen(false);
+      }}
+    >
+      <label className="sr-only" htmlFor={`save-research-name-${kind}`}>Saved research name</label>
+      <input
+        id={`save-research-name-${kind}`}
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        aria-label="Saved research name"
+        autoFocus
+        className="h-9 w-56 rounded-lg border border-slate-400 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-[#007d65]"
+      />
+      <Button type="submit" className="bg-[#007d65] hover:bg-[#006a56]">Save</Button>
+      <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+    </form>
+  );
+}
+
 function IntelligenceDrawer({
   item,
   onClose,
@@ -206,11 +276,17 @@ function IntelligenceDrawer({
   onClose: () => void;
 }) {
   const [showFull, setShowFull] = useState(false);
-  const { addCompare, toggleWatch, watchedIds, compareItems } = useInvestigation();
+  const { addCompare, toggleWatch, watchedIds, compareItems, savedWork } = useInvestigation();
   const isDerived = item?.kind === "signal";
   const canAct = item && !["coverage", "dataset"].includes(item.kind);
   const canCompare = item?.entityType && item.entityKey;
   const incompatible = canCompare && compareItems.length > 0 && compareItems[0].entityType !== item.entityType;
+  const isWatching = item ? (item.entityType && item.entityKey ? savedWork.isEntityWatched(item.entityType, item.entityKey) : watchedIds.has(item.id)) : false;
+  const onToggleWatch = () => {
+    if (!item) return;
+    if (item.entityType && item.entityKey) savedWork.toggleEntityWatch(item.entityType, item.entityKey, item.label, item.records.length);
+    else toggleWatch(item);
+  };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
   const fullHref = item ? `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}` : "#";
 
@@ -229,8 +305,12 @@ function IntelligenceDrawer({
                 <div className={`grid gap-2 ${canCompare ? "grid-cols-3" : "grid-cols-2"}`}>
                   <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>
                   {canCompare && <Button variant="outline" disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>}
-                  <Button variant={watchedIds.has(item.id) ? "secondary" : "outline"} onClick={() => toggleWatch(item)}><Star />{watchedIds.has(item.id) ? "Watching" : "Watch"}</Button>
+                  <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
                 </div>
+              )}
+
+              {canCompare && isWatching && (
+                <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href="/tools/registry-intelligence-hub/saved?tab=watchlists" className="underline">View in Saved</Link></p>
               )}
 
               {item.kind === "coverage" && (
@@ -424,19 +504,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
-  const applications = useMemo(() => {
-    const selectedIds = new Set(filters.ids.split(",").filter(Boolean));
-    return registryFixture.applications.filter((item) => {
-      const matchesQuery = [item.id, item.string, item.applicant, item.organization, item.category, item.region, item.country].some((value) => value.toLowerCase().includes(filters.q.toLowerCase()));
-      return matchesQuery
-        && (!selectedIds.size || selectedIds.has(item.id))
-        && (filters.category === "all" || item.category === filters.category)
-        && (filters.region === "all" || item.region === filters.region)
-        && (filters.status === "all" || (filters.status === "returning" ? item.returning : !item.returning))
-        && (filters.contention === "all" || (filters.contention === "in" ? Boolean(item.contentionSet) : !item.contentionSet))
-        && (filters.idn === "all" || (filters.idn === "idn" ? item.idn : !item.idn));
-    });
-  }, [filters]);
+  const applications = useMemo(() => filterApplicationsByExplore(registryFixture.applications, filters), [filters]);
 
   const rows = useMemo(() => {
     type ExploreRow = { id: string; name: string; detail: string; records: Application[] };
@@ -486,7 +554,18 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p aria-live="polite" className="text-sm font-bold text-slate-900">{rows.length} {filters.entity} result{rows.length === 1 ? "" : "s"} · {applications.length} application{applications.length === 1 ? "" : "s"}</p>
-        <div className="flex items-center gap-3"><span className="text-xs font-semibold text-slate-600">URL state updates automatically</span><Button variant="outline" onClick={clear}>Clear filters</Button></div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
+          <SaveResearchButton
+            kind="explore-view"
+            defaultName={`Explore: ${describeExploreFilters(filters)}`.slice(0, 80)}
+            summary={describeExploreFilters(filters)}
+            recordCount={applications.length}
+            disabled={applications.length === 0}
+            buildParams={() => nonDefaultExploreFilterParams(filters)}
+          />
+          <Button variant="outline" onClick={clear}>Clear filters</Button>
+        </div>
       </div>
 
       {state === "loading" ? <LoadingState /> : state === "error" ? (
@@ -505,7 +584,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                 const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
                 const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
                 const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><div className="flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} /></div></td></tr>;
+                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><div className="flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} /><QuickWatchButton item={investigationItem} /></div></td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -513,7 +592,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
             const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
             const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><div className="mt-3 flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} className="flex-1" /></div></div>;
+            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><div className="mt-3 flex flex-wrap gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} className="flex-1" /><QuickWatchButton item={investigationItem} className="flex-1" /></div></div>;
           })}</div>
         </section>
       )}
@@ -528,25 +607,15 @@ export type CompareParams = {
   ids?: string;
 };
 
-function getCompareOptions(type: CompareEntityType) {
-  if (type === "applications") {
-    return registryFixture.applications.map((record) => ({ key: record.id, label: `.${record.string} · ${record.id}`, records: [record] }));
-  }
-  const values = type === "organizations"
-    ? [...new Set(registryFixture.applications.map((record) => record.organization))]
-    : [...new Set(registryFixture.applications.map((record) => record.category))];
-  return values.sort().map((value) => ({ key: value, label: value, records: registryFixture.applications.filter((record) => type === "organizations" ? record.organization === value : record.category === value) }));
-}
-
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
   const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
   const [type, setType] = useState<CompareEntityType>(initialType);
   const [selected, setSelected] = useState(() => {
-    const valid = new Set(getCompareOptions(initialType).map((item) => item.key));
+    const valid = new Set(listEntityOptions(initialType).map((item) => item.key));
     return (initial.ids ?? "").split(",").filter((id) => valid.has(id)).slice(0, 4);
   });
   const [pending, setPending] = useState("");
-  const options = useMemo(() => getCompareOptions(type), [type]);
+  const options = useMemo(() => listEntityOptions(type), [type]);
   const singular = type === "categories" ? "category" : type.slice(0, -1);
   const entities = selected.map((key) => options.find((item) => item.key === key)).filter((item): item is NonNullable<typeof item> => Boolean(item));
   const available = options.filter((item) => !selected.includes(item.key));
@@ -640,12 +709,24 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Selected comparison entities">
         {entities.map((entity, index) => {
           const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
-          return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => setSelected((current) => current.filter((key) => key !== entity.key))} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div></CardContent></Card>;
+          const investigationItem: InvestigationItem = { id: `compare-select-${type}-${entity.key}`, kind, label: entity.label, records: entity.records, entityType: type, entityKey: entity.key };
+          return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => setSelected((current) => current.filter((key) => key !== entity.key))} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
         })}
         {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
       </section>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId}</span></div>
+
+      <div className="mb-5 flex justify-end">
+        <SaveResearchButton
+          kind="compare-config"
+          defaultName={`Compare: ${entities.map((entity) => entity.label).join(", ")}`.slice(0, 80)}
+          summary={describeCompareSelection(type, entities.map((entity) => entity.label))}
+          recordCount={entities.reduce((sum, entity) => sum + entity.records.length, 0)}
+          disabled={entities.length < 2}
+          buildParams={() => ({ type, ids: selected.join(",") })}
+        />
+      </div>
 
       {state === "loading" ? <LoadingState /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
         <>
@@ -661,12 +742,13 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {} }: { state?: ViewState; view?: "command" | "explore" | "compare"; exploreParams?: ExploreParams; compareParams?: CompareParams }) {
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {} }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
   const [compareItems, setCompareItems] = useState<InvestigationItem[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
+  const savedWork = useSavedWork();
   const searchRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => registryFixture.applications.filter((item) =>
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
@@ -703,14 +785,15 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     }),
     compareItems,
     watchedIds,
+    savedWork,
   };
 
   return (
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
-      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : (
+      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
