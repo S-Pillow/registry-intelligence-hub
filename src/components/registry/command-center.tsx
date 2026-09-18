@@ -48,14 +48,32 @@ function ShellHeader() {
           </Link>
           <nav aria-label="Main navigation" className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
             <Link href="/" className="hover:text-white">Home</Link>
-            <Link href="/tools" className="border-b border-[#72dfb4] py-5 text-white">Tools</Link>
+            <a href="https://forgeforward.app/tools" className="border-b border-[#72dfb4] py-5 text-white">Tools</a>
           </nav>
         </div>
         <div className="flex items-center gap-2">
           <Badge className="hidden bg-white/10 text-slate-200 sm:inline-flex" variant="outline">PUBLIC FIXTURE</Badge>
-          <Button variant="ghost" size="icon" className="text-slate-200 md:hidden" aria-label="Open navigation">
-            <Menu />
-          </Button>
+          <Sheet>
+            <SheetTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72dfb4] md:hidden" aria-label="Open navigation">
+              <Menu />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[85%] bg-white">
+              <SheetHeader className="border-b">
+                <SheetTitle>ForgeForward</SheetTitle>
+                <SheetDescription>Navigation and Hub sections</SheetDescription>
+              </SheetHeader>
+              <nav aria-label="Mobile navigation" className="space-y-1 px-4">
+                <Link href="/" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Home</Link>
+                <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
+                <div className="my-3 border-t" />
+                {navItems.map((item, index) => (
+                  <div key={item} className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm ${index === 0 ? "bg-emerald-50 font-semibold text-[#006a56]" : "text-slate-400"}`}>
+                    {item}{index !== 0 && <Badge variant="secondary">Planned</Badge>}
+                  </div>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>
@@ -69,11 +87,11 @@ function HubNav() {
         {navItems.map((item, index) => (
           <button
             key={item}
-            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${index === 0 ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-500"}`}
+            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-medium ${index === 0 ? "border-[#007d65] text-[#006a56]" : "cursor-not-allowed border-transparent text-slate-400 opacity-70"}`}
             disabled={index !== 0}
             title={index === 0 ? undefined : "Planned for a later slice"}
           >
-            {item}
+            {item}{index !== 0 && <span className="ml-1 text-[10px] font-normal uppercase tracking-wide">(planned)</span>}
           </button>
         ))}
       </div>
@@ -213,6 +231,13 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
           <ProvenanceSheet label="Fixture limitations" />
         </div>
 
+        {state === "ready" && query && (
+          <section aria-live="polite" className="mb-6 rounded-xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Fixture search results</h2><Badge variant="secondary">{filtered.length} records</Badge></div>
+            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <div className="rounded-lg border p-3 text-sm" key={item.id}><strong>.{item.string}</strong><p className="mt-1 text-slate-500">{item.organization} · {item.category}</p></div>)}</div> : <p className="py-5 text-center text-sm text-slate-500">No fixture records match “{query}”. Try an organization, string, or category.</p>}
+          </section>
+        )}
+
         {state === "loading" ? <LoadingState /> : state === "empty" || state === "error" ? <MessageState kind={state} /> : (
           <>
             <section aria-labelledby="round-pulse-heading">
@@ -294,13 +319,6 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                 ))}
               </div>
             </section>
-
-            {query && (
-              <section className="mt-8 rounded-xl border bg-white p-5">
-                <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Fixture search results</h2><Badge variant="secondary">{filtered.length} records</Badge></div>
-                {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <div className="rounded-lg border p-3 text-sm" key={item.id}><strong>.{item.string}</strong><p className="mt-1 text-slate-500">{item.organization} · {item.category}</p></div>)}</div> : <p className="py-8 text-center text-sm text-slate-500">No fixture records match “{query}”. Try an organization, string, or category.</p>}
-              </section>
-            )}
 
             <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
               <span>Snapshot {registryFixture.snapshotId} · Method {registryFixture.methodVersion}</span>
