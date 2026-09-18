@@ -108,7 +108,7 @@ describe("Explore interactions", () => {
     render(<CommandCenter view="explore" exploreParams={{ category: "Identity", status: "returning" }} />);
 
     expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /View intelligence for \.secure/ }));
+    await user.click(screen.getAllByRole("button", { name: /View intelligence for \.secure/ })[0]);
 
     expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Compare" })).toBeInTheDocument();
