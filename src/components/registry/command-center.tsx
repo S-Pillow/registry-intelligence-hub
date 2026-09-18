@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
@@ -41,12 +43,12 @@ function ShellHeader() {
     <header className="border-b border-white/10 bg-[#101923] text-white">
       <div className="mx-auto flex h-16 max-w-[1480px] items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
-          <a href="/" className="font-mono text-sm font-semibold tracking-[0.2em]">
+          <Link href="/" className="font-mono text-sm font-semibold tracking-[0.2em]">
             FORGE<span className="text-[#72dfb4]">/</span>FORWARD
-          </a>
+          </Link>
           <nav aria-label="Main navigation" className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-            <a href="/" className="hover:text-white">Home</a>
-            <a href="/tools" className="border-b border-[#72dfb4] py-5 text-white">Tools</a>
+            <Link href="/" className="hover:text-white">Home</Link>
+            <Link href="/tools" className="border-b border-[#72dfb4] py-5 text-white">Tools</Link>
           </nav>
         </div>
         <div className="flex items-center gap-2">
@@ -159,6 +161,7 @@ function LoadingState() {
 }
 
 function MessageState({ kind }: { kind: "empty" | "error" }) {
+  const router = useRouter();
   const empty = kind === "empty";
   return (
     <Card className="border-dashed py-16 text-center">
@@ -168,7 +171,7 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
         </div>
         <h2 className="text-xl font-semibold">{empty ? "No approved baseline yet" : "Command Center unavailable"}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">{empty ? "The publication gate has not promoted a dataset. Existing tools remain unaffected." : "The rehearsal fixture could not be loaded. Try again or inspect Data Health."}</p>
-        <Button className="mt-6 bg-[#007d65] hover:bg-[#006a56]" onClick={() => window.location.assign("/tools/registry-intelligence-hub")}>{empty ? "View rehearsal fixture" : "Try again"}</Button>
+        <Button className="mt-6 bg-[#007d65] hover:bg-[#006a56]" onClick={() => router.push("/tools/registry-intelligence-hub")}>{empty ? "View rehearsal fixture" : "Try again"}</Button>
       </CardContent>
     </Card>
   );
