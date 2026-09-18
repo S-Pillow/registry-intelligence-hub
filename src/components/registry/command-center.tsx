@@ -174,6 +174,16 @@ function ProvenanceSheet({
   );
 }
 
+function QuickCompareButton({ item, className = "" }: { item: InvestigationItem; className?: string }) {
+  const { addCompare, compareItems } = useInvestigation();
+  const selected = compareItems.some((entry) => entry.id === item.id);
+  return (
+    <button type="button" disabled={selected || compareItems.length >= 2} onClick={() => addCompare(item)} className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:border-[#007d65] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`} aria-label={`${selected ? "Added to compare" : "Add to compare"} ${item.label}`}>
+      <GitCompareArrows className="size-3.5" />{selected ? "Added" : "+ Compare"}
+    </button>
+  );
+}
+
 function IntelligenceDrawer({
   item,
   onClose,
@@ -408,13 +418,13 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
-      if (event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+      if (event.key === "/" || event.code === "Slash" || ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === "k" || event.code === "KeyK"))) {
         event.preventDefault();
         searchRef.current?.focus();
       }
     };
-    window.addEventListener("keydown", focusSearch);
-    return () => window.removeEventListener("keydown", focusSearch);
+    document.addEventListener("keydown", focusSearch, true);
+    return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
   const applications = useMemo(() => {
@@ -490,16 +500,22 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         <section className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[900px] text-sm">
-              <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th></tr></thead>
+              <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th><th className="p-3">Actions</th></tr></thead>
               <tbody>{rows.map((row) => {
                 const returning = row.records.filter((item) => item.returning).length;
                 const contention = row.records.filter((item) => item.contentionSet).length;
                 const idn = row.records.filter((item) => item.idn).length;
-                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet id={`explore-${row.id}`} kind={filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric"} label={row.name} records={row.records} triggerClassName="group text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td></tr>;
+                const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric";
+                const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records };
+                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><div className="flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} /></div></td></tr>;
               })}</tbody>
             </table>
           </div>
-          <div className="divide-y md:hidden">{rows.map((row) => <ProvenanceSheet key={row.id} id={`explore-mobile-${row.id}`} kind={filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric"} label={row.name} records={row.records} triggerClassName="group block w-full p-4 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} />)}</div>
+          <div className="divide-y md:hidden">{rows.map((row) => {
+            const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric";
+            const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records };
+            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><div className="mt-3 flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} className="flex-1" /></div></div>;
+          })}</div>
         </section>
       )}
 
@@ -530,13 +546,13 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
-      if (event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+      if (event.key === "/" || event.code === "Slash" || ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === "k" || event.code === "KeyK"))) {
         event.preventDefault();
         searchRef.current?.focus();
       }
     };
-    window.addEventListener("keydown", focusSearch);
-    return () => window.removeEventListener("keydown", focusSearch);
+    document.addEventListener("keydown", focusSearch, true);
+    return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
   const controls: InvestigationContextValue = {

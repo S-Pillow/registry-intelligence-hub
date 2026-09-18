@@ -95,6 +95,8 @@ describe("Explore interactions", () => {
     render(<CommandCenter view="explore" />);
 
     expect(screen.getByText("12 applications results · 12 applications")).toBeInTheDocument();
+    await user.keyboard("/");
+    expect(screen.getByRole("textbox", { name: "Search all registry records" })).toHaveFocus();
     await user.selectOptions(screen.getByRole("combobox", { name: "Filter by IDN" }), "idn");
 
     expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
@@ -108,7 +110,8 @@ describe("Explore interactions", () => {
     render(<CommandCenter view="explore" exploreParams={{ category: "Identity", status: "returning" }} />);
 
     expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: /View intelligence for \.secure/ })[0]);
+    expect(screen.getAllByRole("button", { name: /Add to compare \.secure/ }).length).toBeGreaterThan(0);
+    await user.click(screen.getAllByRole("button", { name: "View intelligence for .secure" }).find((button) => button.textContent === "Investigate")!);
 
     expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Compare" })).toBeInTheDocument();
