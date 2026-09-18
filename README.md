@@ -17,6 +17,7 @@ Open:
 
 - `http://localhost:3000/tools/registry-intelligence-hub` for Command Center.
 - `http://localhost:3000/tools/registry-intelligence-hub/explore` for Explore.
+- `http://localhost:3000/tools/registry-intelligence-hub/compare` for two-to-four like-entity comparison.
 
 State rehearsals are available on either route with `?state=loading`, `?state=empty`, and `?state=error`.
 

@@ -4,6 +4,8 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
+  ArrowRight,
   BookOpen,
   CheckCircle2,
   ChevronRight,
@@ -17,6 +19,7 @@ import {
   Info,
   Layers3,
   Menu,
+  Plus,
   Search,
   ShieldCheck,
   Sparkles,
@@ -40,6 +43,7 @@ import {
 } from "@/lib/registry-data";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
+type CompareEntityType = "organizations" | "applications" | "categories";
 
 const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
 const lensInterpretations: Record<string, string> = {
@@ -49,12 +53,14 @@ const lensInterpretations: Record<string, string> = {
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
 
-type InvestigationKind = "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
+type InvestigationKind = "application" | "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
 type InvestigationItem = {
   id: string;
   label: string;
   kind: InvestigationKind;
   records: readonly Application[];
+  entityType?: CompareEntityType;
+  entityKey?: string;
 };
 
 type InvestigationContextValue = {
@@ -103,7 +109,7 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  index < 2 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : "/tools/registry-intelligence-hub/explore"} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
+                  index < 3 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
                   <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
                 ))}
               </nav>
@@ -120,10 +126,10 @@ function HubNav({ active = "Command Center" }: { active?: string }) {
     <div className="border-b bg-white">
       <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {navItems.map((item, index) => (
-          index < 2 ? (
+          index < 3 ? (
             <Link
               key={item}
-              href={index === 0 ? "/tools/registry-intelligence-hub" : "/tools/registry-intelligence-hub/explore"}
+              href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`}
               className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
             >
               {item}
@@ -146,6 +152,8 @@ function ProvenanceSheet({
   triggerClassName,
   kind = "dataset",
   id,
+  entityType,
+  entityKey,
 }: {
   label: string;
   records?: readonly Application[];
@@ -153,6 +161,8 @@ function ProvenanceSheet({
   triggerClassName?: string;
   kind?: InvestigationKind;
   id?: string;
+  entityType?: CompareEntityType;
+  entityKey?: string;
 }) {
   const { investigate } = useInvestigation();
   const item = {
@@ -160,6 +170,8 @@ function ProvenanceSheet({
     label,
     kind,
     records: records ?? registryFixture.applications,
+    entityType,
+    entityKey,
   };
 
   return (
@@ -176,9 +188,11 @@ function ProvenanceSheet({
 
 function QuickCompareButton({ item, className = "" }: { item: InvestigationItem; className?: string }) {
   const { addCompare, compareItems } = useInvestigation();
+  if (!item.entityType || !item.entityKey) return null;
   const selected = compareItems.some((entry) => entry.id === item.id);
+  const incompatible = compareItems.length > 0 && compareItems[0].entityType !== item.entityType;
   return (
-    <button type="button" disabled={selected || compareItems.length >= 2} onClick={() => addCompare(item)} className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:border-[#007d65] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`} aria-label={`${selected ? "Added to compare" : "Add to compare"} ${item.label}`}>
+    <button type="button" disabled={selected || incompatible || compareItems.length >= 4} onClick={() => addCompare(item)} className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:border-[#007d65] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`} aria-label={`${selected ? "Added to compare" : incompatible ? "Incompatible comparison type" : "Add to compare"} ${item.label}`}>
       <GitCompareArrows className="size-3.5" />{selected ? "Added" : "+ Compare"}
     </button>
   );
@@ -195,6 +209,8 @@ function IntelligenceDrawer({
   const { addCompare, toggleWatch, watchedIds, compareItems } = useInvestigation();
   const isDerived = item?.kind === "signal";
   const canAct = item && !["coverage", "dataset"].includes(item.kind);
+  const canCompare = item?.entityType && item.entityKey;
+  const incompatible = canCompare && compareItems.length > 0 && compareItems[0].entityType !== item.entityType;
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
   const fullHref = item ? `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}` : "#";
 
@@ -210,9 +226,9 @@ function IntelligenceDrawer({
             </SheetHeader>
             <div className="space-y-6 px-6 pb-8">
               {canAct && (
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid gap-2 ${canCompare ? "grid-cols-3" : "grid-cols-2"}`}>
                   <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>
-                  <Button variant="outline" disabled={compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 2} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>
+                  {canCompare && <Button variant="outline" disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>}
                   <Button variant={watchedIds.has(item.id) ? "secondary" : "outline"} onClick={() => toggleWatch(item)}><Star />{watchedIds.has(item.id) ? "Watching" : "Watch"}</Button>
                 </div>
               )}
@@ -283,40 +299,21 @@ function IntelligenceDrawer({
 
 function ComparisonTray() {
   const { compareItems, removeCompare } = useInvestigation();
-  const [expanded, setExpanded] = useState(false);
   if (!compareItems.length) return null;
 
-  const dimensions = (item: InvestigationItem) => ({
-    records: item.records.length,
-    organizations: new Set(item.records.map((record) => record.organization)).size,
-    categories: new Set(item.records.map((record) => record.category)).size,
-    contention: item.records.filter((record) => record.contentionSet).length,
-  });
+  const entityType = compareItems[0].entityType;
+  const compatible = Boolean(entityType) && compareItems.every((item) => item.entityType === entityType && item.entityKey);
+  const compareHref = compatible ? `/tools/registry-intelligence-hub/compare?type=${entityType}&ids=${encodeURIComponent(compareItems.map((item) => item.entityKey).join(","))}` : "#";
 
   return (
     <aside aria-label="Comparison selection tray" className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-4xl rounded-2xl border border-slate-700 bg-[#101923] p-3 text-white shadow-2xl">
       <div className="flex flex-wrap items-center gap-2">
         <span className="px-2 text-xs font-bold uppercase tracking-wider text-[#72dfb4]">Compare</span>
         {compareItems.map((item) => <span key={item.id} className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold">{item.label}<button onClick={() => removeCompare(item.id)} aria-label={`Remove ${item.label} from comparison`} className="rounded p-0.5 hover:bg-white/15"><X className="size-3.5" /></button></span>)}
-        {compareItems.length < 2 && <span className="text-xs text-slate-300">Choose one more investigation</span>}
-        <Button className="ml-auto bg-[#72dfb4] text-[#0b3129] hover:bg-[#93e8c9]" disabled={compareItems.length < 2} onClick={() => setExpanded((value) => !value)}><GitCompareArrows />{expanded ? "Hide comparison" : `Compare ${compareItems.length}`}</Button>
+        {compareItems.length < 2 && <span className="text-xs text-slate-300">Choose one more {entityType?.slice(0, -1) ?? "like entity"}</span>}
+        {compareItems.length < 4 && compareItems.length >= 2 && <span className="text-xs text-slate-300">Up to 4</span>}
+        {compatible && compareItems.length >= 2 ? <Link href={compareHref} className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#72dfb4] px-3 text-sm font-bold text-[#0b3129] hover:bg-[#93e8c9]"><GitCompareArrows className="size-4" />Compare {compareItems.length}</Link> : <Button className="ml-auto bg-[#72dfb4] text-[#0b3129]" disabled><GitCompareArrows />Compare {compareItems.length}</Button>}
       </div>
-      {expanded && compareItems.length === 2 && (
-        <div className="mt-3 overflow-x-auto rounded-xl bg-white text-slate-950">
-          <table className="w-full min-w-[520px] text-sm">
-            <thead><tr className="border-b bg-slate-100"><th className="p-3 text-left text-xs uppercase tracking-wider text-slate-600">Dimension</th>{compareItems.map((item) => <th key={item.id} className="p-3 text-left">{item.label}</th>)}</tr></thead>
-            <tbody>
-              {[
-                ["Supporting records", "records"],
-                ["Organizations represented", "organizations"],
-                ["Categories represented", "categories"],
-                ["Applications in initial contention", "contention"],
-              ].map(([label, key]) => <tr key={key} className="border-b last:border-0"><th className="p-3 text-left font-medium text-slate-700">{label}</th>{compareItems.map((item) => <td key={item.id} className="p-3 font-mono font-bold">{dimensions(item)[key as keyof ReturnType<typeof dimensions>]}</td>)}</tr>)}
-              <tr><th className="p-3 text-left font-medium text-slate-700">Evidence state</th>{compareItems.map((item) => <td key={item.id} className="p-3 font-semibold text-[#006a56]">Complete for fixture</td>)}</tr>
-            </tbody>
-          </table>
-        </div>
-      )}
     </aside>
   );
 }
@@ -505,15 +502,17 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                 const returning = row.records.filter((item) => item.returning).length;
                 const contention = row.records.filter((item) => item.contentionSet).length;
                 const idn = row.records.filter((item) => item.idn).length;
-                const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric";
-                const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records };
+                const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
+                const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
+                const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
                 return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><div className="flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} /></div></td></tr>;
               })}</tbody>
             </table>
           </div>
           <div className="divide-y md:hidden">{rows.map((row) => {
-            const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : "metric";
-            const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records };
+            const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
+            const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
+            const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
             return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><div className="mt-3 flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} className="flex-1" /></div></div>;
           })}</div>
         </section>
@@ -524,7 +523,145 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {} }: { state?: ViewState; view?: "command" | "explore"; exploreParams?: ExploreParams }) {
+export type CompareParams = {
+  type?: string;
+  ids?: string;
+};
+
+function getCompareOptions(type: CompareEntityType) {
+  if (type === "applications") {
+    return registryFixture.applications.map((record) => ({ key: record.id, label: `.${record.string} · ${record.id}`, records: [record] }));
+  }
+  const values = type === "organizations"
+    ? [...new Set(registryFixture.applications.map((record) => record.organization))]
+    : [...new Set(registryFixture.applications.map((record) => record.category))];
+  return values.sort().map((value) => ({ key: value, label: value, records: registryFixture.applications.filter((record) => type === "organizations" ? record.organization === value : record.category === value) }));
+}
+
+function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
+  const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
+  const [type, setType] = useState<CompareEntityType>(initialType);
+  const [selected, setSelected] = useState(() => {
+    const valid = new Set(getCompareOptions(initialType).map((item) => item.key));
+    return (initial.ids ?? "").split(",").filter((id) => valid.has(id)).slice(0, 4);
+  });
+  const [pending, setPending] = useState("");
+  const options = useMemo(() => getCompareOptions(type), [type]);
+  const singular = type === "categories" ? "category" : type.slice(0, -1);
+  const entities = selected.map((key) => options.find((item) => item.key === key)).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const available = options.filter((item) => !selected.includes(item.key));
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("type", type);
+    if (selected.length) params.set("ids", selected.join(","));
+    window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
+  }, [selected, type]);
+
+  const chooseType = (next: CompareEntityType) => {
+    setType(next);
+    setSelected([]);
+    setPending("");
+  };
+  const addPending = () => {
+    if (pending && selected.length < 4) {
+      setSelected((current) => [...current, pending]);
+      setPending("");
+    }
+  };
+  const replace = (index: number, key: string) => setSelected((current) => current.map((item, itemIndex) => itemIndex === index ? key : item));
+  const move = (index: number, direction: -1 | 1) => setSelected((current) => {
+    const target = index + direction;
+    if (target < 0 || target >= current.length) return current;
+    const next = [...current];
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  });
+
+  type CompareCell = { value: ReactNode; state?: "unavailable" | "not-comparable" };
+  type CompareRow = { label: string; definition: string; cells: CompareCell[] };
+  const rows: CompareRow[] = useMemo(() => {
+    const cell = (value: ReactNode, state?: CompareCell["state"]): CompareCell => ({ value, state });
+    if (type === "organizations") {
+      return [
+        { label: "2026 applications", definition: "Count of fixture applications resolved to this organization.", cells: entities.map((entity) => cell(entity.records.length)) },
+        { label: "Participation status", definition: "Returning when any supporting applicant participated in the normalized 2012 cohort.", cells: entities.map((entity) => cell(entity.records.some((record) => record.returning) ? "Returning" : "New")) },
+        { label: "Categories", definition: "Distinct versioned fixture categories represented.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
+        { label: "Application mix", definition: "Published application-type labels; higher is not inherently better.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.type))].join(", "))) },
+        { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", cells: entities.map((entity) => cell(`${entity.records.filter((record) => record.contentionSet).length} applications`)) },
+        { label: "Regions", definition: "Distinct applicant regions in the fixture.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
+        { label: "IDN applications", definition: "Applications with a preserved Unicode/A-label representation.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
+        { label: "Historical market demand", definition: "Approved comparable market measure for the same reporting period.", cells: entities.map(() => cell("Not available — source not approved", "unavailable")) },
+      ];
+    }
+    if (type === "applications") {
+      return [
+        { label: "Applicant", definition: "Legal applying entity as represented in the source fixture.", cells: entities.map((entity) => cell(entity.records[0].applicant)) },
+        { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", cells: entities.map((entity) => cell(entity.records[0].organization)) },
+        { label: "Applied string", definition: "Requested primary string, distinct from a delegated TLD.", cells: entities.map((entity) => cell(`.${entity.records[0].string}`)) },
+        { label: "Replacement string", definition: "Published optional replacement; absence is not represented as zero.", cells: entities.map((entity) => entity.records[0].replacement ? cell(`.${entity.records[0].replacement}`) : cell("Not available — not published", "unavailable")) },
+        { label: "Category / type", definition: "Versioned category and published application-type label.", cells: entities.map((entity) => cell(`${entity.records[0].category} · ${entity.records[0].type}`)) },
+        { label: "Region", definition: "Applicant region derived from published country.", cells: entities.map((entity) => cell(entity.records[0].region)) },
+        { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort.", cells: entities.map((entity) => cell(entity.records[0].returning ? "Returning" : "New")) },
+        { label: "Initial contention", definition: "Initial identical-string set at fixture baseline; not final contention.", cells: entities.map((entity) => cell(entity.records[0].contentionSet ?? "Not applicable")) },
+        { label: "Comparable market demand", definition: "Like-for-like public demand measure with aligned reporting periods.", cells: entities.map(() => cell("Not comparable — source unavailable", "not-comparable")) },
+      ];
+    }
+    const historical = registryFixture.historicalContext.categoryCounts as Record<string, number>;
+    return [
+      { label: "2026 applications", definition: "Applications assigned to the versioned fixture category.", cells: entities.map((entity) => cell(entity.records.length)) },
+      { label: "Organizations", definition: "Distinct resolved organizations represented.", cells: entities.map((entity) => cell(new Set(entity.records.map((record) => record.organization)).size)) },
+      { label: "New / returning mix", definition: "Application count by normalized participation status.", cells: entities.map((entity) => cell(`${entity.records.filter((record) => !record.returning).length} new · ${entity.records.filter((record) => record.returning).length} returning`)) },
+      { label: "Initial contention exposure", definition: "Applications in initial identical-string sets.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
+      { label: "Regions", definition: "Distinct applicant regions represented.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
+      { label: "IDN applications", definition: "Applications preserving Unicode and A-label values.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
+      { label: "2012 cohort applications", definition: "Compatible normalized rehearsal cohort count; not an official total.", cells: entities.map((entity) => cell(historical[entity.key] ?? "Not available", historical[entity.key] === undefined ? "unavailable" : undefined)) },
+      { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
+    ];
+  }, [entities, type]);
+
+  const exploreHref = `/tools/registry-intelligence-hub/explore?entity=${type}`;
+
+  return (
+    <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Like-for-like research</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Compare registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Shop two to four like entities side by side with stable definitions, evidence context, and explicit unavailable states.</p></div>
+        <Link href={exploreHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-400 bg-white px-3 text-sm font-bold text-[#006a56] hover:bg-emerald-50"><ArrowLeft className="size-4" />Back to Explore</Link>
+      </div>
+
+      <section className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div><p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">Entity type boundary</p><div className="flex flex-wrap gap-2">{(["organizations", "applications", "categories"] as CompareEntityType[]).map((item) => <button key={item} aria-pressed={type === item} onClick={() => chooseType(item)} className={`rounded-lg px-3 py-2 text-sm font-bold capitalize ${type === item ? "bg-[#007d65] text-white" : "border border-slate-300 bg-white text-slate-700"}`}>{item}</button>)}</div></div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><label className="text-xs font-bold text-slate-700">Add {singular}<select aria-label={`Add ${singular}`} value={pending} onChange={(event) => setPending(event.target.value)} className="mt-1 block h-9 min-w-64 rounded-lg border border-slate-400 bg-white px-3 text-sm"><option value="">Choose one…</option>{available.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label><Button disabled={!pending || selected.length >= 4} onClick={addPending} className="bg-[#007d65]"><Plus />Add</Button></div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700"><ShieldCheck className="size-4 text-[#007d65]" />Only {type} can be combined in this view. Changing type clears selection.</div>
+      </section>
+
+      <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Selected comparison entities">
+        {entities.map((entity, index) => {
+          const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
+          return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => setSelected((current) => current.filter((key) => key !== entity.key))} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div></CardContent></Card>;
+        })}
+        {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
+      </section>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId}</span></div>
+
+      {state === "loading" ? <LoadingState /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
+        <>
+          <section className="hidden overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm md:block">
+            <table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b bg-slate-100"><th className="sticky left-0 z-10 w-64 bg-slate-100 p-4 text-left text-xs uppercase tracking-wider text-slate-700">Stable dimension</th>{entities.map((entity) => <th key={entity.key} className="min-w-52 p-4 text-left">{entity.label}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.label} className="border-b last:border-0"><th className="sticky left-0 z-10 bg-white p-4 text-left align-top"><span className="block font-bold text-slate-900">{row.label}</span><span className="mt-1 block text-xs font-normal leading-5 text-slate-600">{row.definition}</span></th>{row.cells.map((entry, index) => <td key={entities[index].key} className="p-4 align-top">{entry.state ? <span><Badge variant={entry.state === "unavailable" ? "secondary" : "outline"}>{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge><span className="mt-2 block text-xs leading-5 text-slate-700">{entry.value}</span></span> : <span className="font-semibold text-slate-900">{entry.value}</span>}</td>)}</tr>)}</tbody></table>
+          </section>
+          <section className="space-y-4 md:hidden">{entities.map((entity, entityIndex) => <Card key={entity.key} className="border-slate-300"><CardHeader><CardTitle>{entity.label}</CardTitle><p className="text-xs text-slate-600">As of fixture baseline · {entity.records.length} records</p></CardHeader><CardContent className="divide-y">{rows.map((row) => <div key={row.label} className="py-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-600">{row.label}</p>{row.cells[entityIndex].state ? <p className="mt-1 text-sm text-slate-700"><Badge variant="secondary">{row.cells[entityIndex].state}</Badge><span className="mt-1 block">{row.cells[entityIndex].value}</span></p> : <p className="mt-1 text-sm font-semibold">{row.cells[entityIndex].value}</p>}</div>)}</CardContent></Card>)}</section>
+        </>
+      )}
+
+      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Source: {registryFixture.source.name} · Retrieved {new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</span><span>Method {registryFixture.methodVersion} · URL state updates automatically</span></footer>
+    </main>
+  );
+}
+
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {} }: { state?: ViewState; view?: "command" | "explore" | "compare"; exploreParams?: ExploreParams; compareParams?: CompareParams }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
@@ -557,7 +694,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
   const controls: InvestigationContextValue = {
     investigate: setInvestigation,
-    addCompare: (item) => setCompareItems((current) => current.some((entry) => entry.id === item.id) || current.length >= 2 ? current : [...current, item]),
+    addCompare: (item) => setCompareItems((current) => current.some((entry) => entry.id === item.id) || current.length >= 4 || !item.entityType || !item.entityKey || (current.length > 0 && current[0].entityType !== item.entityType) ? current : [...current, item]),
     removeCompare: (id) => setCompareItems((current) => current.filter((item) => item.id !== id)),
     toggleWatch: (item) => setWatchedIds((current) => {
       const next = new Set(current);
@@ -572,8 +709,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
-      <HubNav active={view === "explore" ? "Explore" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : (
+      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
@@ -643,7 +780,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
         {state === "ready" && query && (
           <section aria-live="polite" className="mb-6 rounded-xl border border-emerald-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Fixture search results</h2><Badge variant="secondary">{filtered.length} records</Badge></div>
-            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="applicant" label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No fixture records match “{query}”. Try an organization, string, or category.</p>}
+            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="application" entityType="applications" entityKey={item.id} label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No fixture records match “{query}”. Try an organization, string, or category.</p>}
           </section>
         )}
 
@@ -722,6 +859,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                         key={item.category}
                         id={`category-change-${item.category}`}
                         kind="category"
+                        entityType="categories"
+                        entityKey={item.category}
                         label={`${item.category}: ${item.previous} in 2012 to ${item.current} in rehearsal`}
                         records={registryFixture.applications.filter((record) => record.category === item.category)}
                         triggerClassName="group grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
@@ -743,6 +882,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                         key={item.organization}
                         id={`applicant-watch-${item.organization}`}
                         kind="applicant"
+                        entityType="organizations"
+                        entityKey={item.organization}
                         label={`${item.organization} investigation profile`}
                         records={item.records}
                         triggerClassName="group grid w-full grid-cols-[32px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
@@ -763,7 +904,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   <CardContent className="space-y-2">
                     {portfolioRanking.slice(0, 5).map((item, index) => {
                       const records = registryFixture.applications.filter((record) => record.organization === item.organization);
-                      return <ProvenanceSheet key={item.organization} id={`organization-${item.organization}`} kind="applicant" label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;
+                      return <ProvenanceSheet key={item.organization} id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;
                     })}
                   </CardContent>
                 </Card>
@@ -772,7 +913,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">APPLICATION MIX</p><CardTitle className="text-lg">Interest by category</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
                     {categoryMix.map((item, index) => (
-                      <ProvenanceSheet key={item.category} id={`category-${item.category}`} kind="category" label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
+                      <ProvenanceSheet key={item.category} id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
                     ))}
                     <p className="pt-3 text-xs leading-5 text-slate-600">Market demand is <strong>not available</strong> pending source-rights review; no proxy is substituted.</p>
                   </CardContent>

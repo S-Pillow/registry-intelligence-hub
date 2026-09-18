@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { CommandCenter } from "./command-center";
@@ -38,21 +38,15 @@ describe("Command Center interactions", () => {
     expect(screen.getByRole("button", { name: "Watching" })).toBeInTheDocument();
   });
 
-  it("builds a meaningful two-item comparison from low-friction actions", async () => {
+  it("connects like-entity Explore selections to the full Compare route", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 12" }));
-    await user.click(screen.getByRole("button", { name: "+ Compare" }));
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    await user.click(screen.getByRole("button", { name: "View intelligence for Unique strings: 10" }));
-    await user.click(screen.getByRole("button", { name: "+ Compare" }));
-    await user.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getAllByRole("button", { name: "Add to compare Atlas Digital" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Add to compare Kizuna Registry" })[0]);
 
-    await user.click(screen.getByRole("button", { name: "Compare 2" }));
-    expect(screen.getByRole("table")).toBeInTheDocument();
-    expect(screen.getByText("Supporting records")).toBeInTheDocument();
-    expect(screen.getAllByText("Complete for fixture")).toHaveLength(2);
+    const compareLink = screen.getByRole("link", { name: "Compare 2" });
+    expect(compareLink).toHaveAttribute("href", expect.stringContaining("/compare?type=organizations"));
   });
 
   it("explains fixture-backed source coverage exceptions", async () => {
@@ -113,7 +107,7 @@ describe("Explore interactions", () => {
     expect(screen.getAllByRole("button", { name: /Add to compare \.secure/ }).length).toBeGreaterThan(0);
     await user.click(screen.getAllByRole("button", { name: "View intelligence for .secure" }).find((button) => button.textContent === "Investigate")!);
 
-    expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICATION/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "+ Compare" })).toBeInTheDocument();
   });
 
@@ -122,5 +116,55 @@ describe("Explore interactions", () => {
 
     expect(screen.getByText("No records match this research view")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Clear filters" }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Compare interactions", () => {
+  it("renders stable organization rows with provenance and unavailable states", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.getByText("Stable dimension")).toBeInTheDocument();
+    expect(screen.getAllByText("2026 applications").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Initial contention exposure").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View intelligence for Atlas Digital" })).toBeInTheDocument();
+  });
+
+  it("adds, reorders, replaces, and removes like entities with URL state", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Add category" }), "Consumer");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("button", { name: "Remove Consumer" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Move Identity left" }));
+    await waitFor(() => expect(window.location.search).toContain("ids=Identity%2CTechnology%2CConsumer"));
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Replace Technology" }), "Community");
+    await waitFor(() => expect(window.location.search).toContain("Community"));
+
+    await user.click(screen.getByRole("button", { name: "Remove Consumer" }));
+    expect(screen.queryByRole("button", { name: "Remove Consumer" })).not.toBeInTheDocument();
+  });
+
+  it("keeps application unavailable and not-comparable states distinct", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
+
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Not comparable").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Not available — not published").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("covers empty, loading, and error states", () => {
+    const { rerender } = render(<CommandCenter view="compare" state="empty" />);
+    expect(screen.getByText("Choose at least two organizations")).toBeInTheDocument();
+
+    rerender(<CommandCenter view="compare" state="loading" />);
+    expect(screen.getByLabelText("Loading Command Center")).toBeInTheDocument();
+
+    rerender(<CommandCenter view="compare" state="error" />);
+    expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
   });
 });
