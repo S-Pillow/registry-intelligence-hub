@@ -1,0 +1,13 @@
+{
+  "manifestVersion": "1.0.0",
+  "snapshotId": "snap-rehearsal-2026-09-16",
+  "immutable": true,
+  "files": [
+    {
+      "path": "registry-applications.json",
+      "size": 4459,
+      "sha256": "a66a77e205c377ba55f68ad6bdc200020cc1e4ec699519f70bf3726104348183",
+      "mediaType": "application/json"
+    }
+  ]
+}

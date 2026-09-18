@@ -1,0 +1,33 @@
+{
+  "fixtureId": "rehearsal-2026-v1",
+  "snapshotId": "snap-rehearsal-2026-09-16",
+  "baselineAt": "2026-09-16T14:00:00Z",
+  "retrievedAt": "2026-09-16T14:07:32Z",
+  "checkedAt": "2026-09-16T14:15:00Z",
+  "parserVersion": "registry-fixture/1.0.0",
+  "methodVersion": "round-pulse/1.0.0",
+  "source": {
+    "name": "ICANN New gTLD Program",
+    "url": "https://newgtldprogram.icann.org/",
+    "evidenceClass": "authoritative"
+  },
+  "limitations": [
+    "Curated rehearsal fixture — not an official 2026 publication.",
+    "Organization relationships are illustrative and have not been steward-approved.",
+    "Historical market demand is unavailable pending source-rights review."
+  ],
+  "applications": [
+    { "id": "APP-26001", "string": "atlas", "applicant": "Atlas Digital Registry LLC", "organization": "Atlas Digital", "country": "US", "region": "North America", "category": "Technology", "type": "Generic", "returning": true, "idn": false, "replacement": null, "contentionSet": "ICS-atlas", "confidence": 0.98 },
+    { "id": "APP-26002", "string": "atlas", "applicant": "Northstar Naming Inc.", "organization": "Northstar Group", "country": "CA", "region": "North America", "category": "Technology", "type": "Generic", "returning": false, "idn": false, "replacement": "atlasnet", "contentionSet": "ICS-atlas", "confidence": 0.82 },
+    { "id": "APP-26003", "string": "verde", "applicant": "Verde Community Cooperative", "organization": "Verde Cooperative", "country": "BR", "region": "Latin America", "category": "Community", "type": "Community", "returning": false, "idn": false, "replacement": null, "contentionSet": null, "confidence": 1 },
+    { "id": "APP-26004", "string": "مستقبل", "aLabel": "xn--mgbuq0c", "applicant": "Future MENA Domains FZ-LLC", "organization": "Future MENA", "country": "AE", "region": "Middle East", "category": "Technology", "type": "Generic", "returning": false, "idn": true, "replacement": null, "contentionSet": null, "confidence": 0.91 },
+    { "id": "APP-26005", "string": "harbor", "applicant": "Harbor Brands GmbH", "organization": "Harbor Brands", "country": "DE", "region": "Europe", "category": "Consumer", "type": "Brand", "returning": true, "idn": false, "replacement": null, "contentionSet": null, "confidence": 1 },
+    { "id": "APP-26006", "string": "信頼", "aLabel": "xn--vuq861b", "applicant": "Kizuna Registry KK", "organization": "Kizuna Registry", "country": "JP", "region": "Asia Pacific", "category": "Identity", "type": "Generic", "returning": true, "idn": true, "replacement": null, "contentionSet": null, "confidence": 0.95 },
+    { "id": "APP-26007", "string": "orbit", "applicant": "Atlas Digital Registry LLC", "organization": "Atlas Digital", "country": "US", "region": "North America", "category": "Technology", "type": "Generic", "returning": true, "idn": false, "replacement": null, "contentionSet": null, "confidence": 0.98 },
+    { "id": "APP-26008", "string": "secure", "applicant": "Sentinel Public Benefit Corp.", "organization": "Sentinel PBC", "country": "US", "region": "North America", "category": "Identity", "type": "Community", "returning": false, "idn": false, "replacement": "trusted", "contentionSet": "ICS-secure", "confidence": 1 },
+    { "id": "APP-26009", "string": "secure", "applicant": "Kizuna Registry KK", "organization": "Kizuna Registry", "country": "JP", "region": "Asia Pacific", "category": "Identity", "type": "Generic", "returning": true, "idn": false, "replacement": null, "contentionSet": "ICS-secure", "confidence": 0.95 },
+    { "id": "APP-26010", "string": "terra", "applicant": "Terra Geographic Association", "organization": "Terra Association", "country": "KE", "region": "Africa", "category": "Geographic", "type": "Geographic", "returning": false, "idn": false, "replacement": null, "contentionSet": null, "confidence": 1 },
+    { "id": "APP-26011", "string": "northstar", "applicant": "Northstar Naming Inc.", "organization": "Northstar Group", "country": "CA", "region": "North America", "category": "Consumer", "type": "Brand", "returning": false, "idn": false, "replacement": null, "contentionSet": null, "confidence": 0.82 },
+    { "id": "APP-26012", "string": "pulse", "applicant": "Atlas Digital Registry LLC", "organization": "Atlas Digital", "country": "US", "region": "North America", "category": "Media", "type": "Brand", "returning": true, "idn": false, "replacement": null, "contentionSet": null, "confidence": 0.98 }
+  ]
+}
