@@ -362,7 +362,7 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                         trigger={<><span><strong className="block text-sm">{item.category}</strong><span className="text-xs text-slate-500">{item.previous} → {item.current} applications</span></span><Badge className={item.change > 0 ? "bg-emerald-100 text-[#005c49]" : "bg-rose-100 text-rose-800"}>{item.change > 0 ? "+" : ""}{item.change}</Badge><ChevronRight className="size-4 text-[#007d65]" /></>}
                       />
                     ))}
-                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why this stands out:</strong> Technology doubled while Consumer and Community each declined in this normalized rehearsal cohort. These are fixture comparisons, not official round trends.</p>
+                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why this stands out:</strong> Identity rose from one to three applications, Technology doubled, and Consumer and Community each declined in this normalized rehearsal cohort. These are fixture comparisons, not official round trends.</p>
                   </CardContent>
                 </Card>
 

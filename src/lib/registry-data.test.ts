@@ -55,12 +55,12 @@ describe("deterministic intelligence calculations", () => {
   it("ranks contextual changes by absolute movement against the fixture cohort", () => {
     const changes = buildBiggestChanges(fixture.applications);
 
-    expect(changes[0]).toEqual({ category: "Technology", previous: 2, current: 4, change: 2 });
+    expect(changes[0]).toEqual({ category: "Identity", previous: 1, current: 3, change: 2 });
     expect(changes.map((item) => item.category)).toEqual([
+      "Identity",
       "Technology",
       "Community",
       "Consumer",
-      "Identity",
       "Geographic",
       "Media",
     ]);
@@ -70,7 +70,7 @@ describe("deterministic intelligence calculations", () => {
     const watched = buildApplicantsToWatch(fixture.applications);
 
     expect(watched.map((item) => item.organization)).toEqual(["Atlas Digital", "Kizuna Registry", "Northstar Group"]);
-    expect(watched[0].reasons).toEqual(["3-application portfolio", "2 categories", "returning participant"]);
+    expect(watched[0].reasons).toEqual(["3-application portfolio", "2 categories", "1 application in initial contention", "returning participant"]);
     expect(watched.every((item) => item.reasons.length > 0)).toBe(true);
   });
 });
