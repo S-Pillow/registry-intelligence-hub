@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  COMPARE_TIME_BASIS,
   filterApplicationsByExplore,
   listEntityOptions,
   recordsForEntity,
@@ -54,8 +55,8 @@ function buildExploreHrefForEntity(entityType: EntityType, entityKey: string) {
   return `/tools/registry-intelligence-hub/explore?${params.toString()}`;
 }
 
-function buildCompareHref(entityType: EntityType, keys: string[]) {
-  const params = new URLSearchParams({ type: entityType, ids: keys.join(",") });
+function buildCompareHref(entityType: EntityType, keys: string[], origin: string) {
+  const params = new URLSearchParams({ type: entityType, ids: keys.join(","), origin });
   return `/tools/registry-intelligence-hub/compare?${params.toString()}`;
 }
 
@@ -229,7 +230,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
             {groupedByType.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {groupedByType.map(([entityType, keys]) => (
-                  <Link key={entityType} href={buildCompareHref(entityType, keys.slice(0, 4))} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#007d65] px-3 text-sm font-bold text-white hover:bg-[#006a56]">
+                  <Link key={entityType} href={buildCompareHref(entityType, keys.slice(0, 4), `Watchlist: ${list.name}`)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#007d65] px-3 text-sm font-bold text-white hover:bg-[#006a56]">
                     <GitCompareArrows className="size-4" />Compare {Math.min(keys.length, 4)} {entityType}
                   </Link>
                 ))}
@@ -321,6 +322,23 @@ function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
   );
 }
 
+/**
+ * Surfaces the pinned reproducibility facts captured when a comparison was
+ * saved: entity type/selection live in `entry.params` already; this adds the
+ * snapshot, time basis, and dimensions-version pinning so reopening later
+ * (including once a "Current" time basis ships) can disclose drift instead
+ * of silently recomputing against a different fixture state. Falls back
+ * gracefully for comparisons saved before this metadata existed.
+ */
+function compareReproducibilityLine(entry: SavedResearch): string {
+  const snapshot = entry.params.snapshotId ?? registryFixture.snapshotId;
+  const timeBasisRaw = entry.params.timeBasis ?? COMPARE_TIME_BASIS;
+  const timeBasisLabel = timeBasisRaw === COMPARE_TIME_BASIS ? "Reveal Day (pinned)" : timeBasisRaw;
+  const dimensions = entry.params.dimensionsVersion ?? "pre-1.1.0 (legacy)";
+  const origin = entry.params.origin ?? "Origin not recorded";
+  return `Snapshot ${snapshot} · Time basis: ${timeBasisLabel} · Dimensions ${dimensions} · ${origin}`;
+}
+
 function SavedResearchCard({ entry }: { entry: SavedResearch }) {
   const { savedWork } = useInvestigation();
 
@@ -343,6 +361,7 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
           </div>
           <p className="mt-1 max-w-xl text-xs text-slate-600">{entry.summary}</p>
           <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(entry.lastOpenedAt)} · Updated {formatDateTime(entry.updatedAt)}</p>
+          {entry.kind === "compare-config" && <p className="mt-1 text-xs text-slate-500">{compareReproducibilityLine(entry)}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Link href={openHrefForSavedResearch(entry)} onClick={() => savedWork.markSavedResearchOpened(entry.id)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]">

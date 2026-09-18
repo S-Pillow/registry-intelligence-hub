@@ -157,6 +157,24 @@ describe("Saved hub — Saved Research", () => {
     await waitFor(() => expect(screen.queryByText(/\(copy\)$/)).not.toBeInTheDocument());
     expect(screen.getByText("Renamed comparison")).toBeInTheDocument();
   });
+
+  it("persists entity type, selection, snapshot, time basis, dimensions version, and originating context for a saved comparison", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group", origin: "Watchlist: Quick Watchlist" }} />);
+
+    await user.click(screen.getByRole("button", { name: "Save this comparison" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText(/Saved “/);
+
+    cleanup();
+    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+
+    expect(await screen.findByText("Compare configuration")).toBeInTheDocument();
+    expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
+    expect(screen.getByText(/Time basis: Reveal Day \(pinned\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Dimensions compare-dimensions\/1\.1\.0/)).toBeInTheDocument();
+    expect(screen.getByText(/Watchlist: Quick Watchlist/)).toBeInTheDocument();
+  });
 });
 
 describe("Saved hub — changes since last visit", () => {

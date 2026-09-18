@@ -10,12 +10,18 @@ import {
   buildCategoryMix,
   buildPortfolioRanking,
   buildRoundPulse,
+  cellDiffersFromBaseline,
+  type CompareRowLike,
   describeCompareSelection,
   describeExploreFilters,
   filterApplicationsByExplore,
+  groupCompareRowsBySection,
   listEntityOptions,
   nonDefaultExploreFilterParams,
+  numericCellDelta,
   recordsForEntity,
+  rowHasDifference,
+  summarizeCompareDifferences,
 } from "./registry-data";
 
 describe("immutable registry fixture", () => {
@@ -124,5 +130,91 @@ describe("shared entity and Explore filter helpers used by Saved Research and Wa
   it("describes a Compare selection with the correct singular/plural entity noun", () => {
     expect(describeCompareSelection("organizations", ["Atlas Digital"])).toBe("Compare 1 organization: Atlas Digital");
     expect(describeCompareSelection("categories", ["Technology", "Identity"])).toBe("Compare 2 categories: Technology, Identity");
+  });
+});
+
+describe("deterministic Compare differencing, grouping, and delta helpers", () => {
+  const matchingRow: CompareRowLike = { label: "Regions", section: "round-activity", cells: [{ value: "Americas" }, { value: "Americas" }] };
+  const differingRow: CompareRowLike = { label: "2026 applications", section: "round-activity", cells: [{ value: 3 }, { value: 5 }] };
+  const stateDifferingRow: CompareRowLike = {
+    label: "Historical market demand",
+    section: "market-context",
+    cells: [{ value: "Not available — source not approved", state: "unavailable" }, { value: 42 }],
+  };
+  const bothUnavailableRow: CompareRowLike = {
+    label: "Market demand",
+    section: "market-context",
+    cells: [{ value: "Not comparable", state: "not-comparable" }, { value: "Not comparable", state: "not-comparable" }],
+  };
+
+  it("flags a row as differing only when a cell's state+value diverges from the first selection", () => {
+    expect(rowHasDifference(matchingRow)).toBe(false);
+    expect(rowHasDifference(differingRow)).toBe(true);
+    expect(rowHasDifference(stateDifferingRow)).toBe(true);
+    expect(rowHasDifference(bothUnavailableRow)).toBe(false);
+    expect(rowHasDifference({ label: "Solo", section: "round-activity", cells: [{ value: 1 }] })).toBe(false);
+  });
+
+  it("never marks the baseline (first) cell as differing from itself", () => {
+    expect(cellDiffersFromBaseline(differingRow.cells, 0)).toBe(false);
+    expect(cellDiffersFromBaseline(differingRow.cells, 1)).toBe(true);
+    expect(cellDiffersFromBaseline(matchingRow.cells, 1)).toBe(false);
+  });
+
+  it("computes a deterministic numeric delta versus the baseline selection only when both sides are numeric and unequal", () => {
+    expect(numericCellDelta(differingRow.cells, 1)).toBe(2);
+    expect(numericCellDelta(differingRow.cells, 0)).toBeNull();
+    expect(numericCellDelta(matchingRow.cells, 1)).toBeNull();
+    expect(numericCellDelta(stateDifferingRow.cells, 1)).toBeNull();
+  });
+
+  it("groups rows into the four scalable sections in a fixed, stable order", () => {
+    const rows: CompareRowLike[] = [
+      { label: "Market demand", section: "market-context", cells: [] },
+      { label: "2026 applications", section: "round-activity", cells: [] },
+      { label: "Categories", section: "existing-portfolio", cells: [] },
+      { label: "Participation status", section: "historical-participation", cells: [] },
+    ];
+    const grouped = groupCompareRowsBySection(rows);
+
+    expect(grouped.map((group) => group.label)).toEqual([
+      "Round Activity",
+      "Historical Participation",
+      "Existing Portfolio",
+      "Market Context",
+    ]);
+    expect(grouped.every((group) => group.rows.length === 1)).toBe(true);
+  });
+
+  it("omits empty sections rather than rendering a heading with no dimensions", () => {
+    const grouped = groupCompareRowsBySection([{ label: "2026 applications", section: "round-activity", cells: [] }]);
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0].section).toBe("round-activity");
+  });
+
+  it("summarizes key differences deterministically without any score or winner language", () => {
+    const summary = summarizeCompareDifferences([matchingRow, differingRow, stateDifferingRow, bothUnavailableRow]);
+
+    expect(summary.headline).toBe("2 of 4 dimensions differ across selections");
+    expect(summary.differingLabels).toEqual(["2026 applications", "Historical market demand"]);
+    expect(summary.detail).not.toMatch(/win|best|worst|lead/i);
+  });
+
+  it("reports when every shown dimension matches across the current selection", () => {
+    const summary = summarizeCompareDifferences([matchingRow, bothUnavailableRow]);
+    expect(summary.headline).toBe("All 2 dimensions match across selections");
+    expect(summary.differingLabels).toEqual([]);
+  });
+
+  it("caps the listed differing dimensions and discloses the remainder count", () => {
+    const manyDiffering: CompareRowLike[] = Array.from({ length: 6 }, (_, index) => ({
+      label: `Dimension ${index + 1}`,
+      section: "round-activity" as const,
+      cells: [{ value: index }, { value: index + 1 }],
+    }));
+    const summary = summarizeCompareDifferences(manyDiffering);
+
+    expect(summary.headline).toBe("6 of 6 dimensions differ across selections");
+    expect(summary.detail).toBe("Dimension 1, Dimension 2, Dimension 3, Dimension 4, and 2 more.");
   });
 });

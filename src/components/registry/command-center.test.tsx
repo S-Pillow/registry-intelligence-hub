@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CommandCenter } from "./command-center";
@@ -173,6 +173,84 @@ describe("Compare interactions", () => {
 
     rerender(<CommandCenter view="compare" state="error" />);
     expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
+  });
+
+  it("groups dimensions into scalable sections while preserving unavailable states", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.getAllByText("Round Activity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Historical Participation").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Existing Portfolio").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Market Context").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows a deterministic, score-free Key differences summary above the table", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.getByText("Key differences")).toBeInTheDocument();
+    expect(screen.getByText(/of \d+ dimensions differ across selections/)).toBeInTheDocument();
+    const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
+    expect(within(summarySection).queryByText(/win|best|worst|leads/i)).not.toBeInTheDocument();
+  });
+
+  it("toggles between All dimensions and Differences only, hiding matching rows", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.getByRole("button", { name: "All dimensions" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByText("Historical market demand").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Differences only" }));
+
+    expect(screen.getByRole("button", { name: "Differences only" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Historical market demand")).not.toBeInTheDocument();
+    expect(screen.getAllByText("2026 applications").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "All dimensions" }));
+    expect(screen.getAllByText("Historical market demand").length).toBeGreaterThan(0);
+  });
+
+  it("displays a deterministic delta versus the baseline selection for a differing numeric dimension", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    // Atlas Digital (baseline) has 3 applications; Northstar Group has 2 — a deterministic -1 delta.
+    expect(screen.getAllByText("(-1)").length).toBeGreaterThan(0);
+  });
+
+  it("keeps entity column headers sticky for long comparisons", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    const header = screen.getByRole("columnheader", { name: "Atlas Digital" });
+    expect(header.className).toContain("sticky");
+    expect(header.className).toContain("top-0");
+  });
+
+  it("collapses the large entity selector into a compact editable selection bar and back", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.getByText("Entity type boundary")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse selector" }));
+
+    expect(screen.queryByText("Entity type boundary")).not.toBeInTheDocument();
+    const compactBar = screen.getByLabelText("Compact comparison selection");
+    expect(within(compactBar).getByText("Atlas Digital")).toBeInTheDocument();
+    expect(within(compactBar).getByText("Northstar Group")).toBeInTheDocument();
+
+    await user.click(within(compactBar).getByRole("button", { name: "Remove Northstar Group" }));
+    expect(screen.getByText("Choose at least two organizations")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit selection" }));
+    expect(screen.getByText("Entity type boundary")).toBeInTheDocument();
+  });
+
+  it("replaces consumer-shopping copy with internal intelligence language and shows originating context", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    expect(screen.queryByText(/^Shop /)).not.toBeInTheDocument();
+    expect(screen.getByText(/Review two to four like entities side by side/)).toBeInTheDocument();
+    expect(screen.getByText("Context: Direct entity selection in Compare")).toBeInTheDocument();
   });
 });
 

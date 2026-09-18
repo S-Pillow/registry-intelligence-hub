@@ -97,6 +97,93 @@ export function describeCompareSelection(entityType: EntityType, labels: string[
   return `Compare ${labels.length} ${labels.length === 1 ? singular : entityType}: ${labels.join(", ")}`;
 }
 
+/**
+ * Bumped whenever the set or definition of Compare dimensions changes, so a
+ * saved comparison can record which method version produced its rows —
+ * matching the fixture's existing snapshot/method pinning discipline.
+ */
+export const COMPARE_DIMENSIONS_VERSION = "compare-dimensions/1.1.0";
+
+export const COMPARE_TIME_BASIS = "reveal-day-baseline" as const;
+
+export type CompareSectionId = "round-activity" | "historical-participation" | "existing-portfolio" | "market-context";
+
+export const compareSectionOrder: CompareSectionId[] = [
+  "round-activity",
+  "historical-participation",
+  "existing-portfolio",
+  "market-context",
+];
+
+export const compareSectionLabels: Record<CompareSectionId, string> = {
+  "round-activity": "Round Activity",
+  "historical-participation": "Historical Participation",
+  "existing-portfolio": "Existing Portfolio",
+  "market-context": "Market Context",
+};
+
+export type CompareCellLike = { value: unknown; state?: "unavailable" | "not-comparable" };
+export type CompareRowLike = { label: string; section: CompareSectionId; cells: CompareCellLike[] };
+
+function compareCellSignature(cell: CompareCellLike): string {
+  return `${cell.state ?? ""}|${String(cell.value)}`;
+}
+
+/** A row "differs" when at least one cell's state+value diverges from the first (baseline) cell. */
+export function rowHasDifference(row: CompareRowLike): boolean {
+  if (row.cells.length < 2) return false;
+  const baseline = compareCellSignature(row.cells[0]);
+  return row.cells.some((cell) => compareCellSignature(cell) !== baseline);
+}
+
+/** Whether a single cell differs from the row's first (baseline) selection. Index 0 is never "different" from itself. */
+export function cellDiffersFromBaseline(cells: CompareCellLike[], index: number): boolean {
+  if (index <= 0 || cells.length < 2) return false;
+  return compareCellSignature(cells[index]) !== compareCellSignature(cells[0]);
+}
+
+/** Deterministic numeric delta versus the first (baseline) selection; null when not meaningful (non-numeric or unchanged). */
+export function numericCellDelta(cells: CompareCellLike[], index: number): number | null {
+  if (index <= 0) return null;
+  const baseline = cells[0]?.value;
+  const value = cells[index]?.value;
+  if (typeof baseline !== "number" || typeof value !== "number" || baseline === value) return null;
+  return value - baseline;
+}
+
+export function groupCompareRowsBySection<T extends CompareRowLike>(rows: T[]) {
+  return compareSectionOrder
+    .map((section) => ({ section, label: compareSectionLabels[section], rows: rows.filter((row) => row.section === section) }))
+    .filter((group) => group.rows.length > 0);
+}
+
+/**
+ * Deterministic, evidence-neutral summary: counts and names dimensions that
+ * differ across the current selection. Never ranks or declares a "better"
+ * entity — that judgment is out of scope for this product.
+ */
+export function summarizeCompareDifferences(rows: CompareRowLike[]) {
+  if (!rows.length) {
+    return { headline: "No dimensions to compare yet", detail: "Select at least two entities to see key differences.", differingLabels: [] as string[] };
+  }
+  const differing = rows.filter(rowHasDifference);
+  if (!differing.length) {
+    return {
+      headline: `All ${rows.length} dimensions match across selections`,
+      detail: "No differences were found across the selected entities for the dimensions shown.",
+      differingLabels: [] as string[],
+    };
+  }
+  const labels = differing.map((row) => row.label);
+  const shown = labels.slice(0, 4);
+  const remainder = labels.length - shown.length;
+  return {
+    headline: `${differing.length} of ${rows.length} dimensions differ across selections`,
+    detail: remainder > 0 ? `${shown.join(", ")}, and ${remainder} more.` : `${shown.join(", ")}.`,
+    differingLabels: labels,
+  };
+}
+
 export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }

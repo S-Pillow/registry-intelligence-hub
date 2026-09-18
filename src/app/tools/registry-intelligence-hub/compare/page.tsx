@@ -13,6 +13,7 @@ export default async function ComparePage({
   const compareParams: CompareParams = {
     type: typeof params.type === "string" ? params.type : undefined,
     ids: typeof params.ids === "string" ? params.ids : undefined,
+    origin: typeof params.origin === "string" ? params.origin : undefined,
   };
 
   return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="compare" compareParams={compareParams} />;

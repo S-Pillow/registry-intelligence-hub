@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -20,6 +20,7 @@ import {
   Info,
   Layers3,
   Menu,
+  Pencil,
   Plus,
   Search,
   ShieldCheck,
@@ -36,16 +37,24 @@ import {
   applicantsToWatch,
   biggestChanges,
   categoryMix,
+  cellDiffersFromBaseline,
+  COMPARE_DIMENSIONS_VERSION,
+  COMPARE_TIME_BASIS,
   describeCompareSelection,
   describeExploreFilters,
   filterApplicationsByExplore,
+  groupCompareRowsBySection,
   listEntityOptions,
   nonDefaultExploreFilterParams,
+  numericCellDelta,
   portfolioRanking,
   registryFixture,
+  rowHasDifference,
   roundPulse,
   standoutInsights,
+  summarizeCompareDifferences,
   type Application,
+  type CompareSectionId,
 } from "@/lib/registry-data";
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
@@ -383,7 +392,7 @@ function ComparisonTray() {
 
   const entityType = compareItems[0].entityType;
   const compatible = Boolean(entityType) && compareItems.every((item) => item.entityType === entityType && item.entityKey);
-  const compareHref = compatible ? `/tools/registry-intelligence-hub/compare?type=${entityType}&ids=${encodeURIComponent(compareItems.map((item) => item.entityKey).join(","))}` : "#";
+  const compareHref = compatible ? `/tools/registry-intelligence-hub/compare?type=${entityType}&ids=${encodeURIComponent(compareItems.map((item) => item.entityKey).join(","))}&origin=${encodeURIComponent("Investigation tray selection")}` : "#";
 
   return (
     <aside aria-label="Comparison selection tray" className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-4xl rounded-2xl border border-slate-700 bg-[#101923] p-3 text-white shadow-2xl">
@@ -605,6 +614,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
 export type CompareParams = {
   type?: string;
   ids?: string;
+  origin?: string;
 };
 
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
@@ -615,6 +625,10 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     return (initial.ids ?? "").split(",").filter((id) => valid.has(id)).slice(0, 4);
   });
   const [pending, setPending] = useState("");
+  const [compactAdd, setCompactAdd] = useState("");
+  const [diffMode, setDiffMode] = useState<"all" | "differences">("all");
+  const [selectorExpanded, setSelectorExpanded] = useState(true);
+  const [originContext] = useState(() => initial.origin || "Direct entity selection in Compare");
   const options = useMemo(() => listEntityOptions(type), [type]);
   const singular = type === "categories" ? "category" : type.slice(0, -1);
   const entities = selected.map((key) => options.find((item) => item.key === key)).filter((item): item is NonNullable<typeof item> => Boolean(item));
@@ -631,6 +645,8 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     setType(next);
     setSelected([]);
     setPending("");
+    setCompactAdd("");
+    setSelectorExpanded(true);
   };
   const addPending = () => {
     if (pending && selected.length < 4) {
@@ -638,6 +654,11 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       setPending("");
     }
   };
+  const addFromCompactBar = (key: string) => {
+    if (key && selected.length < 4) setSelected((current) => [...current, key]);
+    setCompactAdd("");
+  };
+  const removeSelection = (key: string) => setSelected((current) => current.filter((item) => item !== key));
   const replace = (index: number, key: string) => setSelected((current) => current.map((item, itemIndex) => itemIndex === index ? key : item));
   const move = (index: number, direction: -1 | 1) => setSelected((current) => {
     const target = index + direction;
@@ -648,74 +669,107 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   });
 
   type CompareCell = { value: ReactNode; state?: "unavailable" | "not-comparable" };
-  type CompareRow = { label: string; definition: string; cells: CompareCell[] };
+  type CompareRow = { label: string; definition: string; section: CompareSectionId; cells: CompareCell[] };
   const rows: CompareRow[] = useMemo(() => {
     const cell = (value: ReactNode, state?: CompareCell["state"]): CompareCell => ({ value, state });
     if (type === "organizations") {
       return [
-        { label: "2026 applications", definition: "Count of fixture applications resolved to this organization.", cells: entities.map((entity) => cell(entity.records.length)) },
-        { label: "Participation status", definition: "Returning when any supporting applicant participated in the normalized 2012 cohort.", cells: entities.map((entity) => cell(entity.records.some((record) => record.returning) ? "Returning" : "New")) },
-        { label: "Categories", definition: "Distinct versioned fixture categories represented.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
-        { label: "Application mix", definition: "Published application-type labels; higher is not inherently better.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.type))].join(", "))) },
-        { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", cells: entities.map((entity) => cell(`${entity.records.filter((record) => record.contentionSet).length} applications`)) },
-        { label: "Regions", definition: "Distinct applicant regions in the fixture.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
-        { label: "IDN applications", definition: "Applications with a preserved Unicode/A-label representation.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
-        { label: "Historical market demand", definition: "Approved comparable market measure for the same reporting period.", cells: entities.map(() => cell("Not available — source not approved", "unavailable")) },
+        { label: "2026 applications", definition: "Count of fixture applications resolved to this organization.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.length)) },
+        { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
+        { label: "Regions", definition: "Distinct applicant regions in the fixture.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
+        { label: "IDN applications", definition: "Applications with a preserved Unicode/A-label representation.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
+        { label: "Participation status", definition: "Returning when any supporting applicant participated in the normalized 2012 cohort.", section: "historical-participation", cells: entities.map((entity) => cell(entity.records.some((record) => record.returning) ? "Returning" : "New")) },
+        { label: "Categories", definition: "Distinct versioned fixture categories represented.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
+        { label: "Application mix", definition: "Published application-type labels; not a ranking of any kind.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.type))].join(", "))) },
+        { label: "Historical market demand", definition: "Approved comparable market measure for the same reporting period.", section: "market-context", cells: entities.map(() => cell("Not available — source not approved", "unavailable")) },
       ];
     }
     if (type === "applications") {
       return [
-        { label: "Applicant", definition: "Legal applying entity as represented in the source fixture.", cells: entities.map((entity) => cell(entity.records[0].applicant)) },
-        { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", cells: entities.map((entity) => cell(entity.records[0].organization)) },
-        { label: "Applied string", definition: "Requested primary string, distinct from a delegated TLD.", cells: entities.map((entity) => cell(`.${entity.records[0].string}`)) },
-        { label: "Replacement string", definition: "Published optional replacement; absence is not represented as zero.", cells: entities.map((entity) => entity.records[0].replacement ? cell(`.${entity.records[0].replacement}`) : cell("Not available — not published", "unavailable")) },
-        { label: "Category / type", definition: "Versioned category and published application-type label.", cells: entities.map((entity) => cell(`${entity.records[0].category} · ${entity.records[0].type}`)) },
-        { label: "Region", definition: "Applicant region derived from published country.", cells: entities.map((entity) => cell(entity.records[0].region)) },
-        { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort.", cells: entities.map((entity) => cell(entity.records[0].returning ? "Returning" : "New")) },
-        { label: "Initial contention", definition: "Initial identical-string set at fixture baseline; not final contention.", cells: entities.map((entity) => cell(entity.records[0].contentionSet ?? "Not applicable")) },
-        { label: "Comparable market demand", definition: "Like-for-like public demand measure with aligned reporting periods.", cells: entities.map(() => cell("Not comparable — source unavailable", "not-comparable")) },
+        { label: "Applicant", definition: "Legal applying entity as represented in the source fixture.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].applicant)) },
+        { label: "Applied string", definition: "Requested primary string, distinct from a delegated TLD.", section: "round-activity", cells: entities.map((entity) => cell(`.${entity.records[0].string}`)) },
+        { label: "Replacement string", definition: "Published optional replacement; absence is not represented as zero.", section: "round-activity", cells: entities.map((entity) => entity.records[0].replacement ? cell(`.${entity.records[0].replacement}`) : cell("Not available — not published", "unavailable")) },
+        { label: "Region", definition: "Applicant region derived from published country.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].region)) },
+        { label: "Initial contention", definition: "Initial identical-string set at fixture baseline; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].contentionSet ?? "Not applicable")) },
+        { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort.", section: "historical-participation", cells: entities.map((entity) => cell(entity.records[0].returning ? "Returning" : "New")) },
+        { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", section: "existing-portfolio", cells: entities.map((entity) => cell(entity.records[0].organization)) },
+        { label: "Category / type", definition: "Versioned category and published application-type label.", section: "existing-portfolio", cells: entities.map((entity) => cell(`${entity.records[0].category} · ${entity.records[0].type}`)) },
+        { label: "Comparable market demand", definition: "Like-for-like public demand measure with aligned reporting periods.", section: "market-context", cells: entities.map(() => cell("Not comparable — source unavailable", "not-comparable")) },
       ];
     }
     const historical = registryFixture.historicalContext.categoryCounts as Record<string, number>;
     return [
-      { label: "2026 applications", definition: "Applications assigned to the versioned fixture category.", cells: entities.map((entity) => cell(entity.records.length)) },
-      { label: "Organizations", definition: "Distinct resolved organizations represented.", cells: entities.map((entity) => cell(new Set(entity.records.map((record) => record.organization)).size)) },
-      { label: "New / returning mix", definition: "Application count by normalized participation status.", cells: entities.map((entity) => cell(`${entity.records.filter((record) => !record.returning).length} new · ${entity.records.filter((record) => record.returning).length} returning`)) },
-      { label: "Initial contention exposure", definition: "Applications in initial identical-string sets.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
-      { label: "Regions", definition: "Distinct applicant regions represented.", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
-      { label: "IDN applications", definition: "Applications preserving Unicode and A-label values.", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
-      { label: "2012 cohort applications", definition: "Compatible normalized rehearsal cohort count; not an official total.", cells: entities.map((entity) => cell(historical[entity.key] ?? "Not available", historical[entity.key] === undefined ? "unavailable" : undefined)) },
-      { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
+      { label: "2026 applications", definition: "Applications assigned to the versioned fixture category.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.length)) },
+      { label: "Initial contention exposure", definition: "Applications in initial identical-string sets.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
+      { label: "Regions", definition: "Distinct applicant regions represented.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
+      { label: "IDN applications", definition: "Applications preserving Unicode and A-label values.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
+      { label: "New / returning mix", definition: "Application count by normalized participation status.", section: "historical-participation", cells: entities.map((entity) => cell(`${entity.records.filter((record) => !record.returning).length} new · ${entity.records.filter((record) => record.returning).length} returning`)) },
+      { label: "2012 cohort applications", definition: "Compatible normalized rehearsal cohort count; not an official total.", section: "historical-participation", cells: entities.map((entity) => cell(historical[entity.key] ?? "Not available", historical[entity.key] === undefined ? "unavailable" : undefined)) },
+      { label: "Organizations", definition: "Distinct resolved organizations represented.", section: "existing-portfolio", cells: entities.map((entity) => cell(new Set(entity.records.map((record) => record.organization)).size)) },
+      { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", section: "market-context", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
     ];
   }, [entities, type]);
 
+  const visibleRows = useMemo(() => diffMode === "differences" ? rows.filter(rowHasDifference) : rows, [rows, diffMode]);
+  const sections = useMemo(() => groupCompareRowsBySection(visibleRows), [visibleRows]);
+  const differenceSummary = useMemo(() => summarizeCompareDifferences(rows), [rows]);
   const exploreHref = `/tools/registry-intelligence-hub/explore?entity=${type}`;
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Like-for-like research</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Compare registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Shop two to four like entities side by side with stable definitions, evidence context, and explicit unavailable states.</p></div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Like-for-like research</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Compare registry intelligence</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Review two to four like entities side by side with stable definitions, evidence context, and explicit unavailable states.</p>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Context: {originContext}</p>
+        </div>
         <Link href={exploreHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-400 bg-white px-3 text-sm font-bold text-[#006a56] hover:bg-emerald-50"><ArrowLeft className="size-4" />Back to Explore</Link>
       </div>
 
-      <section className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div><p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">Entity type boundary</p><div className="flex flex-wrap gap-2">{(["organizations", "applications", "categories"] as CompareEntityType[]).map((item) => <button key={item} aria-pressed={type === item} onClick={() => chooseType(item)} className={`rounded-lg px-3 py-2 text-sm font-bold capitalize ${type === item ? "bg-[#007d65] text-white" : "border border-slate-300 bg-white text-slate-700"}`}>{item}</button>)}</div></div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><label className="text-xs font-bold text-slate-700">Add {singular}<select aria-label={`Add ${singular}`} value={pending} onChange={(event) => setPending(event.target.value)} className="mt-1 block h-9 min-w-64 rounded-lg border border-slate-400 bg-white px-3 text-sm"><option value="">Choose one…</option>{available.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label><Button disabled={!pending || selected.length >= 4} onClick={addPending} className="bg-[#007d65]"><Plus />Add</Button></div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700"><ShieldCheck className="size-4 text-[#007d65]" />Only {type} can be combined in this view. Changing type clears selection.</div>
-      </section>
+      {selectorExpanded ? (
+        <>
+          <section className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+              <div><p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">Entity type boundary</p><div className="flex flex-wrap gap-2">{(["organizations", "applications", "categories"] as CompareEntityType[]).map((item) => <button key={item} aria-pressed={type === item} onClick={() => chooseType(item)} className={`rounded-lg px-3 py-2 text-sm font-bold capitalize ${type === item ? "bg-[#007d65] text-white" : "border border-slate-300 bg-white text-slate-700"}`}>{item}</button>)}</div></div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <label className="text-xs font-bold text-slate-700">Add {singular}<select aria-label={`Add ${singular}`} value={pending} onChange={(event) => setPending(event.target.value)} className="mt-1 block h-9 min-w-64 rounded-lg border border-slate-400 bg-white px-3 text-sm"><option value="">Choose one…</option>{available.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+                <Button disabled={!pending || selected.length >= 4} onClick={addPending} className="bg-[#007d65]"><Plus />Add</Button>
+                {entities.length >= 2 && <Button variant="outline" onClick={() => setSelectorExpanded(false)}>Collapse selector</Button>}
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700"><ShieldCheck className="size-4 text-[#007d65]" />Only {type} can be combined in this view. Changing type clears selection.</div>
+          </section>
 
-      <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Selected comparison entities">
-        {entities.map((entity, index) => {
-          const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
-          const investigationItem: InvestigationItem = { id: `compare-select-${type}-${entity.key}`, kind, label: entity.label, records: entity.records, entityType: type, entityKey: entity.key };
-          return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => setSelected((current) => current.filter((key) => key !== entity.key))} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
-        })}
-        {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
-      </section>
+          <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Selected comparison entities">
+            {entities.map((entity, index) => {
+              const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
+              const investigationItem: InvestigationItem = { id: `compare-select-${type}-${entity.key}`, kind, label: entity.label, records: entity.records, entityType: type, entityKey: entity.key };
+              return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
+            })}
+            {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
+          </section>
+        </>
+      ) : (
+        <section aria-label="Compact comparison selection" className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm">
+          <Badge variant="outline" className="capitalize">{type}</Badge>
+          {entities.map((entity) => (
+            <span key={entity.key} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-800">
+              {entity.label}
+              <button type="button" aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-0.5 hover:bg-slate-200"><X className="size-3" /></button>
+            </span>
+          ))}
+          {available.length > 0 && selected.length < 4 && (
+            <select aria-label={`Add ${singular}`} value={compactAdd} onChange={(event) => addFromCompactBar(event.target.value)} className="h-8 rounded-lg border border-slate-300 bg-white px-2 text-xs">
+              <option value="">+ Add {singular}…</option>
+              {available.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+            </select>
+          )}
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => setSelectorExpanded(true)}><Pencil />Edit selection</Button>
+        </section>
+      )}
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId}</span></div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
 
       <div className="mb-5 flex justify-end">
         <SaveResearchButton
@@ -724,20 +778,117 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
           summary={describeCompareSelection(type, entities.map((entity) => entity.label))}
           recordCount={entities.reduce((sum, entity) => sum + entity.records.length, 0)}
           disabled={entities.length < 2}
-          buildParams={() => ({ type, ids: selected.join(",") })}
+          buildParams={() => ({
+            type,
+            ids: selected.join(","),
+            snapshotId: registryFixture.snapshotId,
+            timeBasis: COMPARE_TIME_BASIS,
+            dimensionsVersion: COMPARE_DIMENSIONS_VERSION,
+            origin: originContext,
+          })}
         />
       </div>
 
       {state === "loading" ? <LoadingState /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
         <>
-          <section className="hidden overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm md:block">
-            <table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b bg-slate-100"><th className="sticky left-0 z-10 w-64 bg-slate-100 p-4 text-left text-xs uppercase tracking-wider text-slate-700">Stable dimension</th>{entities.map((entity) => <th key={entity.key} className="min-w-52 p-4 text-left">{entity.label}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.label} className="border-b last:border-0"><th className="sticky left-0 z-10 bg-white p-4 text-left align-top"><span className="block font-bold text-slate-900">{row.label}</span><span className="mt-1 block text-xs font-normal leading-5 text-slate-600">{row.definition}</span></th>{row.cells.map((entry, index) => <td key={entities[index].key} className="p-4 align-top">{entry.state ? <span><Badge variant={entry.state === "unavailable" ? "secondary" : "outline"}>{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge><span className="mt-2 block text-xs leading-5 text-slate-700">{entry.value}</span></span> : <span className="font-semibold text-slate-900">{entry.value}</span>}</td>)}</tr>)}</tbody></table>
+          <section className="mb-4 flex flex-col justify-between gap-3 rounded-xl border border-slate-300 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+            <div aria-live="polite">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Key differences</p>
+              <p className="mt-1 text-sm font-bold text-slate-900">{differenceSummary.headline}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-700">{differenceSummary.detail}</p>
+            </div>
+            <div className="inline-flex shrink-0 rounded-lg border border-slate-300 bg-slate-50 p-1" role="group" aria-label="Dimension filter">
+              <button type="button" aria-pressed={diffMode === "all"} onClick={() => setDiffMode("all")} className={`rounded-md px-3 py-1.5 text-xs font-bold ${diffMode === "all" ? "bg-[#007d65] text-white" : "text-slate-600 hover:text-slate-900"}`}>All dimensions</button>
+              <button type="button" aria-pressed={diffMode === "differences"} onClick={() => setDiffMode("differences")} className={`rounded-md px-3 py-1.5 text-xs font-bold ${diffMode === "differences" ? "bg-[#007d65] text-white" : "text-slate-600 hover:text-slate-900"}`}>Differences only</button>
+            </div>
           </section>
-          <section className="space-y-4 md:hidden">{entities.map((entity, entityIndex) => <Card key={entity.key} className="border-slate-300"><CardHeader><CardTitle>{entity.label}</CardTitle><p className="text-xs text-slate-600">As of fixture baseline · {entity.records.length} records</p></CardHeader><CardContent className="divide-y">{rows.map((row) => <div key={row.label} className="py-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-600">{row.label}</p>{row.cells[entityIndex].state ? <p className="mt-1 text-sm text-slate-700"><Badge variant="secondary">{row.cells[entityIndex].state}</Badge><span className="mt-1 block">{row.cells[entityIndex].value}</span></p> : <p className="mt-1 text-sm font-semibold">{row.cells[entityIndex].value}</p>}</div>)}</CardContent></Card>)}</section>
+
+          <section className="hidden overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm md:block">
+            <div className="max-h-[70vh] overflow-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700">
+                    <th className="sticky top-0 left-0 z-30 w-64 bg-slate-100 p-4 text-left">Stable dimension</th>
+                    {entities.map((entity) => <th key={entity.key} className="sticky top-0 z-20 min-w-52 bg-slate-100 p-4 text-left normal-case tracking-normal text-slate-950">{entity.label}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sections.map((group) => (
+                    <Fragment key={group.section}>
+                      <tr className="bg-slate-50">
+                        <th colSpan={entities.length + 1} className="sticky left-0 bg-slate-50 px-4 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600">{group.label}</th>
+                      </tr>
+                      {group.rows.map((row) => (
+                        <tr key={row.label} className="border-b last:border-0">
+                          <th className="sticky left-0 z-10 bg-white p-4 text-left align-top"><span className="block font-bold text-slate-900">{row.label}</span><span className="mt-1 block text-xs font-normal leading-5 text-slate-600">{row.definition}</span></th>
+                          {row.cells.map((entry, index) => {
+                            const differs = cellDiffersFromBaseline(row.cells, index);
+                            const delta = numericCellDelta(row.cells, index);
+                            return (
+                              <td key={entities[index].key} className={`p-4 align-top ${differs ? "bg-amber-50/70" : ""}`}>
+                                {entry.state ? (
+                                  <span>
+                                    <Badge variant={entry.state === "unavailable" ? "secondary" : "outline"}>{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge>
+                                    <span className="mt-2 block text-xs leading-5 text-slate-700">{entry.value}</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900">
+                                    {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-amber-500" />}
+                                    {entry.value}
+                                    {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta})</span>}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="space-y-4 md:hidden">
+            {entities.map((entity, entityIndex) => (
+              <Card key={entity.key} className="border-slate-300">
+                <CardHeader><CardTitle>{entity.label}</CardTitle><p className="text-xs text-slate-600">As of fixture baseline · {entity.records.length} records</p></CardHeader>
+                <CardContent className="space-y-4">
+                  {sections.map((group) => (
+                    <div key={group.section}>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">{group.label}</p>
+                      <div className="divide-y">
+                        {group.rows.map((row) => {
+                          const entry = row.cells[entityIndex];
+                          const differs = cellDiffersFromBaseline(row.cells, entityIndex);
+                          const delta = numericCellDelta(row.cells, entityIndex);
+                          return (
+                            <div key={row.label} className={`py-3 ${differs ? "-mx-2 rounded-lg bg-amber-50/70 px-2" : ""}`}>
+                              <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{row.label}</p>
+                              {entry.state ? (
+                                <p className="mt-1 text-sm text-slate-700"><Badge variant="secondary">{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge><span className="mt-1 block">{entry.value}</span></p>
+                              ) : (
+                                <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
+                                  {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-amber-500" />}
+                                  {entry.value}
+                                  {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta})</span>}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </section>
         </>
       )}
 
-      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Source: {registryFixture.source.name} · Retrieved {new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</span><span>Method {registryFixture.methodVersion} · URL state updates automatically</span></footer>
+      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Source: {registryFixture.source.name} · Retrieved {new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</span><span>Method {registryFixture.methodVersion} · Dimensions {COMPARE_DIMENSIONS_VERSION} · URL state updates automatically</span></footer>
     </main>
   );
 }
