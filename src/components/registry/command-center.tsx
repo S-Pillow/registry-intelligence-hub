@@ -617,6 +617,12 @@ export type CompareParams = {
   origin?: string;
 };
 
+/**
+ * Compare v1 — frozen. Sections, dimensions, diff/reference model, and
+ * persisted comparison metadata are stable; only fixes are in scope here.
+ * New Compare capabilities (set-difference UI, cohort comparison, etc.)
+ * belong in a v2 proposal, not incremental edits to this component.
+ */
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
   const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
   const [type, setType] = useState<CompareEntityType>(initialType);
@@ -668,12 +674,12 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     return next;
   });
 
-  type CompareCell = { value: ReactNode; state?: "unavailable" | "not-comparable" };
+  type CompareCell = { value: ReactNode; state?: "unavailable" | "not-comparable"; entityLabel?: string };
   type CompareRow = { label: string; definition: string; section: CompareSectionId; cells: CompareCell[] };
   const rows: CompareRow[] = useMemo(() => {
     const cell = (value: ReactNode, state?: CompareCell["state"]): CompareCell => ({ value, state });
-    if (type === "organizations") {
-      return [
+    const historical = registryFixture.historicalContext.categoryCounts as Record<string, number>;
+    const baseRows: CompareRow[] = type === "organizations" ? [
         { label: "2026 applications", definition: "Count of fixture applications resolved to this organization.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.length)) },
         { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
         { label: "Regions", definition: "Distinct applicant regions in the fixture.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
@@ -682,10 +688,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Categories", definition: "Distinct versioned fixture categories represented.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
         { label: "Application mix", definition: "Published application-type labels; not a ranking of any kind.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.type))].join(", "))) },
         { label: "Historical market demand", definition: "Approved comparable market measure for the same reporting period.", section: "market-context", cells: entities.map(() => cell("Not available — source not approved", "unavailable")) },
-      ];
-    }
-    if (type === "applications") {
-      return [
+      ] : type === "applications" ? [
         { label: "Applicant", definition: "Legal applying entity as represented in the source fixture.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].applicant)) },
         { label: "Applied string", definition: "Requested primary string, distinct from a delegated TLD.", section: "round-activity", cells: entities.map((entity) => cell(`.${entity.records[0].string}`)) },
         { label: "Replacement string", definition: "Published optional replacement; absence is not represented as zero.", section: "round-activity", cells: entities.map((entity) => entity.records[0].replacement ? cell(`.${entity.records[0].replacement}`) : cell("Not available — not published", "unavailable")) },
@@ -695,10 +698,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", section: "existing-portfolio", cells: entities.map((entity) => cell(entity.records[0].organization)) },
         { label: "Category / type", definition: "Versioned category and published application-type label.", section: "existing-portfolio", cells: entities.map((entity) => cell(`${entity.records[0].category} · ${entity.records[0].type}`)) },
         { label: "Comparable market demand", definition: "Like-for-like public demand measure with aligned reporting periods.", section: "market-context", cells: entities.map(() => cell("Not comparable — source unavailable", "not-comparable")) },
-      ];
-    }
-    const historical = registryFixture.historicalContext.categoryCounts as Record<string, number>;
-    return [
+      ] : [
       { label: "2026 applications", definition: "Applications assigned to the versioned fixture category.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.length)) },
       { label: "Initial contention exposure", definition: "Applications in initial identical-string sets.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
       { label: "Regions", definition: "Distinct applicant regions represented.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
@@ -708,7 +708,9 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       { label: "Organizations", definition: "Distinct resolved organizations represented.", section: "existing-portfolio", cells: entities.map((entity) => cell(new Set(entity.records.map((record) => record.organization)).size)) },
       { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", section: "market-context", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
     ];
+    return baseRows.map((row) => ({ ...row, cells: row.cells.map((entry, index) => ({ ...entry, entityLabel: entities[index]?.label })) }));
   }, [entities, type]);
+  const referenceLabel = entities[0]?.label;
 
   const visibleRows = useMemo(() => diffMode === "differences" ? rows.filter(rowHasDifference) : rows, [rows, diffMode]);
   const sections = useMemo(() => groupCompareRowsBySection(visibleRows), [visibleRows]);
@@ -745,7 +747,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
             {entities.map((entity, index) => {
               const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
               const investigationItem: InvestigationItem = { id: `compare-select-${type}-${entity.key}`, kind, label: entity.label, records: entity.records, entityType: type, entityKey: entity.key };
-              return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div><span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span><ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
+              return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div>{index === 0 ? <Badge variant="outline" className="border-sky-300 text-[10px] font-bold uppercase tracking-wider text-sky-800">Reference</Badge> : <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span>}<ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
             })}
             {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
           </section>
@@ -753,9 +755,10 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       ) : (
         <section aria-label="Compact comparison selection" className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm">
           <Badge variant="outline" className="capitalize">{type}</Badge>
-          {entities.map((entity) => (
+          {entities.map((entity, index) => (
             <span key={entity.key} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-800">
-              {entity.label}
+              {index === 0 && <Badge variant="outline" className="border-sky-300 text-[10px] font-bold uppercase tracking-wider text-sky-800">Reference</Badge>}
+              <span>{entity.label}</span>
               <button type="button" aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-0.5 hover:bg-slate-200"><X className="size-3" /></button>
             </span>
           ))}
@@ -809,7 +812,14 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
                 <thead>
                   <tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700">
                     <th className="sticky top-0 left-0 z-30 w-64 bg-slate-100 p-4 text-left">Stable dimension</th>
-                    {entities.map((entity) => <th key={entity.key} className="sticky top-0 z-20 min-w-52 bg-slate-100 p-4 text-left normal-case tracking-normal text-slate-950">{entity.label}</th>)}
+                    {entities.map((entity, index) => (
+                      <th key={entity.key} className="sticky top-0 z-20 min-w-52 bg-slate-100 p-4 text-left normal-case tracking-normal text-slate-950">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span>{entity.label}</span>
+                          {index === 0 && <Badge variant="outline" className="border-sky-300 text-[10px] font-semibold normal-case tracking-normal text-sky-800">Reference</Badge>}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -825,7 +835,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
                             const differs = cellDiffersFromBaseline(row.cells, index);
                             const delta = numericCellDelta(row.cells, index);
                             return (
-                              <td key={entities[index].key} className={`p-4 align-top ${differs ? "bg-amber-50/70" : ""}`}>
+                              <td key={entities[index].key} className={`p-4 align-top ${differs ? "bg-sky-50/70" : ""}`}>
                                 {entry.state ? (
                                   <span>
                                     <Badge variant={entry.state === "unavailable" ? "secondary" : "outline"}>{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge>
@@ -833,9 +843,9 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900">
-                                    {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-amber-500" />}
+                                    {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-sky-500" />}
                                     {entry.value}
-                                    {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta})</span>}
+                                    {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta} vs {referenceLabel})</span>}
                                   </span>
                                 )}
                               </td>
@@ -853,7 +863,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
           <section className="space-y-4 md:hidden">
             {entities.map((entity, entityIndex) => (
               <Card key={entity.key} className="border-slate-300">
-                <CardHeader><CardTitle>{entity.label}</CardTitle><p className="text-xs text-slate-600">As of fixture baseline · {entity.records.length} records</p></CardHeader>
+                <CardHeader><CardTitle className="flex flex-wrap items-center gap-1.5"><span>{entity.label}</span>{entityIndex === 0 && <Badge variant="outline" className="border-sky-300 text-[10px] font-semibold text-sky-800">Reference</Badge>}</CardTitle><p className="text-xs text-slate-600">As of fixture baseline · {entity.records.length} records</p></CardHeader>
                 <CardContent className="space-y-4">
                   {sections.map((group) => (
                     <div key={group.section}>
@@ -864,15 +874,15 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
                           const differs = cellDiffersFromBaseline(row.cells, entityIndex);
                           const delta = numericCellDelta(row.cells, entityIndex);
                           return (
-                            <div key={row.label} className={`py-3 ${differs ? "-mx-2 rounded-lg bg-amber-50/70 px-2" : ""}`}>
+                            <div key={row.label} className={`py-3 ${differs ? "-mx-2 rounded-lg bg-sky-50/70 px-2" : ""}`}>
                               <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{row.label}</p>
                               {entry.state ? (
                                 <p className="mt-1 text-sm text-slate-700"><Badge variant="secondary">{entry.state === "unavailable" ? "Unavailable" : "Not comparable"}</Badge><span className="mt-1 block">{entry.value}</span></p>
                               ) : (
                                 <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold">
-                                  {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-amber-500" />}
+                                  {differs && <span aria-hidden="true" className="inline-block size-1.5 shrink-0 rounded-full bg-sky-500" />}
                                   {entry.value}
-                                  {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta})</span>}
+                                  {delta !== null && <span className="text-xs font-medium text-slate-500">({delta > 0 ? "+" : ""}{delta} vs {referenceLabel})</span>}
                                 </p>
                               )}
                             </div>

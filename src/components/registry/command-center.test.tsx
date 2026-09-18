@@ -185,13 +185,17 @@ describe("Compare interactions", () => {
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("shows a deterministic, score-free Key differences summary above the table", () => {
+  it("shows a deterministic Key differences summary with actual directional facts and shared dimensions, never AI or winner language", () => {
     render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getByText("Key differences")).toBeInTheDocument();
     expect(screen.getByText(/of \d+ dimensions differ across selections/)).toBeInTheDocument();
     const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
-    expect(within(summarySection).queryByText(/win|best|worst|leads/i)).not.toBeInTheDocument();
+    // Directional facts: the actual entity + value, not just the dimension name.
+    expect(within(summarySection).getByText(/2026 applications — Atlas Digital 3, Northstar Group 2/)).toBeInTheDocument();
+    // Meaningful shared dimensions are named, not just counted.
+    expect(within(summarySection).getByText(/Selections match on/)).toBeInTheDocument();
+    expect(within(summarySection).queryByText(/win|best|worst|leads|recommend|\bAI\b|\brank/i)).not.toBeInTheDocument();
   });
 
   it("toggles between All dimensions and Differences only, hiding matching rows", async () => {
@@ -211,19 +215,82 @@ describe("Compare interactions", () => {
     expect(screen.getAllByText("Historical market demand").length).toBeGreaterThan(0);
   });
 
-  it("displays a deterministic delta versus the baseline selection for a differing numeric dimension", () => {
+  it("displays an unambiguous delta naming the reference entity for a differing numeric dimension", () => {
     render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
-    // Atlas Digital (baseline) has 3 applications; Northstar Group has 2 — a deterministic -1 delta.
-    expect(screen.getAllByText("(-1)").length).toBeGreaterThan(0);
+    // Atlas Digital (reference) has 3 applications; Northstar Group has 2 — a deterministic -1 delta.
+    expect(screen.getAllByText("(-1 vs Atlas Digital)").length).toBeGreaterThan(0);
+  });
+
+  it("explicitly labels the first selected entity as Reference and keeps it deterministic under reorder/replace", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    const headerBefore = screen.getByRole("columnheader", { name: /Atlas Digital/ });
+    expect(within(headerBefore).getByText("Reference")).toBeInTheDocument();
+    expect(screen.getAllByText("Reference").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("(-1 vs Atlas Digital)").length).toBeGreaterThan(0);
+
+    // Reordering so Northstar Group becomes index 0 makes it the new, deterministic reference.
+    await user.click(screen.getByRole("button", { name: "Move Northstar Group left" }));
+    await waitFor(() => expect(window.location.search).toContain("ids=Northstar+Group%2CAtlas+Digital"));
+
+    const headerAfter = screen.getByRole("columnheader", { name: /Northstar Group/ });
+    expect(within(headerAfter).getByText("Reference")).toBeInTheDocument();
+    expect(screen.getAllByText("(+1 vs Northstar Group)").length).toBeGreaterThan(0);
+  });
+
+  it("uses a neutral, non-amber tint for difference affordances, reserving amber for warning/evidence banners", () => {
+    const { container } = render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    const differingCells = container.querySelectorAll("td.bg-sky-50\\/70");
+    expect(differingCells.length).toBeGreaterThan(0);
+    differingCells.forEach((cell) => expect(cell.className).not.toMatch(/amber|yellow/));
+
+    // The rehearsal-baseline banner is a warning/evidence caveat, so it keeps its amber treatment.
+    expect(screen.getByText("Rehearsal comparison.").closest("div")?.className).toMatch(/amber/);
   });
 
   it("keeps entity column headers sticky for long comparisons", () => {
     render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
-    const header = screen.getByRole("columnheader", { name: "Atlas Digital" });
+    const header = screen.getByRole("columnheader", { name: /Atlas Digital/ });
     expect(header.className).toContain("sticky");
     expect(header.className).toContain("top-0");
+  });
+
+  it("keeps sticky, correctly aligned entity headers with three selected entities", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer" }} />);
+
+    const dimensionHeader = screen.getByRole("columnheader", { name: "Stable dimension" });
+    expect(dimensionHeader.className).toContain("sticky");
+    expect(dimensionHeader.className).toContain("left-0");
+    expect(dimensionHeader.className).toContain("top-0");
+    ["Technology", "Identity", "Consumer"].forEach((label) => {
+      const header = screen.getByRole("columnheader", { name: new RegExp(label) });
+      expect(header.className).toContain("sticky");
+      expect(header.className).toContain("top-0");
+      expect(header.className).toContain("z-20");
+    });
+    // Every data row must have exactly one cell per selected entity, keeping columns aligned under the sticky headers.
+    const firstRow = screen.getAllByText("2026 applications")[0].closest("tr") as HTMLElement;
+    expect(within(firstRow).getAllByRole("cell")).toHaveLength(3);
+  });
+
+  it("keeps sticky, correctly aligned entity headers with four selected entities", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer,Community" }} />);
+
+    const dimensionHeader = screen.getByRole("columnheader", { name: "Stable dimension" });
+    expect(dimensionHeader.className).toContain("sticky");
+    expect(dimensionHeader.className).toContain("left-0");
+    ["Technology", "Identity", "Consumer", "Community"].forEach((label) => {
+      const header = screen.getByRole("columnheader", { name: new RegExp(label) });
+      expect(header.className).toContain("sticky");
+      expect(header.className).toContain("top-0");
+      expect(header.className).toContain("z-20");
+    });
+    const firstRow = screen.getAllByText("2026 applications")[0].closest("tr") as HTMLElement;
+    expect(within(firstRow).getAllByRole("cell")).toHaveLength(4);
   });
 
   it("collapses the large entity selector into a compact editable selection bar and back", async () => {

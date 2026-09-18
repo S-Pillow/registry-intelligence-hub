@@ -122,7 +122,7 @@ export const compareSectionLabels: Record<CompareSectionId, string> = {
   "market-context": "Market Context",
 };
 
-export type CompareCellLike = { value: unknown; state?: "unavailable" | "not-comparable" };
+export type CompareCellLike = { value: unknown; state?: "unavailable" | "not-comparable"; entityLabel?: string };
 export type CompareRowLike = { label: string; section: CompareSectionId; cells: CompareCellLike[] };
 
 function compareCellSignature(cell: CompareCellLike): string {
@@ -157,30 +157,73 @@ export function groupCompareRowsBySection<T extends CompareRowLike>(rows: T[]) {
     .filter((group) => group.rows.length > 0);
 }
 
+export type CompareDifferenceSummary = {
+  headline: string;
+  detail: string;
+  differingLabels: string[];
+  matchingLabels: string[];
+};
+
+function formatCompareCellForSummary(cell: CompareCellLike): string {
+  if (cell.state === "unavailable") return "unavailable";
+  if (cell.state === "not-comparable") return "not comparable";
+  return String(cell.value);
+}
+
+/** One factual, evidence-neutral sentence naming the actual value each entity holds — never which is "better". */
+function describeDifferingRowFacts(row: CompareRowLike): string {
+  const facts = row.cells.map((cell) => `${cell.entityLabel ?? "a selection"} ${formatCompareCellForSummary(cell)}`);
+  return `${row.label} — ${facts.join(", ")}`;
+}
+
+function joinWithRemainder(labels: string[], cap: number): string {
+  const shown = labels.slice(0, cap);
+  const remainder = labels.length - shown.length;
+  return remainder > 0 ? `${shown.join(", ")}, and ${remainder} more` : shown.join(", ");
+}
+
 /**
- * Deterministic, evidence-neutral summary: counts and names dimensions that
- * differ across the current selection. Never ranks or declares a "better"
- * entity — that judgment is out of scope for this product.
+ * Deterministic, evidence-neutral summary: states the actual directional
+ * facts for dimensions that differ (which entity holds which value) and
+ * names meaningful dimensions every selection shares — "meaningful" meaning
+ * the shared value is a known fact, not merely a shared absence of data
+ * (e.g. two entities both lacking a market-demand figure is not reported as
+ * a match). Never ranks, scores, or declares a "better"/"winning" entity —
+ * that judgment is out of scope for this product.
  */
-export function summarizeCompareDifferences(rows: CompareRowLike[]) {
+export function summarizeCompareDifferences(rows: CompareRowLike[]): CompareDifferenceSummary {
   if (!rows.length) {
-    return { headline: "No dimensions to compare yet", detail: "Select at least two entities to see key differences.", differingLabels: [] as string[] };
+    return { headline: "No dimensions to compare yet", detail: "Select at least two entities to see key differences.", differingLabels: [], matchingLabels: [] };
   }
+
   const differing = rows.filter(rowHasDifference);
+  const matching = rows.filter((row) => !rowHasDifference(row));
+  const meaningfulMatching = matching.filter((row) => row.cells.every((cell) => !cell.state));
+  const matchingLabels = meaningfulMatching.map((row) => row.label);
+
   if (!differing.length) {
     return {
       headline: `All ${rows.length} dimensions match across selections`,
-      detail: "No differences were found across the selected entities for the dimensions shown.",
-      differingLabels: [] as string[],
+      detail: matchingLabels.length
+        ? `Every selection matches on all ${rows.length} shown dimensions, including ${joinWithRemainder(matchingLabels, 4)}.`
+        : `Every selection matches on all ${rows.length} shown dimensions.`,
+      differingLabels: [],
+      matchingLabels,
     };
   }
-  const labels = differing.map((row) => row.label);
-  const shown = labels.slice(0, 4);
-  const remainder = labels.length - shown.length;
+
+  const shownFacts = differing.slice(0, 3).map(describeDifferingRowFacts);
+  const factRemainder = differing.length - shownFacts.length;
+  const factsSentence = factRemainder > 0
+    ? `${shownFacts.join("; ")}; and ${factRemainder} more dimension${factRemainder === 1 ? "" : "s"} also differ.`
+    : `${shownFacts.join("; ")}.`;
+  const sharedSentence = matchingLabels.length ? ` Selections match on ${joinWithRemainder(matchingLabels, 4)}.` : "";
+
   return {
     headline: `${differing.length} of ${rows.length} dimensions differ across selections`,
-    detail: remainder > 0 ? `${shown.join(", ")}, and ${remainder} more.` : `${shown.join(", ")}.`,
-    differingLabels: labels,
+    detail: `${factsSentence}${sharedSentence}`,
+    differingLabels: differing.map((row) => row.label),
+    matchingLabels,
   };
 }
 

@@ -175,6 +175,36 @@ describe("Saved hub — Saved Research", () => {
     expect(screen.getByText(/Dimensions compare-dimensions\/1\.1\.0/)).toBeInTheDocument();
     expect(screen.getByText(/Watchlist: Quick Watchlist/)).toBeInTheDocument();
   });
+
+  it("falls back gracefully to the current fixture snapshot and a legacy dimensions label for a comparison saved before this metadata existed", async () => {
+    const now = new Date().toISOString();
+    window.localStorage.setItem(
+      "registry-hub:saved-research:v1",
+      JSON.stringify([
+        {
+          id: "legacy-compare-1",
+          name: "Pre-metadata comparison",
+          kind: "compare-config",
+          summary: "Compare 2 organizations: Atlas Digital, Northstar Group",
+          createdAt: now,
+          updatedAt: now,
+          lastOpenedAt: now,
+          // Intentionally omits snapshotId, timeBasis, dimensionsVersion, and origin —
+          // the shape saved before this metadata was introduced.
+          params: { type: "organizations", ids: "Atlas Digital,Northstar Group" },
+          recordCountAtSave: 4,
+        },
+      ]),
+    );
+
+    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+
+    expect(await screen.findByText("Pre-metadata comparison")).toBeInTheDocument();
+    expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
+    expect(screen.getByText(/Time basis: Reveal Day \(pinned\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Dimensions pre-1\.1\.0 \(legacy\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Origin not recorded/)).toBeInTheDocument();
+  });
 });
 
 describe("Saved hub — changes since last visit", () => {

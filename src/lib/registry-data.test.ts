@@ -134,17 +134,17 @@ describe("shared entity and Explore filter helpers used by Saved Research and Wa
 });
 
 describe("deterministic Compare differencing, grouping, and delta helpers", () => {
-  const matchingRow: CompareRowLike = { label: "Regions", section: "round-activity", cells: [{ value: "Americas" }, { value: "Americas" }] };
-  const differingRow: CompareRowLike = { label: "2026 applications", section: "round-activity", cells: [{ value: 3 }, { value: 5 }] };
+  const matchingRow: CompareRowLike = { label: "Regions", section: "round-activity", cells: [{ value: "Americas", entityLabel: "Atlas Digital" }, { value: "Americas", entityLabel: "Northstar Group" }] };
+  const differingRow: CompareRowLike = { label: "2026 applications", section: "round-activity", cells: [{ value: 3, entityLabel: "Atlas Digital" }, { value: 5, entityLabel: "Northstar Group" }] };
   const stateDifferingRow: CompareRowLike = {
     label: "Historical market demand",
     section: "market-context",
-    cells: [{ value: "Not available — source not approved", state: "unavailable" }, { value: 42 }],
+    cells: [{ value: "Not available — source not approved", state: "unavailable", entityLabel: "Atlas Digital" }, { value: 42, entityLabel: "Northstar Group" }],
   };
   const bothUnavailableRow: CompareRowLike = {
     label: "Market demand",
     section: "market-context",
-    cells: [{ value: "Not comparable", state: "not-comparable" }, { value: "Not comparable", state: "not-comparable" }],
+    cells: [{ value: "Not comparable", state: "not-comparable", entityLabel: "Atlas Digital" }, { value: "Not comparable", state: "not-comparable", entityLabel: "Northstar Group" }],
   };
 
   it("flags a row as differing only when a cell's state+value diverges from the first selection", () => {
@@ -192,29 +192,40 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
     expect(grouped[0].section).toBe("round-activity");
   });
 
-  it("summarizes key differences deterministically without any score or winner language", () => {
+  it("summarizes key differences with the actual directional facts and meaningful shared dimensions, never any score or winner language", () => {
     const summary = summarizeCompareDifferences([matchingRow, differingRow, stateDifferingRow, bothUnavailableRow]);
 
     expect(summary.headline).toBe("2 of 4 dimensions differ across selections");
     expect(summary.differingLabels).toEqual(["2026 applications", "Historical market demand"]);
-    expect(summary.detail).not.toMatch(/win|best|worst|lead/i);
+    // Directional facts name the actual entity + value, not just the dimension.
+    expect(summary.detail).toContain("2026 applications — Atlas Digital 3, Northstar Group 5");
+    expect(summary.detail).toContain("Historical market demand — Atlas Digital unavailable, Northstar Group 42");
+    // "Regions" is a meaningful shared dimension (both sides have a real value); the two both-unavailable
+    // rows are not reported as "matching" — an absence of data on both sides is not a shared fact.
+    expect(summary.matchingLabels).toEqual(["Regions"]);
+    expect(summary.detail).toContain("Selections match on Regions");
+    expect(summary.detail).not.toMatch(/win|best|worst|lead|recommend|\bAI\b|\brank/i);
   });
 
-  it("reports when every shown dimension matches across the current selection", () => {
+  it("reports when every shown dimension matches, naming meaningful shared dimensions and excluding shared-absence rows", () => {
     const summary = summarizeCompareDifferences([matchingRow, bothUnavailableRow]);
     expect(summary.headline).toBe("All 2 dimensions match across selections");
     expect(summary.differingLabels).toEqual([]);
+    expect(summary.matchingLabels).toEqual(["Regions"]);
+    expect(summary.detail).toContain("including Regions");
   });
 
-  it("caps the listed differing dimensions and discloses the remainder count", () => {
+  it("caps the shown directional facts and discloses the remainder count", () => {
     const manyDiffering: CompareRowLike[] = Array.from({ length: 6 }, (_, index) => ({
       label: `Dimension ${index + 1}`,
       section: "round-activity" as const,
-      cells: [{ value: index }, { value: index + 1 }],
+      cells: [{ value: index, entityLabel: "Atlas Digital" }, { value: index + 1, entityLabel: "Northstar Group" }],
     }));
     const summary = summarizeCompareDifferences(manyDiffering);
 
     expect(summary.headline).toBe("6 of 6 dimensions differ across selections");
-    expect(summary.detail).toBe("Dimension 1, Dimension 2, Dimension 3, Dimension 4, and 2 more.");
+    expect(summary.detail).toBe(
+      "Dimension 1 — Atlas Digital 0, Northstar Group 1; Dimension 2 — Atlas Digital 1, Northstar Group 2; Dimension 3 — Atlas Digital 2, Northstar Group 3; and 3 more dimensions also differ.",
+    );
   });
 });
