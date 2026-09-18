@@ -115,12 +115,37 @@ export const compareSectionOrder: CompareSectionId[] = [
   "market-context",
 ];
 
-export const compareSectionLabels: Record<CompareSectionId, string> = {
-  "round-activity": "Round Activity",
-  "historical-participation": "Historical Participation",
-  "existing-portfolio": "Existing Portfolio",
-  "market-context": "Market Context",
+/**
+ * Section labels are entity-type-aware even though every entity type shares
+ * the same section ids, row-to-section assignment, and comparison engine —
+ * only the display label changes to match what the rows in that section
+ * actually mean for the entity type being compared (e.g. a single
+ * application doesn't have a "portfolio", but it does have "details").
+ */
+export const compareSectionLabelsByEntityType: Record<EntityType, Record<CompareSectionId, string>> = {
+  organizations: {
+    "round-activity": "Round Activity",
+    "historical-participation": "Historical Participation",
+    "existing-portfolio": "Existing Portfolio",
+    "market-context": "Market Context",
+  },
+  applications: {
+    "round-activity": "Application Details",
+    "historical-participation": "Historical Participation",
+    "existing-portfolio": "Application Context",
+    "market-context": "Market Context",
+  },
+  categories: {
+    "round-activity": "Round Composition",
+    "historical-participation": "Historical Participation",
+    "existing-portfolio": "Category Footprint",
+    "market-context": "Market Context",
+  },
 };
+
+export function compareSectionLabel(entityType: EntityType, section: CompareSectionId): string {
+  return compareSectionLabelsByEntityType[entityType][section];
+}
 
 export type CompareCellLike = { value: unknown; state?: "unavailable" | "not-comparable"; entityLabel?: string };
 export type CompareRowLike = { label: string; section: CompareSectionId; cells: CompareCellLike[] };
@@ -151,18 +176,26 @@ export function numericCellDelta(cells: CompareCellLike[], index: number): numbe
   return value - baseline;
 }
 
-export function groupCompareRowsBySection<T extends CompareRowLike>(rows: T[]) {
+export function groupCompareRowsBySection<T extends CompareRowLike>(rows: T[], entityType: EntityType) {
   return compareSectionOrder
-    .map((section) => ({ section, label: compareSectionLabels[section], rows: rows.filter((row) => row.section === section) }))
+    .map((section) => ({ section, label: compareSectionLabel(entityType, section), rows: rows.filter((row) => row.section === section) }))
     .filter((group) => group.rows.length > 0);
 }
 
 export type CompareDifferenceSummary = {
   headline: string;
-  detail: string;
+  /** Up to KEY_FINDING_LIMIT deterministic, evidence-neutral facts, ranked by meaningfulness. */
+  topFacts: string[];
+  /** The remaining differing-dimension facts, in table order, revealed via "View all N differences". */
+  remainingFacts: string[];
+  /** A concise sentence naming meaningful dimensions every selection shares, or "" when there is none to state. */
+  matchingSentence: string;
   differingLabels: string[];
   matchingLabels: string[];
 };
+
+/** Cap on findings shown before requiring "View all N differences" to reveal the rest. */
+const KEY_FINDING_LIMIT = 4;
 
 function formatCompareCellForSummary(cell: CompareCellLike): string {
   if (cell.state === "unavailable") return "unavailable";
@@ -183,17 +216,38 @@ function joinWithRemainder(labels: string[], cap: number): string {
 }
 
 /**
- * Deterministic, evidence-neutral summary: states the actual directional
- * facts for dimensions that differ (which entity holds which value) and
- * names meaningful dimensions every selection shares — "meaningful" meaning
- * the shared value is a known fact, not merely a shared absence of data
- * (e.g. two entities both lacking a market-demand figure is not reported as
- * a match). Never ranks, scores, or declares a "better"/"winning" entity —
- * that judgment is out of scope for this product.
+ * Ranks a differing row by how meaningful/concrete its fact is: a real
+ * numeric comparison is the most immediately meaningful, a categorical
+ * (string) difference is next, and a difference driven by one side simply
+ * lacking data (an "unavailable"/"not-comparable" state) is least meaningful
+ * — it's a data-coverage note, not a like-for-like value comparison.
+ */
+function rowMeaningfulnessRank(row: CompareRowLike): 0 | 1 | 2 {
+  if (row.cells.some((cell) => cell.state)) return 2;
+  return row.cells.every((cell) => typeof cell.value === "number") ? 0 : 1;
+}
+
+/** For numeric rows, the spread between the smallest and largest value — a rough, deterministic proxy for how notable the difference is. */
+function rowNumericSpread(row: CompareRowLike): number {
+  const values = row.cells.map((cell) => cell.value).filter((value): value is number => typeof value === "number");
+  return values.length ? Math.max(...values) - Math.min(...values) : 0;
+}
+
+/**
+ * Deterministic, evidence-neutral summary: selects a concise, ranked set of
+ * findings that state the actual directional facts for dimensions that
+ * differ (which entity holds which value), with the rest revealed on demand
+ * rather than crammed into the initial view. Also names meaningful
+ * dimensions every selection shares — "meaningful" meaning the shared value
+ * is a known fact, not merely a shared absence of data (e.g. two entities
+ * both lacking a market-demand figure is not reported as a match). Never
+ * ranks, scores, or declares a "better"/"winning" entity, and never infers
+ * beyond what the rows state — that judgment is out of scope for this
+ * product.
  */
 export function summarizeCompareDifferences(rows: CompareRowLike[]): CompareDifferenceSummary {
   if (!rows.length) {
-    return { headline: "No dimensions to compare yet", detail: "Select at least two entities to see key differences.", differingLabels: [], matchingLabels: [] };
+    return { headline: "No dimensions to compare yet", topFacts: [], remainingFacts: [], matchingSentence: "Select at least two entities to see key differences.", differingLabels: [], matchingLabels: [] };
   }
 
   const differing = rows.filter(rowHasDifference);
@@ -204,7 +258,9 @@ export function summarizeCompareDifferences(rows: CompareRowLike[]): CompareDiff
   if (!differing.length) {
     return {
       headline: `All ${rows.length} dimensions match across selections`,
-      detail: matchingLabels.length
+      topFacts: [],
+      remainingFacts: [],
+      matchingSentence: matchingLabels.length
         ? `Every selection matches on all ${rows.length} shown dimensions, including ${joinWithRemainder(matchingLabels, 4)}.`
         : `Every selection matches on all ${rows.length} shown dimensions.`,
       differingLabels: [],
@@ -212,16 +268,22 @@ export function summarizeCompareDifferences(rows: CompareRowLike[]): CompareDiff
     };
   }
 
-  const shownFacts = differing.slice(0, 3).map(describeDifferingRowFacts);
-  const factRemainder = differing.length - shownFacts.length;
-  const factsSentence = factRemainder > 0
-    ? `${shownFacts.join("; ")}; and ${factRemainder} more dimension${factRemainder === 1 ? "" : "s"} also differ.`
-    : `${shownFacts.join("; ")}.`;
-  const sharedSentence = matchingLabels.length ? ` Selections match on ${joinWithRemainder(matchingLabels, 4)}.` : "";
+  const ranked = differing
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => {
+      const rankDiff = rowMeaningfulnessRank(a.row) - rowMeaningfulnessRank(b.row);
+      if (rankDiff !== 0) return rankDiff;
+      const spreadDiff = rowNumericSpread(b.row) - rowNumericSpread(a.row);
+      if (spreadDiff !== 0) return spreadDiff;
+      return a.index - b.index; // stable, deterministic tie-break matching table order
+    })
+    .map((entry) => entry.row);
 
   return {
     headline: `${differing.length} of ${rows.length} dimensions differ across selections`,
-    detail: `${factsSentence}${sharedSentence}`,
+    topFacts: ranked.slice(0, KEY_FINDING_LIMIT).map(describeDifferingRowFacts),
+    remainingFacts: ranked.slice(KEY_FINDING_LIMIT).map(describeDifferingRowFacts),
+    matchingSentence: matchingLabels.length ? `Selections match on ${joinWithRemainder(matchingLabels, 4)}.` : "",
     differingLabels: differing.map((row) => row.label),
     matchingLabels,
   };

@@ -185,6 +185,29 @@ describe("Compare interactions", () => {
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("labels the same sections differently per entity type while comparing the same underlying dimensions", () => {
+    const { unmount } = render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    expect(screen.getAllByText("Round Activity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Existing Portfolio").length).toBeGreaterThan(0);
+    unmount();
+
+    const { unmount: unmountApplications } = render(<CommandCenter view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
+    expect(screen.getAllByText("Application Details").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Application Context").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Round Activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("Existing Portfolio")).not.toBeInTheDocument();
+    unmountApplications();
+
+    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
+    expect(screen.getAllByText("Round Composition").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Category Footprint").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Round Activity")).not.toBeInTheDocument();
+    expect(screen.queryByText("Existing Portfolio")).not.toBeInTheDocument();
+    // Historical Participation and Market Context are shared/generic labels across entity types.
+    expect(screen.getAllByText("Historical Participation").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Market Context").length).toBeGreaterThan(0);
+  });
+
   it("shows a deterministic Key differences summary with actual directional facts and shared dimensions, never AI or winner language", () => {
     render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
@@ -238,6 +261,33 @@ describe("Compare interactions", () => {
     const headerAfter = screen.getByRole("columnheader", { name: /Northstar Group/ });
     expect(within(headerAfter).getByText("Reference")).toBeInTheDocument();
     expect(screen.getAllByText("(+1 vs Northstar Group)").length).toBeGreaterThan(0);
+  });
+
+  it("caps Key differences to a concise, ranked set and reveals the rest via 'View all N differences'", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group,Verde Cooperative,Future MENA" }} />);
+
+    const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
+    const initialFindings = within(summarySection).getAllByRole("listitem");
+    expect(initialFindings.length).toBeLessThanOrEqual(4);
+
+    const viewAllButton = screen.getByRole("button", { name: /^View all \d+ differences$/ });
+    await user.click(viewAllButton);
+
+    const expandedFindings = within(summarySection).getAllByRole("listitem");
+    expect(expandedFindings.length).toBeGreaterThan(initialFindings.length);
+    expect(screen.getByRole("button", { name: "Show fewer differences" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show fewer differences" }));
+    expect(within(summarySection).getAllByRole("listitem")).toHaveLength(initialFindings.length);
+  });
+
+  it("scales the Key differences summary down to a single concise finding for a two-entity comparison with one real difference", () => {
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
+    expect(screen.queryByRole("button", { name: /View all/ })).not.toBeInTheDocument();
+    expect(within(summarySection).getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
   it("uses a neutral, non-amber tint for difference affordances, reserving amber for warning/evidence banners", () => {

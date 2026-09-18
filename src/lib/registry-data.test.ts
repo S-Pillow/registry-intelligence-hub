@@ -175,7 +175,7 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
       { label: "Categories", section: "existing-portfolio", cells: [] },
       { label: "Participation status", section: "historical-participation", cells: [] },
     ];
-    const grouped = groupCompareRowsBySection(rows);
+    const grouped = groupCompareRowsBySection(rows, "organizations");
 
     expect(grouped.map((group) => group.label)).toEqual([
       "Round Activity",
@@ -187,35 +187,58 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
   });
 
   it("omits empty sections rather than rendering a heading with no dimensions", () => {
-    const grouped = groupCompareRowsBySection([{ label: "2026 applications", section: "round-activity", cells: [] }]);
+    const grouped = groupCompareRowsBySection([{ label: "2026 applications", section: "round-activity", cells: [] }], "organizations");
     expect(grouped).toHaveLength(1);
     expect(grouped[0].section).toBe("round-activity");
   });
 
-  it("summarizes key differences with the actual directional facts and meaningful shared dimensions, never any score or winner language", () => {
+  it("uses the same section ids, row assignment, and comparison engine across entity types but chooses semantically correct labels per type", () => {
+    const rows: CompareRowLike[] = [
+      { label: "2026 applications", section: "round-activity", cells: [] },
+      { label: "Organizations", section: "existing-portfolio", cells: [] },
+    ];
+
+    const organizationLabels = groupCompareRowsBySection(rows, "organizations").map((group) => group.label);
+    const applicationLabels = groupCompareRowsBySection(rows, "applications").map((group) => group.label);
+    const categoryLabels = groupCompareRowsBySection(rows, "categories").map((group) => group.label);
+
+    expect(organizationLabels).toEqual(["Round Activity", "Existing Portfolio"]);
+    expect(applicationLabels).toEqual(["Application Details", "Application Context"]);
+    expect(categoryLabels).toEqual(["Round Composition", "Category Footprint"]);
+    // Same rows, same sections, same order — only the label text differs by entity type.
+    expect(groupCompareRowsBySection(rows, "organizations").map((group) => group.section)).toEqual(
+      groupCompareRowsBySection(rows, "categories").map((group) => group.section),
+    );
+  });
+
+  it("summarizes key differences with ranked, evidence-neutral facts (numeric before availability-state) and meaningful shared dimensions, never any score or winner language", () => {
     const summary = summarizeCompareDifferences([matchingRow, differingRow, stateDifferingRow, bothUnavailableRow]);
 
     expect(summary.headline).toBe("2 of 4 dimensions differ across selections");
     expect(summary.differingLabels).toEqual(["2026 applications", "Historical market demand"]);
-    // Directional facts name the actual entity + value, not just the dimension.
-    expect(summary.detail).toContain("2026 applications — Atlas Digital 3, Northstar Group 5");
-    expect(summary.detail).toContain("Historical market demand — Atlas Digital unavailable, Northstar Group 42");
+    // A real numeric comparison ranks ahead of a difference driven by one side simply lacking data.
+    expect(summary.topFacts).toEqual([
+      "2026 applications — Atlas Digital 3, Northstar Group 5",
+      "Historical market demand — Atlas Digital unavailable, Northstar Group 42",
+    ]);
+    expect(summary.remainingFacts).toEqual([]);
     // "Regions" is a meaningful shared dimension (both sides have a real value); the two both-unavailable
     // rows are not reported as "matching" — an absence of data on both sides is not a shared fact.
     expect(summary.matchingLabels).toEqual(["Regions"]);
-    expect(summary.detail).toContain("Selections match on Regions");
-    expect(summary.detail).not.toMatch(/win|best|worst|lead|recommend|\bAI\b|\brank/i);
+    expect(summary.matchingSentence).toBe("Selections match on Regions.");
+    expect([...summary.topFacts, summary.matchingSentence].join(" ")).not.toMatch(/win|best|worst|lead|recommend|\bAI\b|\brank/i);
   });
 
   it("reports when every shown dimension matches, naming meaningful shared dimensions and excluding shared-absence rows", () => {
     const summary = summarizeCompareDifferences([matchingRow, bothUnavailableRow]);
     expect(summary.headline).toBe("All 2 dimensions match across selections");
     expect(summary.differingLabels).toEqual([]);
+    expect(summary.topFacts).toEqual([]);
     expect(summary.matchingLabels).toEqual(["Regions"]);
-    expect(summary.detail).toContain("including Regions");
+    expect(summary.matchingSentence).toContain("including Regions");
   });
 
-  it("caps the shown directional facts and discloses the remainder count", () => {
+  it("caps the initial findings at a concise, deterministic set and reveals the rest as remainingFacts for a 'View all' affordance", () => {
     const manyDiffering: CompareRowLike[] = Array.from({ length: 6 }, (_, index) => ({
       label: `Dimension ${index + 1}`,
       section: "round-activity" as const,
@@ -224,8 +247,22 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
     const summary = summarizeCompareDifferences(manyDiffering);
 
     expect(summary.headline).toBe("6 of 6 dimensions differ across selections");
-    expect(summary.detail).toBe(
-      "Dimension 1 — Atlas Digital 0, Northstar Group 1; Dimension 2 — Atlas Digital 1, Northstar Group 2; Dimension 3 — Atlas Digital 2, Northstar Group 3; and 3 more dimensions also differ.",
-    );
+    expect(summary.topFacts).toEqual([
+      "Dimension 1 — Atlas Digital 0, Northstar Group 1",
+      "Dimension 2 — Atlas Digital 1, Northstar Group 2",
+      "Dimension 3 — Atlas Digital 2, Northstar Group 3",
+      "Dimension 4 — Atlas Digital 3, Northstar Group 4",
+    ]);
+    expect(summary.remainingFacts).toEqual([
+      "Dimension 5 — Atlas Digital 4, Northstar Group 5",
+      "Dimension 6 — Atlas Digital 5, Northstar Group 6",
+    ]);
+    expect(summary.topFacts.length + summary.remainingFacts.length).toBe(summary.differingLabels.length);
+  });
+
+  it("scales down cleanly to a single finding for a two-entity, single-difference comparison (no 'View all' needed)", () => {
+    const summary = summarizeCompareDifferences([matchingRow, differingRow]);
+    expect(summary.topFacts).toEqual(["2026 applications — Atlas Digital 3, Northstar Group 5"]);
+    expect(summary.remainingFacts).toEqual([]);
   });
 });

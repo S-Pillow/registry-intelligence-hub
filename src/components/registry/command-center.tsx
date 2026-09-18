@@ -618,9 +618,10 @@ export type CompareParams = {
 };
 
 /**
- * Compare v1 — frozen. Sections, dimensions, diff/reference model, and
- * persisted comparison metadata are stable; only fixes are in scope here.
- * New Compare capabilities (set-difference UI, cohort comparison, etc.)
+ * Compare v1 — fully frozen (semantic cleanup complete, no more v1 work
+ * planned). Sections, dimensions, diff/reference model, and persisted
+ * comparison metadata are stable. New Compare capabilities (set-difference
+ * UI, cohort comparison, set-as-reference interaction, new sections, etc.)
  * belong in a v2 proposal, not incremental edits to this component.
  */
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
@@ -634,6 +635,8 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   const [compactAdd, setCompactAdd] = useState("");
   const [diffMode, setDiffMode] = useState<"all" | "differences">("all");
   const [selectorExpanded, setSelectorExpanded] = useState(true);
+  const [showAllDifferences, setShowAllDifferences] = useState(false);
+  const [lastDifferencesSelectionKey, setLastDifferencesSelectionKey] = useState("");
   const [originContext] = useState(() => initial.origin || "Direct entity selection in Compare");
   const options = useMemo(() => listEntityOptions(type), [type]);
   const singular = type === "categories" ? "category" : type.slice(0, -1);
@@ -713,8 +716,15 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   const referenceLabel = entities[0]?.label;
 
   const visibleRows = useMemo(() => diffMode === "differences" ? rows.filter(rowHasDifference) : rows, [rows, diffMode]);
-  const sections = useMemo(() => groupCompareRowsBySection(visibleRows), [visibleRows]);
+  const sections = useMemo(() => groupCompareRowsBySection(visibleRows, type), [visibleRows, type]);
   const differenceSummary = useMemo(() => summarizeCompareDifferences(rows), [rows]);
+  // Collapse "View all differences" back down whenever the selection changes, so a new
+  // comparison always starts with the concise ranked findings, not a stale expanded list.
+  const differencesSelectionKey = `${type}:${selected.join(",")}`;
+  if (differencesSelectionKey !== lastDifferencesSelectionKey) {
+    setLastDifferencesSelectionKey(differencesSelectionKey);
+    setShowAllDifferences(false);
+  }
   const exploreHref = `/tools/registry-intelligence-hub/explore?entity=${type}`;
 
   return (
@@ -795,10 +805,20 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       {state === "loading" ? <LoadingState /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
         <>
           <section className="mb-4 flex flex-col justify-between gap-3 rounded-xl border border-slate-300 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
-            <div aria-live="polite">
+            <div aria-live="polite" className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-600">Key differences</p>
               <p className="mt-1 text-sm font-bold text-slate-900">{differenceSummary.headline}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-700">{differenceSummary.detail}</p>
+              {differenceSummary.topFacts.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-slate-700">
+                  {(showAllDifferences ? [...differenceSummary.topFacts, ...differenceSummary.remainingFacts] : differenceSummary.topFacts).map((fact) => <li key={fact}>{fact}</li>)}
+                </ul>
+              )}
+              {differenceSummary.remainingFacts.length > 0 && (
+                <button type="button" onClick={() => setShowAllDifferences((current) => !current)} className="mt-2 text-xs font-bold text-[#006a56] hover:underline">
+                  {showAllDifferences ? "Show fewer differences" : `View all ${differenceSummary.differingLabels.length} differences`}
+                </button>
+              )}
+              {differenceSummary.matchingSentence && <p className="mt-2 text-xs leading-5 text-slate-600">{differenceSummary.matchingSentence}</p>}
             </div>
             <div className="inline-flex shrink-0 rounded-lg border border-slate-300 bg-slate-50 p-1" role="group" aria-label="Dimension filter">
               <button type="button" aria-pressed={diffMode === "all"} onClick={() => setDiffMode("all")} className={`rounded-md px-3 py-1.5 text-xs font-bold ${diffMode === "all" ? "bg-[#007d65] text-white" : "text-slate-600 hover:text-slate-900"}`}>All dimensions</button>
