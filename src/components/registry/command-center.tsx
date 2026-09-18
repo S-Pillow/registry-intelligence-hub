@@ -1,16 +1,16 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  BarChart3,
   BookOpen,
   CheckCircle2,
   ChevronRight,
   CircleAlert,
   Clock3,
   Database,
+  Eye,
   ExternalLink,
   FileClock,
   GitCompareArrows,
@@ -20,6 +20,8 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Star,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +42,37 @@ import {
 type ViewState = "ready" | "loading" | "empty" | "error";
 
 const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
+const lensInterpretations: Record<string, string> = {
+  all: "The rehearsal fixture points to concentrated portfolios, increased IDN representation, and two initial contention clusters worth coordinated review.",
+  commercial: "Portfolio concentration and contention expose where account research may be most efficient; they are investigation priorities, not sales recommendations.",
+  strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
+  marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
+};
+
+type InvestigationKind = "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
+type InvestigationItem = {
+  id: string;
+  label: string;
+  kind: InvestigationKind;
+  records: readonly Application[];
+};
+
+type InvestigationContextValue = {
+  investigate: (item: InvestigationItem) => void;
+  addCompare: (item: InvestigationItem) => void;
+  removeCompare: (id: string) => void;
+  toggleWatch: (item: InvestigationItem) => void;
+  compareItems: InvestigationItem[];
+  watchedIds: Set<string>;
+};
+
+const InvestigationContext = createContext<InvestigationContextValue | null>(null);
+
+function useInvestigation() {
+  const value = useContext(InvestigationContext);
+  if (!value) throw new Error("Investigation controls require CommandCenter context");
+  return value;
+}
 
 function ShellHeader() {
   return (
@@ -107,62 +140,169 @@ function ProvenanceSheet({
   records,
   trigger,
   triggerClassName,
+  kind = "dataset",
+  id,
 }: {
   label: string;
   records?: readonly Application[];
   trigger?: ReactNode;
   triggerClassName?: string;
+  kind?: InvestigationKind;
+  id?: string;
 }) {
+  const { investigate } = useInvestigation();
+  const item = {
+    id: id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    label,
+    kind,
+    records: records ?? registryFixture.applications,
+  };
+
   return (
-    <Sheet>
-      <SheetTrigger
-        className={triggerClassName ?? "inline-flex size-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"}
-        aria-label={`View evidence for ${label}`}
-      >
-        {trigger ?? <Info className="size-4" />}
-      </SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto bg-white sm:max-w-lg">
-        <SheetHeader className="border-b px-6 py-5">
-          <Badge variant="outline" className="mb-2 border-emerald-200 text-[#006a56]">EVIDENCE & METHOD</Badge>
-          <SheetTitle className="text-xl">{label}</SheetTitle>
-          <SheetDescription>Trace this claim to its fixture records and deterministic method.</SheetDescription>
-        </SheetHeader>
-        <div className="space-y-6 px-6 pb-8">
-          <section>
-            <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-500">SOURCE SNAPSHOT</h3>
-            <dl className="grid grid-cols-[110px_1fr] gap-y-3 text-sm">
-              <dt className="text-slate-500">Evidence class</dt><dd className="font-medium">Authoritative fact (rehearsal copy)</dd>
-              <dt className="text-slate-500">Source</dt><dd><a className="inline-flex items-center gap-1 text-[#006a56] underline" href={registryFixture.source.url} target="_blank" rel="noreferrer">{registryFixture.source.name}<ExternalLink className="size-3" /></a></dd>
-              <dt className="text-slate-500">Snapshot ID</dt><dd className="break-all font-mono text-xs">{registryFixture.snapshotId}</dd>
-              <dt className="text-slate-500">Retrieved</dt><dd>{new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</dd>
-              <dt className="text-slate-500">Parser</dt><dd className="font-mono text-xs">{registryFixture.parserVersion}</dd>
-            </dl>
-          </section>
-          <section className="rounded-xl border bg-slate-50 p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><BarChart3 className="size-4 text-[#007d65]" />Transformation</div>
-            <p className="text-sm leading-6 text-slate-600">Records are grouped and counted by deterministic TypeScript functions. Unknown values are never substituted with zero.</p>
-            <code className="mt-3 block rounded bg-slate-900 p-3 text-xs text-emerald-200">{registryFixture.methodVersion}</code>
-          </section>
-          {records && (
-            <section>
-              <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-500">SUPPORTING RECORDS · {records.length}</h3>
-              <div className="space-y-2">
-                {records.map((record) => (
-                  <div key={record.id} className="rounded-lg border p-3 text-sm">
-                    <div className="flex items-center justify-between"><span className="font-mono font-semibold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
-                    <p className="mt-1 text-slate-500">{record.organization} · {record.category}</p>
+    <button
+      type="button"
+      className={triggerClassName ?? "inline-flex size-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"}
+      aria-label={`View intelligence for ${label}`}
+      onClick={() => investigate(item)}
+    >
+      {trigger ?? <Info className="size-4" />}
+    </button>
+  );
+}
+
+function IntelligenceDrawer({
+  item,
+  onClose,
+}: {
+  item: InvestigationItem | null;
+  onClose: () => void;
+}) {
+  const [showFull, setShowFull] = useState(false);
+  const { addCompare, toggleWatch, watchedIds, compareItems } = useInvestigation();
+  const isDerived = item?.kind === "signal";
+  const canAct = item && !["coverage", "dataset"].includes(item.kind);
+  const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
+
+  return (
+    <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
+      <SheetContent className="w-full overflow-y-auto bg-white sm:max-w-xl">
+        {item && (
+          <>
+            <SheetHeader className="border-b border-slate-200 px-6 py-5">
+              <Badge variant="outline" className="mb-2 border-emerald-300 text-[#005c49]">INTELLIGENCE DRAWER · {item.kind.toUpperCase()}</Badge>
+              <SheetTitle className="pr-8 text-xl">{item.label}</SheetTitle>
+              <SheetDescription className="text-slate-600">Investigate without leaving the Command Center or losing your selected View.</SheetDescription>
+            </SheetHeader>
+            <div className="space-y-6 px-6 pb-8">
+              {canAct && (
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant="outline" onClick={() => setShowFull(true)}><Eye />View full</Button>
+                  <Button variant="outline" disabled={compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 2} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>
+                  <Button variant={watchedIds.has(item.id) ? "secondary" : "outline"} onClick={() => toggleWatch(item)}><Star />{watchedIds.has(item.id) ? "Watching" : "Watch"}</Button>
+                </div>
+              )}
+
+              {item.kind === "coverage" && (
+                <section>
+                  <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">COVERAGE EXCEPTIONS</h3>
+                  <div className="space-y-3">
+                    {registryFixture.sourceHealth.gaps.map((gap) => (
+                      <div key={gap.source} className="rounded-xl border border-slate-300 p-4">
+                        <div className="flex items-center justify-between gap-3"><strong className="text-sm">{gap.source}</strong><Badge variant={gap.status === "missing" ? "destructive" : "secondary"}>{gap.status.replaceAll("-", " ")}</Badge></div>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">{gap.detail}</p>
+                        <p className="mt-2 text-xs font-semibold text-slate-600">Affected: {gap.affected}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </section>
+              )}
+
+              <section className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Evidence completeness</p>
+                  <p className="mt-2 text-lg font-bold text-[#004c3d]">{item.kind === "coverage" ? `${registryFixture.sourceHealth.requiredFieldsCovered}/${registryFixture.sourceHealth.requiredFieldsTotal} fields` : `${item.records.length}/${item.records.length} records`}</p>
+                  <p className="mt-1 text-xs text-slate-700">Coverage of evidence used for this view</p>
+                </div>
+                <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Classification</p>
+                  <p className="mt-2 text-sm font-bold text-slate-900">{isDerived ? "Calculated insight" : "Deterministic source-backed fact"}</p>
+                  <p className="mt-1 text-xs text-slate-700">{isDerived ? "Confidence: High · versioned rule" : "Confidence: not applicable to deterministic facts"}</p>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SOURCE & METHOD</h3>
+                <dl className="grid grid-cols-[105px_1fr] gap-y-3 text-sm">
+                  <dt className="text-slate-600">Source</dt><dd><a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={registryFixture.source.url} target="_blank" rel="noreferrer">{registryFixture.source.name}<ExternalLink className="size-3" /></a></dd>
+                  <dt className="text-slate-600">Snapshot</dt><dd className="break-all font-mono text-xs">{registryFixture.snapshotId}</dd>
+                  <dt className="text-slate-600">Retrieved</dt><dd>{new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</dd>
+                  <dt className="text-slate-600">Method</dt><dd className="font-mono text-xs">{registryFixture.methodVersion}</dd>
+                </dl>
+              </section>
+
+              {item.kind !== "coverage" && (
+                <section>
+                  <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SUPPORTING RECORDS · {item.records.length}</h3>
+                  <div className="space-y-2">
+                    {displayedRecords?.map((record) => (
+                      <div key={record.id} className="rounded-lg border border-slate-300 p-3 text-sm">
+                        <div className="flex items-center justify-between"><span className="font-mono font-bold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
+                        <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {!showFull && item.records.length > 4 && <Button variant="ghost" className="mt-2 text-[#006a56]" onClick={() => setShowFull(true)}>Show all {item.records.length} records</Button>}
+                </section>
+              )}
+
+              <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{registryFixture.limitations[0]}</p>
               </div>
-            </section>
-          )}
-          <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            <CircleAlert className="mt-0.5 size-4 shrink-0" />
-            <p>{registryFixture.limitations[0]}</p>
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function ComparisonTray() {
+  const { compareItems, removeCompare } = useInvestigation();
+  const [expanded, setExpanded] = useState(false);
+  if (!compareItems.length) return null;
+
+  const dimensions = (item: InvestigationItem) => ({
+    records: item.records.length,
+    organizations: new Set(item.records.map((record) => record.organization)).size,
+    categories: new Set(item.records.map((record) => record.category)).size,
+    contention: item.records.filter((record) => record.contentionSet).length,
+  });
+
+  return (
+    <aside aria-label="Comparison selection tray" className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-4xl rounded-2xl border border-slate-700 bg-[#101923] p-3 text-white shadow-2xl">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="px-2 text-xs font-bold uppercase tracking-wider text-[#72dfb4]">Compare</span>
+        {compareItems.map((item) => <span key={item.id} className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold">{item.label}<button onClick={() => removeCompare(item.id)} aria-label={`Remove ${item.label} from comparison`} className="rounded p-0.5 hover:bg-white/15"><X className="size-3.5" /></button></span>)}
+        {compareItems.length < 2 && <span className="text-xs text-slate-300">Choose one more investigation</span>}
+        <Button className="ml-auto bg-[#72dfb4] text-[#0b3129] hover:bg-[#93e8c9]" disabled={compareItems.length < 2} onClick={() => setExpanded((value) => !value)}><GitCompareArrows />{expanded ? "Hide comparison" : `Compare ${compareItems.length}`}</Button>
+      </div>
+      {expanded && compareItems.length === 2 && (
+        <div className="mt-3 overflow-x-auto rounded-xl bg-white text-slate-950">
+          <table className="w-full min-w-[520px] text-sm">
+            <thead><tr className="border-b bg-slate-100"><th className="p-3 text-left text-xs uppercase tracking-wider text-slate-600">Dimension</th>{compareItems.map((item) => <th key={item.id} className="p-3 text-left">{item.label}</th>)}</tr></thead>
+            <tbody>
+              {[
+                ["Supporting records", "records"],
+                ["Organizations represented", "organizations"],
+                ["Categories represented", "categories"],
+                ["Applications in initial contention", "contention"],
+              ].map(([label, key]) => <tr key={key} className="border-b last:border-0"><th className="p-3 text-left font-medium text-slate-700">{label}</th>{compareItems.map((item) => <td key={item.id} className="p-3 font-mono font-bold">{dimensions(item)[key as keyof ReturnType<typeof dimensions>]}</td>)}</tr>)}
+              <tr><th className="p-3 text-left font-medium text-slate-700">Evidence state</th>{compareItems.map((item) => <td key={item.id} className="p-3 font-semibold text-[#006a56]">Complete for fixture</td>)}</tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -178,6 +318,8 @@ function MetricCards() {
       {roundPulse.map((metric) => (
         <ProvenanceSheet
           key={metric.id}
+          id={`metric-${metric.id}`}
+          kind="metric"
           label={`${metric.label}: ${metric.value}`}
           records={recordsFor(metric.filter)}
           triggerClassName="group min-h-32 rounded-xl border border-slate-300 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
@@ -216,7 +358,7 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
           {empty ? <Database /> : <CircleAlert />}
         </div>
         <h2 className="text-xl font-semibold">{empty ? "No approved baseline yet" : "Command Center unavailable"}</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500">{empty ? "The publication gate has not promoted a dataset. Existing tools remain unaffected." : "The rehearsal fixture could not be loaded. Try again or inspect Data Health."}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{empty ? "The publication gate has not promoted a dataset. Existing tools remain unaffected." : "The rehearsal fixture could not be loaded. Try again or inspect Data Health."}</p>
         <Button className="mt-6 bg-[#007d65] hover:bg-[#006a56]" onClick={() => router.push("/tools/registry-intelligence-hub")}>{empty ? "View rehearsal fixture" : "Try again"}</Button>
       </CardContent>
     </Card>
@@ -226,6 +368,10 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
 export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
+  const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
+  const [compareItems, setCompareItems] = useState<InvestigationItem[]>([]);
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
+  const searchRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => registryFixture.applications.filter((item) =>
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [query]);
@@ -239,8 +385,33 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
     return standoutInsights.filter((insight) => idsByLens[lens].includes(insight.id));
   }, [lens]);
 
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if (event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  const controls: InvestigationContextValue = {
+    investigate: setInvestigation,
+    addCompare: (item) => setCompareItems((current) => current.some((entry) => entry.id === item.id) || current.length >= 2 ? current : [...current, item]),
+    removeCompare: (id) => setCompareItems((current) => current.filter((item) => item.id !== id)),
+    toggleWatch: (item) => setWatchedIds((current) => {
+      const next = new Set(current);
+      if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+      return next;
+    }),
+    compareItems,
+    watchedIds,
+  };
+
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-slate-950">
+    <InvestigationContext.Provider value={controls}>
+    <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
       <HubNav />
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -248,7 +419,7 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> REHEARSAL READY</Badge>
-              <span className="text-xs text-slate-500">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
+              <span className="text-xs font-medium text-slate-600">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
               <ProvenanceSheet label="Dataset state" />
             </div>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Registry Intelligence Hub</h1>
@@ -257,7 +428,8 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
           <div className="flex flex-col gap-2 sm:flex-row">
             <label className="relative block">
               <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fixture records…" className="h-9 w-full rounded-lg border bg-white pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-[#007d65] sm:w-72" />
+              <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fixture records…" aria-label="Search fixture records" aria-keyshortcuts="/ Control+K Meta+K" className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65] sm:w-80" />
+              <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
             </label>
           </div>
         </div>
@@ -289,10 +461,17 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
         </section>
 
         <section aria-label="Dataset health" className="mb-5 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Snapshot</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span></div>
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Last checked</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Last changed</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
-          <div className="bg-emerald-50 px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Source coverage</span><span className="mt-1 flex items-center gap-2 text-sm font-bold text-[#004c3d]"><CheckCircle2 className="size-4" />{registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records · {((registryFixture.sourceHealth.requiredFieldsCovered / registryFixture.sourceHealth.requiredFieldsTotal) * 100).toFixed(1)}% fields</span></div>
+          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span></div>
+          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
+          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
+          <ProvenanceSheet
+            id="source-coverage"
+            kind="coverage"
+            label="Source coverage"
+            records={registryFixture.applications}
+            triggerClassName="group bg-emerald-50 px-4 py-3 text-left hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
+            trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Source coverage<ChevronRight className="size-4 transition group-hover:translate-x-0.5" /></span><span className="mt-1 flex items-center gap-2 text-sm font-bold text-[#004c3d]"><CheckCircle2 className="size-4" />{registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records · {((registryFixture.sourceHealth.requiredFieldsCovered / registryFixture.sourceHealth.requiredFieldsTotal) * 100).toFixed(1)}% fields</span></>}
+          />
         </section>
 
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -304,7 +483,7 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
         {state === "ready" && query && (
           <section aria-live="polite" className="mb-6 rounded-xl border border-emerald-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Fixture search results</h2><Badge variant="secondary">{filtered.length} records</Badge></div>
-            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <div className="rounded-lg border p-3 text-sm" key={item.id}><strong>.{item.string}</strong><p className="mt-1 text-slate-500">{item.organization} · {item.category}</p></div>)}</div> : <p className="py-5 text-center text-sm text-slate-500">No fixture records match “{query}”. Try an organization, string, or category.</p>}
+            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="applicant" label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No fixture records match “{query}”. Try an organization, string, or category.</p>}
           </section>
         )}
 
@@ -318,6 +497,26 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
               <MetricCards />
             </section>
 
+            <section className="mt-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm" aria-labelledby="glance-heading">
+              <div className="mb-3 flex items-center justify-between">
+                <div><p className="text-xs font-bold tracking-[0.14em] text-[#006a56]">REVEAL DAY AT A GLANCE</p><h2 id="glance-heading" className="mt-1 text-lg font-bold">Rehearsal vs normalized 2012 cohort</h2></div>
+                <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance versus 2012" records={registryFixture.applications} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                  ["Applications", registryFixture.applications.length, registryFixture.historicalContext.applications],
+                  ["Unique strings", new Set(registryFixture.applications.map((item) => item.string)).size, registryFixture.historicalContext.uniqueStrings],
+                  ["Organizations", new Set(registryFixture.applications.map((item) => item.organization)).size, registryFixture.historicalContext.organizations],
+                  ["IDN applications", registryFixture.applications.filter((item) => item.idn).length, registryFixture.historicalContext.idnApplications],
+                ].map(([label, current, previous]) => (
+                  <div key={label} className="rounded-lg bg-slate-100 p-3">
+                    <p className="text-xs font-bold text-slate-700">{label}</p>
+                    <p className="mt-2 flex items-baseline gap-2"><strong className="text-2xl text-slate-950">{current}</strong><span className="text-xs font-semibold text-slate-600">vs {previous} in 2012</span></p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <section className="mt-10" aria-labelledby="intelligence-heading">
               <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                 <div>
@@ -325,12 +524,17 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                   <h2 id="intelligence-heading" className="mt-1 text-2xl font-bold tracking-tight">Reveal Day Intelligence</h2>
                   <p className="mt-1 text-sm text-slate-600">{lens === "all" ? "All Intelligence" : lens === "strategy" ? "Product & Strategy" : lens.charAt(0).toUpperCase() + lens.slice(1)} view · ranked by materiality and evidence coverage</p>
                 </div>
-                <span className="text-xs font-medium text-slate-500">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
+                <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
+              </div>
+              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800">
+                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[lens]}
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
                 {visibleInsights.map((insight) => (
                   <ProvenanceSheet
                     key={insight.id}
+                    id={`signal-${insight.id}`}
+                    kind="signal"
                     label={insight.title}
                     records={insight.records}
                     triggerClassName="group rounded-xl border border-slate-300 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
@@ -350,16 +554,18 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                 <Card className="border-slate-300 shadow-sm">
                   <CardHeader className="flex-row items-start justify-between">
                     <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">{registryFixture.historicalContext.comparisonLabel}</p></div>
-                    <ProvenanceSheet label="Biggest changes versus 2012" records={registryFixture.applications} />
+                    <ProvenanceSheet kind="metric" label="Biggest changes versus 2012" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {biggestChanges.slice(0, 4).map((item) => (
                       <ProvenanceSheet
                         key={item.category}
+                        id={`category-change-${item.category}`}
+                        kind="category"
                         label={`${item.category}: ${item.previous} in 2012 to ${item.current} in rehearsal`}
                         records={registryFixture.applications.filter((record) => record.category === item.category)}
                         triggerClassName="group grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                        trigger={<><span><strong className="block text-sm">{item.category}</strong><span className="text-xs text-slate-500">{item.previous} → {item.current} applications</span></span><Badge className={item.change > 0 ? "bg-emerald-100 text-[#005c49]" : "bg-rose-100 text-rose-800"}>{item.change > 0 ? "+" : ""}{item.change}</Badge><ChevronRight className="size-4 text-[#007d65]" /></>}
+                        trigger={<><span><strong className="block text-sm">{item.category}</strong><span className="text-xs text-slate-600">{item.previous} → {item.current} applications</span></span><Badge className={item.change > 0 ? "bg-emerald-100 text-[#005c49]" : "bg-rose-100 text-rose-800"}>{item.change > 0 ? "+" : ""}{item.change}</Badge><ChevronRight className="size-4 text-[#007d65]" /></>}
                       />
                     ))}
                     <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why this stands out:</strong> Identity rose from one to three applications, Technology doubled, and Consumer and Community each declined in this normalized rehearsal cohort. These are fixture comparisons, not official round trends.</p>
@@ -369,12 +575,14 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                 <Card className="border-slate-300 shadow-sm">
                   <CardHeader className="flex-row items-start justify-between">
                     <div><p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANTS TO WATCH</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">Ranked signals, not lead scores or recommendations</p></div>
-                    <ProvenanceSheet label="Applicants to Watch method" records={registryFixture.applications} />
+                    <ProvenanceSheet kind="metric" label="Applicants to Watch method" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {applicantsToWatch.map((item, index) => (
                       <ProvenanceSheet
                         key={item.organization}
+                        id={`applicant-watch-${item.organization}`}
+                        kind="applicant"
                         label={`${item.organization} investigation profile`}
                         records={item.records}
                         triggerClassName="group grid w-full grid-cols-[32px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
@@ -388,14 +596,14 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
             </section>
 
             <section className="mt-10 border-t border-slate-300 pt-8" aria-labelledby="supporting-heading">
-              <div className="mb-5"><p className="text-xs font-bold tracking-[0.14em] text-slate-500">SUPPORTING CHARTS</p><h2 id="supporting-heading" className="mt-1 text-2xl font-bold">Explore the shape behind the signals</h2></div>
+              <div className="mb-5"><p className="text-xs font-bold tracking-[0.14em] text-slate-600">SUPPORTING CHARTS</p><h2 id="supporting-heading" className="mt-1 text-2xl font-bold">Explore the shape behind the signals</h2></div>
               <div className="grid gap-6 lg:grid-cols-5">
                 <Card className="border-slate-300 lg:col-span-3">
                   <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">LARGEST PORTFOLIOS</p><CardTitle className="text-lg">Application concentration</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     {portfolioRanking.slice(0, 5).map((item, index) => {
                       const records = registryFixture.applications.filter((record) => record.organization === item.organization);
-                      return <ProvenanceSheet key={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-500">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;
+                      return <ProvenanceSheet key={item.organization} id={`organization-${item.organization}`} kind="applicant" label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;
                     })}
                   </CardContent>
                 </Card>
@@ -404,7 +612,7 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
                   <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">APPLICATION MIX</p><CardTitle className="text-lg">Interest by category</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
                     {categoryMix.map((item, index) => (
-                      <ProvenanceSheet key={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
+                      <ProvenanceSheet key={item.category} id={`category-${item.category}`} kind="category" label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
                     ))}
                     <p className="pt-3 text-xs leading-5 text-slate-600">Market demand is <strong>not available</strong> pending source-rights review; no proxy is substituted.</p>
                   </CardContent>
@@ -412,13 +620,16 @@ export function CommandCenter({ state = "ready" }: { state?: ViewState }) {
               </div>
             </section>
 
-            <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               <span>Snapshot {registryFixture.snapshotId} · Method {registryFixture.methodVersion}</span>
               <span className="flex items-center gap-1"><BookOpen className="size-3.5" /> Catalog integration flag: <strong className="text-slate-700">disabled</strong></span>
             </footer>
           </>
         )}
       </main>
+      <IntelligenceDrawer item={investigation} onClose={() => setInvestigation(null)} />
+      <ComparisonTray />
     </div>
+    </InvestigationContext.Provider>
   );
 }

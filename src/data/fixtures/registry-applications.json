@@ -12,7 +12,27 @@
     "recordsCovered": 12,
     "recordsTotal": 12,
     "requiredFieldsCovered": 142,
-    "requiredFieldsTotal": 144
+    "requiredFieldsTotal": 144,
+    "gaps": [
+      {
+        "status": "not-yet-published",
+        "source": "ICANN Reveal Day publication",
+        "detail": "Two optional replacement/variant fields are absent from the rehearsal snapshot.",
+        "affected": "Replacement analysis and variant coverage"
+      },
+      {
+        "status": "not-public",
+        "source": "Historical market demand",
+        "detail": "No approved public or licensed source is registered for current demand measures.",
+        "affected": "Market Opportunity Map"
+      },
+      {
+        "status": "missing",
+        "source": "Organization stewardship review",
+        "detail": "Illustrative organization relationships have not received steward approval.",
+        "affected": "Organization confidence and portfolio grouping"
+      }
+    ]
   },
   "historicalContext": {
     "comparisonLabel": "Illustrative normalized 2012 rehearsal cohort",
