@@ -5,8 +5,8 @@
   "files": [
     {
       "path": "registry-applications.json",
-      "size": 4459,
-      "sha256": "a66a77e205c377ba55f68ad6bdc200020cc1e4ec699519f70bf3726104348183",
+      "size": 5045,
+      "sha256": "c2223bc9e62a358ea791b999bd40c39fe878d0ffe63ad6be4156b2c03c7382f0",
       "mediaType": "application/json"
     }
   ]

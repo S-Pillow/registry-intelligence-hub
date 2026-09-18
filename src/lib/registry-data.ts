@@ -1,6 +1,7 @@
 import fixture from "@/data/fixtures/registry-applications.json";
 
 export type Application = (typeof fixture.applications)[number];
+export type HistoricalContext = typeof fixture.historicalContext;
 export type EvidenceKind = "authoritative" | "calculated";
 
 export const registryFixture = fixture;
@@ -9,15 +10,15 @@ export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
-export function buildRoundPulse(applications: Application[]) {
+export function buildRoundPulse(applications: Application[], historical: HistoricalContext = fixture.historicalContext) {
   const organizations = uniqueCount(applications.map((item) => item.organization));
   return [
-    { id: "applications", label: "Applications", value: applications.length, delta: "+18% vs rehearsal cohort", filter: "all" },
-    { id: "strings", label: "Unique strings", value: uniqueCount(applications.map((item) => item.string)), delta: "2 initial identical sets", filter: "strings" },
-    { id: "organizations", label: "Organizations", value: organizations, delta: `${applications.length - organizations} portfolio overlap`, filter: "organizations" },
+    { id: "applications", label: "Applications", value: applications.length, delta: `+${applications.length - historical.applications} vs 2012 cohort`, filter: "all" },
+    { id: "strings", label: "Unique strings", value: uniqueCount(applications.map((item) => item.string)), delta: `+${uniqueCount(applications.map((item) => item.string)) - historical.uniqueStrings} vs 2012`, filter: "strings" },
+    { id: "organizations", label: "Organizations", value: organizations, delta: `+${organizations - historical.organizations} vs 2012`, filter: "organizations" },
     { id: "regions", label: "Regions", value: uniqueCount(applications.map((item) => item.region)), delta: `${uniqueCount(applications.map((item) => item.country))} countries`, filter: "regions" },
-    { id: "idn", label: "IDN applications", value: applications.filter((item) => item.idn).length, delta: "2 scripts represented", filter: "idn" },
-    { id: "contention", label: "Initial contention sets", value: uniqueCount(applications.flatMap((item) => item.contentionSet ? [item.contentionSet] : [])), delta: "Not final contention", filter: "contention" }
+    { id: "idn", label: "IDN applications", value: applications.filter((item) => item.idn).length, delta: `+${applications.filter((item) => item.idn).length - historical.idnApplications} vs 2012`, filter: "idn" },
+    { id: "contention", label: "Initial contention sets", value: uniqueCount(applications.flatMap((item) => item.contentionSet ? [item.contentionSet] : [])), delta: `${historical.contentionSets - uniqueCount(applications.flatMap((item) => item.contentionSet ? [item.contentionSet] : []))} fewer vs 2012`, filter: "contention" }
   ] as const;
 }
 
@@ -44,9 +45,40 @@ export function buildCategoryMix(applications: Application[]) {
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
 }
 
+export function buildBiggestChanges(applications: Application[], historical: HistoricalContext = fixture.historicalContext) {
+  const current = Object.fromEntries(buildCategoryMix(applications).map((item) => [item.category, item.count]));
+  return Object.entries(historical.categoryCounts)
+    .map(([category, previous]) => ({
+      category,
+      previous,
+      current: current[category] ?? 0,
+      change: (current[category] ?? 0) - previous,
+    }))
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change) || a.category.localeCompare(b.category));
+}
+
+export function buildApplicantsToWatch(applications: Application[]) {
+  return buildPortfolioRanking(applications).slice(0, 3).map((organization) => {
+    const records = applications.filter((item) => item.organization === organization.organization);
+    const categories = uniqueCount(records.map((item) => item.category));
+    const contention = records.filter((item) => item.contentionSet).length;
+    const idn = records.filter((item) => item.idn).length;
+    const reasons = [
+      organization.count > 1 ? `${organization.count}-application portfolio` : null,
+      categories > 1 ? `${categories} categories` : null,
+      contention ? `${contention} application${contention > 1 ? "s" : ""} in initial contention` : null,
+      idn ? `${idn} IDN application${idn > 1 ? "s" : ""}` : null,
+      organization.returning ? "returning participant" : "new participant",
+    ].filter((reason): reason is string => Boolean(reason));
+    return { ...organization, records, reasons };
+  });
+}
+
 export const roundPulse = buildRoundPulse(fixture.applications);
 export const portfolioRanking = buildPortfolioRanking(fixture.applications);
 export const categoryMix = buildCategoryMix(fixture.applications);
+export const biggestChanges = buildBiggestChanges(fixture.applications);
+export const applicantsToWatch = buildApplicantsToWatch(fixture.applications);
 
 export const standoutInsights = [
   {

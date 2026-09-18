@@ -4,7 +4,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import manifest from "@/data/fixtures/manifest.json";
 import fixture from "@/data/fixtures/registry-applications.json";
-import { buildCategoryMix, buildPortfolioRanking, buildRoundPulse } from "./registry-data";
+import {
+  buildApplicantsToWatch,
+  buildBiggestChanges,
+  buildCategoryMix,
+  buildPortfolioRanking,
+  buildRoundPulse,
+} from "./registry-data";
 
 describe("immutable registry fixture", () => {
   it("matches the declared snapshot hash and byte size", () => {
@@ -44,5 +50,27 @@ describe("deterministic intelligence calculations", () => {
 
     expect(mix.reduce((sum, item) => sum + item.count, 0)).toBe(fixture.applications.length);
     expect(mix[0]).toEqual({ category: "Technology", count: 4, percent: 33 });
+  });
+
+  it("ranks contextual changes by absolute movement against the fixture cohort", () => {
+    const changes = buildBiggestChanges(fixture.applications);
+
+    expect(changes[0]).toEqual({ category: "Technology", previous: 2, current: 4, change: 2 });
+    expect(changes.map((item) => item.category)).toEqual([
+      "Technology",
+      "Community",
+      "Consumer",
+      "Identity",
+      "Geographic",
+      "Media",
+    ]);
+  });
+
+  it("explains every applicant watch signal with transparent fixture rules", () => {
+    const watched = buildApplicantsToWatch(fixture.applications);
+
+    expect(watched.map((item) => item.organization)).toEqual(["Atlas Digital", "Kizuna Registry", "Northstar Group"]);
+    expect(watched[0].reasons).toEqual(["3-application portfolio", "2 categories", "returning participant"]);
+    expect(watched.every((item) => item.reasons.length > 0)).toBe(true);
   });
 });

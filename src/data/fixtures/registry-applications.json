@@ -4,8 +4,32 @@
   "baselineAt": "2026-09-16T14:00:00Z",
   "retrievedAt": "2026-09-16T14:07:32Z",
   "checkedAt": "2026-09-16T14:15:00Z",
+  "changedAt": "2026-09-16T14:07:32Z",
   "parserVersion": "registry-fixture/1.0.0",
   "methodVersion": "round-pulse/1.0.0",
+  "sourceHealth": {
+    "status": "healthy",
+    "recordsCovered": 12,
+    "recordsTotal": 12,
+    "requiredFieldsCovered": 142,
+    "requiredFieldsTotal": 144
+  },
+  "historicalContext": {
+    "comparisonLabel": "Illustrative normalized 2012 rehearsal cohort",
+    "applications": 10,
+    "uniqueStrings": 9,
+    "organizations": 7,
+    "idnApplications": 1,
+    "contentionSets": 3,
+    "categoryCounts": {
+      "Technology": 2,
+      "Identity": 1,
+      "Consumer": 3,
+      "Community": 2,
+      "Geographic": 1,
+      "Media": 1
+    }
+  },
   "source": {
     "name": "ICANN New gTLD Program",
     "url": "https://newgtldprogram.icann.org/",
