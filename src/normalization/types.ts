@@ -7,7 +7,12 @@
 export const PARSER_VERSION = "icann2012-parser/1.1.0";
 export const NORMALIZER_VERSION = "icann2012-normalizer/1.1.0";
 export const OVERRIDE_REGISTRY_VERSION = "override-registry/1.0.0";
+export const ORGANIZATION_PROMOTION_REGISTRY_VERSION = "organization-promotion-registry/1.0.0";
+export const ORGANIZATION_PROMOTION_METHOD_VERSION = "organization-promotion/1.0.0";
 export const BUILD_MANIFEST_VERSION = "normalization-build/1.0.0";
+
+/** First-class steward organization resolution state (Reveal Day promotion). */
+export type OrganizationPromotionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
 
 /** How a field value should be interpreted when absent or partial. */
 export type ValueSemantics =
@@ -157,10 +162,45 @@ export interface TldEntity extends NormalizedEntityBase {
   label: FieldValue<string>;
 }
 
+export interface ApplicantOrganizationPromotion {
+  organizationKey: string;
+  canonicalOrganizationName: string;
+  promotionState: OrganizationPromotionState;
+  confidence: "high" | "medium" | "low";
+  reviewState: "steward-approved" | "pending-review";
+  methodVersion: string;
+  evidence: string[];
+  promotionOpId: string;
+}
+
 export interface ApplicantEntity extends NormalizedEntityBase {
   entityKind: "applicant";
   legalName: FieldValue<string>;
   jurisdiction: FieldValue<string | null>;
+  /** Explicit steward promotion link — never inferred silently during rebuild. */
+  organizationPromotion?: ApplicantOrganizationPromotion;
+}
+
+export interface OrganizationPromotionOperation {
+  opId: string;
+  opVersion: 1;
+  organizationKey: string;
+  canonicalOrganizationName: string;
+  promotionState: OrganizationPromotionState;
+  confidence: "high" | "medium" | "low";
+  reviewState: "steward-approved" | "pending-review";
+  methodVersion: string;
+  evidence: string[];
+  applicationIds: string[];
+  reason: string;
+  author: string;
+  createdAt: string;
+}
+
+export interface OrganizationPromotionRegistry {
+  registryVersion: typeof ORGANIZATION_PROMOTION_REGISTRY_VERSION;
+  methodVersion: typeof ORGANIZATION_PROMOTION_METHOD_VERSION;
+  operations: OrganizationPromotionOperation[];
 }
 
 export interface OrganizationCandidate {
@@ -171,10 +211,24 @@ export interface OrganizationCandidate {
   sourceObservationIds: string[];
 }
 
+export interface PromotedOrganizationSummary {
+  organizationKey: string;
+  canonicalOrganizationName: string;
+  promotionState: OrganizationPromotionState;
+  memberApplicationIds: string[];
+  confidence: "high" | "medium" | "low";
+  reviewState: "steward-approved" | "pending-review";
+  methodVersion: string;
+  evidence: string[];
+  promotionOpIds: string[];
+}
+
 export interface OrganizationEntity extends NormalizedEntityBase {
   entityKind: "organization";
   /** Conservative resolution: candidates only, never a single forced match. */
   candidates: OrganizationCandidate[];
+  /** Present when rebuilt from explicit promotion operations (no silent merge). */
+  promotion?: PromotedOrganizationSummary;
 }
 
 export interface RegistryOperatorEntity extends NormalizedEntityBase {
@@ -256,6 +310,7 @@ export interface NormalizationQualityReport {
   parserVersion: string;
   normalizerVersion: string;
   overrideRegistryVersion: string;
+  organizationPromotionRegistryVersion?: string;
   inputContentHash: string;
   buildId: string;
   entityCounts: Record<EntityKind, number>;
@@ -272,6 +327,7 @@ export interface BuildManifest {
   parserVersion: string;
   normalizerVersion: string;
   overrideRegistryVersion: string;
+  organizationPromotionRegistryVersion?: string;
   inputContentHash: string;
   outputContentHash: string;
   builtAt: string;

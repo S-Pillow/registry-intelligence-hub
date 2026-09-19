@@ -16,5 +16,5 @@ Acquisition notes: `scripts/acquire-icann2012-reveal-day.md`
 ## Not in this bundle
 
 - Post-Reveal application status, withdrawals, delegations (`gtldresult.icann.org` HTML — not scraped)
-- Steward organization promotion (candidates-only / unavailable hints)
+- Full-round steward organization promotion — **partial** via `organization-promotions.json` (19 targeted ops; see Project docs `2012-organization-promotion.md`)
 - Administrative columns beyond the normalization coverage contract (preserved on parsed payload only)

@@ -21,6 +21,7 @@ export const FIXTURE_BUNDLE_REGISTRY: FixtureBundleDefinition[] = [
       "registry-operators.json",
       "secondary-applications.jsonl",
       "overrides.json",
+      "organization-promotions.json",
     ],
   },
   {
@@ -39,6 +40,7 @@ export const FIXTURE_BUNDLE_REGISTRY: FixtureBundleDefinition[] = [
       "contention-sets.json",
       "registry-operators.json",
       "overrides.json",
+      "organization-promotions.json",
     ],
   },
 ];

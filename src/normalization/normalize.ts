@@ -1,4 +1,5 @@
 import type { LoadedFixtureBundle } from "./load-bundle";
+import { applyOrganizationPromotions } from "./organization-promotion";
 import { applyOverrides } from "./overrides";
 import type {
   ApplicationEntity,
@@ -294,7 +295,8 @@ export function normalizeFromObservations(
     entities.push(ro);
   }
 
-  return applyOverrides(entities, loaded.overrides.operations);
+  const withOverrides = applyOverrides(entities, loaded.overrides.operations);
+  return applyOrganizationPromotions(withOverrides, loaded.organizationPromotions);
 }
 
 export function countByKind(entities: NormalizedEntity[]): Record<EntityKind, number> {

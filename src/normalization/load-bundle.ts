@@ -3,7 +3,14 @@ import { join } from "node:path";
 import { contentHash, sha256Hex } from "./hashes";
 import { parseRevealDayCsvText } from "./parse-reveal-csv";
 import { requireBundle } from "./registry";
-import type { ApplicationFixtureFormat, FixtureBundleDefinition, OverrideOperation, RawSnapshotRef } from "./types";
+import type {
+  ApplicationFixtureFormat,
+  FixtureBundleDefinition,
+  OrganizationPromotionRegistry,
+  OverrideOperation,
+  RawSnapshotRef,
+} from "./types";
+import { ORGANIZATION_PROMOTION_METHOD_VERSION, ORGANIZATION_PROMOTION_REGISTRY_VERSION } from "./types";
 
 export interface LoadedFixtureBundle {
   definition: FixtureBundleDefinition;
@@ -17,6 +24,7 @@ export interface LoadedFixtureBundle {
   contentionMembershipByApplicationId: Map<string, string>;
   registryOperators: { operators: Array<Record<string, unknown>> };
   overrides: { registryVersion: string; operations: OverrideOperation[] };
+  organizationPromotions: OrganizationPromotionRegistry;
   inputContentHash: string;
   roundAccounting?: {
     applicationRowCount: number;
@@ -73,6 +81,15 @@ export async function loadFixtureBundle(bundleId: string, workspaceRoot: string)
     join(base, "registry-operators.json"),
   );
   const overrides = await readJson<{ registryVersion: string; operations: OverrideOperation[] }>(join(base, "overrides.json"));
+  const organizationPromotions = await readJson<OrganizationPromotionRegistry>(
+    join(base, "organization-promotions.json"),
+  );
+  if (organizationPromotions.registryVersion !== ORGANIZATION_PROMOTION_REGISTRY_VERSION) {
+    throw new Error(`Unexpected organization promotion registry version for ${bundleId}`);
+  }
+  if (organizationPromotions.methodVersion !== ORGANIZATION_PROMOTION_METHOD_VERSION) {
+    throw new Error(`Unexpected organization promotion method version for ${bundleId}`);
+  }
 
   let applicationsPrimary: LoadedFixtureBundle["applicationLinesPrimary"] = [];
   let applicationsSecondary: LoadedFixtureBundle["applicationLinesSecondary"] = [];
@@ -124,6 +141,7 @@ export async function loadFixtureBundle(bundleId: string, workspaceRoot: string)
     contentionSets,
     registryOperators,
     overrides: overrides.operations,
+    organizationPromotions: organizationPromotions.operations,
   });
 
   const roundAccounting =
@@ -147,6 +165,7 @@ export async function loadFixtureBundle(bundleId: string, workspaceRoot: string)
     contentionMembershipByApplicationId,
     registryOperators,
     overrides,
+    organizationPromotions,
     inputContentHash,
     roundAccounting,
   };

@@ -10,6 +10,7 @@ import type { BuildManifest, NormalizationArtifacts } from "./types";
 import {
   BUILD_MANIFEST_VERSION,
   NORMALIZER_VERSION,
+  ORGANIZATION_PROMOTION_REGISTRY_VERSION,
   OVERRIDE_REGISTRY_VERSION,
   PARSER_VERSION,
 } from "./types";
@@ -28,7 +29,12 @@ export async function runNormalization(options: NormalizeOptions): Promise<Norma
   const observations = observationsFromParsedRecords(parsedRecords);
   const entities = normalizeFromObservations(loaded, parsedRecords, observations);
 
-  const buildId = buildIdFromInput(loaded.inputContentHash, [PARSER_VERSION, NORMALIZER_VERSION, OVERRIDE_REGISTRY_VERSION]);
+  const buildId = buildIdFromInput(loaded.inputContentHash, [
+    PARSER_VERSION,
+    NORMALIZER_VERSION,
+    OVERRIDE_REGISTRY_VERSION,
+    ORGANIZATION_PROMOTION_REGISTRY_VERSION,
+  ]);
 
   const limitations = [
     loaded.definition.coverageNote,
@@ -61,6 +67,7 @@ export async function runNormalization(options: NormalizeOptions): Promise<Norma
     parserVersion: PARSER_VERSION,
     normalizerVersion: NORMALIZER_VERSION,
     overrideRegistryVersion: OVERRIDE_REGISTRY_VERSION,
+    organizationPromotionRegistryVersion: ORGANIZATION_PROMOTION_REGISTRY_VERSION,
     inputContentHash: loaded.inputContentHash,
     builtAt: "2012-06-13T12:00:00.000Z",
     entityCount: entities.length,
