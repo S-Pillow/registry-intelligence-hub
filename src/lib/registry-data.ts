@@ -200,13 +200,10 @@ export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: st
 
 /** One-sentence Why this matters above Round Pulse (full `lensInterpretations` stays downstream). */
 export const lensWhyMattersCondensed: Record<Lens, string> = {
-  all: "Concentrated portfolios, IDN share, and initial contention clusters are the cross-lens signals worth coordinated review in this fixture.",
-  commercial:
-    "Portfolio concentration and contention exposure show where account research may be most efficient — investigation priorities, not sales recommendations.",
-  strategy:
-    "Category movement, IDN participation, and contention patterns show how this rehearsal cohort differs from the normalized 2012 fixture.",
-  marketing:
-    "IDN participation spans multiple regions and scripts, making geographic and language patterns the most relevant signals in this view.",
+  all: "This view balances portfolios, IDN representation, and contention clusters for a coordinated rehearsal read.",
+  commercial: "This view emphasizes applicant portfolios, organizations, and contention for efficient account research.",
+  strategy: "This view emphasizes how the round is structured and where participation patterns differ.",
+  marketing: "This view emphasizes cross-region and language patterns that may shape market narratives.",
 };
 
 export function lensWhyMattersCondensedLabel(lens: Lens) {

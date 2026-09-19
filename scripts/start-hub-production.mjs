@@ -17,6 +17,11 @@ function killListenersOnPort(targetPort) {
   } catch {
     // Nothing listening.
   }
+  try {
+    execSync("pkill -f 'next-server' 2>/dev/null || true", { stdio: "ignore", shell: true });
+  } catch {
+    // ignore
+  }
 }
 
 if (!skipBuild) {
@@ -26,7 +31,7 @@ if (!skipBuild) {
 
 console.log(`Stopping any stale next-server on ${host}:${port}…`);
 killListenersOnPort(port);
-await delay(400);
+await delay(1500);
 
 console.log(`Starting next start on http://${host}:${port}`);
 const child = spawn("npx", ["next", "start", "-H", host, "-p", port], {

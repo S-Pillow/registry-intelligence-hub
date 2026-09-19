@@ -55,7 +55,7 @@ describe("Command Center interactions", () => {
       "Marketing: Focuses on geographic reach, IDN participation, and themes that may shape external narratives.",
     );
     expect(condensedWhy()).toMatch(/Why this matters for Marketing:/);
-    expect(condensedWhy()).toMatch(/geographic and language patterns the most relevant signals/);
+    expect(condensedWhy()).toMatch(/cross-region and language patterns that may shape market narratives/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · MARKETING VIEW");
     expect(pulseSubtitle()).toBe("Geographic reach and IDN signals at a glance");
   });
