@@ -169,25 +169,57 @@ export const lensInterpretations: Record<Lens, string> = {
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
 
-/** Round Pulse section heading copy — same metric values, lens-specific framing above the fold. */
-export const lensRoundPulseCopy: Record<Lens, { title: string; subtitle: string }> = {
+/** Short line under View buttons in the dark panel — explains the active lens before scroll. */
+export const lensViewPanelLine: Record<Lens, string> = {
+  all: "All Intelligence: Surfaces portfolios, IDN representation, and contention clusters together for a balanced rehearsal read.",
+  commercial: "Commercial: Focuses on applicant portfolios, organizations, and contention.",
+  strategy: "Product & Strategy: Focuses on composition, IDN participation, and contention.",
+  marketing:
+    "Marketing: Focuses on geographic reach, IDN participation, and themes that may shape external narratives.",
+};
+
+/** Round Pulse eyebrow + subtitle (metric values unchanged). */
+export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: string }> = {
   all: {
-    title: "Round-wide rehearsal pulse",
-    subtitle: "All six fixture metrics at Reveal Day baseline — balanced read across portfolios, IDN, and contention.",
+    eyebrow: "ROUND PULSE · ALL INTELLIGENCE",
+    subtitle: "The rehearsal round at a glance",
   },
   commercial: {
-    title: "Portfolio & contention pulse",
-    subtitle: "Organizations and initial contention sets lead this View — account-research entry points, not recommendations.",
+    eyebrow: "ROUND PULSE · COMMERCIAL VIEW",
+    subtitle: "Applicant portfolios, organizations, and contention signals at a glance",
   },
   strategy: {
-    title: "Composition & structure pulse",
-    subtitle: "Regions, IDN share, and contention clusters frame how this rehearsal cohort differs from the 2012 fixture.",
+    eyebrow: "ROUND PULSE · PRODUCT & STRATEGY VIEW",
+    subtitle: "Composition, IDN participation, and contention signals at a glance",
   },
   marketing: {
-    title: "Participation & narrative pulse",
-    subtitle: "IDN and regional spread lead this View — evidence-backed themes only, not demand or success forecasts.",
+    eyebrow: "ROUND PULSE · MARKETING VIEW",
+    subtitle: "Geographic reach and IDN signals at a glance",
   },
 };
+
+/** One-sentence Why this matters above Round Pulse (full `lensInterpretations` stays downstream). */
+export const lensWhyMattersCondensed: Record<Lens, string> = {
+  all: "Concentrated portfolios, IDN share, and initial contention clusters are the cross-lens signals worth coordinated review in this fixture.",
+  commercial:
+    "Portfolio concentration and contention exposure show where account research may be most efficient — investigation priorities, not sales recommendations.",
+  strategy:
+    "Category movement, IDN participation, and contention patterns show how this rehearsal cohort differs from the normalized 2012 fixture.",
+  marketing:
+    "IDN participation spans multiple regions and scripts, making geographic and language patterns the most relevant signals in this view.",
+};
+
+export function lensWhyMattersCondensedLabel(lens: Lens) {
+  const name =
+    lens === "all"
+      ? "All Intelligence"
+      : lens === "strategy"
+        ? "Product & Strategy"
+        : lens === "commercial"
+          ? "Commercial"
+          : "Marketing";
+  return `Why this matters for ${name}`;
+}
 
 /** The record set a saved/briefed Explore view or Compare configuration resolves to right now — shared by Saved's change-since-visit count and Briefings' generator/drift disclosure. */
 export function recordsForParams(kind: "explore-view" | "compare-config", params: Record<string, string>): Application[] {

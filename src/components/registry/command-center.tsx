@@ -54,7 +54,10 @@ import {
   insightEmphasisForLens,
   investigationQueueLensNote,
   lensIntelligenceSubtitles,
-  lensRoundPulseCopy,
+  lensRoundPulseFraming,
+  lensViewPanelLine,
+  lensWhyMattersCondensed,
+  lensWhyMattersCondensedLabel,
   roundPulseEmphasisByLens,
   standoutInsightsForLens,
   summarizeCompareDifferences,
@@ -594,7 +597,7 @@ function MetricCards({ lens }: { lens: Lens }) {
         <div
           key={metric.id}
           data-lens-emphasized={emphasized.has(metric.filter) ? "true" : undefined}
-          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${emphasized.has(metric.filter) ? "ring-2 ring-[#72dfb4]/80 ring-offset-1 ring-offset-[#f4f6f8]" : ""}`}
+          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${emphasized.has(metric.filter) ? "outline outline-1 -outline-offset-1 outline-[#72dfb4]/50" : ""}`}
         >
           <ProvenanceSheet
             id={`metric-${metric.id}`}
@@ -1192,8 +1195,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div data-testid="above-fold-lens-surface" aria-live="polite" className="mb-6">
         <section className="mb-4 rounded-2xl border border-slate-700 bg-[#152331] p-4 text-white shadow-lg">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:items-start">
-            <div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 flex-1">
               <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[#72dfb4]">View</p>
               <div className="flex flex-wrap gap-2" aria-label="Intelligence lens">
                 {[
@@ -1207,38 +1210,28 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   </button>
                 ))}
               </div>
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Time basis</p>
-                <div className="inline-flex rounded-lg border border-white/15 bg-[#0d1720] p-1" aria-label="Time basis">
-                  <button aria-pressed="true" className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-950"><FileClock className="mr-1.5 inline size-4" />Reveal Day</button>
-                  <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500">Current</button>
-                  <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500"><GitCompareArrows className="mr-1 inline size-4" />Compare</button>
-                </div>
+              <p className="mt-3 text-sm font-medium leading-6 text-slate-100" data-testid="lens-view-panel-line">{lensViewPanelLine[activeLens]}</p>
+            </div>
+            <div className="shrink-0">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Time basis</p>
+              <div className="inline-flex rounded-lg border border-white/15 bg-[#0d1720] p-1" aria-label="Time basis">
+                <button aria-pressed="true" className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-950"><FileClock className="mr-1.5 inline size-4" />Reveal Day</button>
+                <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500">Current</button>
+                <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500"><GitCompareArrows className="mr-1 inline size-4" />Compare</button>
               </div>
             </div>
-            <div className="rounded-xl border-2 border-[#72dfb4]/50 bg-[#0d1720] p-4" data-testid="lens-why-matters">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#72dfb4]">Why this matters for this View</p>
-              <p className="mt-2 text-base font-medium leading-7 text-white">{lensInterpretations[activeLens]}</p>
-            </div>
           </div>
-          {state === "ready" && visibleInsights[0] ? (
-            <div className="mt-4 rounded-xl border border-emerald-400/40 bg-emerald-950/50 px-4 py-3" data-testid="lens-above-fold-lead">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#72dfb4]">What you should know first in this View</p>
-              <p className="mt-1 text-sm font-semibold leading-snug text-white">{visibleInsights[0].title}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-300">{visibleInsights[0].body}</p>
-            </div>
-          ) : null}
         </section>
 
         {state === "loading" ? <LoadingState /> : state === "empty" || state === "error" ? <MessageState kind={state} /> : (
           <section className="mb-2" aria-labelledby="round-pulse-heading">
+            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters-condensed">
+              <strong className="text-[#005c49]">{lensWhyMattersCondensedLabel(activeLens)}:</strong> {lensWhyMattersCondensed[activeLens]}
+            </p>
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold tracking-[0.14em] text-[#007d65]">
-                  ROUND PULSE · <span data-testid="lens-round-pulse-view-label">{activeLens === "all" ? "All Intelligence" : activeLens === "strategy" ? "Product & Strategy" : activeLens === "commercial" ? "Commercial" : "Marketing"}</span>
-                </p>
-                <h2 id="round-pulse-heading" className="mt-1 text-2xl font-bold tracking-tight text-[#004c3d]" data-testid="lens-round-pulse-title">{lensRoundPulseCopy[activeLens].title}</h2>
-                <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-700" data-testid="lens-round-pulse-subtitle">{lensRoundPulseCopy[activeLens].subtitle}</p>
+                <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>
+                <h2 className="mt-1 text-xl font-bold tracking-tight text-[#004c3d] sm:text-2xl" data-testid="lens-round-pulse-subtitle">{lensRoundPulseFraming[activeLens].subtitle}</h2>
               </div>
               <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
             </div>
@@ -1376,6 +1369,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   <p className="mt-1 text-sm text-slate-600" data-testid="lens-intelligence-subtitle">{lensIntelligenceSubtitles[activeLens]}</p>
                 </div>
                 <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
+              </div>
+              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters">
+                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[activeLens]}
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
                 {visibleInsights.map((insight) => {

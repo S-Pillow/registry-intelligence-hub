@@ -17,60 +17,61 @@ afterEach(() => {
 });
 
 describe("Command Center interactions", () => {
-  it("changes above-the-fold rendered text across all four Views", async () => {
+  it("changes above-the-fold rendered text across acceptance View pairs", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
     const aboveFold = () => screen.getByTestId("above-fold-lens-surface").textContent ?? "";
-    const whyMatters = () => screen.getByTestId("lens-why-matters").textContent ?? "";
-    const pulseTitle = () => screen.getByTestId("lens-round-pulse-title").textContent ?? "";
+    const panelLine = () => screen.getByTestId("lens-view-panel-line").textContent ?? "";
+    const condensedWhy = () => screen.getByTestId("lens-why-matters-condensed").textContent ?? "";
+    const pulseEyebrow = () => screen.getByTestId("lens-round-pulse-eyebrow").textContent ?? "";
     const pulseSubtitle = () => screen.getByTestId("lens-round-pulse-subtitle").textContent ?? "";
-    const lead = () => screen.getByTestId("lens-above-fold-lead").textContent ?? "";
-    const subtitle = () => screen.getByTestId("lens-intelligence-subtitle").textContent ?? "";
-    const investigationNote = () => screen.getByTestId("lens-investigation-note").textContent ?? "";
-    const topInvestigation = () => screen.getByTestId("investigation-queue-0").textContent ?? "";
 
-    const allWhy = whyMatters();
-    const allPulseTitle = pulseTitle();
-    const allPulseSubtitle = pulseSubtitle();
-    expect(allPulseTitle).toBe("Round-wide rehearsal pulse");
-    expect(allWhy).toMatch(/concentrated portfolios, increased IDN representation/);
-    expect(lead()).toMatch(/Atlas Digital holds the rehearsal fixture/);
+    expect(panelLine()).toMatch(/All Intelligence:/);
+    expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
+    expect(pulseSubtitle()).toBe("The rehearsal round at a glance");
+
+    const allAbove = aboveFold();
+    await user.click(screen.getByRole("button", { name: "Commercial" }));
+    expect(aboveFold()).not.toBe(allAbove);
+    expect(panelLine()).toBe("Commercial: Focuses on applicant portfolios, organizations, and contention.");
+    expect(condensedWhy()).toMatch(/Why this matters for Commercial:/);
+    expect(pulseEyebrow()).toBe("ROUND PULSE · COMMERCIAL VIEW");
+    expect(pulseSubtitle()).toBe("Applicant portfolios, organizations, and contention signals at a glance");
+    expect(document.querySelectorAll('[data-lens-emphasized="true"]').length).toBeGreaterThan(0);
+
+    const commercialAbove = aboveFold();
+    await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
+    expect(aboveFold()).not.toBe(commercialAbove);
+    expect(panelLine()).toBe("Product & Strategy: Focuses on composition, IDN participation, and contention.");
+    expect(condensedWhy()).toMatch(/Why this matters for Product & Strategy:/);
+    expect(pulseEyebrow()).toBe("ROUND PULSE · PRODUCT & STRATEGY VIEW");
+    expect(pulseSubtitle()).toBe("Composition, IDN participation, and contention signals at a glance");
+
+    const strategyAbove = aboveFold();
+    await user.click(screen.getByRole("button", { name: "Marketing" }));
+    expect(aboveFold()).not.toBe(strategyAbove);
+    expect(panelLine()).toBe(
+      "Marketing: Focuses on geographic reach, IDN participation, and themes that may shape external narratives.",
+    );
+    expect(condensedWhy()).toMatch(/Why this matters for Marketing:/);
+    expect(condensedWhy()).toMatch(/geographic and language patterns the most relevant signals/);
+    expect(pulseEyebrow()).toBe("ROUND PULSE · MARKETING VIEW");
+    expect(pulseSubtitle()).toBe("Geographic reach and IDN signals at a glance");
+  });
+
+  it("keeps downstream lens-dependent content when Views change", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+    const fullWhy = () => screen.getByTestId("lens-why-matters").textContent ?? "";
+    const topInvestigation = () => screen.getByTestId("investigation-queue-0").textContent ?? "";
+    expect(fullWhy()).toMatch(/concentrated portfolios, increased IDN representation/);
     expect(topInvestigation()).toBe("Atlas Digital");
 
     await user.click(screen.getByRole("button", { name: "Commercial" }));
-    expect(screen.getByRole("button", { name: "Commercial" })).toHaveAttribute("aria-pressed", "true");
-    expect(whyMatters()).not.toBe(allWhy);
-    expect(whyMatters()).toMatch(/account research may be most efficient/);
-    expect(pulseTitle()).not.toBe(allPulseTitle);
-    expect(pulseTitle()).toBe("Portfolio & contention pulse");
-    expect(pulseSubtitle()).not.toBe(allPulseSubtitle);
-    expect(pulseSubtitle()).toMatch(/Organizations and initial contention/);
-    expect(subtitle()).toMatch(/Commercial view/);
-    expect(investigationNote()).toMatch(/portfolio depth and contention exposure/i);
-
-    const commercialWhy = whyMatters();
-    const commercialPulseTitle = pulseTitle();
+    expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
-    expect(whyMatters()).not.toBe(commercialWhy);
-    expect(whyMatters()).toMatch(/Category movement, IDN participation/);
-    expect(pulseTitle()).not.toBe(commercialPulseTitle);
-    expect(pulseTitle()).toBe("Composition & structure pulse");
-    expect(lead()).toMatch(/Identity and technology each contain an identical-string set/);
     expect(topInvestigation()).toBe("Kizuna Registry");
-
-    const strategyWhy = whyMatters();
-    const strategyPulseTitle = pulseTitle();
-    await user.click(screen.getByRole("button", { name: "Marketing" }));
-    expect(whyMatters()).not.toBe(strategyWhy);
-    expect(whyMatters()).toMatch(/Cross-region IDN participation/);
-    expect(pulseTitle()).not.toBe(strategyPulseTitle);
-    expect(pulseTitle()).toBe("Participation & narrative pulse");
-    expect(pulseSubtitle()).toMatch(/IDN and regional spread/);
-    expect(lead()).toMatch(/IDN interest reaches two regions and two scripts/);
-    expect(investigationNote()).toMatch(/cross-region IDN participation/i);
-    expect(aboveFold()).toMatch(/Why this matters for this View/);
-    expect(aboveFold()).toMatch(/Participation & narrative pulse/);
   });
 
   it("opens the intelligence drawer and separates evidence from classification", async () => {
