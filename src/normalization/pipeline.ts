@@ -30,17 +30,24 @@ export async function runNormalization(options: NormalizeOptions): Promise<Norma
 
   const buildId = buildIdFromInput(loaded.inputContentHash, [PARSER_VERSION, NORMALIZER_VERSION, OVERRIDE_REGISTRY_VERSION]);
 
+  const limitations = [
+    loaded.definition.coverageNote,
+    "Registry operator records are SOURCE_ONLY when present — delegation not replayed.",
+    "Live ICANN HTML/API ingest is out of scope; fixtures only.",
+  ];
+  if (loaded.roundAccounting) {
+    limitations.push(
+      `Round accounting: ${loaded.roundAccounting.applicationRowCount} application rows; ${loaded.roundAccounting.contentionSetCount} official contention sets extracted; ${loaded.roundAccounting.contentionUniqueApplicationIds} applications with official contention membership.`,
+    );
+  }
+
   const report = buildQualityReport(
     loaded.definition.id,
     loaded.definition.version,
     loaded.inputContentHash,
     entities,
     observations,
-    [
-      loaded.definition.coverageNote,
-      "Registry operator records are SOURCE_ONLY in this slice — delegation not replayed.",
-      "Live ICANN HTML/API ingest is out of scope; fixtures only.",
-    ],
+    limitations,
   );
 
   const manifestBase: Omit<BuildManifest, "outputContentHash"> = {

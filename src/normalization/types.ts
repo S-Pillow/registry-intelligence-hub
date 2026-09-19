@@ -4,8 +4,8 @@
  * Human-readable design: Project Agent Store docs/domain-model-and-normalization.md
  */
 
-export const PARSER_VERSION = "icann2012-fixture-parser/1.0.0";
-export const NORMALIZER_VERSION = "icann2012-normalizer/1.0.0";
+export const PARSER_VERSION = "icann2012-parser/1.1.0";
+export const NORMALIZER_VERSION = "icann2012-normalizer/1.1.0";
 export const OVERRIDE_REGISTRY_VERSION = "override-registry/1.0.0";
 export const BUILD_MANIFEST_VERSION = "normalization-build/1.0.0";
 
@@ -206,6 +206,8 @@ export type OverrideOperation =
       createdAt: string;
     };
 
+export type ApplicationFixtureFormat = "jsonl-dual-source" | "reveal-day-csv";
+
 export interface FixtureBundleDefinition {
   id: string;
   version: number;
@@ -215,6 +217,7 @@ export interface FixtureBundleDefinition {
   roundProgramYear: number;
   fixtureRoot: string;
   sourceFiles: string[];
+  applicationFormat?: ApplicationFixtureFormat;
 }
 
 export interface ReconciliationRow {

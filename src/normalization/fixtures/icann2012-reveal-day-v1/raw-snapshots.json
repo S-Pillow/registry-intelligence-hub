@@ -1,0 +1,50 @@
+{
+  "snapshots": [
+    {
+      "snapshotId": "snap-2012-reveal-day-csv-v1",
+      "sourceId": "icann-2012-reveal-day-strings-csv",
+      "sourceVersion": 1,
+      "requestedUrl": "https://newgtlds.icann.org/en/program-status/application-results/strings-1200utc-13jun12-en",
+      "resolvedUrl": "https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+      "retrievedAt": "2026-09-19T05:57:00.000Z",
+      "effectiveAt": "2012-06-13T12:00:00.000Z",
+      "redirectChain": [
+        {
+          "fromUrl": "https://newgtlds.icann.org/en/program-status/application-results/strings-1200utc-13jun12-en",
+          "toUrl": "https://gtldresult.icann.org/application-result/applicationstatus",
+          "httpStatus": 301,
+          "observedAt": "2026-09-19T05:57:00.000Z"
+        },
+        {
+          "fromUrl": "https://newgtlds.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+          "toUrl": "https://newgtlds.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+          "httpStatus": 404,
+          "observedAt": "2026-09-19T05:57:00.000Z"
+        },
+        {
+          "fromUrl": "https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+          "toUrl": "https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+          "httpStatus": 200,
+          "observedAt": "2026-09-19T05:57:00.000Z"
+        }
+      ]
+    },
+    {
+      "snapshotId": "snap-2012-similarity-contention-pdf-v1",
+      "sourceId": "icann-2012-string-similarity-contention-pdf",
+      "sourceVersion": 1,
+      "requestedUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
+      "resolvedUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
+      "retrievedAt": "2026-09-19T05:57:00.000Z",
+      "effectiveAt": "2013-02-26T00:00:00.000Z",
+      "redirectChain": [
+        {
+          "fromUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
+          "toUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
+          "httpStatus": 200,
+          "observedAt": "2026-09-19T05:57:00.000Z"
+        }
+      ]
+    }
+  ]
+}

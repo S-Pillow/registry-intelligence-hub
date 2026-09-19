@@ -58,22 +58,28 @@ npm run pipeline -- fetch --all --mode live --root /tmp/source-pipeline-live
 - `verify` recomputes hashes for every stored blob and flags tampering or missing files; `snapshots`/`inspect` read manifest history; `handoff` returns the stable, adapter-agnostic contract a future normalizer should read instead of touching manifests or blobs directly.
 - No fetched production payload is ever committed to this repository — only the hand-authored fixtures in `src/pipeline/fixtures/` (see that directory's own README) and whatever a `--mode live` run writes to a git-ignored or explicitly out-of-repo `--root`.
 
-## Offline normalization (2012 foundation slice)
+## Offline normalization (2012)
 
-`src/normalization/` is a round-neutral, fixture-only normalization foundation: raw snapshot refs → parsed records → observations → normalized entities, with immutable override replay, deterministic reconciliation states, and content-addressed build artifacts. It does not connect to the browser app or live ICANN fetch.
+`src/normalization/` is a round-neutral, fixture-only normalization foundation: raw snapshot refs → parsed records → observations → normalized entities, with immutable override replay, deterministic reconciliation states, and content-addressed build artifacts. It does not connect to the browser app or live ICANN HTML scrape.
 
-Design and quality reporting:
+Design, coverage contract, and quality reporting:
 
 - `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/domain-model-and-normalization.md`
-- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/normalization-quality-report.md`
+- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/normalization-coverage-contract.md`
+- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/normalization-quality-report.md` (representative slice)
+- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/2012-full-round-quality-report.md` (full Reveal Day fixture)
+
+Acquisition notes for the full-round CSV/PDF fixtures: `scripts/acquire-icann2012-reveal-day.md`
 
 ```bash
 npm run normalize -- list-bundles
-npm run normalize -- normalize
+npm run normalize -- normalize --bundle icann2012-representative-v1
+npm run normalize -- normalize --bundle icann2012-reveal-day-v1
 npm run normalize -- report
 npm run normalize -- trace application 1-1200-1-1
-npm run normalize -- verify
+npm run normalize -- verify --bundle icann2012-reveal-day-v1
 ```
 
-- Default bundle `icann2012-representative-v1` is explicitly **not** the full 2012 round — it exercises conflicts, missing references, redirect provenance, IDNs, contention, organization candidates, and steward overrides.
+- `icann2012-representative-v1` — rehearsal slice (conflicts, overrides, missing refs).
+- `icann2012-reveal-day-v1` — **1,930** Reveal Day applications from preserved CSV + official contention PDF extraction (not wired to UI).
 - Builds land under `.data/normalization/builds/<buildId>/` (gitignored). `verify` recomputes a fresh offline normalization and checks output hashes plus stored artifact integrity.

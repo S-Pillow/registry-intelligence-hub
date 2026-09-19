@@ -15,6 +15,7 @@ import { PARSER_VERSION } from "./types";
 
 const workspaceRoot = join(import.meta.dirname, "..", "..");
 const bundleId = "icann2012-representative-v1";
+const fullRoundBundleId = "icann2012-reveal-day-v1";
 const projectDocsRoot = "/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs";
 
 describe("2012 normalization foundation", () => {
@@ -114,14 +115,36 @@ describe("2012 normalization foundation", () => {
     assertDeterministicReport(r1, r2);
   });
 
-  it("project docs describe lineage and representative scope", async () => {
+  it("project docs describe lineage, coverage contract, and round reports", async () => {
     const domain = await readFile(join(projectDocsRoot, "domain-model-and-normalization.md"), "utf8");
     const quality = await readFile(join(projectDocsRoot, "normalization-quality-report.md"), "utf8");
+    const contract = await readFile(join(projectDocsRoot, "normalization-coverage-contract.md"), "utf8");
+    const fullReport = await readFile(join(projectDocsRoot, "2012-full-round-quality-report.md"), "utf8");
     expect(domain).toContain("raw snapshot");
     expect(domain).toContain("REQUIRES_REVIEW");
-    expect(domain).toContain("not the full");
+    expect(contract).toContain("Reveal Day intelligence parity");
+    expect(fullReport).toContain("icann2012-reveal-day-v1");
     expect(quality).toContain("icann2012-representative-v1");
-    expect(quality).toContain("not");
+  });
+
+  it("normalizes full 2012 Reveal Day bundle offline with deterministic rebuild", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "norm-full-"));
+    try {
+      const first = await normalizeAndPersist({ bundleId: fullRoundBundleId, workspaceRoot, storeRoot: dir });
+      const second = await runNormalization({ bundleId: fullRoundBundleId, workspaceRoot, storeRoot: dir });
+      expect(first.manifest.outputContentHash).toBe(second.manifest.outputContentHash);
+      expect(first.report.entityCounts.application).toBe(1930);
+      expect(first.report.entityCounts["contention-set"]).toBeGreaterThan(0);
+      const appsInContention = first.entities.filter(
+        (e) => e.entityKind === "application" && e.contentionSetId.value,
+      ).length;
+      expect(appsInContention).toBe(754);
+      const store = createNormalizationStore(dir);
+      const verification = verifyStoredBuild(await store.readBuild(first.manifest.buildId));
+      expect(verification.ok).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("detects tampered output hash in stored build", async () => {

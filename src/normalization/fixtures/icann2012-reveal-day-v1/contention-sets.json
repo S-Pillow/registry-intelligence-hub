@@ -1,0 +1,2402 @@
+{
+  "extractorVersion": "icann2012-contention-pdf/1.0.0",
+  "sourcePublication": "similarity-contention-26feb13-en.pdf",
+  "effectiveAt": "2013-02-26T00:00:00.000Z",
+  "setCount": 234,
+  "applicationMembershipCount": 754,
+  "uniqueApplicationIds": 754,
+  "sets": [
+    {
+      "setId": "ICS-2012-similarity-1",
+      "matchKind": "similarity",
+      "applicationIds": [
+        "1-1249-87712",
+        "1-1016-75482"
+      ],
+      "sourceSetNumber": "1"
+    },
+    {
+      "setId": "ICS-2012-similarity-2",
+      "matchKind": "similarity",
+      "applicationIds": [
+        "1-996-99850",
+        "1-1771-82835"
+      ],
+      "sourceSetNumber": "2"
+    },
+    {
+      "setId": "ICS-2012-exact-pair-3",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-7047",
+        "1-995-44061"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-4",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-963-13166",
+        "1-1491-83816"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-5",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1121-17301",
+        "1-1309-35206"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-6",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-950-28485",
+        "1-1313-58483"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-7",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1159-3507",
+        "1-994-51307"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-8",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2102-26509",
+        "1-858-36255"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-9",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2101-67873",
+        "1-1120-42188"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-10",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1165-42560",
+        "1-1243-89583"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-11",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-909-9646",
+        "1-1341-21066"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-12",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-7451",
+        "1-868-39920",
+        "1-1315-63009",
+        "1-1138-33325",
+        "1-1182-25681",
+        "1-1778-4598",
+        "1-1815-5857",
+        "1-1343-89689",
+        "1-875-87230",
+        "1-1296-33564",
+        "1-927-15180",
+        "1-2039-18233",
+        "1-1289-59445"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-3",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-98331",
+        "1-1013-74175",
+        "1-1384-49318",
+        "1-1852-14467",
+        "1-1444-46322",
+        "1-1086-79087",
+        "1-1670-92378",
+        "1-1316-67680",
+        "1-1551-91953",
+        "1-959-51046",
+        "1-1140-91567",
+        "1-1913-18850",
+        "1-1317-24947",
+        "1-1317-52344"
+      ],
+      "sourceSetNumber": "3"
+    },
+    {
+      "setId": "ICS-2012-exact-pair-14",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1844-98392",
+        "1-1344-70608",
+        "1-1097-20833",
+        "1-1675-51302",
+        "1-875-17602",
+        "1-1086-100",
+        "1-927-15036",
+        "1-1211-27884",
+        "1-855-66616"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-15",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1347-98883",
+        "1-855-2943"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-16",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1349-23181",
+        "1-845-89968"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-17",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1351-20019",
+        "1-879-42119",
+        "1-1913-24731",
+        "1-855-72019"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-18",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1352-18081",
+        "1-1417-16218",
+        "1-1216-75929",
+        "1-1054-95858",
+        "1-1156-50969",
+        "1-927-8340"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-19",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1350-42613",
+        "1-856-54878"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-20",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1053-59307",
+        "1-1035-13873"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-21",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1870-98363",
+        "1-1255-43729"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-22",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1246-9615",
+        "1-1353-23613"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-23",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1199-43437",
+        "1-994-9184",
+        "1-1355-53565"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-24",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1302-76087",
+        "1-1356-74155",
+        "1-927-46801"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-25",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-21199",
+        "1-1201-33931",
+        "1-1359-21671",
+        "1-2015-28690"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-26",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1207-57645",
+        "1-1360-70873"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-27",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1680-47770",
+        "1-1358-79189",
+        "1-875-12119",
+        "1-1661-34613",
+        "1-917-1259",
+        "1-1086-2781",
+        "1-927-96975",
+        "1-1013-6634"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-28",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1362-58076",
+        "1-909-78528"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-29",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-44051",
+        "1-1217-96477",
+        "1-1099-17603",
+        "1-2029-6966",
+        "1-1361-60591",
+        "1-1132-20461",
+        "1-1296-97422",
+        "1-1020-75316",
+        "1-1038-7319"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-30",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-32664",
+        "1-1309-75738"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-31",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-994-4128",
+        "1-1365-11798",
+        "1-1326-20526"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-32",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1332-82635",
+        "1-1364-8001"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-33",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-53217",
+        "1-1368-92181",
+        "1-1141-30048",
+        "1-1213-57533",
+        "1-1694-75318"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-34",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1370-88467",
+        "1-1868-50221"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-35",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-882-71415",
+        "1-1234-83704",
+        "1-1255-75865"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-36",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-909-45636",
+        "1-1377-8759",
+        "1-845-37810"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-37",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1379-61100",
+        "1-1109-26787",
+        "1-1038-47257"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-38",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-87246",
+        "1-1382-33633",
+        "1-1203-44541",
+        "1-907-62211"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-39",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1241-87032"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-40",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1237-60534",
+        "1-1064-17982",
+        "1-1385-24288",
+        "1-1279-42610"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-41",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1387-59691",
+        "1-886-42389"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-42",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1066-67099",
+        "1-1389-12139",
+        "1-1938-29030"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-43",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1068-4952",
+        "1-845-44500"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-44",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-79670",
+        "1-1669-75338",
+        "1-1099-17190",
+        "1-1747-41841",
+        "1-1393-18458",
+        "1-1027-19707",
+        "1-1038-9346"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-45",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-864-71021",
+        "1-1396-86079",
+        "1-875-24017"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-46",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1880-48905",
+        "1-1397-64766"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-47",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1400-95244",
+        "1-2137-73069"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-48",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-871-10185",
+        "1-1403-98045"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-49",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1139-21220",
+        "1-1407-41397",
+        "1-880-39342",
+        "1-2066-18958",
+        "1-1296-53960",
+        "1-1693-13474"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-50",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1038-69660",
+        "1-845-1644"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-51",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-85731",
+        "1-1038-45713"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-52",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1413-96740",
+        "1-1668-71698"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-53",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1910-48133",
+        "1-1911-56672",
+        "1-1138-86970",
+        "1-1744-1971",
+        "1-1038-40570",
+        "1-1411-59458"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-54",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1205-96748",
+        "1-1414-81052",
+        "1-1038-10584"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-55",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1691-43949"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-56",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2009-38008",
+        "1-1605-75916",
+        "1-927-73627"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-57",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1138-74264",
+        "1-1038-5963"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-58",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1315-35975",
+        "1-855-23694"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-59",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1056-93782",
+        "1-1419-43874",
+        "1-1110-25638"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-60",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1220-89939",
+        "1-1420-57575"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-61",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-78434",
+        "1-870-27617"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-62",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1425-38025",
+        "1-2082-69005",
+        "1-1296-10164",
+        "1-1000-71907",
+        "1-1086-90196",
+        "1-1038-80812",
+        "1-845-26161",
+        "1-1013-4245"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-63",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-95567",
+        "1-1138-73066"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-64",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1225-36982",
+        "1-1426-25607",
+        "1-845-21294"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-65",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2007-43424",
+        "1-1424-94823"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-66",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-856-55254",
+        "1-1431-6328"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-67",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1678-58300",
+        "1-1326-57740"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-68",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1682-12856",
+        "1-1129-14280"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-69",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1430-52453",
+        "1-1060-13366",
+        "1-2026-56939"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-70",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1140-60957",
+        "1-1429-22494",
+        "1-1038-63631"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-71",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1140-12803",
+        "1-2005-70840"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-72",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-37524",
+        "1-1138-62581"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-73",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1140-20623",
+        "1-901-26957"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-74",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-912-59314",
+        "1-1434-1370",
+        "1-1710-92415",
+        "1-1039-91823"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-75",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1437-42738",
+        "1-1221-4047"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-76",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1970-27496"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-77",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1690-33371",
+        "1-1447-46365"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-78",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1450-96002",
+        "1-1683-11222",
+        "1-845-55827"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-79",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1455-48217",
+        "1-1224-46400",
+        "1-1039-98979",
+        "1-845-22951"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-80",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1138-87772",
+        "1-1802-37358",
+        "1-1452-20905"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-81",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-856-22387",
+        "1-1459-49079"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-82",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1039-82031",
+        "1-1255-72432"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-83",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1229-33615",
+        "1-1039-18316"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-84",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1458-34042",
+        "1-1534-89307",
+        "1-1039-50712",
+        "1-845-21975"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-85",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1975-66983",
+        "1-1326-50608",
+        "1-1462-36448"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-86",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1185-40986",
+        "1-1463-19656"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-87",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-909-18178",
+        "1-1461-35653"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-88",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1212-56127",
+        "1-1913-92671",
+        "1-1464-71170"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-89",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-21923",
+        "1-1141-1851",
+        "1-1465-93738",
+        "1-1039-66889",
+        "1-845-38175"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-90",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1680-35845",
+        "1-1133-86731",
+        "1-1274-35353"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-91",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1466-60532",
+        "1-845-27313"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-92",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1683-65308",
+        "1-1579-33517"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-93",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-7998",
+        "1-1660-73645",
+        "1-1138-34539",
+        "1-1177-24251",
+        "1-855-17500"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-94",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1472-69003",
+        "1-1039-6355",
+        "1-845-21873"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-95",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1713-23699"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-96",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1039-47682",
+        "1-1255-4825"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-97",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1729-48006",
+        "1-1866-26783"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-98",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1218-92007",
+        "1-855-85881"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-99",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1474-76888",
+        "1-1541-3638"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-100",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1747-40234",
+        "1-1473-54534"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-101",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1682-34664",
+        "1-1477-91047",
+        "1-1952-21459",
+        "1-1296-52581",
+        "1-1273-63351"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-102",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1478-71326",
+        "1-1143-36731"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-103",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-900-40419",
+        "1-1913-58763",
+        "1-1184-54304",
+        "1-1476-38656"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-104",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1142-62939",
+        "1-1810-48580"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-105",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1481-2922",
+        "1-845-42772"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-106",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-24661",
+        "1-884-75541",
+        "1-1039-46343",
+        "1-1255-2257"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-107",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1189-31055",
+        "1-2064-74519"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-108",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-84755",
+        "1-1296-48207",
+        "1-1482-30833",
+        "1-1086-21577",
+        "1-1171-93026"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-109",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1728-88967",
+        "1-1298-37058"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-110",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1484-33046",
+        "1-1039-17716"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-111",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-46158",
+        "1-1302-98299"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-112",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-3442",
+        "1-1178-3236",
+        "1-1684-6394",
+        "1-1489-82287"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-113",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1499-91633",
+        "1-845-3403"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-114",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1204-89680",
+        "1-1493-98462"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-115",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-95616",
+        "1-1494-83305",
+        "1-1139-16944",
+        "1-907-28623",
+        "1-1049-60075",
+        "1-2021-47438",
+        "1-1109-77450",
+        "1-1326-24627",
+        "1-875-27253",
+        "1-927-70273",
+        "1-845-48417"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-116",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1286-14385",
+        "1-1507-65003",
+        "1-855-76484"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-117",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-38620",
+        "1-1498-82780",
+        "1-907-22514"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-118",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1249-36568",
+        "1-1181-77853",
+        "1-1059-97519",
+        "1-1913-57874",
+        "1-1032-95136",
+        "1-1500-16803",
+        "1-927-25198"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-119",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1511-99612",
+        "1-1761-46474",
+        "1-1000-62742",
+        "1-1037-6617"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-120",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-6380",
+        "1-1271-68369",
+        "1-1112-96698",
+        "1-1142-83944",
+        "1-1692-77224",
+        "1-880-35979",
+        "1-890-52980",
+        "1-1309-22501",
+        "1-1296-44261",
+        "1-927-63223",
+        "1-855-4741"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-121",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1512-20834",
+        "1-1063-32835",
+        "1-1035-75923",
+        "1-1269-14573"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-122",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1253-11362",
+        "1-1520-93221"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-123",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1522-61364",
+        "1-845-92261"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-124",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1309-46695"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-125",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2008-77299",
+        "1-1038-32393"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-126",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1523-55821",
+        "1-1055-21389",
+        "1-875-2472",
+        "1-1296-62922",
+        "1-1183-17612",
+        "1-927-20582"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-127",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1531-96078",
+        "1-927-4468"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-128",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1536-79233",
+        "1-917-16797"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-129",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-927-66189",
+        "1-1535-64595",
+        "1-1861-18909"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-130",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1680-95108",
+        "1-1545-55209",
+        "1-1129-83871"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-131",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1326-92909",
+        "1-1547-37710"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-132",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-65445",
+        "1-1417-41320",
+        "1-880-17627",
+        "1-1546-93002",
+        "1-1692-61931",
+        "1-1013-43904",
+        "1-1296-44333",
+        "1-1086-42934",
+        "1-927-11663"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-133",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1142-52922",
+        "1-880-35508",
+        "1-1013-89480",
+        "1-1693-56810"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-134",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1065-49761",
+        "1-1544-18264"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-135",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1681-93347",
+        "1-855-10958"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-136",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1678-55117",
+        "1-1549-37731",
+        "1-875-6276",
+        "1-1253-49828",
+        "1-1230-19511",
+        "1-927-91932",
+        "1-855-55170"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-137",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-84727",
+        "1-1714-80638",
+        "1-880-44249",
+        "1-1694-79399",
+        "1-1013-19866",
+        "1-1296-16820",
+        "1-1550-65638"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-138",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1265-36346"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-139",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1256-50020",
+        "1-1013-47551",
+        "1-1316-17384",
+        "1-1141-82929",
+        "1-890-53570",
+        "1-1548-63140",
+        "1-1906-88399"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-140",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-5335",
+        "1-1417-46480",
+        "1-1255-71670"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-141",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1557-30317",
+        "1-1171-71619",
+        "1-855-23003"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-142",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1678-4292",
+        "1-1556-47497",
+        "1-1076-76766"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-143",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1139-2965",
+        "1-1320-21500",
+        "1-1192-28569",
+        "1-907-38758"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-144",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1560-69674",
+        "1-1171-56570",
+        "1-855-44456"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-145",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-46640",
+        "1-1563-40885",
+        "1-2108-24342"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-146",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-980-7217",
+        "1-1702-28003",
+        "1-1702-73085"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-147",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-71271",
+        "1-1828-26452",
+        "1-1888-47714"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-148",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-6133",
+        "1-2012-89566",
+        "1-1566-85057"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-149",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1139-52584",
+        "1-855-75369",
+        "1-1255-96181"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-150",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1179-41884",
+        "1-1567-79679"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-151",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1697-33789",
+        "1-1851-68583"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-152",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1138-87257",
+        "1-1255-15838"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-153",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-44615",
+        "1-1140-55599",
+        "1-1920-39242",
+        "1-1180-29599",
+        "1-1803-2593",
+        "1-1570-42842",
+        "1-1296-23277",
+        "1-1290-2671"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-154",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-18029",
+        "1-1680-18593",
+        "1-1175-68062",
+        "1-1115-14110",
+        "1-1058-25065",
+        "1-994-99764",
+        "1-1571-12951"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-155",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-26110",
+        "1-1172-3099",
+        "1-1057-44086",
+        "1-1573-27315",
+        "1-875-79821",
+        "1-917-11894",
+        "1-855-42105"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-156",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1316-48771",
+        "1-861-67658",
+        "1-1575-53902",
+        "1-979-89214",
+        "1-1309-93271",
+        "1-2138-10969"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-157",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1073-19391",
+        "1-979-77610"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-158",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1574-83272",
+        "1-856-67717",
+        "1-1070-97873",
+        "1-1003-97300",
+        "1-2091-95954",
+        "1-1171-72107"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-159",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-921-91127",
+        "1-901-9391"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-160",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1214-59403",
+        "1-1274-20024"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-161",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-64413",
+        "1-1750-33973"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-162",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-95281",
+        "1-1678-92681"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-163",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1142-85390",
+        "1-1076-91066"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-164",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2011-80942",
+        "1-1582-80831"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-165",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1581-70192",
+        "1-1086-52200"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-166",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1069-35959",
+        "1-1833-90242"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-167",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1711-63214",
+        "1-1583-6697",
+        "1-927-3932",
+        "1-845-62256"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-168",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1976-9220",
+        "1-1584-14507"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-169",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-97559",
+        "1-1683-17546",
+        "1-1067-89443",
+        "1-1231-63687"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-170",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1589-56456"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-171",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-94737",
+        "1-1587-4615",
+        "1-1202-1720",
+        "1-1696-52899"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-172",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1592-63879",
+        "1-927-66497",
+        "1-845-65560"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-173",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1594-21696",
+        "1-1200-70811",
+        "1-855-75445"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-174",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-75631",
+        "1-994-75477",
+        "1-1083-39123",
+        "1-1593-8224"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-175",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-907-1363",
+        "1-1597-13898",
+        "1-927-76919",
+        "1-845-86924"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-176",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1598-77594",
+        "1-1913-14988"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-177",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-93793",
+        "1-1595-97277"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-178",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-909-9048",
+        "1-1604-36499"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-179",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1219-75721",
+        "1-1610-3807",
+        "1-1110-95066",
+        "1-845-64388"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-180",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1208-90224",
+        "1-1037-71433"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-181",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1854-53707",
+        "1-865-67813",
+        "1-1255-57953"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-182",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1612-2805",
+        "1-1206-66762",
+        "1-994-63638"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-183",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1232-61938",
+        "1-1616-69474"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-184",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1235-38087",
+        "1-1984-65341",
+        "1-1617-57149",
+        "1-1110-17668",
+        "1-855-27044"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-185",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1028-58177",
+        "1-939-82184",
+        "1-1302-58142",
+        "1-1618-18834"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-186",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1624-75239",
+        "1-1013-83132"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-187",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1323-55150",
+        "1-1794-37473"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-188",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-82096",
+        "1-855-45602"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-189",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1622-67844",
+        "1-1110-66434",
+        "1-845-60801"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-190",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1238-98669",
+        "1-1110-8071"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-191",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-13549",
+        "1-1626-61742",
+        "1-1141-50966",
+        "1-1209-16177"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-192",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-98508",
+        "1-1796-18939"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-193",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2058-59499",
+        "1-1625-43519",
+        "1-1027-69486"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-194",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1106-79501",
+        "1-2113-59868"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-195",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-37897",
+        "1-889-24496",
+        "1-1138-5993",
+        "1-1830-1672",
+        "1-1176-45062",
+        "1-1051-32260",
+        "1-890-52063",
+        "1-890-65213",
+        "1-1632-57390"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-196",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1631-16988",
+        "1-845-21316"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-197",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-52877",
+        "1-1417-47872",
+        "1-1633-36635",
+        "1-866-43988"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-198",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1681-36344",
+        "1-1637-12997",
+        "1-1048-46315",
+        "1-901-58689",
+        "1-1110-76338"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-199",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1000-18032",
+        "1-1636-27531"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-200",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1196-35744",
+        "1-1635-18982",
+        "1-1905-88711",
+        "1-1110-28392"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-201",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1309-81322",
+        "1-1619-92115",
+        "1-1110-73648"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-202",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1174-59954",
+        "1-1012-71460"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-203",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-50025",
+        "1-1139-66836",
+        "1-1303-82330"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-204",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1681-77547",
+        "1-1013-93642"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-205",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1613-64465",
+        "1-1687-62688"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-206",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1681-60225",
+        "1-1789-97294",
+        "1-1052-82517",
+        "1-1609-60839",
+        "1-1110-26809",
+        "1-855-18880"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-207",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1881-96350",
+        "1-2002-31471"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-208",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1309-22538",
+        "1-1608-9291"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-209",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1602-30813",
+        "1-2081-48775",
+        "1-1086-6187",
+        "1-1110-21114",
+        "1-845-11507"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-210",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1596-35125",
+        "1-1279-43617",
+        "1-2080-92776"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-211",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1317-29107",
+        "1-1417-17579"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-212",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1239-50781",
+        "1-1558-74769",
+        "1-1025-18840"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-213",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-34317",
+        "1-1559-19356",
+        "1-1141-13949",
+        "1-855-72897"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-214",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1678-63859",
+        "1-1670-76346",
+        "1-1554-19894",
+        "1-1296-83792",
+        "1-1110-23787",
+        "1-855-90632"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-215",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1640-29241",
+        "1-1198-18833",
+        "1-1723-69677",
+        "1-2036-18560"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-216",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1641-67063",
+        "1-1326-97308"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-217",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2155-24150",
+        "1-1638-77826",
+        "1-1233-26032",
+        "1-1973-48269",
+        "1-1013-4506"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-218",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2123-56973",
+        "1-1645-45928",
+        "1-1884-1217"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-219",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-2047-17293",
+        "1-1654-94203"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-220",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1656-46642",
+        "1-1142-5476",
+        "1-926-88379"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-221",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1480-90854",
+        "1-1110-29042",
+        "1-855-53391"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-222",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1140-53549",
+        "1-1003-40726",
+        "1-1532-71538",
+        "1-1037-88001",
+        "1-878-22942",
+        "1-851-9629"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-223",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1530-99208",
+        "1-1013-44231"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-224",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1013-6638",
+        "1-1681-58699",
+        "1-956-26846",
+        "1-1296-36138",
+        "1-1527-54849",
+        "1-1013-77165",
+        "1-1009-97005"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-225",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1033-22687",
+        "1-1033-73917"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-226",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1050-30871",
+        "1-1524-44846",
+        "1-1037-47594"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-227",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1037-16321",
+        "1-856-13669",
+        "1-1519-43980"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-228",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-950-50638",
+        "1-1313-41040"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-229",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-868-66341",
+        "1-1223-37711",
+        "1-1515-14214"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-230",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1504-13424",
+        "1-1071-58353"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-231",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1318-51358",
+        "1-1142-53389",
+        "1-1255-61847"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-232",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1037-89079",
+        "1-845-11060",
+        "1-1502-54392"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-233",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1318-84751",
+        "1-1682-29217"
+      ],
+      "sourceSetNumber": null
+    },
+    {
+      "setId": "ICS-2012-exact-pair-234",
+      "matchKind": "exact",
+      "applicationIds": [
+        "1-1318-12524",
+        "1-974-89210"
+      ],
+      "sourceSetNumber": null
+    }
+  ]
+}

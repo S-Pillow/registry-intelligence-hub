@@ -111,7 +111,18 @@ export function normalizeFromObservations(
     const ulabel = merge("stringUlabel") as { merged: FieldValue<string>; conflict: boolean };
     const alabel = merge("stringAlabel") as { merged: FieldValue<string | null>; conflict: boolean };
     const isIdn = merge("isIdn") as { merged: FieldValue<boolean>; conflict: boolean };
-    const contentionSetId = merge("contentionSetId") as { merged: FieldValue<string | null>; conflict: boolean };
+    const contentionFromObs = merge("contentionSetId") as { merged: FieldValue<string | null>; conflict: boolean };
+    const officialContentionSetId = loaded.contentionMembershipByApplicationId.get(applicationId) ?? null;
+    const contentionSetId: { merged: FieldValue<string | null>; conflict: boolean } = officialContentionSetId
+      ? {
+          merged: {
+            value: officialContentionSetId,
+            semantics: "known",
+            provenance: contentionFromObs.merged.provenance,
+          },
+          conflict: false,
+        }
+      : contentionFromObs;
     const priority = merge("priorityNumber") as { merged: FieldValue<number | null>; conflict: boolean };
     const orgHint = merge("organizationHint") as { merged: FieldValue<string | null>; conflict: boolean };
 
@@ -184,7 +195,7 @@ export function normalizeFromObservations(
       });
     }
 
-    if (orgHint.merged.value) {
+    if (orgHint.merged.value && orgHint.merged.semantics !== "unavailable") {
       const orgId = `organization:candidate-root:${applicationId}`;
       if (!organizations.has(orgId)) {
         const candidateHints = obsList
