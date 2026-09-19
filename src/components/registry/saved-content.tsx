@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
+  ChevronDown,
+  ChevronUp,
   CircleAlert,
   Copy,
   Database,
@@ -30,7 +33,7 @@ import {
   registryFixture,
   type EntityType,
 } from "@/lib/registry-data";
-import { summarizeChangeSinceVisit } from "@/lib/saved-change-summary";
+import { summarizeChangeSinceVisit, type ChangeSinceVisitSummary } from "@/lib/saved-change-summary";
 import type { SavedResearch, Watchlist, WatchlistItem } from "@/lib/saved-storage";
 import { useInvestigation } from "@/components/registry/investigation-context";
 
@@ -66,6 +69,31 @@ function recordedCountForWatchlist(items: WatchlistItem[]) {
 
 function currentCountForWatchlist(items: WatchlistItem[]) {
   return items.reduce((sum, item) => sum + recordsForEntity(item.entityType, item.entityKey).length, 0);
+}
+
+/**
+ * Concise, deterministic watchlist-level intelligence computed purely from
+ * fixture data already on the page — no live tracking. `changed` counts
+ * entities whose current supporting-record count no longer matches the
+ * count recorded when they were added; `contention`/`returning` reuse the
+ * same `contentionSet`/`returning` flags Explore's table already surfaces,
+ * so the vocabulary matches across the app. All four numbers are supported
+ * for every entity type, since every entity type resolves to the same
+ * underlying `Application[]` via `recordsForEntity`.
+ */
+function watchlistIntelligence(items: WatchlistItem[]) {
+  let changed = 0;
+  const records = items.flatMap((item) => {
+    const current = recordsForEntity(item.entityType, item.entityKey);
+    if (current.length !== item.recordCountAtAdd) changed += 1;
+    return current;
+  });
+  return {
+    entities: items.length,
+    changed,
+    contention: records.filter((record) => record.contentionSet).length,
+    returning: records.filter((record) => record.returning).length,
+  };
 }
 
 function currentCountForSavedResearch(entry: SavedResearch) {
@@ -141,14 +169,81 @@ function DeleteControl({ name, onConfirm }: { name: string; onConfirm: () => voi
   );
 }
 
-function ChangeSinceVisitBanner({ hasChanged, headline, detail }: { hasChanged: boolean; headline: string; detail: string }) {
+/**
+ * The card's central state: `Last material change` is always shown first and
+ * most prominently, backed by the fixture's own `changedAt` — the single
+ * honest source of "change" this prototype can attest to. `review` is an
+ * optional, bounded (fixed-size, no pagination) disclosure that only renders
+ * a toggle when there is a material change to look at.
+ */
+function MaterialChangeStatus({ change, review }: { change: ChangeSinceVisitSummary; review?: ReactNode }) {
+  const [reviewing, setReviewing] = useState(false);
+
   return (
-    <p className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${hasChanged ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
-      <History className="mt-0.5 size-3.5 shrink-0" /><span>{headline} · {detail}</span>
-    </p>
+    <div className={`rounded-lg border px-3 py-2.5 text-xs ${change.hasChanged ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
+      <p className={`flex flex-wrap items-center gap-2 font-bold ${change.hasChanged ? "text-amber-900" : "text-slate-800"}`}>
+        <History className="size-3.5 shrink-0" />
+        <span>Last material change: {formatDateTime(change.lastMaterialChangeAt)}</span>
+        {change.hasChanged && <Badge variant="outline" className="border-amber-400 bg-white text-amber-900">New since last visit</Badge>}
+      </p>
+      <p className={`mt-1 ${change.hasChanged ? "text-amber-900" : "text-slate-700"}`}>{change.headline}. {change.detail}</p>
+      {change.hasChanged && review && (
+        <>
+          <button
+            type="button"
+            onClick={() => setReviewing((value) => !value)}
+            aria-expanded={reviewing}
+            className="mt-2 font-bold text-amber-900 underline underline-offset-2 hover:text-amber-950"
+          >
+            {reviewing ? "Hide review" : "Review changes"}
+          </button>
+          {reviewing && <div className="mt-2 space-y-1.5 rounded-lg border border-amber-200 bg-white p-2.5 text-slate-800">{review}</div>}
+        </>
+      )}
+    </div>
   );
 }
 
+function WatchlistReviewPanel({ list, change }: { list: Watchlist; change: ChangeSinceVisitSummary }) {
+  const changedItems = useMemo(
+    () =>
+      list.items
+        .map((item) => ({ item, current: recordsForEntity(item.entityType, item.entityKey).length }))
+        .filter(({ item, current }) => current !== item.recordCountAtAdd),
+    [list.items]
+  );
+
+  return (
+    <>
+      {change.hasFixtureUpdate && (
+        <p>Fixture snapshot updated {formatDateTime(change.lastMaterialChangeAt)} — after your last visit on {formatDateTime(list.lastOpenedAt)}.</p>
+      )}
+      {list.items.length === 0 ? (
+        <p className="text-slate-600">No entities in this watchlist yet — nothing to review.</p>
+      ) : changedItems.length > 0 ? (
+        <ul className="list-disc space-y-1 pl-4">
+          {changedItems.map(({ item, current }) => (
+            <li key={`${item.entityType}-${item.entityKey}`}>{item.label}: {item.recordCountAtAdd} → {current} supporting records</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-slate-600">No individual entity’s supporting-record count has moved since it was added — this review reflects only the fixture’s own update timestamp above.</p>
+      )}
+      <p className="text-slate-500">Bounded to the {list.items.length} entit{list.items.length === 1 ? "y" : "ies"} currently in this watchlist. Compares recorded fixture state only — not live monitoring.</p>
+    </>
+  );
+}
+
+/**
+ * Watchlists v1 — frozen after Steven's Saved feedback pass (count semantics
+ * fixed so supporting-record sums can never read as an entity count,
+ * accessible Expand/Collapse chevron semantics, explicit Quick Watchlist
+ * default communication, entity-level "Investigate" language, `Last
+ * material change` as the central card state with a bounded Review changes
+ * flow, and deterministic watchlist-level intelligence). No further v1 UX
+ * changes are planned; management controls remain limited to
+ * Duplicate/Rename/Delete.
+ */
 function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; expanded: boolean; onToggleExpand: () => void }) {
   const { savedWork } = useInvestigation();
   const [addType, setAddType] = useState<EntityType>("organizations");
@@ -159,7 +254,10 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
     recordedCount: recordedCountForWatchlist(list.items),
     currentCount: currentCountForWatchlist(list.items),
     fixtureChangedAt: savedWork.fixtureChangedAt,
+    subject: "supporting-record",
   }), [list, savedWork.fixtureChangedAt]);
+
+  const intelligence = useMemo(() => watchlistIntelligence(list.items), [list.items]);
 
   const addOptions = useMemo(
     () => listEntityOptions(addType).filter((option) => !list.items.some((item) => item.entityType === addType && item.entityKey === option.key)),
@@ -172,19 +270,30 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
     return [...groups.entries()].filter(([, keys]) => keys.length >= 2);
   }, [list.items]);
 
+  const panelId = `watchlist-panel-${list.id}`;
+
   return (
     <Card className="border-slate-300">
       <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="text-lg">{list.name}</CardTitle>
-            {list.isQuickWatch && <Badge variant="outline" className="border-amber-300 text-amber-800">Quick Watch</Badge>}
+            {list.isQuickWatch && <Badge variant="outline" className="border-amber-300 text-amber-800">Quick Watchlist</Badge>}
           </div>
-          <p className="mt-1 text-xs text-slate-600">{list.items.length} entit{list.items.length === 1 ? "y" : "ies"} · Last opened {formatDateTime(list.lastOpenedAt)}</p>
+          {list.isQuickWatch && (
+            <p className="mt-1 max-w-md text-xs text-amber-800">Automatic default for the star “Watch” action in Explore, Compare, and investigation drawers. Use “Add entity” below on another list to choose deliberately instead.</p>
+          )}
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-semibold text-slate-700">
+            <span>{intelligence.entities} entit{intelligence.entities === 1 ? "y" : "ies"}</span>
+            <span>{intelligence.changed} changed</span>
+            <span>{intelligence.contention} contested record{intelligence.contention === 1 ? "" : "s"}</span>
+            <span>{intelligence.returning} returning record{intelligence.returning === 1 ? "" : "s"}</span>
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(list.lastOpenedAt)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Button size="sm" variant="outline" onClick={() => { savedWork.markWatchlistOpened(list.id); onToggleExpand(); }} aria-expanded={expanded}>
-            <FolderOpen />{expanded ? "Close" : "Open"}
+          <Button size="sm" variant="outline" onClick={() => { savedWork.markWatchlistOpened(list.id); onToggleExpand(); }} aria-expanded={expanded} aria-controls={panelId}>
+            {expanded ? <ChevronUp /> : <ChevronDown />}{expanded ? "Collapse" : "Expand"}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => savedWork.duplicateWatchlist(list.id)}><Copy />Duplicate</Button>
           <RenameControl name={list.name} entityLabel={list.id} onRename={(next) => savedWork.renameWatchlist(list.id, next)} />
@@ -192,12 +301,12 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <ChangeSinceVisitBanner hasChanged={change.hasChanged} headline={change.headline} detail={change.detail} />
+        <MaterialChangeStatus change={change} review={<WatchlistReviewPanel list={list} change={change} />} />
 
         {expanded && (
-          <div className="space-y-3">
+          <div id={panelId} className="space-y-3">
             {list.items.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600">No entities yet. Add one below, or use the star “Watch” action from Explore, Compare, or an investigation drawer.</p>
+              <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600">No entities yet. Add one below, or use the star “Watch” action from Explore, Compare, or an investigation drawer — that always adds to your Quick Watchlist by default; add straight to this list with “Add entity” instead.</p>
             ) : (
               <ul className="space-y-2">
                 {list.items.map((item) => {
@@ -210,7 +319,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
                       </div>
                       <div className="flex items-center gap-2">
                         <Link href={buildExploreHrefForEntity(item.entityType, item.entityKey)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50">
-                          <Eye className="size-3.5" />Explore
+                          <Eye className="size-3.5" />Investigate
                         </Link>
                         <button
                           type="button"
@@ -308,7 +417,7 @@ function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
           <CardContent>
             <Star className="mx-auto mb-4 size-9 text-slate-500" />
             <h3 className="text-lg font-bold">No watchlists yet</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href="/tools/registry-intelligence-hub/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href="/tools/registry-intelligence-hub/compare" className="font-semibold text-[#006a56] underline">Compare</Link>.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href="/tools/registry-intelligence-hub/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href="/tools/registry-intelligence-hub/compare" className="font-semibold text-[#006a56] underline">Compare</Link>. That one-click action always creates and adds to a <strong>Quick Watchlist</strong> automatically — create a named list above first if you want to choose a different destination deliberately.</p>
           </CardContent>
         </Card>
       ) : (
@@ -339,15 +448,26 @@ function compareReproducibilityLine(entry: SavedResearch): string {
   return `Snapshot ${snapshot} · Time basis: ${timeBasisLabel} · Dimensions ${dimensions} · ${origin}`;
 }
 
+/**
+ * Saved Research's changing-answer model: unlike a Watchlist's fixed entity
+ * set, a saved cohort/filter definition or comparison is re-evaluated
+ * against the current fixture every time it's viewed, so its result count
+ * and material-change status can genuinely move even though the underlying
+ * definition never silently changes. `params`/`recordCountAtSave`/`kind`
+ * are the saved promotion contract a future "Compare selected" or "Create
+ * briefing" flow would read — see the Saved Research promotion contract in
+ * the Briefings design spec.
+ */
 function SavedResearchCard({ entry }: { entry: SavedResearch }) {
   const { savedWork } = useInvestigation();
+  const currentCount = useMemo(() => currentCountForSavedResearch(entry), [entry]);
 
   const change = useMemo(() => summarizeChangeSinceVisit({
     lastOpenedAt: entry.lastOpenedAt,
     recordedCount: entry.recordCountAtSave,
-    currentCount: currentCountForSavedResearch(entry),
+    currentCount,
     fixtureChangedAt: savedWork.fixtureChangedAt,
-  }), [entry, savedWork.fixtureChangedAt]);
+  }), [entry, currentCount, savedWork.fixtureChangedAt]);
 
   return (
     <Card className="border-slate-300">
@@ -359,13 +479,15 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
               {entry.kind === "explore-view" ? "Explore view" : "Compare configuration"}
             </Badge>
           </div>
-          <p className="mt-1 max-w-xl text-xs text-slate-600">{entry.summary}</p>
-          <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(entry.lastOpenedAt)} · Updated {formatDateTime(entry.updatedAt)}</p>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Cohort / filter definition</p>
+          <p className="max-w-xl text-xs text-slate-700">{entry.summary}</p>
+          <p className="mt-1.5 text-xs text-slate-600">Result count: <strong className="font-bold text-slate-900">{currentCount}</strong>{currentCount !== entry.recordCountAtSave ? ` (was ${entry.recordCountAtSave} at save)` : " (unchanged since save)"}</p>
+          <p className="mt-1 text-xs text-slate-500">Saved {formatDateTime(entry.createdAt)} · Last opened {formatDateTime(entry.lastOpenedAt)} · Updated {formatDateTime(entry.updatedAt)}</p>
           {entry.kind === "compare-config" && <p className="mt-1 text-xs text-slate-500">{compareReproducibilityLine(entry)}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Link href={openHrefForSavedResearch(entry)} onClick={() => savedWork.markSavedResearchOpened(entry.id)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]">
-            <FolderOpen className="size-3.5" />Reopen
+            <FolderOpen className="size-3.5" />Open research
           </Link>
           <Button size="sm" variant="ghost" onClick={() => savedWork.duplicateSavedResearch(entry.id)}><Copy />Duplicate</Button>
           <RenameControl name={entry.name} entityLabel={entry.id} onRename={(next) => savedWork.renameSavedResearch(entry.id, next)} />
@@ -373,7 +495,7 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
         </div>
       </CardHeader>
       <CardContent>
-        <ChangeSinceVisitBanner hasChanged={change.hasChanged} headline={change.headline} detail={change.detail} />
+        <MaterialChangeStatus change={change} />
       </CardContent>
     </Card>
   );

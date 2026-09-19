@@ -209,6 +209,7 @@ function QuickWatchButton({ item, className = "" }: { item: InvestigationItem; c
       onClick={() => savedWork.toggleEntityWatch(entityType, entityKey, item.label, item.records.length)}
       className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-bold hover:bg-amber-50 ${watching ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-300 bg-white text-slate-700 hover:border-amber-400"} ${className}`}
       aria-label={`${watching ? "Watching" : "Watch"} ${item.label}`}
+      title={watching ? "In your Quick Watchlist — click to remove" : "Adds to your Quick Watchlist automatically. Choose a different list from the Saved hub instead."}
     >
       <Star className={`size-3.5 ${watching ? "fill-amber-500" : ""}`} />{watching ? "Watching" : "Watch"}
     </button>

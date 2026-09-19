@@ -67,7 +67,7 @@ describe("Saved hub — Watchlist CRUD", () => {
     expect(screen.getByText("Renamed Watchlist")).toBeInTheDocument();
   });
 
-  it("adds and removes entities from a watchlist and links back into Explore", async () => {
+  it("adds and removes entities from a watchlist and links back into Investigate via an accessible Expand/Collapse toggle", async () => {
     const user = userEvent.setup();
     render(<CommandCenter view="saved" />);
 
@@ -76,18 +76,38 @@ describe("Saved hub — Watchlist CRUD", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
     await screen.findByText("My List");
 
-    await user.click(screen.getByRole("button", { name: "Open" }));
+    const toggle = screen.getByRole("button", { name: "Expand" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await user.click(toggle);
+    expect(screen.getByRole("button", { name: "Collapse" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/No entities yet/)).toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Add entity" }), "Atlas Digital");
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     const itemRow = (await screen.findByText("Atlas Digital")).closest("li") as HTMLElement;
-    const exploreLink = within(itemRow).getByRole("link", { name: "Explore" });
-    expect(exploreLink).toHaveAttribute("href", expect.stringContaining("/explore?entity=organizations"));
+    const investigateLink = within(itemRow).getByRole("link", { name: "Investigate" });
+    expect(investigateLink).toHaveAttribute("href", expect.stringContaining("/explore?entity=organizations"));
 
     await user.click(screen.getByRole("button", { name: "Remove Atlas Digital from My List" }));
     expect(await screen.findByText(/No entities yet/)).toBeInTheDocument();
+  });
+
+  it("shows deterministic watchlist-level intelligence and communicates the Quick Watchlist default", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+
+    await user.click(screen.getAllByRole("button", { name: "Watch Atlas Digital" })[0]);
+
+    cleanup();
+    render(<CommandCenter view="saved" />);
+
+    expect(await screen.findAllByText("Quick Watchlist")).toHaveLength(2);
+    expect(screen.getByText(/Automatic default for the star .Watch. action/)).toBeInTheDocument();
+    expect(screen.getByText("1 entity")).toBeInTheDocument();
+    expect(screen.getByText("0 changed")).toBeInTheDocument();
+    expect(screen.getByText(/contested record/)).toBeInTheDocument();
+    expect(screen.getByText(/returning record/)).toBeInTheDocument();
   });
 });
 
@@ -135,7 +155,7 @@ describe("Saved hub — Saved Research", () => {
     expect(await screen.findByText("Compare configuration")).toBeInTheDocument();
     expect(screen.getByText(/Compare 2 organizations: Atlas Digital, Northstar Group/)).toBeInTheDocument();
 
-    const reopenLink = screen.getByRole("link", { name: "Reopen" });
+    const reopenLink = screen.getByRole("link", { name: "Open research" });
     expect(reopenLink).toHaveAttribute("href", expect.stringContaining("/compare?type=organizations&ids=Atlas"));
 
     await user2.click(screen.getByRole("button", { name: "Duplicate" }));
@@ -216,7 +236,43 @@ describe("Saved hub — changes since last visit", () => {
     await user.type(screen.getByRole("textbox", { name: "Watchlist name" }), "Tracked");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
-    expect(await screen.findByText(/No changes since your last visit/)).toBeInTheDocument();
+    expect(await screen.findByText(/No material change since your last visit/)).toBeInTheDocument();
     expect(screen.getByText(/Fixture snapshot unchanged since your last visit/)).toBeInTheDocument();
+  });
+
+  it("makes Last material change the central watchlist card state, phrases counts as supporting records (never an entity count), and exposes a bounded Review changes flow", async () => {
+    window.localStorage.setItem(
+      "registry-hub:watchlists:v1",
+      JSON.stringify([
+        {
+          id: "watchlist-material-change",
+          name: "Pre-update visit",
+          isQuickWatch: false,
+          createdAt: "2026-09-01T00:00:00Z",
+          // Last opened before the fixture's changedAt (2026-09-16T14:07:32Z) so a material change is pending.
+          updatedAt: "2026-09-01T00:00:00Z",
+          lastOpenedAt: "2026-09-01T00:00:00Z",
+          items: [
+            // Deliberately implausible recorded counts guarantee a real supporting-record
+            // drift regardless of the fixture's actual per-entity record counts.
+            { entityType: "organizations", entityKey: "Atlas Digital", label: "Atlas Digital", addedAt: "2026-09-01T00:00:00Z", recordCountAtAdd: 999 },
+            { entityType: "organizations", entityKey: "Northstar Group", label: "Northstar Group", addedAt: "2026-09-01T00:00:00Z", recordCountAtAdd: 999 },
+          ],
+        },
+      ]),
+    );
+
+    const user = userEvent.setup();
+    render(<CommandCenter view="saved" />);
+
+    expect(await screen.findByText(/Last material change: Sep 16, 2026/)).toBeInTheDocument();
+    expect(screen.getByText("New since last visit")).toBeInTheDocument();
+    expect(screen.getByText(/Fixture snapshot updated/)).toBeInTheDocument();
+    expect(screen.getByText(/Supporting records/)).toBeInTheDocument();
+    expect(screen.queryByText(/Result count/)).not.toBeInTheDocument();
+
+    expect(screen.queryByText(/Atlas Digital: 999 →/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Review changes" }));
+    expect(screen.getByText(/Bounded to the 2 entities currently in this watchlist/)).toBeInTheDocument();
   });
 });
