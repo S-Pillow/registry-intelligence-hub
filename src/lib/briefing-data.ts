@@ -1,3 +1,4 @@
+import { participationStatusCellForApplication } from "@/comparison/compare-dimensions";
 import {
   applicantsToWatch,
   compareSectionLabel,
@@ -302,7 +303,13 @@ export function buildBriefingCompareRows(type: EntityType, entities: { key: stri
     {
       label: type === "applications" ? "Participation status" : "Returning participants",
       section: "historical-participation" as const,
-      cells: entities.map((entity) => cell(type === "applications" ? (entity.records[0]?.returning ? "Returning" : "New") : entity.records.filter((record) => record.returning).length, entity.label)),
+      cells: entities.map((entity) => {
+        if (type === "applications") {
+          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning));
+          return cell(eligibility.value, entity.label, eligibility.state);
+        }
+        return cell(entity.records.filter((record) => record.returning).length, entity.label);
+      }),
     },
     { label: "Market demand", section: "market-context" as const, cells: entities.map((entity) => cell("Not comparable — source not approved", entity.label, "not-comparable")) },
   ];

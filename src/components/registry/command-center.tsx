@@ -65,7 +65,10 @@ import {
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
-import { participationStatusCellForOrganization } from "@/comparison/compare-dimensions";
+import {
+  participationStatusCellForApplication,
+  participationStatusCellForOrganization,
+} from "@/comparison/compare-dimensions";
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
@@ -171,6 +174,7 @@ function ProvenanceSheet({
   entityKey,
   historicalFact,
   exploreFullHref,
+  accessibilityLabel,
 }: {
   label: string;
   records?: readonly Application[];
@@ -182,6 +186,7 @@ function ProvenanceSheet({
   entityKey?: string;
   historicalFact?: HistoricalMetricFact;
   exploreFullHref?: string;
+  accessibilityLabel?: string;
 }) {
   const { investigate } = useInvestigation();
   const item: InvestigationItem = {
@@ -199,7 +204,7 @@ function ProvenanceSheet({
     <button
       type="button"
       className={triggerClassName ?? "inline-flex size-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"}
-      aria-label={`View intelligence for ${label}`}
+      aria-label={accessibilityLabel ?? `View intelligence for ${label}`}
       onClick={() => investigate(item)}
     >
       {trigger ?? <Info className="size-4" />}
@@ -566,7 +571,7 @@ function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string;
   );
 }
 
-function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
+function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) {
   return (
     <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
       Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.
@@ -617,9 +622,11 @@ function MetricCards() {
   );
 }
 
-function LoadingState({ surface = "command" }: { surface?: "command" | "explore" }) {
+function LoadingState({ surface = "command" }: { surface?: "command" | "explore" | "compare" }) {
+  const label =
+    surface === "explore" ? "Loading Explore" : surface === "compare" ? "Loading Compare" : "Loading Command Center";
   return (
-    <div aria-live="polite" aria-label={surface === "explore" ? "Loading Explore" : "Loading Command Center"} className="space-y-6">
+    <div aria-live="polite" aria-label={label} className="space-y-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
       <div className="grid gap-6 lg:grid-cols-5"><Skeleton className="h-96 lg:col-span-3" /><Skeleton className="h-96 lg:col-span-2" /></div>
     </div>
@@ -889,7 +896,10 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Replacement string", definition: "Published optional replacement; absence is not represented as zero.", section: "round-activity", cells: entities.map((entity) => entity.records[0].replacement ? cell(`.${entity.records[0].replacement}`) : cell("Not available — not published", "unavailable")) },
         { label: "Region", definition: "Applicant region derived from published country.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].region)) },
         { label: "Initial contention", definition: "Initial identical-string set at fixture baseline; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].contentionSet ?? "Not applicable")) },
-        { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort.", section: "historical-participation", cells: entities.map((entity) => cell(entity.records[0].returning ? "Returning" : "New")) },
+        { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort — fixture flags only; post-Reveal outcomes are not ingested.", section: "historical-participation", cells: entities.map((entity) => {
+          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning));
+          return cell(String(eligibility.value), eligibility.state);
+        }) },
         { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", section: "existing-portfolio", cells: entities.map((entity) => cell(entity.records[0].organization)) },
         { label: "Category / type", definition: "Versioned category and published application-type label.", section: "existing-portfolio", cells: entities.map((entity) => cell(`${entity.records[0].category} · ${entity.records[0].type}`)) },
         { label: "Comparable market demand", definition: "Like-for-like public demand measure with aligned reporting periods.", section: "market-context", cells: entities.map(() => cell("Not comparable — source unavailable", "not-comparable")) },
@@ -949,7 +959,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
             {entities.map((entity, index) => {
               const kind = type === "organizations" ? "applicant" : type === "applications" ? "application" : "category";
               const investigationItem: InvestigationItem = { id: `compare-select-${type}-${entity.key}`, kind, label: entity.label, records: entity.records, entityType: type, entityKey: entity.key };
-              return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div>{index === 0 ? <Badge variant="outline" className="border-sky-300 text-[10px] font-bold uppercase tracking-wider text-sky-800">Reference</Badge> : <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span>}<ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2"><QuickWatchButton item={investigationItem} className="w-full" /></div></CardContent></Card>;
+              return <Card key={entity.key} className="border-slate-300"><CardContent className="pt-5"><div className="flex items-start justify-between gap-2"><div>{index === 0 ? <Badge variant="outline" className="border-sky-300 text-[10px] font-bold uppercase tracking-wider text-sky-800">Reference</Badge> : <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selection {index + 1}</span>}<ProvenanceSheet id={`compare-${type}-${entity.key}`} kind={kind} entityType={type} entityKey={entity.key} label={entity.label} records={entity.records} triggerClassName="mt-1 block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<strong className="flex items-center gap-1 text-base">{entity.label}<Info className="size-3.5 text-[#007d65]" /></strong>} /></div><button aria-label={`Remove ${entity.label}`} onClick={() => removeSelection(entity.key)} className="rounded p-1 text-slate-500 hover:bg-slate-100"><X className="size-4" /></button></div><p className="mt-2 text-xs text-slate-600">{entity.records.length} supporting record{entity.records.length === 1 ? "" : "s"} · source-backed fixture</p><div className="mt-4 flex items-center gap-1"><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} left`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowLeft /></Button><Button size="icon-xs" variant="outline" aria-label={`Move ${entity.label} right`} disabled={index === entities.length - 1} onClick={() => move(index, 1)}><ArrowRight /></Button><select aria-label={`Replace ${entity.label}`} value={entity.key} onChange={(event) => replace(index, event.target.value)} className="ml-auto h-7 max-w-36 rounded border border-slate-300 px-2 text-xs">{options.filter((item) => item.key === entity.key || !selected.includes(item.key)).map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div><div className="mt-2 flex gap-2"><ProvenanceSheet {...investigationItem} accessibilityLabel={`Investigate ${entity.label}`} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickWatchButton item={investigationItem} className="flex-1" /></div></CardContent></Card>;
             })}
             {Array.from({ length: Math.max(0, 2 - entities.length) }).map((_, index) => <div key={`empty-${index}`} className="grid min-h-40 place-items-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-center"><div><Plus className="mx-auto mb-2 size-5 text-slate-500" /><p className="text-sm font-bold text-slate-700">Add {singular} {entities.length + index + 1}</p><p className="mt-1 text-xs text-slate-600">Two selections required</p></div></div>)}
           </section>
@@ -1001,7 +1011,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         />
       </div>
 
-      {state === "loading" ? <LoadingState /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
+      {state === "loading" ? <LoadingState surface="compare" /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
         <>
           <section className="mb-4 flex flex-col justify-between gap-3 rounded-xl border border-slate-300 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
             <div aria-live="polite" className="min-w-0">

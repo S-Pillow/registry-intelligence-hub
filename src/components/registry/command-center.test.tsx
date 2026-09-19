@@ -227,7 +227,7 @@ describe("Compare interactions", () => {
     expect(screen.getAllByText("Initial contention exposure").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "View intelligence for Atlas Digital" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("adds, reorders, replaces, and removes like entities with URL state", async () => {
@@ -254,6 +254,8 @@ describe("Compare interactions", () => {
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Not comparable").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Not available — not published").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/outcome not verified|New \(fixture\)/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/^Returning$/)).not.toBeInTheDocument();
   });
 
   it("covers empty, loading, and error states", () => {
@@ -261,7 +263,7 @@ describe("Compare interactions", () => {
     expect(screen.getByText("Choose at least two organizations")).toBeInTheDocument();
 
     rerender(<CommandCenter view="compare" state="loading" />);
-    expect(screen.getByLabelText("Loading Command Center")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading Compare")).toBeInTheDocument();
 
     rerender(<CommandCenter view="compare" state="error" />);
     expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
@@ -464,11 +466,19 @@ describe("Compare interactions", () => {
 });
 
 describe("Investigate — shared intelligence drawer", () => {
+  it("opens the intelligence drawer from Compare selection cards via Investigate", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    await user.click(screen.getByRole("button", { name: "Investigate Atlas Digital" }));
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
+  });
+
   it("opens from Compare entity provenance with entity-scoped View full", async () => {
     const user = userEvent.setup();
     render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for Atlas Digital" }));
+    await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
     expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute(
       "href",

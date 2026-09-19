@@ -44,6 +44,18 @@ function eligibilityForMetric(metricId: string) {
   };
 }
 
+export function participationStatusCellForApplication(returningFlag: boolean): CompareCellEligibility {
+  const meta = eligibilityForMetric("returning-participant-identity");
+  return {
+    value: returningFlag
+      ? "Fixture flags returning (outcome not verified)"
+      : "New (fixture)",
+    state: "not-comparable",
+    ...meta,
+    method: "cross-round-identity/1.0.0",
+  };
+}
+
 export function participationStatusCellForOrganization(returningFlag: boolean): CompareCellEligibility {
   const entry = getCompareDimensionEligibility("participation-status-identity")
     ?? getMetricEligibility("returning-participant-identity");
