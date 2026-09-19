@@ -11,6 +11,7 @@
     "test": "vitest run",
     "pipeline": "tsx src/pipeline/cli.ts",
     "normalize": "tsx src/normalization/cli.ts",
+    "reveal-2026": "tsx src/reveal-day-2026/cli.ts",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

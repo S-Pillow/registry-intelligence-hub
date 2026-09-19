@@ -29,4 +29,12 @@ describe("comparison eligibility contracts (project docs)", () => {
     expect(resolution.toLowerCase()).toContain("no silent merges");
     expect(resolution).toContain("cross-round-identity/1.0.0");
   });
+
+  it("documents 2026 reveal-day ingestion gates and contamination rule", async () => {
+    const ingestion = await readFile(join(projectDocsRoot, "2026-reveal-day-ingestion.md"), "utf8");
+    expect(ingestion).toContain("registry-2026-parser/1.0.0");
+    expect(ingestion).toContain("rehearsal-for-pipeline-only");
+    expect(ingestion).toContain("verify-reveal-day");
+    expect(ingestion).toMatch(/organization-resolution-2026\/1\.0\.0/);
+  });
 });

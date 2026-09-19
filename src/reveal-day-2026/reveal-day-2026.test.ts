@@ -1,0 +1,222 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  evaluateApplicationActualityPromotion,
+  organizationMetricsRemainGatedAfterApplicationPromotion,
+  readClaimActualityState,
+  resolveMetricEligibilityWithActuality,
+  writeClaimActualityState,
+} from "./claim-actuality";
+import { buildComparisonUnlockReport } from "./comparison-unlock";
+import { assertNoFixtureContaminationInRealBuild } from "./contamination";
+import { loadPublicationSnapshotFromPath, runDryRunIngestion } from "./dry-run";
+import type { Registry2026PublicationSnapshot } from "./types";
+import { PARSER_VERSION, PUBLICATION_SCHEMA_VERSION } from "./types";
+import { validatePublicationSnapshot, validationFailed } from "./validate";
+
+const projectDocsRoot = "/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs";
+const rehearsalSnapshotPath = join(
+  process.cwd(),
+  "src/reveal-day-2026/fixtures/rehearsal-2026-pipeline-v1/publication.snapshot.json",
+);
+
+describe("2026 reveal-day ingestion", () => {
+  const tempDirs: string[] = [];
+  afterEach(async () => {
+    for (const dir of tempDirs) await rm(dir, { recursive: true, force: true });
+  });
+
+  async function tempStatePath(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), "claim-actuality-"));
+    tempDirs.push(dir);
+    return join(dir, "claim-actuality-state.json");
+  }
+
+  it("fails validation on unexpected fields and duplicate application ids", () => {
+    const bad = {
+      schemaVersion: PUBLICATION_SCHEMA_VERSION,
+      publicationKind: "rehearsal-for-pipeline-only",
+      snapshotId: "snap-test",
+      publishedAt: "2026-01-01T00:00:00Z",
+      retrievedAt: "2026-01-01T00:00:00Z",
+      parserVersion: PARSER_VERSION,
+      normalizerVersion: "registry-2026-normalizer/1.0.0",
+      source: { name: "t", url: "https://example.com", evidenceClass: "rehearsal" },
+      limitations: [],
+      surpriseField: true,
+      applications: [
+        {
+          id: "APP-1",
+          string: "bad",
+          applicant: "A",
+          organization: "O",
+          country: "US",
+          region: "NA",
+          category: "X",
+          type: "G",
+          returning: false,
+          idn: false,
+          replacement: null,
+          contentionSet: null,
+          confidence: 1,
+        },
+        {
+          id: "APP-1",
+          string: "also-bad",
+          applicant: "B",
+          organization: "O",
+          country: "US",
+          region: "NA",
+          category: "X",
+          type: "G",
+          returning: false,
+          idn: false,
+          replacement: null,
+          contentionSet: null,
+          confidence: 1,
+        },
+      ],
+    };
+    const { issues } = validatePublicationSnapshot(bad, { enforceProductionRowBounds: false });
+    expect(validationFailed(issues)).toBe(true);
+    expect(issues.some((i) => i.code === "unexpected-field")).toBe(true);
+    expect(issues.some((i) => i.code === "duplicate-application-id")).toBe(true);
+  });
+
+  it("dry-run produces diagnostics without writing claim actuality state", async () => {
+    const statePath = await tempStatePath();
+    const snapshot = await loadPublicationSnapshotFromPath(rehearsalSnapshotPath);
+    const before = await readClaimActualityState(statePath);
+    expect(before.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
+
+    const diagnostics = runDryRunIngestion(snapshot);
+    expect(diagnostics.validation.ok).toBe(true);
+    expect(diagnostics.contaminationCheck.blockedForRealPromotion).toBe(true);
+
+    const after = await readClaimActualityState(statePath);
+    expect(after).toEqual(before);
+  });
+
+  it("blocks rehearsal snapshot from actuality promotion (contamination guard)", async () => {
+    const snapshot = await loadPublicationSnapshotFromPath(rehearsalSnapshotPath);
+    const verdict = assertNoFixtureContaminationInRealBuild(snapshot, "promote");
+    expect(verdict.ok).toBe(false);
+
+    const diagnostics = runDryRunIngestion(snapshot);
+    const result = evaluateApplicationActualityPromotion(snapshot, diagnostics, DEFAULT_CLAIM_ACTUALITY_STATE);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /rehearsal/i.test(e))).toBe(true);
+  });
+
+  it("keeps organization metrics gated after application actuality promotion", () => {
+    const promoted = {
+      ...DEFAULT_CLAIM_ACTUALITY_STATE,
+      round2026ApplicationActuality: "REAL_SOURCE_READY" as const,
+      promotedAt: "2026-06-01T00:00:00Z",
+      snapshotId: "snap-real",
+      snapshotContentHash: "abc",
+      promotionGates: {
+        snapshotValidated: true,
+        parserPassed: true,
+        normalizationPassed: true,
+        provenanceRecorded: true,
+        validationPassed: true,
+        contaminationClear: true,
+      },
+    };
+
+    expect(organizationMetricsRemainGatedAfterApplicationPromotion(promoted)).toBe(true);
+
+    for (const id of ["application-count", "unique-applied-strings", "idn-applications"]) {
+      const resolved = resolveMetricEligibilityWithActuality(id, promoted);
+      expect(resolved?.claimReadiness.round2026).toBe("REAL_SOURCE_READY");
+      expect(resolved?.comparisonAllowed).toBe(true);
+    }
+
+    const org = resolveMetricEligibilityWithActuality("organization-round-count", promoted);
+    expect(org?.comparisonAllowed).toBe(false);
+    expect(org?.claimReadiness.round2026).not.toBe("REAL_SOURCE_READY");
+
+    const unlock = buildComparisonUnlockReport(promoted);
+    expect(unlock.summary.newlyUnlockedComparisonCount).toBe(3);
+    expect(unlock.metrics.find((m) => m.metricId === "organization-round-count")?.comparisonAllowed).toBe(false);
+  });
+
+  it("comparison-unlock report lists gated vs newly eligible metrics", () => {
+    const report = buildComparisonUnlockReport(DEFAULT_CLAIM_ACTUALITY_STATE);
+    expect(report.metrics.every((m) => !m.comparisonAllowed)).toBe(true);
+    expect(report.strictRule).toMatch(/organization intelligence/i);
+  });
+
+  it("documents reveal-day ingestion in project docs", async () => {
+    const doc = await readFile(join(projectDocsRoot, "2026-reveal-day-ingestion.md"), "utf8");
+    expect(doc).toContain("reveal-2026");
+    expect(doc).toContain("rehearsal-for-pipeline-only");
+    expect(doc).toContain("promote-actuality");
+    expect(doc).toMatch(/NOT_PUBLISHED.*REAL_SOURCE_READY/);
+  });
+
+  it("persists promotion only via explicit write", async () => {
+    const statePath = await tempStatePath();
+    const promoted = {
+      ...DEFAULT_CLAIM_ACTUALITY_STATE,
+      round2026ApplicationActuality: "REAL_SOURCE_READY" as const,
+      promotedAt: "2026-06-01T00:00:00Z",
+      snapshotId: "snap-real-test",
+      snapshotContentHash: "deadbeef",
+      promotionGates: DEFAULT_CLAIM_ACTUALITY_STATE.promotionGates,
+    };
+    await writeClaimActualityState(statePath, promoted);
+    const text = await readFile(statePath, "utf8");
+    const parsed = JSON.parse(text);
+    expect(parsed.round2026ApplicationActuality).toBe("REAL_SOURCE_READY");
+  });
+});
+
+function minimalProductionSnapshot(applicationCount: number): Registry2026PublicationSnapshot {
+  const applications = Array.from({ length: applicationCount }, (_, i) => ({
+    id: `APP-${90000 + i}`,
+    string: `str${i}`,
+    applicant: `Applicant ${i} LLC`,
+    organization: `Org ${i}`,
+    country: "US",
+    region: "North America",
+    category: "Technology",
+    type: "Generic",
+    returning: false,
+    idn: false,
+    replacement: null,
+    contentionSet: null,
+    confidence: 1,
+  }));
+  return {
+    schemaVersion: PUBLICATION_SCHEMA_VERSION,
+    publicationKind: "immutable-publication",
+    snapshotId: "snap-immutable-test-100",
+    publishedAt: "2026-06-01T12:00:00Z",
+    retrievedAt: "2026-06-01T12:05:00Z",
+    parserVersion: PARSER_VERSION,
+    normalizerVersion: "registry-2026-normalizer/1.0.0",
+    source: { name: "ICANN", url: "https://newgtldprogram.icann.org/", evidenceClass: "authoritative" },
+    limitations: [],
+    applications,
+  };
+}
+
+describe("immutable publication row bounds", () => {
+  it("rejects suspiciously small immutable snapshots", () => {
+    const snap = minimalProductionSnapshot(12);
+    const { issues } = validatePublicationSnapshot(snap, { enforceProductionRowBounds: true });
+    expect(issues.some((i) => i.code === "row-count-low")).toBe(true);
+  });
+
+  it("accepts production-shaped snapshot at minimum row bound", () => {
+    const snap = minimalProductionSnapshot(100);
+    const { issues, snapshot } = validatePublicationSnapshot(snap, { enforceProductionRowBounds: true });
+    expect(validationFailed(issues)).toBe(false);
+    expect(snapshot?.applications.length).toBe(100);
+  });
+});
