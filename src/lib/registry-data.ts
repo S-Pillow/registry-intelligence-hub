@@ -683,13 +683,35 @@ export function insightEmphasisForLens(lens: Lens, insightId: string) {
   return emphasis[insightId];
 }
 
-/** Round Pulse metric `filter` keys emphasized for the active View (visual ring only; values unchanged). */
+/** Round Pulse metric `filter` keys emphasized for the active View (border/tint + VIEW FOCUS marker; values unchanged). */
 export const roundPulseEmphasisByLens: Record<Lens, string[]> = {
   all: [],
   commercial: ["organizations", "contention"],
   strategy: ["regions", "idn", "contention"],
   marketing: ["idn", "regions"],
 };
+
+/** Semantic VIEW FOCUS label per emphasized Round Pulse card (filter key → marker text). */
+export const roundPulseViewFocusByLens: Record<Lens, Partial<Record<string, string>>> = {
+  all: {},
+  commercial: {
+    organizations: "Portfolio depth signal",
+    contention: "Contention timing watch",
+  },
+  strategy: {
+    regions: "Composition geography",
+    idn: "Composition shift",
+    contention: "Round-structure signal",
+  },
+  marketing: {
+    idn: "Cross-region narrative",
+    regions: "Geographic reach signal",
+  },
+};
+
+export function roundPulseViewFocusForLens(lens: Lens, filter: string) {
+  return roundPulseViewFocusByLens[lens][filter];
+}
 
 const investigationOrganizationOrderByLens: Record<Lens, string[]> = {
   all: ["Atlas Digital", "Northstar Group", "Kizuna Registry"],

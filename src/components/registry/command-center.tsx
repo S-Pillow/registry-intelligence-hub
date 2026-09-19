@@ -59,6 +59,7 @@ import {
   lensWhyMattersCondensed,
   lensWhyMattersCondensedLabel,
   roundPulseEmphasisByLens,
+  roundPulseViewFocusForLens,
   standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
@@ -593,12 +594,20 @@ function MetricCards({ lens }: { lens: Lens }) {
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      {metrics.map((metric) => (
+      {metrics.map((metric) => {
+        const isFocused = emphasized.has(metric.filter);
+        const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
+        return (
         <div
           key={metric.id}
-          data-lens-emphasized={emphasized.has(metric.filter) ? "true" : undefined}
-          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${emphasized.has(metric.filter) ? "outline outline-1 -outline-offset-1 outline-[#72dfb4]/50" : ""}`}
+          data-lens-emphasized={isFocused ? "true" : undefined}
+          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${isFocused ? "border-[#007d65] bg-emerald-50/70 shadow-md ring-1 ring-[#72dfb4]/40" : ""}`}
         >
+          {focusMarker ? (
+            <p className="border-b border-emerald-200/80 bg-emerald-100/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]" data-testid="lens-view-focus-marker">
+              View focus · {focusMarker}
+            </p>
+          ) : null}
           <ProvenanceSheet
             id={`metric-${metric.id}`}
             kind="metric"
@@ -627,7 +636,8 @@ function MetricCards({ lens }: { lens: Lens }) {
             Open in Explore<ArrowRight className="size-3.5" />
           </Link>
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }
@@ -1211,6 +1221,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 ))}
               </div>
               <p className="mt-3 text-sm font-medium leading-6 text-slate-100" data-testid="lens-view-panel-line">{lensViewPanelLine[activeLens]}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-50" data-testid="lens-why-matters-condensed">
+                <strong className="font-semibold text-[#72dfb4]">{lensWhyMattersCondensedLabel(activeLens)}:</strong> {lensWhyMattersCondensed[activeLens]}
+              </p>
             </div>
             <div className="shrink-0">
               <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Time basis</p>
@@ -1225,9 +1238,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
         {state === "loading" ? <LoadingState /> : state === "empty" || state === "error" ? <MessageState kind={state} /> : (
           <section className="mb-2" aria-labelledby="round-pulse-heading">
-            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters-condensed">
-              <strong className="text-[#005c49]">{lensWhyMattersCondensedLabel(activeLens)}:</strong> {lensWhyMattersCondensed[activeLens]}
-            </p>
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>

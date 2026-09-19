@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 describe("Command Center interactions", () => {
-  it("changes above-the-fold rendered text across acceptance View pairs", async () => {
+  it("passes the cover-the-buttons contract for all four Views", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
@@ -26,10 +26,21 @@ describe("Command Center interactions", () => {
     const condensedWhy = () => screen.getByTestId("lens-why-matters-condensed").textContent ?? "";
     const pulseEyebrow = () => screen.getByTestId("lens-round-pulse-eyebrow").textContent ?? "";
     const pulseSubtitle = () => screen.getByTestId("lens-round-pulse-subtitle").textContent ?? "";
+    const focusMarkers = () => screen.queryAllByTestId("lens-view-focus-marker").map((node) => node.textContent ?? "");
+    const factValues = () =>
+      within(screen.getByTestId("above-fold-lens-surface"))
+        .getAllByText(/^\d+$/)
+        .map((node) => node.textContent);
 
     expect(panelLine()).toMatch(/All Intelligence:/);
+    expect(condensedWhy()).toMatch(/Why this matters for All Intelligence:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
     expect(pulseSubtitle()).toBe("The rehearsal round at a glance");
+    expect(focusMarkers()).toHaveLength(0);
+    const baselineFacts = factValues();
+    expect(baselineFacts).toContain("1930");
+    expect(baselineFacts).toContain("1409");
+    expect(baselineFacts).toContain("116");
 
     const allAbove = aboveFold();
     await user.click(screen.getByRole("button", { name: "Commercial" }));
@@ -38,15 +49,26 @@ describe("Command Center interactions", () => {
     expect(condensedWhy()).toMatch(/Why this matters for Commercial:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · COMMERCIAL VIEW");
     expect(pulseSubtitle()).toBe("Applicant portfolios, organizations, and contention signals at a glance");
-    expect(document.querySelectorAll('[data-lens-emphasized="true"]').length).toBeGreaterThan(0);
+    expect(focusMarkers()).toEqual(
+      expect.arrayContaining(["View focus · Portfolio depth signal", "View focus · Contention timing watch"]),
+    );
+    expect(factValues()).toEqual(baselineFacts);
 
     const commercialAbove = aboveFold();
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
     expect(aboveFold()).not.toBe(commercialAbove);
     expect(panelLine()).toBe("Product & Strategy: Focuses on composition, IDN participation, and contention.");
-    expect(condensedWhy()).toMatch(/Why this matters for Product & Strategy:/);
+    expect(condensedWhy()).toMatch(/how the round is structured and where participation patterns differ/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · PRODUCT & STRATEGY VIEW");
     expect(pulseSubtitle()).toBe("Composition, IDN participation, and contention signals at a glance");
+    expect(focusMarkers()).toEqual(
+      expect.arrayContaining([
+        "View focus · Composition geography",
+        "View focus · Composition shift",
+        "View focus · Round-structure signal",
+      ]),
+    );
+    expect(factValues()).toEqual(baselineFacts);
 
     const strategyAbove = aboveFold();
     await user.click(screen.getByRole("button", { name: "Marketing" }));
@@ -58,6 +80,10 @@ describe("Command Center interactions", () => {
     expect(condensedWhy()).toMatch(/cross-region and language patterns that may shape market narratives/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · MARKETING VIEW");
     expect(pulseSubtitle()).toBe("Geographic reach and IDN signals at a glance");
+    expect(focusMarkers()).toEqual(
+      expect.arrayContaining(["View focus · Cross-region narrative", "View focus · Geographic reach signal"]),
+    );
+    expect(factValues()).toEqual(baselineFacts);
   });
 
   it("keeps downstream lens-dependent content when Views change", async () => {
