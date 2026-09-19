@@ -944,6 +944,8 @@ export function BriefThisButton({
   defaultName,
   disabled,
   entryPath,
+  emphasis,
+  audience,
   icon,
   variant = "outline",
   className,
@@ -953,6 +955,9 @@ export function BriefThisButton({
   defaultName: string;
   disabled?: boolean;
   entryPath: EntryPath;
+  /** When set (e.g. from Command Center lens), briefing content matches the active View. */
+  emphasis?: Lens;
+  audience?: AudienceId;
   icon?: ReactNode;
   variant?: "outline" | "default" | "ghost";
   className?: string;
@@ -975,7 +980,14 @@ export function BriefThisButton({
       disabled={disabled}
       className={className}
       onClick={() => {
-        const created = savedWork.createBriefing({ name: defaultName, entryPath, audience: "executive", sectionsWanted: defaultSectionsForScope(scope.kind), scope });
+        const created = savedWork.createBriefing({
+          name: defaultName,
+          entryPath,
+          audience: audience ?? "executive",
+          emphasis,
+          sectionsWanted: defaultSectionsForScope(scope.kind),
+          scope,
+        });
         setCreatedId(created.definition.id);
       }}
     >

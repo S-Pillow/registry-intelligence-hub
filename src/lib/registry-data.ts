@@ -85,6 +85,13 @@ export function describeExploreFilters(filters: Record<string, string>) {
   return parts.length ? parts.join(" · ") : "All applications, no filters applied";
 }
 
+export function exploreResearchHref(query: string) {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  const suffix = params.size ? `?${params}` : "";
+  return `/tools/registry-intelligence-hub/explore${suffix}`;
+}
+
 export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(filters).filter(([key, value]) => {

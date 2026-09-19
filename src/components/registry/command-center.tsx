@@ -56,6 +56,8 @@ import {
   type Application,
   type CompareSectionId,
   type Lens,
+  lensInterpretations,
+  exploreResearchHref,
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
@@ -78,12 +80,16 @@ type ViewState = "ready" | "loading" | "empty" | "error";
 export type { CompareEntityType };
 
 const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
-const lensInterpretations: Record<string, string> = {
-  all: "The rehearsal fixture points to concentrated portfolios, increased IDN representation, and two initial contention clusters worth coordinated review.",
-  commercial: "Portfolio concentration and contention expose where account research may be most efficient; they are investigation priorities, not sales recommendations.",
-  strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
-  marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
-};
+
+const TIME_BASIS_UNAVAILABLE =
+  "Unavailable while the 2026 round remains unpublished. Reveal Day shows the approved 2012 baseline and rehearsal fixture context only.";
+
+function briefingAudienceForLens(lens: string): { audience: "executive" | "commercial" | "product-strategy" | "marketing"; emphasis: Lens } {
+  if (lens === "commercial") return { audience: "commercial", emphasis: "commercial" };
+  if (lens === "strategy") return { audience: "product-strategy", emphasis: "strategy" };
+  if (lens === "marketing") return { audience: "marketing", emphasis: "marketing" };
+  return { audience: "executive", emphasis: "all" };
+}
 
 function ShellHeader() {
   return (
@@ -436,6 +442,14 @@ function metricCardSurfaceClass(metric: PresentedHistoricalMetric & { delta: str
   return "border-slate-200 bg-slate-100 opacity-90";
 }
 
+function humanizeMethodReadiness(readiness: string) {
+  if (readiness === "BLOCKED_COVERAGE") return "Coverage gate";
+  if (readiness === "BLOCKED_METHOD") return "Method gate";
+  if (readiness === "COMPARABLE") return "Comparable method";
+  if (readiness === "PARTIAL") return "Partial method";
+  return readiness.replaceAll("_", " ").toLowerCase();
+}
+
 function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string; method: string; displayTier: string; comparisonAllowed: boolean } }) {
   const tierLabel =
     metric.displayTier === "production-ready"
@@ -449,7 +463,7 @@ function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string;
           : "Unavailable";
   return (
     <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-      {tierLabel} · {metric.methodReadiness} · {metric.method}
+      {tierLabel} · {humanizeMethodReadiness(metric.methodReadiness)} · {metric.method}
     </span>
   );
 }
@@ -1006,6 +1020,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
 export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
+  const briefingLens = briefingAudienceForLens(lens);
   const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
   const [compareItems, setCompareItems] = useState<InvestigationItem[]>([]);
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
@@ -1064,14 +1079,30 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative block">
               <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
-              <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fixture records…" aria-label="Search fixture records" aria-keyshortcuts="/ Control+K Meta+K" className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65] sm:w-80" />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && query.trim()) {
+                    event.preventDefault();
+                    window.location.assign(exploreResearchHref(query));
+                  }
+                }}
+                placeholder="Search fixture records…"
+                aria-label="Search fixture records"
+                aria-keyshortcuts="/ Control+K Meta+K"
+                className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65] sm:w-80"
+              />
               <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
             </label>
             <BriefThisButton
               scope={{ kind: "round-wide" }}
               label="Instant Briefing"
-              defaultName="Briefing: Round-wide"
+              defaultName={lens === "all" ? "Briefing: Round-wide" : `Briefing: ${lens === "strategy" ? "Product & Strategy" : lens.charAt(0).toUpperCase() + lens.slice(1)} view`}
               entryPath="instant"
+              audience={briefingLens.audience}
+              emphasis={briefingLens.emphasis}
               variant="default"
               className="bg-[#007d65] text-white hover:bg-[#006a56]"
             />
@@ -1098,16 +1129,16 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Time basis</p>
             <div className="inline-flex rounded-lg border border-white/15 bg-[#0d1720] p-1" aria-label="Time basis">
               <button aria-pressed="true" className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-950"><FileClock className="mr-1.5 inline size-4" />Reveal Day</button>
-              <button disabled className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500">Current</button>
-              <button disabled className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500"><GitCompareArrows className="mr-1 inline size-4" />Compare</button>
+              <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500">Current</button>
+              <button type="button" disabled title={TIME_BASIS_UNAVAILABLE} className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-slate-500"><GitCompareArrows className="mr-1 inline size-4" />Compare</button>
             </div>
           </div>
         </section>
 
         <section aria-label="Dataset health" className="mb-5 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span></div>
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
-          <div className="bg-white px-4 py-3"><span className="block text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed</span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span></div>
+          <ProvenanceSheet id="snapshot-lineage" kind="dataset" label={`Snapshot ${registryFixture.snapshotId}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Rehearsal fixture pin · not official 2026</span></>} />
+          <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Automated fixture validation pass</span></>} />
+          <ProvenanceSheet id="last-changed" kind="dataset" label={`Last changed ${registryFixture.changedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Content revision on pinned snapshot</span></>} />
           <ProvenanceSheet
             id="source-coverage"
             kind="coverage"
@@ -1126,7 +1157,15 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
         {state === "ready" && query && (
           <section aria-live="polite" className="mb-6 rounded-xl border border-emerald-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between"><h2 className="font-semibold">Fixture search results</h2><Badge variant="secondary">{filtered.length} records</Badge></div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold">Fixture search results</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{filtered.length} records</Badge>
+                <Link href={exploreResearchHref(query)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#007d65] bg-emerald-50 px-3 text-xs font-bold text-[#006a56] hover:bg-emerald-100">
+                  Open in Explore<ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            </div>
             {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="application" entityType="applications" entityKey={item.id} label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No fixture records match “{query}”. Try an organization, string, or category.</p>}
           </section>
         )}
@@ -1169,7 +1208,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
               </div>
               <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800">
-                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[lens]}
+                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[lens as Lens]}
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
                 {visibleInsights.map((insight) => (
@@ -1195,7 +1234,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
                 <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`}>
                   <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">Rehearsal fixture only — category mix comparison blocked (BLOCKED_COVERAGE)</p></div>
+                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">Rehearsal fixture only — category mix comparison not yet approved for publication</p></div>
                     <ProvenanceSheet kind="metric" label="Biggest changes versus 2012" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -1227,19 +1266,34 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     <ProvenanceSheet kind="metric" label="Applicants Worth Investigating method" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {applicantsToWatch.map((item, index) => (
-                      <ProvenanceSheet
-                        key={item.organization}
-                        id={`applicant-watch-${item.organization}`}
-                        kind="applicant"
-                        entityType="organizations"
-                        entityKey={item.organization}
-                        label={`${item.organization} investigation profile`}
-                        records={item.records}
-                        triggerClassName="group grid w-full grid-cols-[32px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                        trigger={<><span className="font-mono text-xs font-bold text-slate-400">0{index + 1}</span><span><strong className="block text-sm">{item.organization}</strong><span className="mt-1 block text-xs text-slate-600">{item.reasons.join(" · ")}</span></span><ChevronRight className="size-4 text-[#007d65]" /></>}
-                      />
-                    ))}
+                    {applicantsToWatch.map((item, index) => {
+                      const investigationItem: InvestigationItem = {
+                        id: `applicant-watch-${item.organization}`,
+                        kind: "applicant",
+                        entityType: "organizations",
+                        entityKey: item.organization,
+                        label: `${item.organization} investigation profile`,
+                        records: item.records,
+                      };
+                      return (
+                        <div key={item.organization} className="rounded-lg border border-transparent px-3 py-3 hover:border-emerald-200 hover:bg-emerald-50">
+                          <div className="grid grid-cols-[32px_1fr_auto] items-center gap-3">
+                            <span className="font-mono text-xs font-bold text-slate-400">0{index + 1}</span>
+                            <ProvenanceSheet
+                              {...investigationItem}
+                              triggerClassName="group block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                              trigger={<><strong className="block text-sm">{item.organization}</strong><span className="mt-1 block text-xs text-slate-600">{item.reasons.join(" · ")}</span></>}
+                            />
+                            <ChevronRight className="size-4 text-[#007d65]" aria-hidden />
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2 pl-8">
+                            <ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" />
+                            <QuickCompareButton item={investigationItem} />
+                            <QuickWatchButton item={investigationItem} />
+                          </div>
+                        </div>
+                      );
+                    })}
                     <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why these stand out:</strong> portfolio size, category breadth, contention exposure, IDN participation, and returning status are transparent fixture rules.</p>
                   </CardContent>
                 </Card>

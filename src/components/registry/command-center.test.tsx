@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { exploreResearchHref } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
 
 beforeEach(() => {
@@ -69,6 +70,41 @@ describe("Command Center interactions", () => {
     expect(screen.getByText(/Affected: Market Opportunity Map/)).toBeInTheDocument();
   });
 
+  it("links Command Center search to the Explore research context", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+    const search = screen.getByRole("textbox", { name: "Search fixture records" });
+    await user.type(search, "Atlas");
+    expect(exploreResearchHref("Atlas")).toBe("/tools/registry-intelligence-hub/explore?q=Atlas");
+    expect(screen.getByRole("link", { name: /Open in Explore/ })).toHaveAttribute("href", "/tools/registry-intelligence-hub/explore?q=Atlas");
+  });
+
+  it("opens provenance for snapshot lineage from dataset health", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+    await user.click(screen.getByRole("button", { name: "View intelligence for Snapshot snap-rehearsal-2026-09-16" }));
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · DATASET/)).toBeInTheDocument();
+    expect(screen.getByText("snap-rehearsal-2026-09-16")).toBeInTheDocument();
+  });
+
+  it("wires Investigate, Compare, and Watch for applicants worth investigating", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+    const applicantCard = screen.getByText("Evidence-led investigation queue").closest("[data-slot=card]") as HTMLElement;
+    await user.click(within(applicantCard).getByRole("button", { name: "Add to compare Atlas Digital investigation profile" }));
+    expect(screen.getByLabelText("Comparison selection tray")).toBeInTheDocument();
+    await user.click(within(applicantCard).getByRole("button", { name: "Watch Atlas Digital investigation profile" }));
+    await waitFor(() => expect(within(applicantCard).getByRole("button", { name: "Watching Atlas Digital investigation profile" })).toBeInTheDocument());
+    await user.click(within(applicantCard).getAllByRole("button", { name: "View intelligence for Atlas Digital investigation profile" })[1]);
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
+  });
+
+  it("does not show internal blocked-eligibility codes in Biggest Changes copy", () => {
+    render(<CommandCenter />);
+    expect(screen.queryByText(/BLOCKED_COVERAGE/)).not.toBeInTheDocument();
+    expect(screen.getByText(/category mix comparison not yet approved/i)).toBeInTheDocument();
+  });
+
   it("focuses global search with the slash shortcut", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
@@ -85,7 +121,7 @@ describe("Command Center interactions", () => {
 
     expect(screen.getByText("APPLICANTS WORTH INVESTIGATING")).toBeInTheDocument();
     expect(screen.queryByText("APPLICANTS TO WATCH")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "View intelligence for Atlas Digital investigation profile" }));
+    await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital investigation profile" })[0]);
     expect(screen.getByRole("button", { name: "Watch" })).toBeInTheDocument();
   });
 });

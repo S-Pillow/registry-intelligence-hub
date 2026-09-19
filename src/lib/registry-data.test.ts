@@ -18,6 +18,7 @@ import {
   groupCompareRowsBySection,
   listEntityOptions,
   nonDefaultExploreFilterParams,
+  exploreResearchHref,
   numericCellDelta,
   recordsForEntity,
   rowHasDifference,
@@ -264,5 +265,12 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
     const summary = summarizeCompareDifferences([matchingRow, differingRow]);
     expect(summary.topFacts).toEqual(["2026 applications — Atlas Digital 3, Northstar Group 5"]);
     expect(summary.remainingFacts).toEqual([]);
+  });
+});
+
+describe("exploreResearchHref", () => {
+  it("builds Explore URLs with optional query text", () => {
+    expect(exploreResearchHref("")).toBe("/tools/registry-intelligence-hub/explore");
+    expect(exploreResearchHref("  Atlas  ")).toBe("/tools/registry-intelligence-hub/explore?q=Atlas");
   });
 });
