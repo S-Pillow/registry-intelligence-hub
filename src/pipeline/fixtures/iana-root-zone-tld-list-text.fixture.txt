@@ -1,0 +1,6 @@
+# SYNTHETIC REPRESENTATIVE FIXTURE — NOT REAL IANA DATA. Generated for offline pipeline runs and tests only.
+# Version 2026091900, Last Updated Sat Sep 19 00:00:00 2026 UTC
+EXAMPLE
+XN--EXAMPLE-IDNA1
+FIXTURETLD
+TEST

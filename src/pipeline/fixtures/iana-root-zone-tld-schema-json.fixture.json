@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$comment": "SYNTHETIC REPRESENTATIVE FIXTURE — a trimmed stand-in for IANA's published tlds-schema.json, not a copy of it.",
+  "type": "object",
+  "required": ["meta", "domains"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["generated", "source", "specversion"],
+      "properties": {
+        "generated": { "type": "string" },
+        "source": { "type": "string" },
+        "specversion": { "type": "string" }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string" },
+          "type": { "type": "string" },
+          "ulabel": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "generated": "2026-09-19T00:00:00Z",
+    "source": "SYNTHETIC REPRESENTATIVE FIXTURE — not real IANA data",
+    "specversion": "1.0"
+  },
+  "domains": [
+    {
+      "name": "example",
+      "status": "active",
+      "type": "generic",
+      "ulabel": "example",
+      "script_code": "Latn",
+      "manager": {
+        "organization": "Fixture Registry Operator, Inc.",
+        "address": null,
+        "last_updated": "2026-01-01T00:00:00Z"
+      },
+      "contacts": {
+        "admin": { "name": null, "organization": null, "address": null, "phone": null, "fax": null, "last_updated": "2026-01-01T00:00:00Z" },
+        "tech": { "name": null, "organization": null, "address": null, "phone": null, "fax": null, "last_updated": "2026-01-01T00:00:00Z" }
+      },
+      "ds_records": [],
+      "nameservers": [{ "name": "a.fixture-ns.example.", "ipv4": ["203.0.113.1"], "ipv6": [] }],
+      "rdap_base_urls": ["https://rdap.fixture-registry.example/"],
+      "registration_url": "https://www.fixture-registry.example/",
+      "whois_server": "whois.fixture-registry.example",
+      "annotations": { "delegation_round": "fixture-round" },
+      "events": {
+        "delegation": { "date": "2015-01-01T00:00:00Z", "confidence_level": "high" },
+        "last_updated": "2026-01-01T00:00:00Z"
+      }
+    }
+  ]
+}

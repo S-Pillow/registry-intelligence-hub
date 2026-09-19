@@ -35,3 +35,25 @@ This runs linting, TypeScript checks, deterministic fixture/hash tests, and a pr
 - No production server, database, authentication, or external write integration is used.
 - Immutable fixture metadata and hashes live in `src/data/fixtures/manifest.json`.
 - All displayed numeric intelligence is calculated deterministically in `src/lib/registry-data.ts`.
+
+## Source inventory and snapshot pipeline
+
+`src/pipeline/` is a foundation slice, separate from the browser app above: a typed, versioned registry of authoritative public ICANN/IANA sources (documented in full at `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/source-inventory.md`, including which sources are approved-for-fetch vs. documented-only) and a local CLI pipeline that fetches, validates, and immutably stores raw source bytes ahead of any future normalization work. It does not feed the browser app's fixtures — that handoff is intentionally left as a stable contract (`listHandoff()` / `npm run pipeline -- handoff`) for a later normalization phase, not wired up yet.
+
+```bash
+# Offline by default — fetches from small representative fixtures in src/pipeline/fixtures/,
+# never real production payloads. Safe to run with no network access.
+npm run pipeline -- list
+npm run pipeline -- fetch --all
+npm run pipeline -- snapshots
+npm run pipeline -- verify
+npm run pipeline -- handoff
+
+# Opt-in, bounded, read-only live fetch against the real sources in the registry.
+# Always point --root somewhere outside the repo for a live run.
+npm run pipeline -- fetch --all --mode live --root /tmp/source-pipeline-live
+```
+
+- Every registered source is content-addressed by SHA-256 on write (`.data/source-pipeline/blobs/`, git-ignored) and every fetch attempt — successful or not — is appended to a per-source, never-rewritten manifest (`.data/source-pipeline/manifests/<sourceId>.jsonl`).
+- `verify` recomputes hashes for every stored blob and flags tampering or missing files; `snapshots`/`inspect` read manifest history; `handoff` returns the stable, adapter-agnostic contract a future normalizer should read instead of touching manifests or blobs directly.
+- No fetched production payload is ever committed to this repository — only the hand-authored fixtures in `src/pipeline/fixtures/` (see that directory's own README) and whatever a `--mode live` run writes to a git-ignored or explicitly out-of-repo `--root`.
