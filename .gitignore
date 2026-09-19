@@ -42,3 +42,6 @@ next-env.d.ts
 
 # source snapshot pipeline runtime storage — never commit fetched bytes, see src/pipeline/fixtures/README.md
 /.data/
+
+agent-tools/
+scripts/__pycache__/
