@@ -13,10 +13,20 @@ function killListenersOnPort(targetPort) {
 }
 
 /** Client bundles 404 when an old next-server survives across `next build` — Hub hits the route error boundary. */
+async function fetchOk(url, attempts = 8) {
+  for (let i = 0; i < attempts; i += 1) {
+    const response = await fetch(url);
+    if (response.ok) return response;
+    await delay(400);
+  }
+  const last = await fetch(url);
+  return last;
+}
+
 async function assertClientChunksResolvable(html, pagePath) {
   const scripts = [...new Set([...html.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((match) => match[0]))];
   for (const script of scripts) {
-    const response = await fetch(`${base}${script}`);
+    const response = await fetchOk(`${base}${script}`);
     if (!response.ok) {
       throw new Error(
         `${pagePath} references missing client chunk ${script} (HTTP ${response.status}). ` +
@@ -35,7 +45,7 @@ const paths = [
 ];
 
 killListenersOnPort(port);
-await delay(300);
+await delay(1200);
 
 const server = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", port], {
   cwd: process.cwd(),

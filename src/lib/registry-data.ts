@@ -169,6 +169,26 @@ export const lensInterpretations: Record<Lens, string> = {
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
 
+/** Round Pulse section heading copy — same metric values, lens-specific framing above the fold. */
+export const lensRoundPulseCopy: Record<Lens, { title: string; subtitle: string }> = {
+  all: {
+    title: "Round-wide rehearsal pulse",
+    subtitle: "All six fixture metrics at Reveal Day baseline — balanced read across portfolios, IDN, and contention.",
+  },
+  commercial: {
+    title: "Portfolio & contention pulse",
+    subtitle: "Organizations and initial contention sets lead this View — account-research entry points, not recommendations.",
+  },
+  strategy: {
+    title: "Composition & structure pulse",
+    subtitle: "Regions, IDN share, and contention clusters frame how this rehearsal cohort differs from the 2012 fixture.",
+  },
+  marketing: {
+    title: "Participation & narrative pulse",
+    subtitle: "IDN and regional spread lead this View — evidence-backed themes only, not demand or success forecasts.",
+  },
+};
+
 /** The record set a saved/briefed Explore view or Compare configuration resolves to right now — shared by Saved's change-since-visit count and Briefings' generator/drift disclosure. */
 export function recordsForParams(kind: "explore-view" | "compare-config", params: Record<string, string>): Application[] {
   if (kind === "explore-view") {
