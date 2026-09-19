@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import type { Application, EntityType } from "@/lib/registry-data";
 import type { SavedWork } from "@/lib/use-saved-work";
 
@@ -15,6 +16,10 @@ export type InvestigationItem = {
   records: readonly Application[];
   entityType?: CompareEntityType;
   entityKey?: string;
+  /** Approved 2012 aggregate fact — supporting records may still be rehearsal fixture browse context. */
+  historicalFact?: HistoricalMetricFact;
+  /** Optional override for drawer “View full” when records are aggregate-only or filtered cohorts. */
+  exploreFullHref?: string;
 };
 
 export type InvestigationContextValue = {

@@ -131,6 +131,22 @@ export function exploreEntityResearchHref(entity: "organizations" | "categories"
   return `/tools/registry-intelligence-hub/explore?${params}`;
 }
 
+/** Intelligence drawer “View full” — entity browse, explicit ids, or saved override. */
+export function exploreFullHrefForInvestigation(item: {
+  entityType?: EntityType;
+  entityKey?: string;
+  records: readonly Application[];
+  exploreFullHref?: string;
+}) {
+  if (item.exploreFullHref) return item.exploreFullHref;
+  if (item.entityType && item.entityKey) return exploreEntityResearchHref(item.entityType, item.entityKey);
+  if (item.records.length === 1) return exploreEntityResearchHref("applications", item.records[0].id);
+  if (item.records.length > 1) {
+    return `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}`;
+  }
+  return "/tools/registry-intelligence-hub/explore";
+}
+
 export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(filters).filter(([key, value]) => {

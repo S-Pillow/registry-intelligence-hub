@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { exploreDrillDownHref, exploreEntityResearchHref, exploreResearchHref } from "@/lib/registry-data";
+import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
 
 beforeEach(() => {
@@ -460,6 +460,63 @@ describe("Compare interactions", () => {
     expect(screen.queryByText(/^Shop /)).not.toBeInTheDocument();
     expect(screen.getByText(/Review two to four like entities side by side/)).toBeInTheDocument();
     expect(screen.getByText("Context: Direct entity selection in Compare")).toBeInTheDocument();
+  });
+});
+
+describe("Investigate — shared intelligence drawer", () => {
+  it("opens from Compare entity provenance with entity-scoped View full", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for Atlas Digital" }));
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute(
+      "href",
+      exploreFullHrefForInvestigation({ entityType: "organizations", entityKey: "Atlas Digital", records: [] }),
+    );
+  });
+
+  it("separates approved 2012 baselines from rehearsal supporting records in Round Pulse", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
+    expect(await screen.findByText("Approved 2012 baseline")).toBeInTheDocument();
+    expect(screen.getByText(/rehearsal fixture browse context/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute("href", exploreDrillDownHref("all"));
+  });
+
+  it("opens glance baseline cards without internal eligibility codes", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for Application count: 1930 (2012 approved baseline)" }));
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
+    expect(screen.queryByText(/BLOCKED_/)).not.toBeInTheDocument();
+    expect(screen.getByText(/No entity-level 2012 records/)).toBeInTheDocument();
+  });
+
+  it("labels signal insights as calculated and dataset health as action-unavailable", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for IDN interest reaches two regions and two scripts" }));
+    expect(await screen.findByText("Calculated insight")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "View intelligence for Dataset state" }));
+    expect(await screen.findByText(/Compare, Watch, and View full are not available/i)).toBeInTheDocument();
+  });
+
+  it("routes organization Explore drawer View full to entity browse, not application ids", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+
+    await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
+    expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute(
+      "href",
+      exploreEntityResearchHref("organizations", "Atlas Digital"),
+    );
   });
 });
 

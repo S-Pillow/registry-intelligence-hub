@@ -59,6 +59,7 @@ import {
   lensInterpretations,
   exploreDrillDownHref,
   exploreEntityResearchHref,
+  exploreFullHrefForInvestigation,
   exploreResearchHref,
   recordsForRoundPulseFilter,
 } from "@/lib/registry-data";
@@ -168,6 +169,8 @@ function ProvenanceSheet({
   id,
   entityType,
   entityKey,
+  historicalFact,
+  exploreFullHref,
 }: {
   label: string;
   records?: readonly Application[];
@@ -177,15 +180,19 @@ function ProvenanceSheet({
   id?: string;
   entityType?: CompareEntityType;
   entityKey?: string;
+  historicalFact?: HistoricalMetricFact;
+  exploreFullHref?: string;
 }) {
   const { investigate } = useInvestigation();
-  const item = {
+  const item: InvestigationItem = {
     id: id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     label,
     kind,
     records: records ?? registryFixture.applications,
     entityType,
     entityKey,
+    historicalFact,
+    exploreFullHref,
   };
 
   return (
@@ -359,7 +366,8 @@ function IntelligenceDrawer({
     else toggleWatch(item);
   };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
-  const fullHref = item ? `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}` : "#";
+  const fullHref = item ? exploreFullHrefForInvestigation(item) : "#";
+  const showViewFull = Boolean(item && canAct && (item.records.length > 0 || item.exploreFullHref));
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
@@ -369,15 +377,37 @@ function IntelligenceDrawer({
             <SheetHeader className="border-b border-slate-200 px-6 py-5">
               <Badge variant="outline" className="mb-2 border-emerald-300 text-[#005c49]">INTELLIGENCE DRAWER · {item.kind.toUpperCase()}</Badge>
               <SheetTitle className="pr-8 text-xl">{item.label}</SheetTitle>
-              <SheetDescription className="text-slate-600">Investigate without leaving the Command Center or losing your selected View.</SheetDescription>
+              <SheetDescription className="text-slate-600">Investigate evidence without leaving your current hub view or losing context.</SheetDescription>
             </SheetHeader>
             <div className="space-y-6 px-6 pb-8">
+              {item.historicalFact && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Approved 2012 baseline</p>
+                  <p className="mt-2 text-2xl font-bold text-slate-950">{item.historicalFact.value}</p>
+                  <HistoricalFactCaption fact={item.historicalFact} />
+                  <p className="mt-2 text-xs text-slate-700">Supporting records below, when present, are rehearsal fixture browse context — not mixed into the 2012 aggregate.</p>
+                </div>
+              )}
+
               {canAct && (
-                <div className={`grid gap-2 ${canCompare ? "grid-cols-3" : "grid-cols-2"}`}>
-                  <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>
-                  {canCompare && <Button variant="outline" disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>}
+                <div className={`grid gap-2 ${canCompare && showViewFull ? "grid-cols-3" : canCompare || showViewFull ? "grid-cols-2" : "grid-cols-1"}`}>
+                  {showViewFull && <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>}
+                  {canCompare && (
+                    <Button
+                      variant="outline"
+                      disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4}
+                      title={incompatible ? "Incompatible comparison type" : compareItems.some((entry) => entry.id === item.id) ? "Already in comparison tray" : compareItems.length >= 4 ? "Comparison tray is full (4 max)" : undefined}
+                      onClick={() => addCompare(item)}
+                    >
+                      <GitCompareArrows />+ Compare
+                    </Button>
+                  )}
                   <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
                 </div>
+              )}
+
+              {!canAct && (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">Compare, Watch, and View full are not available for dataset health and coverage summaries. Use supporting sections below for provenance.</p>
               )}
 
               {canCompare && item.entityKey && (
@@ -435,15 +465,25 @@ function IntelligenceDrawer({
               {item.kind !== "coverage" && (
                 <section>
                   <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SUPPORTING RECORDS · {item.records.length}</h3>
-                  <div className="space-y-2">
-                    {displayedRecords?.map((record) => (
-                      <div key={record.id} className="rounded-lg border border-slate-300 p-3 text-sm">
-                        <div className="flex items-center justify-between"><span className="font-mono font-bold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
-                        <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
+                  {item.records.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-700">
+                      {item.historicalFact
+                        ? "No entity-level 2012 records ship in this hub — the approved baseline above is aggregate-only. Use View full to browse the rehearsal fixture cohort."
+                        : "No supporting records are attached to this investigation item."}
+                    </p>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        {displayedRecords?.map((record) => (
+                          <div key={record.id} className="rounded-lg border border-slate-300 p-3 text-sm">
+                            <div className="flex items-center justify-between"><span className="font-mono font-bold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
+                            <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  {!showFull && item.records.length > 4 && <Button variant="ghost" className="mt-2 text-[#006a56]" onClick={() => setShowFull(true)}>Show all {item.records.length} records</Button>}
+                      {!showFull && item.records.length > 4 && <Button variant="ghost" className="mt-2 text-[#006a56]" onClick={() => setShowFull(true)}>Show all {item.records.length} records</Button>}
+                    </>
+                  )}
                 </section>
               )}
 
@@ -500,6 +540,14 @@ function humanizeMethodReadiness(readiness: string) {
   return readiness.replaceAll("_", " ").toLowerCase();
 }
 
+function humanizeClaimReadiness(readiness: string) {
+  if (readiness === "REAL_SOURCE_READY") return "Approved source";
+  if (readiness === "HISTORICAL_ONLY") return "Historical baseline only";
+  if (readiness === "REHEARSAL_ONLY") return "Rehearsal fixture only";
+  if (readiness === "NOT_PUBLISHED") return "Not published";
+  return readiness.replaceAll("_", " ").toLowerCase();
+}
+
 function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string; method: string; displayTier: string; comparisonAllowed: boolean } }) {
   const tierLabel =
     metric.displayTier === "production-ready"
@@ -541,6 +589,8 @@ function MetricCards() {
             kind="metric"
             label={`${metric.label}: ${metric.value}`}
             records={recordsForRoundPulseFilter(metric.filter)}
+            historicalFact={metric.historicalFact}
+            exploreFullHref={exploreDrillDownHref(metric.filter)}
             triggerClassName="group flex flex-1 flex-col p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
             trigger={
               <>
@@ -1241,14 +1291,37 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance — approved 2012 baseline" records={registryFixture.applications} />
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                {glanceMetrics.map((fact) => (
-                  <div key={fact.metricId} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                    <p className="text-xs font-bold text-slate-700">{fact.label}</p>
-                    <p className="mt-2 text-2xl font-bold text-slate-950">{fact.value}</p>
-                    <HistoricalFactCaption fact={fact} />
-                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{fact.methodReadiness} · {fact.claimReadiness} · snapshot {fact.sourceSnapshotId}</p>
-                  </div>
-                ))}
+                {glanceMetrics.map((fact) => {
+                  const exploreFullHref =
+                    fact.metricId === "unique-applied-strings"
+                      ? exploreDrillDownHref("strings")
+                      : fact.metricId === "idn-applications"
+                        ? exploreDrillDownHref("idn")
+                        : exploreDrillDownHref("all");
+                  return (
+                    <ProvenanceSheet
+                      key={fact.metricId}
+                      id={`glance-${fact.metricId}`}
+                      kind="metric"
+                      label={`${fact.label}: ${fact.value} (2012 approved baseline)`}
+                      records={[]}
+                      historicalFact={fact}
+                      exploreFullHref={exploreFullHref}
+                      triggerClassName="group rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                      trigger={
+                        <>
+                          <p className="text-xs font-bold text-slate-700">{fact.label}</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-950">{fact.value}</p>
+                          <HistoricalFactCaption fact={fact} />
+                          <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            {humanizeMethodReadiness(fact.methodReadiness)} · {humanizeClaimReadiness(fact.claimReadiness)} · snapshot {fact.sourceSnapshotId}
+                          </p>
+                          <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Investigate baseline</span>
+                        </>
+                      }
+                    />
+                  );
+                })}
               </div>
               <p className="mt-3 text-xs text-slate-600">Approved baseline from <code className="text-[11px]">icann2012-reveal-day-v1</code>. No rehearsal 2026 values or percentage deltas are shown here while 2026 remains unpublished.</p>
             </section>

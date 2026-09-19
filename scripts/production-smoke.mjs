@@ -8,6 +8,8 @@ const paths = [
   "/tools/registry-intelligence-hub/explore",
   "/tools/registry-intelligence-hub/explore?entity=organizations&idn=idn",
   "/tools/registry-intelligence-hub/compare?type=organizations&ids=Atlas+Digital,Northstar+Group",
+  "/tools/registry-intelligence-hub/saved",
+  "/tools/registry-intelligence-hub/briefings",
 ];
 
 const server = spawn("npx", ["next", "start", "-p", port], {

@@ -86,8 +86,10 @@ describe("Saved hub — Watchlist CRUD", () => {
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     const itemRow = (await screen.findByText("Atlas Digital")).closest("li") as HTMLElement;
-    const investigateLink = within(itemRow).getByRole("link", { name: "Investigate" });
-    expect(investigateLink).toHaveAttribute("href", expect.stringContaining("/explore?entity=organizations"));
+    await user.click(within(itemRow).getByRole("button", { name: "Investigate" }));
+    expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute("href", expect.stringContaining("/explore?entity=organizations"));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     await user.click(screen.getByRole("button", { name: "Remove Atlas Digital from My List" }));
     expect(await screen.findByText(/No entities yet/)).toBeInTheDocument();

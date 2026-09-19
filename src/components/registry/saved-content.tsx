@@ -208,7 +208,7 @@ function WatchlistReviewPanel({ list, change }: { list: Watchlist; change: Chang
  * Duplicate/Rename/Delete.
  */
 function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; expanded: boolean; onToggleExpand: () => void }) {
-  const { savedWork } = useInvestigation();
+  const { savedWork, investigate } = useInvestigation();
   const [addType, setAddType] = useState<EntityType>("organizations");
   const [addKey, setAddKey] = useState("");
 
@@ -281,6 +281,8 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
               <ul className="space-y-2">
                 {list.items.map((item) => {
                   const current = recordsForEntity(item.entityType, item.entityKey).length;
+                  const records = recordsForEntity(item.entityType, item.entityKey);
+                  const investigationKind = item.entityType === "applications" ? "application" : item.entityType === "categories" ? "category" : "applicant";
                   return (
                     <li key={`${item.entityType}-${item.entityKey}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">
                       <div>
@@ -288,9 +290,21 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
                         <p className="text-xs capitalize text-slate-600">{item.entityType.slice(0, -1)} · added {formatDateTime(item.addedAt)} · {current} supporting record{current === 1 ? "" : "s"}{current !== item.recordCountAtAdd ? ` (was ${item.recordCountAtAdd})` : ""}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Link href={buildExploreHrefForEntity(item.entityType, item.entityKey)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50">
+                        <button
+                          type="button"
+                          onClick={() => investigate({
+                            id: `saved-watch-${item.entityType}-${item.entityKey}`,
+                            kind: investigationKind,
+                            label: item.label,
+                            records,
+                            entityType: item.entityType,
+                            entityKey: item.entityKey,
+                            exploreFullHref: buildExploreHrefForEntity(item.entityType, item.entityKey),
+                          })}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50"
+                        >
                           <Eye className="size-3.5" />Investigate
-                        </Link>
+                        </button>
                         <button
                           type="button"
                           aria-label={`Remove ${item.label} from ${list.name}`}

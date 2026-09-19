@@ -20,6 +20,7 @@ import {
   nonDefaultExploreFilterParams,
   exploreDrillDownHref,
   exploreEntityResearchHref,
+  exploreFullHrefForInvestigation,
   exploreResearchHref,
   numericCellDelta,
   recordsForEntity,
@@ -295,5 +296,24 @@ describe("exploreEntityResearchHref", () => {
     expect(exploreEntityResearchHref("applications", "APP-26001")).toBe(
       "/tools/registry-intelligence-hub/explore?entity=applications&ids=APP-26001",
     );
+  });
+});
+
+describe("exploreFullHrefForInvestigation", () => {
+  it("routes entity, multi-record, and override destinations for the intelligence drawer", () => {
+    expect(exploreFullHrefForInvestigation({
+      entityType: "organizations",
+      entityKey: "Atlas Digital",
+      records: [],
+    })).toBe("/tools/registry-intelligence-hub/explore?entity=organizations&q=Atlas+Digital");
+
+    expect(exploreFullHrefForInvestigation({
+      records: fixture.applications.slice(0, 2),
+    })).toContain("ids=");
+
+    expect(exploreFullHrefForInvestigation({
+      records: [],
+      exploreFullHref: "/tools/registry-intelligence-hub/explore?idn=idn",
+    })).toBe("/tools/registry-intelligence-hub/explore?idn=idn");
   });
 });
