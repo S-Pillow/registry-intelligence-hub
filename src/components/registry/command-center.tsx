@@ -51,13 +51,15 @@ import {
   registryFixture,
   rowHasDifference,
   roundPulse,
-  standoutInsights,
+  standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
   type CompareSectionId,
+  type Lens,
 } from "@/lib/registry-data";
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
+import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 
 export type { SavedParams };
 import {
@@ -109,7 +111,7 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  index < 4 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
+                  index < 5 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
                   <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
                 ))}
               </nav>
@@ -126,7 +128,7 @@ function HubNav({ active = "Command Center" }: { active?: string }) {
     <div className="border-b bg-white">
       <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {navItems.map((item, index) => (
-          index < 4 ? (
+          index < 5 ? (
             <Link
               key={item}
               href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`}
@@ -317,6 +319,16 @@ function IntelligenceDrawer({
                   {canCompare && <Button variant="outline" disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4} onClick={() => addCompare(item)}><GitCompareArrows />+ Compare</Button>}
                   <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
                 </div>
+              )}
+
+              {canCompare && item.entityKey && (
+                <BriefThisButton
+                  scope={{ kind: "entity", entityType: item.entityType!, entityKey: item.entityKey, label: item.label }}
+                  label="Brief this"
+                  defaultName={`Briefing: ${item.label}`}
+                  entryPath="current-view"
+                  className="w-full"
+                />
               )}
 
               {canCompare && isWatching && (
@@ -574,6 +586,13 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             disabled={applications.length === 0}
             buildParams={() => nonDefaultExploreFilterParams(filters)}
           />
+          <BriefThisButton
+            scope={{ kind: "explore-view", params: nonDefaultExploreFilterParams(filters) }}
+            label="Brief this view"
+            defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
+            disabled={applications.length === 0}
+            entryPath="current-view"
+          />
           <Button variant="outline" onClick={clear}>Clear filters</Button>
         </div>
       </div>
@@ -785,7 +804,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
 
-      <div className="mb-5 flex justify-end">
+      <div className="mb-5 flex flex-wrap justify-end gap-2">
         <SaveResearchButton
           kind="compare-config"
           defaultName={`Compare: ${entities.map((entity) => entity.label).join(", ")}`.slice(0, 80)}
@@ -800,6 +819,13 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
             dimensionsVersion: COMPARE_DIMENSIONS_VERSION,
             origin: originContext,
           })}
+        />
+        <BriefThisButton
+          scope={{ kind: "compare-config", params: { type, ids: selected.join(",") } }}
+          label="Brief this comparison"
+          defaultName={`Briefing: ${entities.map((entity) => entity.label).join(", ")}`.slice(0, 80)}
+          disabled={entities.length < 2}
+          entryPath="current-view"
         />
       </div>
 
@@ -924,7 +950,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {} }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams }) {
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const [investigation, setInvestigation] = useState<InvestigationItem | null>(null);
@@ -935,15 +961,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const filtered = useMemo(() => registryFixture.applications.filter((item) =>
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [query]);
-  const visibleInsights = useMemo(() => {
-    const idsByLens: Record<string, string[]> = {
-      all: standoutInsights.map((insight) => insight.id),
-      commercial: ["portfolio-concentration", "contention-concentration"],
-      strategy: ["contention-concentration", "idn-shift", "portfolio-concentration"],
-      marketing: ["idn-shift", "portfolio-concentration"],
-    };
-    return standoutInsights.filter((insight) => idsByLens[lens].includes(insight.id));
-  }, [lens]);
+  const visibleInsights = useMemo(() => standoutInsightsForLens(lens as Lens), [lens]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -974,8 +992,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
-      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : (
+      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
@@ -987,12 +1005,20 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Registry Intelligence Hub</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">A source-backed command center for understanding application portfolios, contention, categories, and cross-round signals.</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative block">
               <Search className="absolute left-3 top-2.5 size-4 text-slate-400" />
               <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fixture records…" aria-label="Search fixture records" aria-keyshortcuts="/ Control+K Meta+K" className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65] sm:w-80" />
               <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
             </label>
+            <BriefThisButton
+              scope={{ kind: "round-wide" }}
+              label="Instant Briefing"
+              defaultName="Briefing: Round-wide"
+              entryPath="instant"
+              variant="default"
+              className="bg-[#007d65] text-white hover:bg-[#006a56]"
+            />
           </div>
         </div>
 

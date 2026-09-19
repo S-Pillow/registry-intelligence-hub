@@ -372,11 +372,11 @@ describe("Compare interactions", () => {
 });
 
 describe("Saved navigation and one-click Watch", () => {
-  it("enables the Saved navigation link while Briefings and Data Health remain planned", () => {
+  it("enables the Saved and Briefings navigation links while Data Health remains planned", () => {
     render(<CommandCenter />);
 
     expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/saved");
-    expect(screen.getByText("Briefings").closest("button")).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/briefings");
     expect(screen.getByText("Data Health").closest("button")).toBeDisabled();
   });
 

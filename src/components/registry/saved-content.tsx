@@ -27,15 +27,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   COMPARE_TIME_BASIS,
-  filterApplicationsByExplore,
+  computeWatchlistIntelligence,
   listEntityOptions,
   recordsForEntity,
+  recordsForParams,
   registryFixture,
   type EntityType,
 } from "@/lib/registry-data";
 import { summarizeChangeSinceVisit, type ChangeSinceVisitSummary } from "@/lib/saved-change-summary";
 import type { SavedResearch, Watchlist, WatchlistItem } from "@/lib/saved-storage";
 import { useInvestigation } from "@/components/registry/investigation-context";
+import { BriefThisButton } from "@/components/registry/briefing-content";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
 
@@ -71,47 +73,8 @@ function currentCountForWatchlist(items: WatchlistItem[]) {
   return items.reduce((sum, item) => sum + recordsForEntity(item.entityType, item.entityKey).length, 0);
 }
 
-/**
- * Concise, deterministic watchlist-level intelligence computed purely from
- * fixture data already on the page — no live tracking. `changed` counts
- * entities whose current supporting-record count no longer matches the
- * count recorded when they were added; `contention`/`returning` reuse the
- * same `contentionSet`/`returning` flags Explore's table already surfaces,
- * so the vocabulary matches across the app. All four numbers are supported
- * for every entity type, since every entity type resolves to the same
- * underlying `Application[]` via `recordsForEntity`.
- */
-function watchlistIntelligence(items: WatchlistItem[]) {
-  let changed = 0;
-  const records = items.flatMap((item) => {
-    const current = recordsForEntity(item.entityType, item.entityKey);
-    if (current.length !== item.recordCountAtAdd) changed += 1;
-    return current;
-  });
-  return {
-    entities: items.length,
-    changed,
-    contention: records.filter((record) => record.contentionSet).length,
-    returning: records.filter((record) => record.returning).length,
-  };
-}
-
 function currentCountForSavedResearch(entry: SavedResearch) {
-  if (entry.kind === "explore-view") {
-    const filters = {
-      q: entry.params.q ?? "",
-      category: entry.params.category ?? "all",
-      region: entry.params.region ?? "all",
-      status: entry.params.status ?? "all",
-      contention: entry.params.contention ?? "all",
-      idn: entry.params.idn ?? "all",
-      ids: entry.params.ids ?? "",
-    };
-    return filterApplicationsByExplore(registryFixture.applications, filters).length;
-  }
-  const type = (entry.params.type as EntityType) ?? "organizations";
-  const ids = (entry.params.ids ?? "").split(",").filter(Boolean);
-  return ids.reduce((sum, id) => sum + recordsForEntity(type, id).length, 0);
+  return recordsForParams(entry.kind, entry.params).length;
 }
 
 function openHrefForSavedResearch(entry: SavedResearch) {
@@ -257,7 +220,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
     subject: "supporting-record",
   }), [list, savedWork.fixtureChangedAt]);
 
-  const intelligence = useMemo(() => watchlistIntelligence(list.items), [list.items]);
+  const intelligence = useMemo(() => computeWatchlistIntelligence(list.items), [list.items]);
 
   const addOptions = useMemo(
     () => listEntityOptions(addType).filter((option) => !list.items.some((item) => item.entityType === addType && item.entityKey === option.key)),
@@ -302,6 +265,13 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
       </CardHeader>
       <CardContent className="space-y-3">
         <MaterialChangeStatus change={change} review={<WatchlistReviewPanel list={list} change={change} />} />
+        <BriefThisButton
+          scope={{ kind: "watchlist", watchlistId: list.id, watchlistName: list.name }}
+          label="Brief this watchlist"
+          defaultName={`Briefing: ${list.name}`}
+          disabled={list.items.length === 0}
+          entryPath="current-view"
+        />
 
         {expanded && (
           <div id={panelId} className="space-y-3">
@@ -494,8 +464,14 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
           <DeleteControl name={entry.name} onConfirm={() => savedWork.deleteSavedResearch(entry.id)} />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <MaterialChangeStatus change={change} />
+        <BriefThisButton
+          scope={{ kind: "saved-research", savedResearchId: entry.id, savedResearchName: entry.name }}
+          label="Brief this research"
+          defaultName={`Briefing: ${entry.name}`}
+          entryPath="current-view"
+        />
       </CardContent>
     </Card>
   );
