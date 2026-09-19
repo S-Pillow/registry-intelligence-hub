@@ -593,13 +593,81 @@ export const standoutInsights = [
 const standoutInsightIdsByLens: Record<Lens, string[]> = {
   all: standoutInsights.map((insight) => insight.id),
   commercial: ["portfolio-concentration", "contention-concentration"],
-  strategy: ["contention-concentration", "idn-shift", "portfolio-concentration"],
+  strategy: ["contention-concentration", "idn-shift"],
   marketing: ["idn-shift", "portfolio-concentration"],
 };
 
 export function standoutInsightsForLens(lens: Lens) {
-  return standoutInsights.filter((insight) => standoutInsightIdsByLens[lens].includes(insight.id));
+  const ids = standoutInsightIdsByLens[lens];
+  return ids
+    .map((id) => standoutInsights.find((insight) => insight.id === id))
+    .filter((insight): insight is (typeof standoutInsights)[number] => insight !== undefined);
 }
+
+/** Short subtitle under “What You Should Know” — changes with the active View. */
+export const lensIntelligenceSubtitles: Record<Lens, string> = {
+  all: "All Intelligence view · ranked by materiality and evidence coverage",
+  commercial: "Commercial view · portfolio depth and contention exposure surfaced first",
+  strategy: "Product & Strategy view · category movement, IDN share, and contention structure first",
+  marketing: "Marketing view · cross-region IDN participation and portfolio themes first",
+};
+
+/** Per-insight View callout shown on insight cards (same facts, lens-specific emphasis). */
+export const lensInsightEmphasis: Record<Lens, Partial<Record<(typeof standoutInsights)[number]["id"], string>>> = {
+  all: {},
+  commercial: {
+    "portfolio-concentration": "Account research priority",
+    "contention-concentration": "Contention timing watch",
+  },
+  strategy: {
+    "contention-concentration": "Round-structure signal",
+    "idn-shift": "Composition shift",
+  },
+  marketing: {
+    "idn-shift": "Cross-region narrative",
+    "portfolio-concentration": "Multi-category brand story",
+  },
+};
+
+export function insightEmphasisForLens(lens: Lens, insightId: string) {
+  const emphasis = lensInsightEmphasis[lens] as Record<string, string | undefined>;
+  return emphasis[insightId];
+}
+
+/** Round Pulse metric `filter` keys emphasized for the active View (visual ring only; values unchanged). */
+export const roundPulseEmphasisByLens: Record<Lens, string[]> = {
+  all: [],
+  commercial: ["organizations", "contention"],
+  strategy: ["regions", "idn", "contention"],
+  marketing: ["idn", "regions"],
+};
+
+const investigationOrganizationOrderByLens: Record<Lens, string[]> = {
+  all: ["Atlas Digital", "Northstar Group", "Kizuna Registry"],
+  commercial: ["Atlas Digital", "Northstar Group", "Kizuna Registry"],
+  strategy: ["Kizuna Registry", "Atlas Digital", "Northstar Group"],
+  marketing: ["Kizuna Registry", "Atlas Digital", "Northstar Group"],
+};
+
+/** Investigation queue ordering — same three organizations, lens-prioritized ranking. */
+export function applicantsInvestigationQueueForLens(lens: Lens) {
+  const order = investigationOrganizationOrderByLens[lens];
+  return [...applicantsToWatch].sort((a, b) => {
+    const ai = order.indexOf(a.organization);
+    const bi = order.indexOf(b.organization);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+}
+
+export const investigationQueueLensNote: Record<Lens, string> = {
+  all: "portfolio size, category breadth, contention exposure, IDN participation, and returning status are transparent fixture rules.",
+  commercial:
+    "this View ranks by portfolio depth and contention exposure first — efficient account-research starting points, not sales recommendations.",
+  strategy:
+    "this View ranks by category span, IDN participation, and contention patterns that shape round composition versus the 2012 fixture cohort.",
+  marketing:
+    "this View ranks by cross-region IDN participation and multi-category organizations — evidence-backed themes only, not demand forecasts.",
+};
 
 /**
  * Concise, deterministic watchlist-level intelligence computed purely from

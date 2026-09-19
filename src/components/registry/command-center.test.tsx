@@ -17,17 +17,43 @@ afterEach(() => {
 });
 
 describe("Command Center interactions", () => {
-  it("changes the intelligence set when the View lens changes", async () => {
+  it("changes rendered lens-dependent content across all four Views", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    expect(screen.getByText("IDN interest reaches two regions and two scripts")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Commercial" }));
+    const whyMatters = () => screen.getByTestId("lens-why-matters").textContent ?? "";
+    const subtitle = () => screen.getByTestId("lens-intelligence-subtitle").textContent ?? "";
+    const investigationNote = () => screen.getByTestId("lens-investigation-note").textContent ?? "";
+    const topInvestigation = () => screen.getByTestId("investigation-queue-0").textContent ?? "";
 
+    const allWhy = whyMatters();
+    expect(screen.getByText("IDN interest reaches two regions and two scripts")).toBeInTheDocument();
+    expect(screen.getByText("Identity and technology each contain an identical-string set")).toBeInTheDocument();
+    expect(topInvestigation()).toBe("Atlas Digital");
+
+    await user.click(screen.getByRole("button", { name: "Commercial" }));
     expect(screen.getByRole("button", { name: "Commercial" })).toHaveAttribute("aria-pressed", "true");
+    expect(whyMatters()).not.toBe(allWhy);
+    expect(subtitle()).toMatch(/Commercial view/);
     expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
-    expect(screen.getByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).toBeInTheDocument();
-    expect(screen.getByText(/Portfolio concentration and contention expose/)).toBeInTheDocument();
+    expect(screen.getByText("Account research priority")).toBeInTheDocument();
+    expect(investigationNote()).toMatch(/portfolio depth and contention exposure/i);
+
+    await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
+    expect(whyMatters()).toMatch(/Category movement, IDN participation/);
+    expect(subtitle()).toMatch(/Product & Strategy view/);
+    expect(screen.queryByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).not.toBeInTheDocument();
+    expect(screen.getByText("Round-structure signal")).toBeInTheDocument();
+    expect(topInvestigation()).toBe("Kizuna Registry");
+    expect(document.querySelector('[data-lens-emphasized="true"]')).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Marketing" }));
+    expect(whyMatters()).toMatch(/Cross-region IDN participation/);
+    expect(subtitle()).toMatch(/Marketing view/);
+    expect(screen.queryByText("Identity and technology each contain an identical-string set")).not.toBeInTheDocument();
+    expect(screen.getByText("Cross-region narrative")).toBeInTheDocument();
+    expect(topInvestigation()).toBe("Kizuna Registry");
+    expect(investigationNote()).toMatch(/cross-region IDN participation/i);
   });
 
   it("opens the intelligence drawer and separates evidence from classification", async () => {

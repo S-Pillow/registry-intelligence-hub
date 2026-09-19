@@ -34,7 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  applicantsToWatch,
+  applicantsInvestigationQueueForLens,
   biggestChanges,
   categoryMix,
   cellDiffersFromBaseline,
@@ -51,6 +51,10 @@ import {
   registryFixture,
   rowHasDifference,
   roundPulse,
+  insightEmphasisForLens,
+  investigationQueueLensNote,
+  lensIntelligenceSubtitles,
+  roundPulseEmphasisByLens,
   standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
@@ -579,15 +583,17 @@ function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) 
   );
 }
 
-function MetricCards() {
+function MetricCards({ lens }: { lens: Lens }) {
   const metrics = roundPulse as (PresentedHistoricalMetric & { delta: string })[];
+  const emphasized = new Set(roundPulseEmphasisByLens[lens]);
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
       {metrics.map((metric) => (
         <div
           key={metric.id}
-          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)}`}
+          data-lens-emphasized={emphasized.has(metric.filter) ? "true" : undefined}
+          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${emphasized.has(metric.filter) ? "ring-2 ring-[#72dfb4] ring-offset-2 ring-offset-[#f4f6f8]" : ""}`}
         >
           <ProvenanceSheet
             id={`metric-${metric.id}`}
@@ -1144,7 +1150,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const filtered = useMemo(() => registryFixture.applications.filter((item) =>
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [query]);
-  const visibleInsights = useMemo(() => standoutInsightsForLens(lens as Lens), [lens]);
+  const activeLens = lens as Lens;
+  const visibleInsights = useMemo(() => standoutInsightsForLens(activeLens), [activeLens]);
+  const investigationQueue = useMemo(() => applicantsInvestigationQueueForLens(activeLens), [activeLens]);
   const glanceMetrics = useMemo(() => buildRevealDayGlanceMetrics(registryFixture.applications), []);
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;
@@ -1292,7 +1300,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <div><p className="text-xs font-bold tracking-[0.14em] text-[#007d65]">ROUND PULSE</p><h2 id="round-pulse-heading" className="mt-1 text-lg font-semibold">The rehearsal round at a glance</h2></div>
                 <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
               </div>
-              <MetricCards />
+              <MetricCards lens={activeLens} />
             </section>
 
             <section className="mt-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm" aria-labelledby="glance-heading">
@@ -1341,15 +1349,17 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <div>
                   <p className="flex items-center gap-1 text-xs font-bold tracking-[0.14em] text-[#007d65]"><Sparkles className="size-3.5" /> WHAT YOU SHOULD KNOW</p>
                   <h2 id="intelligence-heading" className="mt-1 text-2xl font-bold tracking-tight">Reveal Day Intelligence</h2>
-                  <p className="mt-1 text-sm text-slate-600">{lens === "all" ? "All Intelligence" : lens === "strategy" ? "Product & Strategy" : lens.charAt(0).toUpperCase() + lens.slice(1)} view · ranked by materiality and evidence coverage</p>
+                  <p className="mt-1 text-sm text-slate-600" data-testid="lens-intelligence-subtitle">{lensIntelligenceSubtitles[activeLens]}</p>
                 </div>
                 <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
               </div>
-              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800">
-                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[lens as Lens]}
+              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters">
+                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[activeLens]}
               </div>
               <div className="grid gap-4 lg:grid-cols-3">
-                {visibleInsights.map((insight) => (
+                {visibleInsights.map((insight) => {
+                  const viewEmphasis = insightEmphasisForLens(activeLens, insight.id);
+                  return (
                   <ProvenanceSheet
                     key={insight.id}
                     id={`signal-${insight.id}`}
@@ -1359,14 +1369,18 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     triggerClassName="group rounded-xl border border-slate-300 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
                     trigger={
                       <>
-                        <div className="mb-4 flex items-center justify-between"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{insight.eyebrow}</Badge><ChevronRight className="size-5 text-[#007d65] transition group-hover:translate-x-1" /></div>
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{insight.eyebrow}</Badge>
+                          {viewEmphasis ? <Badge className="bg-[#007d65] text-white">{viewEmphasis}</Badge> : null}
+                          <ChevronRight className="size-5 text-[#007d65] transition group-hover:translate-x-1" />
+                        </div>
                         <h3 className="text-lg font-bold leading-6 text-slate-950">{insight.title}</h3>
                         <p className="mt-3 text-sm leading-6 text-slate-700">{insight.body}</p>
                         <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-xs"><span className="font-medium text-slate-600">{insight.confidence} confidence</span><span className="font-bold text-[#006a56]">Investigate evidence</span></div>
                       </>
                     }
                   />
-                ))}
+                );})}
               </div>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
@@ -1404,7 +1418,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     <ProvenanceSheet kind="metric" label="Applicants Worth Investigating method" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {applicantsToWatch.map((item, index) => {
+                    {investigationQueue.map((item, index) => {
                       const investigationItem: InvestigationItem = {
                         id: `applicant-watch-${item.organization}`,
                         kind: "applicant",
@@ -1420,7 +1434,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                             <ProvenanceSheet
                               {...investigationItem}
                               triggerClassName="group block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                              trigger={<><strong className="block text-sm">{item.organization}</strong><span className="mt-1 block text-xs text-slate-600">{item.reasons.join(" · ")}</span></>}
+                              trigger={<><strong className="block text-sm" data-testid={`investigation-queue-${index}`}>{item.organization}</strong><span className="mt-1 block text-xs text-slate-600">{item.reasons.join(" · ")}</span></>}
                             />
                             <ChevronRight className="size-4 text-[#007d65]" aria-hidden />
                           </div>
@@ -1432,7 +1446,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                         </div>
                       );
                     })}
-                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why these stand out:</strong> portfolio size, category breadth, contention exposure, IDN participation, and returning status are transparent fixture rules.</p>
+                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700" data-testid="lens-investigation-note"><strong>Why these stand out in this View:</strong> {investigationQueueLensNote[activeLens]}</p>
                   </CardContent>
                 </Card>
               </div>
