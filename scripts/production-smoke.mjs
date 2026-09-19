@@ -1,8 +1,30 @@
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 
 const port = process.env.SMOKE_PORT ?? "43123";
 const base = `http://127.0.0.1:${port}`;
+
+function killListenersOnPort(targetPort) {
+  try {
+    execSync(`fuser -k ${targetPort}/tcp`, { stdio: "ignore" });
+  } catch {
+    // Nothing listening.
+  }
+}
+
+/** Client bundles 404 when an old next-server survives across `next build` — Hub hits the route error boundary. */
+async function assertClientChunksResolvable(html, pagePath) {
+  const scripts = [...new Set([...html.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((match) => match[0]))];
+  for (const script of scripts) {
+    const response = await fetch(`${base}${script}`);
+    if (!response.ok) {
+      throw new Error(
+        `${pagePath} references missing client chunk ${script} (HTTP ${response.status}). ` +
+          "Restart production preview after build: npm run hub:production",
+      );
+    }
+  }
+}
 const paths = [
   "/tools/registry-intelligence-hub",
   "/tools/registry-intelligence-hub/explore",
@@ -12,7 +34,10 @@ const paths = [
   "/tools/registry-intelligence-hub/briefings",
 ];
 
-const server = spawn("npx", ["next", "start", "-p", port], {
+killListenersOnPort(port);
+await delay(300);
+
+const server = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", port], {
   cwd: process.cwd(),
   stdio: ["ignore", "pipe", "pipe"],
   env: { ...process.env, NODE_ENV: "production" },
@@ -50,9 +75,12 @@ try {
     if (!html.includes("Registry Intelligence Hub") && !html.includes("Explore registry intelligence")) {
       throw new Error(`${path} missing expected hub markup`);
     }
+    if (path === "/tools/registry-intelligence-hub") {
+      await assertClientChunksResolvable(html, path);
+    }
   }
 
-  console.log(`production smoke OK (${paths.length} routes on ${base})`);
+  console.log(`production smoke OK (${paths.length} routes on ${base}, client chunks verified)`);
 } finally {
   server.kill("SIGTERM");
   await delay(300);

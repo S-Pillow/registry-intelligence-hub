@@ -25,9 +25,20 @@ State rehearsals are available on either route with `?state=loading`, `?state=em
 
 ```bash
 npm run verify
+npm run smoke
 ```
 
-This runs linting, TypeScript checks, deterministic fixture/hash tests, and a production build.
+This runs linting, TypeScript checks, deterministic fixture/hash tests, and a production build. `npm run smoke` also boots a fresh `next start` and verifies Hub routes **and** that every client chunk referenced by Command Center resolves (a stale `next-server` left running across `next build` otherwise 404s chunks and triggers the isolated Hub error boundary).
+
+## Production preview (Cloud / manual QA)
+
+After any `npm run build` or `npm run verify`, restart the preview server so HTML and `/_next/static` stay in sync:
+
+```bash
+npm run hub:production
+```
+
+Then open `http://127.0.0.1:43123/tools/registry-intelligence-hub`.
 
 ## Phase 0 boundaries
 
