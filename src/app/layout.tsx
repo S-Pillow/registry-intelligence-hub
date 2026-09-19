@@ -20,7 +20,11 @@ export const metadata: Metadata = {
   description: "A fixture-backed, source-provenance command center for ICANN application intelligence.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"

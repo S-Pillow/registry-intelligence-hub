@@ -1,0 +1,9 @@
+{
+  "sets": [
+    {
+      "setId": "ICS-example",
+      "matchKind": "exact",
+      "applicationIds": ["1-1200-1-1", "1-1200-1-2"]
+    }
+  ]
+}

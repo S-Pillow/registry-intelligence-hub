@@ -1,0 +1,28 @@
+{
+  "registryVersion": "override-registry/1.0.0",
+  "operations": [
+    {
+      "opId": "ovr-2012-hotels-jurisdiction",
+      "opVersion": 1,
+      "kind": "set-field",
+      "entityKind": "applicant",
+      "entityId": "applicant:1-1200-1-4",
+      "fieldPath": "legalName.value",
+      "value": "Hotels Global S.A.",
+      "reason": "Steward correction: punctuation normalized per legal filing",
+      "author": "fixture-steward",
+      "createdAt": "2012-07-01T00:00:00.000Z"
+    },
+    {
+      "opId": "ovr-2012-missing-ref-review",
+      "opVersion": 1,
+      "kind": "annotate-reconciliation",
+      "entityKind": "application",
+      "entityId": "application:1-1200-1-4",
+      "reconciliationState": "REQUIRES_REVIEW",
+      "note": "Contention set ICS-missing-in-bundle absent from bundle — disposition pending full round ingest",
+      "author": "fixture-steward",
+      "createdAt": "2012-07-01T00:00:00.000Z"
+    }
+  ]
+}

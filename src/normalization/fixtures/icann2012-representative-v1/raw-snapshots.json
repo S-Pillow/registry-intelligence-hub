@@ -1,0 +1,31 @@
+{
+  "snapshots": [
+    {
+      "snapshotId": "snap-2012-primary-v1",
+      "sourceId": "icann2012-fixture-primary",
+      "sourceVersion": 1,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "byteCount": 2048,
+      "retrievedAt": "2012-06-13T12:00:00.000Z",
+      "effectiveAt": "2012-06-13T12:00:00.000Z",
+      "redirectChain": [
+        {
+          "fromUrl": "https://newgtlds.icann.org/en/program-status/application-results/strings-1200utc-13jun12-en",
+          "toUrl": "https://gtldresult.icann.org/application-result/applicationstatus",
+          "httpStatus": 301,
+          "observedAt": "2012-06-13T12:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "snapshotId": "snap-2012-secondary-v1",
+      "sourceId": "icann2012-fixture-secondary",
+      "sourceVersion": 1,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "byteCount": 1024,
+      "retrievedAt": "2012-06-14T08:30:00.000Z",
+      "effectiveAt": null,
+      "redirectChain": []
+    }
+  ]
+}

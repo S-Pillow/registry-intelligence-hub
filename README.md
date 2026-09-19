@@ -57,3 +57,23 @@ npm run pipeline -- fetch --all --mode live --root /tmp/source-pipeline-live
 - Every registered source is content-addressed by SHA-256 on write (`.data/source-pipeline/blobs/`, git-ignored) and every fetch attempt — successful or not — is appended to a per-source, never-rewritten manifest (`.data/source-pipeline/manifests/<sourceId>.jsonl`).
 - `verify` recomputes hashes for every stored blob and flags tampering or missing files; `snapshots`/`inspect` read manifest history; `handoff` returns the stable, adapter-agnostic contract a future normalizer should read instead of touching manifests or blobs directly.
 - No fetched production payload is ever committed to this repository — only the hand-authored fixtures in `src/pipeline/fixtures/` (see that directory's own README) and whatever a `--mode live` run writes to a git-ignored or explicitly out-of-repo `--root`.
+
+## Offline normalization (2012 foundation slice)
+
+`src/normalization/` is a round-neutral, fixture-only normalization foundation: raw snapshot refs → parsed records → observations → normalized entities, with immutable override replay, deterministic reconciliation states, and content-addressed build artifacts. It does not connect to the browser app or live ICANN fetch.
+
+Design and quality reporting:
+
+- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/domain-model-and-normalization.md`
+- `/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/normalization-quality-report.md`
+
+```bash
+npm run normalize -- list-bundles
+npm run normalize -- normalize
+npm run normalize -- report
+npm run normalize -- trace application 1-1200-1-1
+npm run normalize -- verify
+```
+
+- Default bundle `icann2012-representative-v1` is explicitly **not** the full 2012 round — it exercises conflicts, missing references, redirect provenance, IDNs, contention, organization candidates, and steward overrides.
+- Builds land under `.data/normalization/builds/<buildId>/` (gitignored). `verify` recomputes a fresh offline normalization and checks output hashes plus stored artifact integrity.
