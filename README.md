@@ -34,7 +34,8 @@ This runs linting, TypeScript checks, deterministic fixture/hash tests, and a pr
 - `features.registryIntelligenceHubCatalog` is disabled. No catalog card or production routing is enabled.
 - No production server, database, authentication, or external write integration is used.
 - Immutable fixture metadata and hashes live in `src/data/fixtures/manifest.json`.
-- All displayed numeric intelligence is calculated deterministically in `src/lib/registry-data.ts`.
+- Rehearsal-round intelligence is calculated in `src/lib/registry-data.ts`.
+- Approved **2012 Reveal Day** comparison facts and eligibility gates live in `src/comparison/` (`metric-eligibility-catalog/1.0.0`, `historical-2012-ui-adapter/1.0.0`). Cross-round org identity links use `cross-round-identity/1.0.0` (`npm run normalize -- cross-round-identity`).
 
 ## Source inventory and snapshot pipeline
 
@@ -78,6 +79,7 @@ npm run normalize -- normalize --bundle icann2012-reveal-day-v1
 npm run normalize -- report
 npm run normalize -- trace application 1-1200-1-1
 npm run normalize -- verify --bundle icann2012-reveal-day-v1
+npm run normalize -- cross-round-identity
 ```
 
 - `icann2012-representative-v1` — rehearsal slice (conflicts, overrides, missing refs).

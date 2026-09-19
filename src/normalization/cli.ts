@@ -8,6 +8,7 @@ import { contentHash } from "./hashes";
 import { summarizeStates, totalEntities } from "./report";
 import { buildContentionReconciliationForBundle, buildTaxonomyCoverageForBundle } from "./offline-reports";
 import { buildOrganizationPromotionReportForBundle } from "./organization-promotion-report";
+import { crossRoundIdentityCliReport } from "../cross-round-identity/load-registry";
 
 const DEFAULT_ROOT = "./.data/normalization";
 const DEFAULT_BUNDLE = "icann2012-representative-v1";
@@ -23,6 +24,7 @@ Usage:
   npm run normalize -- contention-reconcile [--bundle <id>] [--workspace <dir>]
   npm run normalize -- taxonomy-coverage [--bundle <id>] [--workspace <dir>]
   npm run normalize -- organization-promotion [--bundle <id>] [--workspace <dir>]
+  npm run normalize -- cross-round-identity [--workspace <dir>]
   npm run normalize -- trace <entityKind> <entityId> [--build <buildId>] [--root <dir>]
   npm run normalize -- verify [--build <buildId>] [--root <dir>]
 
@@ -92,6 +94,12 @@ async function main(): Promise<void> {
       const report = await buildOrganizationPromotionReportForBundle(bundleId, workspaceRoot);
       console.log(JSON.stringify(report, null, 2));
       if (!report.highImpactCoverageComplete) process.exitCode = 1;
+      return;
+    }
+
+    case "cross-round-identity": {
+      const report = await crossRoundIdentityCliReport(workspaceRoot);
+      console.log(JSON.stringify(report, null, 2));
       return;
     }
 

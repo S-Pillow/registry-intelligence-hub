@@ -1,0 +1,35 @@
+{
+  "registryVersion": "cross-round-identity-registry/1.0.0",
+  "methodVersion": "cross-round-identity/1.0.0",
+  "links": [
+    {
+      "linkId": "xrid-rehearsal-google-atlas-001",
+      "round2012OrganizationKey": "google-charleston-road",
+      "round2026OrganizationKey": "rehearsal-org:atlas-digital",
+      "purpose": "method-rehearsal-only",
+      "confidence": "low",
+      "reviewState": "pending-steward",
+      "methodVersion": "cross-round-identity/1.0.0",
+      "evidence": [
+        "Synthetic method-rehearsal vector only — not a claim that Atlas Digital is Google in 2026.",
+        "Proves immutable link registry replay and conservative matching gates for cross-round-identity/1.0.0."
+      ],
+      "matchingSignals": ["explicit-steward-test-vector"],
+      "createdAt": "2026-09-19T00:00:00.000Z"
+    },
+    {
+      "linkId": "xrid-rehearsal-gmo-kizuna-002",
+      "round2012OrganizationKey": "gmo",
+      "round2026OrganizationKey": "rehearsal-org:kizuna-registry",
+      "purpose": "method-rehearsal-only",
+      "confidence": "low",
+      "reviewState": "pending-steward",
+      "methodVersion": "cross-round-identity/1.0.0",
+      "evidence": [
+        "Second rehearsal vector for deterministic link validation — no real-world identity assertion."
+      ],
+      "matchingSignals": ["explicit-steward-test-vector"],
+      "createdAt": "2026-09-19T00:00:00.000Z"
+    }
+  ]
+}

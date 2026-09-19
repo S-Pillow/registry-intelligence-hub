@@ -122,8 +122,10 @@ describe("2012 normalization foundation", () => {
     const fullReport = await readFile(join(projectDocsRoot, "2012-full-round-quality-report.md"), "utf8");
     const baseline = await readFile(join(projectDocsRoot, "2012-comparison-baseline-contract.md"), "utf8");
     const orgPromotion = await readFile(join(projectDocsRoot, "2012-organization-promotion.md"), "utf8");
+    const org2026 = await readFile(join(projectDocsRoot, "2026-organization-resolution-contract.md"), "utf8");
     expect(domain).toContain("raw snapshot");
-    expect(baseline).toContain("organization-promotion/1.0.0");
+    expect(baseline).toContain("cross-round-identity/1.0.0");
+    expect(org2026).toContain("organization-resolution-2026/1.0.0");
     expect(orgPromotion).toContain("UNRESOLVED");
     expect(domain).toContain("REQUIRES_REVIEW");
     expect(contract).toContain("Reveal Day intelligence parity");

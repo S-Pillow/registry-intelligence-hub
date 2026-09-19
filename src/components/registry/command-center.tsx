@@ -57,6 +57,8 @@ import {
   type CompareSectionId,
   type Lens,
 } from "@/lib/registry-data";
+import { buildRevealDayGlanceMetrics, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
+import { participationStatusCellForOrganization } from "@/comparison/compare-dimensions";
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
@@ -420,6 +422,35 @@ function ComparisonTray() {
   );
 }
 
+function metricCardSurfaceClass(metric: PresentedHistoricalMetric & { delta: string }) {
+  if (metric.displayTier === "production-ready") {
+    return "border-emerald-400/60 bg-white";
+  }
+  if (metric.displayTier === "comparison-pending") {
+    return "border-amber-300 bg-amber-50/40";
+  }
+  if (metric.displayTier === "fixture") {
+    return "border-slate-300 bg-slate-50";
+  }
+  return "border-slate-200 bg-slate-100 opacity-90";
+}
+
+function MetricReadinessCaption({ metric }: { metric: { readiness: string; method: string; displayTier: string } }) {
+  const tierLabel =
+    metric.displayTier === "production-ready"
+      ? "2012 baseline approved"
+      : metric.displayTier === "comparison-pending"
+        ? "Comparison not yet approved"
+        : metric.displayTier === "fixture"
+          ? "Rehearsal fixture"
+          : "Unavailable";
+  return (
+    <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      {tierLabel} · {metric.readiness} · {metric.method}
+    </span>
+  );
+}
+
 function MetricCards() {
   const recordsFor = (filter: string) => {
     if (filter === "idn") return registryFixture.applications.filter((item) => item.idn);
@@ -427,16 +458,18 @@ function MetricCards() {
     return registryFixture.applications;
   };
 
+  const metrics = roundPulse as (PresentedHistoricalMetric & { delta: string })[];
+
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      {roundPulse.map((metric) => (
+      {metrics.map((metric) => (
         <ProvenanceSheet
           key={metric.id}
           id={`metric-${metric.id}`}
           kind="metric"
           label={`${metric.label}: ${metric.value}`}
           records={recordsFor(metric.filter)}
-          triggerClassName="group min-h-32 rounded-xl border border-slate-300 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+          triggerClassName={`group min-h-32 rounded-xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65] ${metricCardSurfaceClass(metric)}`}
           trigger={
             <>
               <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-600">
@@ -444,7 +477,8 @@ function MetricCards() {
               </span>
               <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.value}</span>
               <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>
-              <span className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
+              <MetricReadinessCaption metric={metric} />
+              <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
             </>
           }
         />
@@ -707,7 +741,10 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
         { label: "Regions", definition: "Distinct applicant regions in the fixture.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
         { label: "IDN applications", definition: "Applications with a preserved Unicode/A-label representation.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
-        { label: "Participation status", definition: "Returning when any supporting applicant participated in the normalized 2012 cohort.", section: "historical-participation", cells: entities.map((entity) => cell(entity.records.some((record) => record.returning) ? "Returning" : "New")) },
+        { label: "Participation status (identity)", definition: "Cross-round organization identity only — post-Reveal outcomes are not ingested.", section: "historical-participation", cells: entities.map((entity) => {
+          const eligibility = participationStatusCellForOrganization(entity.records.some((record) => record.returning));
+          return cell(String(eligibility.value), eligibility.state);
+        }) },
         { label: "Categories", definition: "Distinct versioned fixture categories represented.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
         { label: "Application mix", definition: "Published application-type labels; not a ranking of any kind.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.type))].join(", "))) },
         { label: "Historical market demand", definition: "Approved comparable market measure for the same reporting period.", section: "market-context", cells: entities.map(() => cell("Not available — source not approved", "unavailable")) },
@@ -962,6 +999,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [query]);
   const visibleInsights = useMemo(() => standoutInsightsForLens(lens as Lens), [lens]);
+  const glanceMetrics = useMemo(() => buildRevealDayGlanceMetrics(registryFixture.applications), []);
+  const categoryMixGated = true;
+  const portfolioConcentrationGated = true;
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -1090,19 +1130,19 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <div><p className="text-xs font-bold tracking-[0.14em] text-[#006a56]">REVEAL DAY AT A GLANCE</p><h2 id="glance-heading" className="mt-1 text-lg font-bold">Rehearsal vs normalized 2012 cohort</h2></div>
                 <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance versus 2012" records={registryFixture.applications} />
               </div>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {[
-                  ["Applications", registryFixture.applications.length, registryFixture.historicalContext.applications],
-                  ["Unique strings", new Set(registryFixture.applications.map((item) => item.string)).size, registryFixture.historicalContext.uniqueStrings],
-                  ["Organizations", new Set(registryFixture.applications.map((item) => item.organization)).size, registryFixture.historicalContext.organizations],
-                  ["IDN applications", registryFixture.applications.filter((item) => item.idn).length, registryFixture.historicalContext.idnApplications],
-                ].map(([label, current, previous]) => (
-                  <div key={label} className="rounded-lg bg-slate-100 p-3">
-                    <p className="text-xs font-bold text-slate-700">{label}</p>
-                    <p className="mt-2 flex items-baseline gap-2"><strong className="text-2xl text-slate-950">{current}</strong><span className="text-xs font-semibold text-slate-600">vs {previous} in 2012</span></p>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                {glanceMetrics.map((metric) => (
+                  <div key={metric.metricId} className={`rounded-lg p-3 ${metric.displayTier === "production-ready" ? "bg-emerald-50 border border-emerald-200" : "bg-amber-50 border border-amber-200"}`}>
+                    <p className="text-xs font-bold text-slate-700">{metric.label}</p>
+                    <p className="mt-2 flex items-baseline gap-2">
+                      <strong className="text-2xl text-slate-950">{metric.rehearsalValue}</strong>
+                      <span className="text-xs font-semibold text-slate-600">vs {metric.baseline2012} in 2012 Reveal Day</span>
+                    </p>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{metric.readiness} · {metric.method}</p>
                   </div>
                 ))}
               </div>
+              <p className="mt-3 text-xs text-slate-600">Approved 2012 baseline from <code className="text-[11px]">icann2012-reveal-day-v1</code>. Round-wide organization and category comparisons remain gated.</p>
             </section>
 
             <section className="mt-10" aria-labelledby="intelligence-heading">
@@ -1139,12 +1179,17 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               </div>
 
               <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                <Card className="border-slate-300 shadow-sm">
+                <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`}>
                   <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">{registryFixture.historicalContext.comparisonLabel}</p></div>
+                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">Rehearsal fixture only — category mix comparison blocked (BLOCKED_COVERAGE)</p></div>
                     <ProvenanceSheet kind="metric" label="Biggest changes versus 2012" records={registryFixture.applications} />
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    {categoryMixGated && (
+                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                        <strong>Comparison not yet approved.</strong> Broad category / sector charts are gated until 2012 taxonomy coverage and denominator policy are explicit. Rehearsal rows below are illustrative fixture context only.
+                      </p>
+                    )}
                     {biggestChanges.slice(0, 4).map((item) => (
                       <ProvenanceSheet
                         key={item.category}
@@ -1193,6 +1238,11 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <Card className="border-slate-300 lg:col-span-3">
                   <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">LARGEST PORTFOLIOS</p><CardTitle className="text-lg">Application concentration</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
+                    {portfolioConcentrationGated && (
+                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                        <strong>Round-wide concentration gated.</strong> Rehearsal fixture rankings are shown for UX proof only; they are not comparable to 2012 promoted portfolios or publishable concentration metrics.
+                      </p>
+                    )}
                     {portfolioRanking.slice(0, 5).map((item, index) => {
                       const records = registryFixture.applications.filter((record) => record.organization === item.organization);
                       return <ProvenanceSheet key={item.organization} id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;

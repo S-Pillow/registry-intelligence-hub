@@ -1,4 +1,5 @@
 import fixture from "@/data/fixtures/registry-applications.json";
+import { buildCommandCenterRoundPulse } from "@/comparison/historical-2012-ui-adapter";
 
 export type Application = (typeof fixture.applications)[number];
 export type HistoricalContext = typeof fixture.historicalContext;
@@ -326,16 +327,19 @@ export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
-export function buildRoundPulse(applications: Application[], historical: HistoricalContext = fixture.historicalContext) {
-  const organizations = uniqueCount(applications.map((item) => item.organization));
-  return [
-    { id: "applications", label: "Applications", value: applications.length, delta: `+${applications.length - historical.applications} vs 2012 cohort`, filter: "all" },
-    { id: "strings", label: "Unique strings", value: uniqueCount(applications.map((item) => item.string)), delta: `+${uniqueCount(applications.map((item) => item.string)) - historical.uniqueStrings} vs 2012`, filter: "strings" },
-    { id: "organizations", label: "Organizations", value: organizations, delta: `+${organizations - historical.organizations} vs 2012`, filter: "organizations" },
-    { id: "regions", label: "Regions", value: uniqueCount(applications.map((item) => item.region)), delta: `${uniqueCount(applications.map((item) => item.country))} countries`, filter: "regions" },
-    { id: "idn", label: "IDN applications", value: applications.filter((item) => item.idn).length, delta: `+${applications.filter((item) => item.idn).length - historical.idnApplications} vs 2012`, filter: "idn" },
-    { id: "contention", label: "Initial contention sets", value: uniqueCount(applications.flatMap((item) => item.contentionSet ? [item.contentionSet] : [])), delta: `${historical.contentionSets - uniqueCount(applications.flatMap((item) => item.contentionSet ? [item.contentionSet] : []))} fewer vs 2012`, filter: "contention" }
-  ] as const;
+export function buildRoundPulse(applications: Application[]) {
+  return buildCommandCenterRoundPulse(applications).map((metric) => ({
+    id: metric.id,
+    label: metric.label,
+    value: metric.value,
+    delta: metric.deltaLabel ?? "",
+    filter: metric.filter,
+    readiness: metric.readiness,
+    displayTier: metric.displayTier,
+    source: metric.source,
+    method: metric.method,
+    metricId: metric.metricId,
+  }));
 }
 
 export function buildPortfolioRanking(applications: Application[]) {
