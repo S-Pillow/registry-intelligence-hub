@@ -57,7 +57,8 @@ import {
   type CompareSectionId,
   type Lens,
 } from "@/lib/registry-data";
-import { buildRevealDayGlanceMetrics, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
+import { buildRevealDayGlanceMetrics, type HistoricalMetricFact, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
+import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import { participationStatusCellForOrganization } from "@/comparison/compare-dimensions";
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
@@ -435,18 +436,28 @@ function metricCardSurfaceClass(metric: PresentedHistoricalMetric & { delta: str
   return "border-slate-200 bg-slate-100 opacity-90";
 }
 
-function MetricReadinessCaption({ metric }: { metric: { readiness: string; method: string; displayTier: string } }) {
+function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string; method: string; displayTier: string; comparisonAllowed: boolean } }) {
   const tierLabel =
     metric.displayTier === "production-ready"
       ? "2012 baseline approved"
       : metric.displayTier === "comparison-pending"
-        ? "Comparison not yet approved"
+        ? metric.comparisonAllowed
+          ? "Comparison pending publication"
+          : "Historical baseline only"
         : metric.displayTier === "fixture"
           ? "Rehearsal fixture"
           : "Unavailable";
   return (
     <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-      {tierLabel} · {metric.readiness} · {metric.method}
+      {tierLabel} · {metric.methodReadiness} · {metric.method}
+    </span>
+  );
+}
+
+function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
+  return (
+    <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+      Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.
     </span>
   );
 }
@@ -475,8 +486,8 @@ function MetricCards() {
               <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-600">
                 {metric.label}<ChevronRight className="size-4 text-[#007d65] transition group-hover:translate-x-0.5" />
               </span>
-              <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.value}</span>
-              <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>
+              <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.historicalFact ? metric.historicalFact.value : metric.value}</span>
+              {metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
               <MetricReadinessCaption metric={metric} />
               <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
             </>
@@ -583,12 +594,17 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
   const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
   const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
+  const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure();
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Search and compose evidence-backed filters across applications, organizations, strings, categories, regions, participation, contention, and IDNs.</p></div>
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture only</div>
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
+        {exploreHistoricalDisclosure}
       </div>
 
       <div className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
@@ -1127,22 +1143,20 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
             <section className="mt-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm" aria-labelledby="glance-heading">
               <div className="mb-3 flex items-center justify-between">
-                <div><p className="text-xs font-bold tracking-[0.14em] text-[#006a56]">REVEAL DAY AT A GLANCE</p><h2 id="glance-heading" className="mt-1 text-lg font-bold">Rehearsal vs normalized 2012 cohort</h2></div>
-                <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance versus 2012" records={registryFixture.applications} />
+                <div><p className="text-xs font-bold tracking-[0.14em] text-[#006a56]">REVEAL DAY AT A GLANCE</p><h2 id="glance-heading" className="mt-1 text-lg font-bold">Approved 2012 Reveal Day baseline</h2></div>
+                <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance — approved 2012 baseline" records={registryFixture.applications} />
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                {glanceMetrics.map((metric) => (
-                  <div key={metric.metricId} className={`rounded-lg p-3 ${metric.displayTier === "production-ready" ? "bg-emerald-50 border border-emerald-200" : "bg-amber-50 border border-amber-200"}`}>
-                    <p className="text-xs font-bold text-slate-700">{metric.label}</p>
-                    <p className="mt-2 flex items-baseline gap-2">
-                      <strong className="text-2xl text-slate-950">{metric.rehearsalValue}</strong>
-                      <span className="text-xs font-semibold text-slate-600">vs {metric.baseline2012} in 2012 Reveal Day</span>
-                    </p>
-                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{metric.readiness} · {metric.method}</p>
+                {glanceMetrics.map((fact) => (
+                  <div key={fact.metricId} className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-xs font-bold text-slate-700">{fact.label}</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-950">{fact.value}</p>
+                    <HistoricalFactCaption fact={fact} />
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">{fact.methodReadiness} · {fact.claimReadiness} · snapshot {fact.sourceSnapshotId}</p>
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-xs text-slate-600">Approved 2012 baseline from <code className="text-[11px]">icann2012-reveal-day-v1</code>. Round-wide organization and category comparisons remain gated.</p>
+              <p className="mt-3 text-xs text-slate-600">Approved baseline from <code className="text-[11px]">icann2012-reveal-day-v1</code>. No rehearsal 2026 values or percentage deltas are shown here while 2026 remains unpublished.</p>
             </section>
 
             <section className="mt-10" aria-labelledby="intelligence-heading">

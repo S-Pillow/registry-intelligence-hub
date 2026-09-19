@@ -334,11 +334,15 @@ export function buildRoundPulse(applications: Application[]) {
     value: metric.value,
     delta: metric.deltaLabel ?? "",
     filter: metric.filter,
-    readiness: metric.readiness,
+    methodReadiness: metric.methodReadiness,
+    claimReadiness2012: metric.claimReadiness2012,
+    claimReadiness2026: metric.claimReadiness2026,
+    comparisonAllowed: metric.comparisonAllowed,
     displayTier: metric.displayTier,
     source: metric.source,
     method: metric.method,
     metricId: metric.metricId,
+    historicalFact: metric.historicalFact,
   }));
 }
 

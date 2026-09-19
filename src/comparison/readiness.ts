@@ -1,4 +1,4 @@
-/** Machine-readable comparison readiness — consumed by Command Center, Compare, and Briefings. */
+/** Method readiness for comparison — consumed by Command Center, Compare, Briefings, and Explore. */
 export type MetricReadiness =
   | "COMPARABLE"
   | "PARTIAL"

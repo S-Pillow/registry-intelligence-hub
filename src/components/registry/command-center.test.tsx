@@ -33,10 +33,10 @@ describe("Command Center interactions", () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 12" }));
+    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
 
     expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
-    expect(screen.getByText("Applications: 12")).toBeInTheDocument();
+    expect(screen.getByText("Applications: 1930")).toBeInTheDocument();
     expect(screen.getByText("Deterministic source-backed fact")).toBeInTheDocument();
     expect(screen.getByText("Confidence: not applicable to deterministic facts")).toBeInTheDocument();
     expect(screen.getAllByText("snap-rehearsal-2026-09-16").length).toBeGreaterThan(0);
@@ -395,7 +395,7 @@ describe("Saved navigation and one-click Watch", () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 12" }));
+    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     await user.click(screen.getByRole("button", { name: "Watch" }));
     expect(screen.getByRole("button", { name: "Watching" })).toBeInTheDocument();
 

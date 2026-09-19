@@ -1,78 +1,159 @@
 import type { Application } from "@/lib/registry-data";
 import { APPROVED_2012_BASELINE } from "./approved-2012-baseline";
-import { getMetricEligibility, requireMetricEligibility, readinessBlocksComparablePresentation } from "./metric-eligibility";
+import type { ClaimReadiness } from "./claim-readiness";
+import {
+  getMetricEligibility,
+  requireMetricEligibility,
+  readinessBlocksComparablePresentation,
+  type ResolvedMetricEligibility,
+} from "./metric-eligibility";
 import type { MetricDisplayTier, MetricReadiness } from "./readiness";
 import { isReadinessComparable } from "./readiness";
 
 export const HISTORICAL_2012_UI_ADAPTER_VERSION = "historical-2012-ui-adapter/1.0.0";
 
+export const APPROVED_2012_HISTORICAL_ROUND_ID = "2012-reveal-day";
+export const REHEARSAL_2026_ROUND_ID = "2026-rehearsal";
+
+export type HistoricalMetricFact = {
+  metricId: string;
+  value: number;
+  roundId: typeof APPROVED_2012_HISTORICAL_ROUND_ID;
+  effectiveDate: string;
+  sourceClassification: "ICANN_PRIMARY_ARCHIVED_COPY";
+  sourceSnapshotId: string;
+  methodVersion: string;
+  methodReadiness: MetricReadiness;
+  claimReadiness: ClaimReadiness;
+  comparisonAllowed: boolean;
+  limitations: string[];
+  label: string;
+};
+
 export type PresentedHistoricalMetric = {
-  /** Stable Command Center filter id (legacy round-pulse keys). */
   id: string;
   metricId: string;
   label: string;
   value: number;
+  historicalFact?: HistoricalMetricFact;
   baseline2012: number | null;
   deltaLabel: string | null;
-  readiness: MetricReadiness;
+  methodReadiness: MetricReadiness;
+  claimReadiness2012: ClaimReadiness;
+  claimReadiness2026: ClaimReadiness;
+  comparisonAllowed: boolean;
   displayTier: MetricDisplayTier;
   source: string;
   method: string;
   filter: string;
 };
 
-function displayTierFor(readiness: MetricReadiness): MetricDisplayTier {
-  if (readiness === "COMPARABLE") return "production-ready";
-  if (readiness === "PARTIAL") return "comparison-pending";
-  if (readiness === "BLOCKED_COVERAGE" || readiness === "BLOCKED_METHOD") return "comparison-pending";
+export type GlanceMetric = HistoricalMetricFact;
+
+const APPROVED_UI_SWAP_METRIC_IDS = ["application-count", "unique-applied-strings", "idn-applications"] as const;
+
+const HISTORICAL_LIMITATIONS = [
+  "2026 round not published — cross-round comparison withheld.",
+  "Rehearsal fixture values must not be presented as an official 2026 comparison.",
+] as const;
+
+function displayTierFor(methodReadiness: MetricReadiness, comparisonAllowed: boolean): MetricDisplayTier {
+  if (methodReadiness === "COMPARABLE" && comparisonAllowed) return "production-ready";
+  if (methodReadiness === "COMPARABLE" || methodReadiness === "PARTIAL") return "comparison-pending";
+  if (methodReadiness === "BLOCKED_COVERAGE" || methodReadiness === "BLOCKED_METHOD") return "comparison-pending";
   return "unavailable";
 }
 
-function formatDelta(current: number, baseline: number): string {
-  const diff = current - baseline;
-  const sign = diff > 0 ? "+" : "";
-  return `${sign}${diff} vs 2012 Reveal Day (${baseline})`;
+function baselineValueForMetric(metricId: (typeof APPROVED_UI_SWAP_METRIC_IDS)[number]): number {
+  if (metricId === "application-count") return APPROVED_2012_BASELINE.applications;
+  if (metricId === "unique-applied-strings") return APPROVED_2012_BASELINE.uniqueStrings;
+  return APPROVED_2012_BASELINE.idnApplications;
 }
 
-function entryFor(metricId: string) {
-  return requireMetricEligibility(metricId);
+export function buildApproved2012HistoricalFact(metricId: (typeof APPROVED_UI_SWAP_METRIC_IDS)[number]): HistoricalMetricFact {
+  const entry = requireMetricEligibility(metricId);
+  return {
+    metricId,
+    value: baselineValueForMetric(metricId),
+    roundId: APPROVED_2012_HISTORICAL_ROUND_ID,
+    effectiveDate: APPROVED_2012_BASELINE.baselineAt,
+    sourceClassification: "ICANN_PRIMARY_ARCHIVED_COPY",
+    sourceSnapshotId: "snap-2012-reveal-day-csv-v1",
+    methodVersion: APPROVED_2012_BASELINE.parserVersion,
+    methodReadiness: entry.methodReadiness,
+    claimReadiness: entry.claimReadiness.round2012,
+    comparisonAllowed: entry.comparisonAllowed,
+    limitations: [...HISTORICAL_LIMITATIONS],
+    label: entry.label,
+  };
+}
+
+export function buildApproved2012HistoricalFacts(): HistoricalMetricFact[] {
+  return APPROVED_UI_SWAP_METRIC_IDS.map((metricId) => buildApproved2012HistoricalFact(metricId));
 }
 
 function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
+function pulseMeta(entry: ResolvedMetricEligibility) {
+  return {
+    methodReadiness: entry.methodReadiness,
+    claimReadiness2012: entry.claimReadiness.round2012,
+    claimReadiness2026: entry.claimReadiness.round2026,
+    comparisonAllowed: entry.comparisonAllowed,
+    displayTier: displayTierFor(entry.methodReadiness, entry.comparisonAllowed),
+    source: entry.source2012,
+    method: entry.method,
+  };
+}
+
+function historicalStatusLine(entry: ResolvedMetricEligibility): string {
+  return "Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.";
+}
+
+function rehearsalDeltaBlocked(): string {
+  return "Rehearsal fixture shown for UX only — not an approved 2026 comparison.";
+}
+
 /**
- * Incremental Command Center round pulse: rehearsal 2026 values with approved 2012 baselines where gated COMPARABLE/PARTIAL.
+ * Incremental Command Center round pulse: approved 2012 historical facts for the three count metrics;
+ * remaining cards stay on rehearsal fixture with explicit gates.
  */
 export function buildCommandCenterRoundPulse(applications: Application[]): PresentedHistoricalMetric[] {
   const baseline = APPROVED_2012_BASELINE;
+  const applicationEntry = requireMetricEligibility("application-count");
+  const stringsEntry = requireMetricEligibility("unique-applied-strings");
+  const orgEntry = requireMetricEligibility("organization-round-count");
+  const regionsEntry = requireMetricEligibility("distinct-regions");
+  const idnEntry = requireMetricEligibility("idn-applications");
+  const contentionEntry = requireMetricEligibility("contention-set-count");
 
-  const metrics: PresentedHistoricalMetric[] = [
+  const appFact = buildApproved2012HistoricalFact("application-count");
+  const stringsFact = buildApproved2012HistoricalFact("unique-applied-strings");
+  const idnFact = buildApproved2012HistoricalFact("idn-applications");
+
+  return [
     {
       id: "applications",
       metricId: "application-count",
       label: "Applications",
-      value: applications.length,
+      value: appFact.value,
+      historicalFact: appFact,
       baseline2012: baseline.applications,
-      deltaLabel: formatDelta(applications.length, baseline.applications),
-      readiness: entryFor("application-count").readiness,
-      displayTier: displayTierFor(entryFor("application-count").readiness),
-      source: entryFor("application-count").source2012,
-      method: entryFor("application-count").method,
+      deltaLabel: historicalStatusLine(applicationEntry),
+      ...pulseMeta(applicationEntry),
       filter: "all",
     },
     {
       id: "strings",
       metricId: "unique-applied-strings",
       label: "Unique strings",
-      value: uniqueCount(applications.map((item) => item.string)),
+      value: stringsFact.value,
+      historicalFact: stringsFact,
       baseline2012: baseline.uniqueStrings,
-      deltaLabel: formatDelta(uniqueCount(applications.map((item) => item.string)), baseline.uniqueStrings),
-      readiness: entryFor("unique-applied-strings").readiness,
-      displayTier: displayTierFor(entryFor("unique-applied-strings").readiness),
-      source: entryFor("unique-applied-strings").source2012,
-      method: entryFor("unique-applied-strings").method,
+      deltaLabel: historicalStatusLine(stringsEntry),
+      ...pulseMeta(stringsEntry),
       filter: "strings",
     },
     {
@@ -82,10 +163,7 @@ export function buildCommandCenterRoundPulse(applications: Application[]): Prese
       value: uniqueCount(applications.map((item) => item.organization)),
       baseline2012: null,
       deltaLabel: "Round-wide organization comparison not approved",
-      readiness: entryFor("organization-round-count").readiness,
-      displayTier: displayTierFor(entryFor("organization-round-count").readiness),
-      source: entryFor("organization-round-count").source2012,
-      method: entryFor("organization-round-count").method,
+      ...pulseMeta(orgEntry),
       filter: "organizations",
     },
     {
@@ -94,24 +172,19 @@ export function buildCommandCenterRoundPulse(applications: Application[]): Prese
       label: "Regions",
       value: uniqueCount(applications.map((item) => item.region)),
       baseline2012: baseline.distinctRegions,
-      deltaLabel: `${uniqueCount(applications.map((item) => item.country))} countries · 2012 had ${baseline.distinctCountries} countries`,
-      readiness: entryFor("distinct-regions").readiness,
-      displayTier: displayTierFor(entryFor("distinct-regions").readiness),
-      source: entryFor("distinct-regions").source2012,
-      method: entryFor("distinct-regions").method,
+      deltaLabel: `${uniqueCount(applications.map((item) => item.country))} countries · 2012 had ${baseline.distinctCountries} countries · ${rehearsalDeltaBlocked()}`,
+      ...pulseMeta(regionsEntry),
       filter: "regions",
     },
     {
       id: "idn",
       metricId: "idn-applications",
       label: "IDN applications",
-      value: applications.filter((item) => item.idn).length,
+      value: idnFact.value,
+      historicalFact: idnFact,
       baseline2012: baseline.idnApplications,
-      deltaLabel: formatDelta(applications.filter((item) => item.idn).length, baseline.idnApplications),
-      readiness: entryFor("idn-applications").readiness,
-      displayTier: displayTierFor(entryFor("idn-applications").readiness),
-      source: entryFor("idn-applications").source2012,
-      method: entryFor("idn-applications").method,
+      deltaLabel: historicalStatusLine(idnEntry),
+      ...pulseMeta(idnEntry),
       filter: "idn",
     },
     {
@@ -121,64 +194,21 @@ export function buildCommandCenterRoundPulse(applications: Application[]): Prese
       value: uniqueCount(applications.flatMap((item) => (item.contentionSet ? [item.contentionSet] : []))),
       baseline2012: null,
       deltaLabel: "Set-entity count blocked — membership exposure only",
-      readiness: entryFor("contention-set-count").readiness,
-      displayTier: displayTierFor(entryFor("contention-set-count").readiness),
-      source: entryFor("contention-set-count").source2012,
-      method: entryFor("contention-set-count").method,
+      ...pulseMeta(contentionEntry),
       filter: "contention",
     },
   ];
-
-  return metrics;
 }
 
-export type GlanceMetric = {
-  metricId: string;
-  label: string;
-  rehearsalValue: number;
-  baseline2012: number | null;
-  readiness: MetricReadiness;
-  displayTier: MetricDisplayTier;
-  source: string;
-  method: string;
-};
-
-/** Approved 2012 facts for side-by-side glance (excludes gated organization round count). */
-export function buildRevealDayGlanceMetrics(applications: Application[]): GlanceMetric[] {
-  const baseline = APPROVED_2012_BASELINE;
-  const ids = ["application-count", "unique-applied-strings", "idn-applications"] as const;
-
-  return ids.map((metricId) => {
-    const entry = entryFor(metricId);
-    let rehearsalValue = 0;
-    if (metricId === "application-count") rehearsalValue = applications.length;
-    if (metricId === "unique-applied-strings") rehearsalValue = uniqueCount(applications.map((a) => a.string));
-    if (metricId === "idn-applications") rehearsalValue = applications.filter((a) => a.idn).length;
-
-    const baseline2012 =
-      metricId === "application-count"
-        ? baseline.applications
-        : metricId === "unique-applied-strings"
-          ? baseline.uniqueStrings
-          : baseline.idnApplications;
-
-    return {
-      metricId,
-      label: entry.label,
-      rehearsalValue,
-      baseline2012,
-      readiness: entry.readiness,
-      displayTier: displayTierFor(entry.readiness),
-      source: entry.source2012,
-      method: entry.method,
-    };
-  });
+/** Approved 2012 facts for side-by-side glance — structured facts only, no rehearsal comparison. */
+export function buildRevealDayGlanceMetrics(_applications: Application[]): GlanceMetric[] {
+  return buildApproved2012HistoricalFacts();
 }
 
 export function isMetricGatedForUi(metricId: string): boolean {
   const entry = getMetricEligibility(metricId);
   if (!entry) return true;
-  return readinessBlocksComparablePresentation(entry.readiness);
+  return readinessBlocksComparablePresentation(entry.methodReadiness);
 }
 
 export function approved2012ContentionMembershipNote(): string {

@@ -40,11 +40,11 @@ describe("deterministic intelligence calculations", () => {
     const metrics = Object.fromEntries(buildRoundPulse(fixture.applications).map((item) => [item.id, item.value]));
 
     expect(metrics).toEqual({
-      applications: 12,
-      strings: 10,
+      applications: 1930,
+      strings: 1409,
       organizations: 8,
       regions: 6,
-      idn: 2,
+      idn: 116,
       contention: 2,
     });
     expect(fixture.applications.filter((item) => item.replacement === null)).toHaveLength(10);

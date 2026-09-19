@@ -1,3 +1,4 @@
+import type { RoundClaimReadiness } from "./claim-readiness";
 import type { MetricReadiness } from "./readiness";
 
 export const METRIC_ELIGIBILITY_CATALOG_VERSION = "metric-eligibility-catalog/1.0.0";
@@ -5,7 +6,10 @@ export const METRIC_ELIGIBILITY_CATALOG_VERSION = "metric-eligibility-catalog/1.
 export type MetricEligibilityEntry = {
   metricId: string;
   label: string;
-  readiness: MetricReadiness;
+  methodReadiness: MetricReadiness;
+  claimReadiness: RoundClaimReadiness;
+  /** Never assert real 2026 publication identity from rehearsal or partial gates. */
+  claimsReal2026Identity: false;
   source2012: string;
   source2026: string;
   method: string;
@@ -20,7 +24,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "application-count",
     label: "Application count",
-    readiness: "COMPARABLE",
+    methodReadiness: "COMPARABLE",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-reveal-day-v1 / Reveal Day CSV",
     source2026: "registry-applications.json (rehearsal fixture)",
     method: "count(application)",
@@ -28,7 +34,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "unique-applied-strings",
     label: "Unique applied strings",
-    readiness: "COMPARABLE",
+    methodReadiness: "COMPARABLE",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-reveal-day-v1 / Reveal Day CSV",
     source2026: "registry-applications.json (rehearsal fixture)",
     method: "count(distinct stringUlabel)",
@@ -36,7 +44,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "idn-applications",
     label: "IDN applications",
-    readiness: "COMPARABLE",
+    methodReadiness: "COMPARABLE",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-reveal-day-v1 / Reveal Day CSV (IDN? = Yes)",
     source2026: "registry-applications.json (rehearsal fixture)",
     method: "count(isIdn)",
@@ -44,7 +54,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "distinct-countries",
     label: "Distinct applicant countries",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-reveal-day-v1 / CSV Location",
     source2026: "registry-applications.json country",
     method: "count(distinct jurisdiction)",
@@ -53,7 +65,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "distinct-regions",
     label: "Distinct ICANN regions",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-reveal-day-v1 / CSV Region",
     source2026: "registry-applications.json region",
     method: "count(distinct region)",
@@ -61,7 +75,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "community-designation-count",
     label: "Community designation (CSV flag)",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "reveal-day-community-flag/1.0",
     source2026: "registry-market-taxonomy/1.0 on rehearsal type",
     method: "taxonomy community assignment",
@@ -70,7 +86,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "geographic-designation-count",
     label: "Geographic designation (CSV flag)",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "reveal-day-geographic-flag/1.0",
     source2026: "registry-market-taxonomy/1.0 on rehearsal type",
     method: "taxonomy geographic assignment",
@@ -78,7 +96,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "contention-membership-exposure",
     label: "Contention set membership (per application)",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-contention-pdf/1.0.0 membership",
     source2026: "registry-applications.json contentionSet",
     method: "count(applications with set membership)",
@@ -86,7 +106,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "contention-set-count",
     label: "Contention set entity count",
-    readiness: "BLOCKED_METHOD",
+    methodReadiness: "BLOCKED_METHOD",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "icann2012-contention-pdf/1.0.0",
     source2026: "registry-applications.json distinct sets",
     method: "count(distinct setId)",
@@ -95,7 +117,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "category-mix",
     label: "Category / sector mix",
-    readiness: "BLOCKED_COVERAGE",
+    methodReadiness: "BLOCKED_COVERAGE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "registry-market-taxonomy/1.0 (mostly unclassified)",
     source2026: "registry-applications.json rehearsal categories",
     method: "registry-market-taxonomy/1.0",
@@ -104,7 +128,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "organization-round-count",
     label: "Distinct organizations (round-wide)",
-    readiness: "BLOCKED_COVERAGE",
+    methodReadiness: "BLOCKED_COVERAGE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0 (26% promoted)",
     source2026: "registry-applications.json organization (illustrative)",
     method: "count(distinct organization)",
@@ -113,7 +139,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "portfolio-concentration-round-wide",
     label: "Round-wide portfolio concentration",
-    readiness: "BLOCKED_COVERAGE",
+    methodReadiness: "BLOCKED_COVERAGE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "REHEARSAL_ONLY" },
+    claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0",
     source2026: "registry-applications.json",
     method: "portfolio-ranking/1.0.0",
@@ -122,7 +150,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "confirmed-portfolio-facts",
     label: "Promoted organization portfolio facts",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0 (steward ops)",
     source2026: "not applicable until 2026 org resolution",
     method: "organization-promotion/1.0.0",
@@ -131,7 +161,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "returning-participant-identity",
     label: "Returning participant / prior applicant (identity)",
-    readiness: "PARTIAL",
+    methodReadiness: "PARTIAL",
+    claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0 + cross-round-identity/1.0.0",
     source2026: "2026 organization resolution (pre-publication)",
     method: "cross-round-identity/1.0.0",
@@ -141,7 +173,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "returning-delegated-operator",
     label: "Returning delegated operator",
-    readiness: "BLOCKED_SOURCE",
+    methodReadiness: "BLOCKED_SOURCE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "post-Reveal delegation (not ingested)",
     source2026: "post-Reveal lifecycle (not ingested)",
     method: "n/a",
@@ -150,7 +184,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "returning-successful-applicant",
     label: "Returning successful applicant",
-    readiness: "BLOCKED_SOURCE",
+    methodReadiness: "BLOCKED_SOURCE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "post-Reveal outcomes (not ingested)",
     source2026: "post-Reveal outcomes (not ingested)",
     method: "n/a",
@@ -158,7 +194,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "historical-operator-track-record",
     label: "Historical operator track record",
-    readiness: "BLOCKED_SOURCE",
+    methodReadiness: "BLOCKED_SOURCE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "post-Reveal delegation & operations (not ingested)",
     source2026: "post-Reveal lifecycle (not ingested)",
     method: "n/a",
@@ -166,7 +204,9 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
   {
     metricId: "historical-market-demand",
     label: "Historical / comparable market demand",
-    readiness: "BLOCKED_SOURCE",
+    methodReadiness: "BLOCKED_SOURCE",
+    claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "NOT_PUBLISHED" },
+    claimsReal2026Identity: false,
     source2012: "no approved licensed source",
     source2026: "no approved licensed source",
     method: "n/a",
@@ -186,4 +226,3 @@ export function getMetricEligibility(metricId: string): MetricEligibilityEntry |
 export function getCompareDimensionEligibility(compareDimensionId: string): MetricEligibilityEntry | undefined {
   return catalogByDimension.get(compareDimensionId);
 }
-
