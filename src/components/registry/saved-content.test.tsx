@@ -227,6 +227,49 @@ describe("Saved hub — Saved Research", () => {
     expect(screen.getByText(/Dimensions pre-1\.1\.0 \(legacy\)/)).toBeInTheDocument();
     expect(screen.getByText(/Origin not recorded/)).toBeInTheDocument();
   });
+
+  it("enables Compare selected and Create briefing for a valid saved comparison and disables them for an invalid one", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+
+    await user.click(screen.getByRole("button", { name: "Save this comparison" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText(/Saved “/);
+
+    cleanup();
+    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+
+    expect(await screen.findByRole("link", { name: "Compare selected" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/compare?type=organizations"),
+    );
+    expect(screen.getByRole("button", { name: "Create briefing" })).toBeEnabled();
+
+    window.localStorage.setItem(
+      "registry-hub:saved-research:v1",
+      JSON.stringify([
+        {
+          id: "broken-compare",
+          name: "Broken comparison",
+          kind: "compare-config",
+          summary: "Compare 1 organizations: Atlas Digital",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastOpenedAt: new Date().toISOString(),
+          params: { type: "organizations", ids: "Atlas Digital" },
+          recordCountAtSave: 2,
+        },
+      ]),
+    );
+
+    cleanup();
+    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+
+    const compareButtons = await screen.findAllByRole("button", { name: "Compare selected" });
+    const disabledCompare = compareButtons.find((button) => button.hasAttribute("disabled"));
+    expect(disabledCompare).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create briefing" })).toBeDisabled();
+  });
 });
 
 describe("Saved hub — changes since last visit", () => {

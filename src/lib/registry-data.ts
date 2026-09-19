@@ -193,6 +193,91 @@ export function describeCompareSelection(entityType: EntityType, labels: string[
   return `Compare ${labels.length} ${labels.length === 1 ? singular : entityType}: ${labels.join(", ")}`;
 }
 
+export type SavedComparePromotion = {
+  eligible: boolean;
+  href: string;
+  disabledReason: string;
+};
+
+const COMPARE_CAPABLE_ENTITY_TYPES: EntityType[] = ["organizations", "applications", "categories"];
+
+function compareHrefFromSelection(type: EntityType, ids: string[], origin: string, extraParams: Record<string, string> = {}) {
+  const params = new URLSearchParams({ type, ids: ids.join(","), origin });
+  for (const [key, value] of Object.entries(extraParams)) {
+    if (value && !["type", "ids"].includes(key)) params.set(key, value);
+  }
+  return `/tools/registry-intelligence-hub/compare?${params.toString()}`;
+}
+
+/** Validates a saved or derived Compare selection (2–4 like entities that resolve in the fixture). */
+export function savedComparePromotionFromParams(params: Record<string, string>, originLabel: string): SavedComparePromotion {
+  const type = params.type as EntityType;
+  if (!COMPARE_CAPABLE_ENTITY_TYPES.includes(type)) {
+    return { eligible: false, href: "", disabledReason: "Saved comparison is missing a comparable entity type (organizations, applications, or categories)." };
+  }
+  const ids = [...new Set((params.ids ?? "").split(",").map((part) => part.trim()).filter(Boolean))];
+  if (ids.length < 2) {
+    return { eligible: false, href: "", disabledReason: "Compare selected needs at least two like entities." };
+  }
+  if (ids.length > 4) {
+    return { eligible: false, href: "", disabledReason: "Compare supports up to four like entities — narrow this selection." };
+  }
+  const resolved = ids.filter((id) => recordsForEntity(type, id).length > 0);
+  if (resolved.length < 2) {
+    return { eligible: false, href: "", disabledReason: "Fewer than two saved entities still resolve in this fixture." };
+  }
+  return {
+    eligible: true,
+    href: compareHrefFromSelection(type, resolved.slice(0, 4), originLabel, params),
+    disabledReason: "",
+  };
+}
+
+/** Derives a Compare promotion from a saved Explore cohort when browse mode is entity-comparable. */
+export function savedExploreComparePromotion(params: Record<string, string>, originLabel: string): SavedComparePromotion {
+  const browse = params.entity ?? "applications";
+  if (browse === "strings") {
+    return { eligible: false, href: "", disabledReason: "Compare is unavailable in Strings browse — reopen in organizations, applications, or categories." };
+  }
+  const type = browse as EntityType;
+  if (!COMPARE_CAPABLE_ENTITY_TYPES.includes(type)) {
+    return { eligible: false, href: "", disabledReason: "This saved view is not in a comparable browse mode." };
+  }
+  const apps = recordsForParams("explore-view", params);
+  const keys = type === "applications"
+    ? [...new Set(apps.map((record) => record.id))]
+    : type === "organizations"
+      ? [...new Set(apps.map((record) => record.organization))]
+      : [...new Set(apps.map((record) => record.category))];
+  if (keys.length < 2) {
+    return { eligible: false, href: "", disabledReason: "This cohort has fewer than two comparable entities." };
+  }
+  if (keys.length > 4) {
+    return { eligible: false, href: "", disabledReason: `This cohort matches ${keys.length} entities — narrow filters to four or fewer before comparing.` };
+  }
+  return { eligible: true, href: compareHrefFromSelection(type, keys, originLabel), disabledReason: "" };
+}
+
+export function savedResearchComparePromotion(entry: { kind: "explore-view" | "compare-config"; name: string; params: Record<string, string> }): SavedComparePromotion {
+  const origin = `Saved Research: ${entry.name}`;
+  return entry.kind === "compare-config"
+    ? savedComparePromotionFromParams(entry.params, origin)
+    : savedExploreComparePromotion(entry.params, origin);
+}
+
+export function savedResearchBriefingEligible(entry: { kind: "explore-view" | "compare-config"; params: Record<string, string> }): { eligible: boolean; disabledReason: string } {
+  if (entry.kind === "compare-config") {
+    const promotion = savedComparePromotionFromParams(entry.params, "");
+    return promotion.eligible
+      ? { eligible: true, disabledReason: "" }
+      : { eligible: false, disabledReason: promotion.disabledReason || "Create briefing needs a valid 2–4 entity comparison." };
+  }
+  if (recordsForParams("explore-view", entry.params).length === 0) {
+    return { eligible: false, disabledReason: "No records match this saved cohort — nothing to brief." };
+  }
+  return { eligible: true, disabledReason: "" };
+}
+
 /**
  * Bumped whenever the set or definition of Compare dimensions changes, so a
  * saved comparison can record which method version produced its rows —

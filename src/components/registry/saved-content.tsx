@@ -32,6 +32,8 @@ import {
   recordsForEntity,
   recordsForParams,
   registryFixture,
+  savedResearchBriefingEligible,
+  savedResearchComparePromotion,
   type EntityType,
 } from "@/lib/registry-data";
 import { summarizeChangeSinceVisit, type ChangeSinceVisitSummary } from "@/lib/saved-change-summary";
@@ -432,15 +434,47 @@ function compareReproducibilityLine(entry: SavedResearch): string {
   return `Snapshot ${snapshot} · Time basis: ${timeBasisLabel} · Dimensions ${dimensions} · ${origin}`;
 }
 
+function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
+  const comparePromotion = useMemo(() => savedResearchComparePromotion(entry), [entry]);
+  const briefingEligible = useMemo(() => savedResearchBriefingEligible(entry), [entry]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {comparePromotion.eligible ? (
+        <Link
+          href={comparePromotion.href}
+          className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50"
+        >
+          <GitCompareArrows className="size-3.5" />Compare selected
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled
+          title={comparePromotion.disabledReason}
+          className="inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
+        >
+          <GitCompareArrows className="size-3.5" />Compare selected
+        </button>
+      )}
+      <BriefThisButton
+        scope={{ kind: "saved-research", savedResearchId: entry.id, savedResearchName: entry.name }}
+        label="Create briefing"
+        defaultName={`Briefing: ${entry.name}`}
+        disabled={!briefingEligible.eligible}
+        disabledTitle={briefingEligible.disabledReason}
+        entryPath="current-view"
+      />
+    </div>
+  );
+}
+
 /**
  * Saved Research's changing-answer model: unlike a Watchlist's fixed entity
  * set, a saved cohort/filter definition or comparison is re-evaluated
  * against the current fixture every time it's viewed, so its result count
  * and material-change status can genuinely move even though the underlying
- * definition never silently changes. `params`/`recordCountAtSave`/`kind`
- * are the saved promotion contract a future "Compare selected" or "Create
- * briefing" flow would read — see the Saved Research promotion contract in
- * the Briefings design spec.
+ * definition never silently changes.
  */
 function SavedResearchCard({ entry }: { entry: SavedResearch }) {
   const { savedWork } = useInvestigation();
@@ -480,12 +514,7 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <MaterialChangeStatus change={change} />
-        <BriefThisButton
-          scope={{ kind: "saved-research", savedResearchId: entry.id, savedResearchName: entry.name }}
-          label="Brief this research"
-          defaultName={`Briefing: ${entry.name}`}
-          entryPath="current-view"
-        />
+        <SavedResearchPromotionActions entry={entry} />
       </CardContent>
     </Card>
   );

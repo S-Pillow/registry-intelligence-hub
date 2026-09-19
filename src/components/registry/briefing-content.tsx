@@ -943,6 +943,7 @@ export function BriefThisButton({
   label,
   defaultName,
   disabled,
+  disabledTitle,
   entryPath,
   emphasis,
   audience,
@@ -954,6 +955,7 @@ export function BriefThisButton({
   label: string;
   defaultName: string;
   disabled?: boolean;
+  disabledTitle?: string;
   entryPath: EntryPath;
   /** When set (e.g. from Command Center lens), briefing content matches the active View. */
   emphasis?: Lens;
@@ -978,6 +980,7 @@ export function BriefThisButton({
     <Button
       variant={variant}
       disabled={disabled}
+      title={disabled && disabledTitle ? disabledTitle : undefined}
       className={className}
       onClick={() => {
         const created = savedWork.createBriefing({
