@@ -21,30 +21,37 @@ describe("Command Center interactions", () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    const aboveFold = () => screen.getByTestId("above-fold-lens-surface").textContent ?? "";
+    const lensCopyBundle = () =>
+      `${screen.getByTestId("above-fold-lens-surface").textContent ?? ""}${screen.getByTestId("round-pulse-section").textContent ?? ""}`;
     const panelLine = () => screen.getByTestId("lens-view-panel-line").textContent ?? "";
     const condensedWhy = () => screen.getByTestId("lens-why-matters-condensed").textContent ?? "";
     const pulseEyebrow = () => screen.getByTestId("lens-round-pulse-eyebrow").textContent ?? "";
     const pulseSubtitle = () => screen.getByTestId("lens-round-pulse-subtitle").textContent ?? "";
     const focusMarkers = () => screen.queryAllByTestId("lens-view-focus-marker").map((node) => node.textContent ?? "");
     const factValues = () =>
-      within(screen.getByTestId("above-fold-lens-surface"))
+      within(screen.getByTestId("round-pulse-section"))
         .getAllByText(/^\d+$/)
         .map((node) => node.textContent);
+    const hubTitle = () => screen.getByRole("heading", { level: 1, name: "Registry Intelligence Hub" });
+    const documentBefore = (earlier: Element, later: Element) =>
+      Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
 
     expect(panelLine()).toMatch(/All Intelligence:/);
     expect(condensedWhy()).toMatch(/Why this matters for All Intelligence:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
     expect(pulseSubtitle()).toBe("The rehearsal round at a glance");
     expect(focusMarkers()).toHaveLength(0);
+    expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
+    expect(documentBefore(screen.getByLabelText("Dataset health"), screen.getByTestId("round-pulse-section"))).toBe(true);
+    expect(screen.getByText(/Rehearsal data only\./)).toBeInTheDocument();
     const baselineFacts = factValues();
     expect(baselineFacts).toContain("1930");
     expect(baselineFacts).toContain("1409");
     expect(baselineFacts).toContain("116");
 
-    const allAbove = aboveFold();
+    const allAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Commercial" }));
-    expect(aboveFold()).not.toBe(allAbove);
+    expect(lensCopyBundle()).not.toBe(allAbove);
     expect(panelLine()).toBe("Commercial: Focuses on applicant portfolios, organizations, and contention.");
     expect(condensedWhy()).toMatch(/Why this matters for Commercial:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · COMMERCIAL VIEW");
@@ -54,9 +61,9 @@ describe("Command Center interactions", () => {
     );
     expect(factValues()).toEqual(baselineFacts);
 
-    const commercialAbove = aboveFold();
+    const commercialAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
-    expect(aboveFold()).not.toBe(commercialAbove);
+    expect(lensCopyBundle()).not.toBe(commercialAbove);
     expect(panelLine()).toBe("Product & Strategy: Focuses on composition, IDN participation, and contention.");
     expect(condensedWhy()).toMatch(/how the round is structured and where participation patterns differ/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · PRODUCT & STRATEGY VIEW");
@@ -70,9 +77,9 @@ describe("Command Center interactions", () => {
     );
     expect(factValues()).toEqual(baselineFacts);
 
-    const strategyAbove = aboveFold();
+    const strategyAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Marketing" }));
-    expect(aboveFold()).not.toBe(strategyAbove);
+    expect(lensCopyBundle()).not.toBe(strategyAbove);
     expect(panelLine()).toBe(
       "Marketing: Focuses on geographic reach, IDN participation, and themes that may shape external narratives.",
     );
