@@ -4,6 +4,8 @@ export type Application = (typeof fixture.applications)[number];
 export type HistoricalContext = typeof fixture.historicalContext;
 export type EvidenceKind = "authoritative" | "calculated";
 export type EntityType = "organizations" | "applications" | "categories";
+/** Command Center's lens vocabulary, reused verbatim as Briefings' "emphasis" — see briefings-design.md §6. */
+export type Lens = "all" | "commercial" | "strategy" | "marketing";
 
 export const registryFixture = fixture;
 
@@ -90,6 +92,37 @@ export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
       return exploreFilterDefaults[key] !== undefined && value !== exploreFilterDefaults[key];
     })
   );
+}
+
+/**
+ * Command Center's lens-to-interpretation copy, promoted here so a
+ * round-wide Briefing's opening `narrativeFrame` (briefings-design.md §4)
+ * can reuse the identical text rather than a parallel copy of it.
+ */
+export const lensInterpretations: Record<Lens, string> = {
+  all: "The rehearsal fixture points to concentrated portfolios, increased IDN representation, and two initial contention clusters worth coordinated review.",
+  commercial: "Portfolio concentration and contention expose where account research may be most efficient; they are investigation priorities, not sales recommendations.",
+  strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
+  marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
+};
+
+/** The record set a saved/briefed Explore view or Compare configuration resolves to right now — shared by Saved's change-since-visit count and Briefings' generator/drift disclosure. */
+export function recordsForParams(kind: "explore-view" | "compare-config", params: Record<string, string>): Application[] {
+  if (kind === "explore-view") {
+    const filters: ExploreFilterState = {
+      q: params.q ?? "",
+      category: params.category ?? "all",
+      region: params.region ?? "all",
+      status: params.status ?? "all",
+      contention: params.contention ?? "all",
+      idn: params.idn ?? "all",
+      ids: params.ids ?? "",
+    };
+    return filterApplicationsByExplore(fixture.applications, filters);
+  }
+  const type = (params.type as EntityType) ?? "organizations";
+  const ids = (params.ids ?? "").split(",").filter(Boolean);
+  return ids.flatMap((id) => recordsForEntity(type, id));
 }
 
 export function describeCompareSelection(entityType: EntityType, labels: string[]) {
@@ -197,14 +230,14 @@ export type CompareDifferenceSummary = {
 /** Cap on findings shown before requiring "View all N differences" to reveal the rest. */
 const KEY_FINDING_LIMIT = 4;
 
-function formatCompareCellForSummary(cell: CompareCellLike): string {
+export function formatCompareCellForSummary(cell: CompareCellLike): string {
   if (cell.state === "unavailable") return "unavailable";
   if (cell.state === "not-comparable") return "not comparable";
   return String(cell.value);
 }
 
 /** One factual, evidence-neutral sentence naming the actual value each entity holds — never which is "better". */
-function describeDifferingRowFacts(row: CompareRowLike): string {
+export function describeDifferingRowFacts(row: CompareRowLike): string {
   const facts = row.cells.map((cell) => `${cell.entityLabel ?? "a selection"} ${formatCompareCellForSummary(cell)}`);
   return `${row.label} — ${facts.join(", ")}`;
 }
@@ -395,3 +428,47 @@ export const standoutInsights = [
     records: fixture.applications.filter((item) => item.contentionSet)
   }
 ] as const;
+
+/**
+ * The exact lens-to-insight mapping Command Center's lens switcher already
+ * uses to filter `standoutInsights`, promoted here so a round-wide Briefing's
+ * "what stands out" section (briefings-design.md §6/§12) can reuse the
+ * identical deterministic selection rather than a parallel one.
+ */
+const standoutInsightIdsByLens: Record<Lens, string[]> = {
+  all: standoutInsights.map((insight) => insight.id),
+  commercial: ["portfolio-concentration", "contention-concentration"],
+  strategy: ["contention-concentration", "idn-shift", "portfolio-concentration"],
+  marketing: ["idn-shift", "portfolio-concentration"],
+};
+
+export function standoutInsightsForLens(lens: Lens) {
+  return standoutInsights.filter((insight) => standoutInsightIdsByLens[lens].includes(insight.id));
+}
+
+/**
+ * Concise, deterministic watchlist-level intelligence computed purely from
+ * fixture data already on the page — no live tracking. `changed` counts
+ * entities whose current supporting-record count no longer matches the
+ * count recorded when they were added; `contention`/`returning` reuse the
+ * same `contentionSet`/`returning` flags Explore's table already surfaces,
+ * so the vocabulary matches across the app. All four numbers are supported
+ * for every entity type, since every entity type resolves to the same
+ * underlying `Application[]` via `recordsForEntity`. Shared by `WatchlistCard`
+ * and a `watchlist`-scoped Briefing (briefings-design.md §12) so both read
+ * the same numbers from one implementation.
+ */
+export function computeWatchlistIntelligence(items: { entityType: EntityType; entityKey: string; recordCountAtAdd: number }[]) {
+  let changed = 0;
+  const records = items.flatMap((item) => {
+    const current = recordsForEntity(item.entityType, item.entityKey);
+    if (current.length !== item.recordCountAtAdd) changed += 1;
+    return current;
+  });
+  return {
+    entities: items.length,
+    changed,
+    contention: records.filter((record) => record.contentionSet).length,
+    returning: records.filter((record) => record.returning).length,
+  };
+}

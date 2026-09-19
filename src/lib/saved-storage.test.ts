@@ -8,6 +8,8 @@ describe("saved work storage (no browser storage available)", () => {
     expect(storage.backend).toBe("memory");
     expect(storage.loadWatchlists()).toEqual([]);
     expect(storage.loadSavedResearch()).toEqual([]);
+    expect(storage.loadBriefingDefinitions()).toEqual([]);
+    expect(storage.loadBriefingEditions()).toEqual([]);
   });
 
   it("round-trips watchlists and saved research through the in-memory backend", () => {
@@ -21,6 +23,26 @@ describe("saved work storage (no browser storage available)", () => {
     expect(storage.loadWatchlists()[0].name).toBe("Test");
     expect(storage.loadSavedResearch()).toHaveLength(1);
     expect(storage.loadSavedResearch()[0].name).toBe("Test view");
+  });
+
+  it("round-trips briefing definitions and editions through the in-memory backend", () => {
+    const storage = createSavedWorkStorage();
+    const now = new Date().toISOString();
+
+    storage.persistBriefingDefinitions([{
+      id: "b1", name: "Round-wide briefing", entryPath: "instant", audience: "executive", emphasis: "all", detailLevel: "brief",
+      sectionsWanted: ["headline-metrics", "what-stands-out", "limitations"], scope: { kind: "round-wide" },
+      createdAt: now, updatedAt: now, lastOpenedAt: now, currentEditionId: "e1",
+    }]);
+    storage.persistBriefingEditions([{
+      id: "e1", definitionId: "b1", status: "draft", generatedAt: now, dataAsOfTime: now, snapshotId: "snap-1", methodVersion: "v1",
+      sections: [], limitations: [], recordedScopeCount: 12,
+    }]);
+
+    expect(storage.loadBriefingDefinitions()).toHaveLength(1);
+    expect(storage.loadBriefingDefinitions()[0].name).toBe("Round-wide briefing");
+    expect(storage.loadBriefingEditions()).toHaveLength(1);
+    expect(storage.loadBriefingEditions()[0].status).toBe("draft");
   });
 
   it("keeps independent instances isolated from each other", () => {

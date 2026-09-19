@@ -1,4 +1,5 @@
 import type { EntityType } from "@/lib/registry-data";
+import type { BriefingDefinition, BriefingEdition } from "@/lib/briefing-data";
 
 export type WatchlistItem = {
   entityType: EntityType;
@@ -34,6 +35,8 @@ export type SavedResearch = {
 
 const WATCHLISTS_KEY = "registry-hub:watchlists:v1";
 const SAVED_RESEARCH_KEY = "registry-hub:saved-research:v1";
+const BRIEFING_DEFINITIONS_KEY = "registry-hub:briefing-definitions:v1";
+const BRIEFING_EDITIONS_KEY = "registry-hub:briefing-editions:v1";
 
 export interface SavedWorkStorage {
   readonly backend: "local" | "memory";
@@ -41,6 +44,10 @@ export interface SavedWorkStorage {
   persistWatchlists(watchlists: Watchlist[]): void;
   loadSavedResearch(): SavedResearch[];
   persistSavedResearch(entries: SavedResearch[]): void;
+  loadBriefingDefinitions(): BriefingDefinition[];
+  persistBriefingDefinitions(definitions: BriefingDefinition[]): void;
+  loadBriefingEditions(): BriefingEdition[];
+  persistBriefingEditions(editions: BriefingEdition[]): void;
 }
 
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -71,12 +78,30 @@ class LocalSavedWorkStorage implements SavedWorkStorage {
   persistSavedResearch(entries: SavedResearch[]): void {
     window.localStorage.setItem(SAVED_RESEARCH_KEY, JSON.stringify(entries));
   }
+
+  loadBriefingDefinitions(): BriefingDefinition[] {
+    return safeParse<BriefingDefinition[]>(window.localStorage.getItem(BRIEFING_DEFINITIONS_KEY), []);
+  }
+
+  persistBriefingDefinitions(definitions: BriefingDefinition[]): void {
+    window.localStorage.setItem(BRIEFING_DEFINITIONS_KEY, JSON.stringify(definitions));
+  }
+
+  loadBriefingEditions(): BriefingEdition[] {
+    return safeParse<BriefingEdition[]>(window.localStorage.getItem(BRIEFING_EDITIONS_KEY), []);
+  }
+
+  persistBriefingEditions(editions: BriefingEdition[]): void {
+    window.localStorage.setItem(BRIEFING_EDITIONS_KEY, JSON.stringify(editions));
+  }
 }
 
 class MemorySavedWorkStorage implements SavedWorkStorage {
   readonly backend = "memory" as const;
   private watchlists: Watchlist[] = [];
   private savedResearch: SavedResearch[] = [];
+  private briefingDefinitions: BriefingDefinition[] = [];
+  private briefingEditions: BriefingEdition[] = [];
 
   loadWatchlists(): Watchlist[] {
     return this.watchlists;
@@ -92,6 +117,22 @@ class MemorySavedWorkStorage implements SavedWorkStorage {
 
   persistSavedResearch(entries: SavedResearch[]): void {
     this.savedResearch = entries;
+  }
+
+  loadBriefingDefinitions(): BriefingDefinition[] {
+    return this.briefingDefinitions;
+  }
+
+  persistBriefingDefinitions(definitions: BriefingDefinition[]): void {
+    this.briefingDefinitions = definitions;
+  }
+
+  loadBriefingEditions(): BriefingEdition[] {
+    return this.briefingEditions;
+  }
+
+  persistBriefingEditions(editions: BriefingEdition[]): void {
+    this.briefingEditions = editions;
   }
 }
 
