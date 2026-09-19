@@ -1,4 +1,13 @@
 export const PUBLICATION_SCHEMA_VERSION = "registry-2026-publication/1.0.0";
+export const PUBLICATION_SCHEMA_VERSION_V11 = "registry-2026-publication/1.1.0";
+export const INTAKE_ADAPTER_VERSION = "registry-2026-intake-adapter/1.0.0";
+export const INTAKE_WIRE_SCHEMA_VERSION = "registry-2026-intake-wire/1.0.0";
+export const PROMOTION_HISTORY_ENTRY_VERSION = "promotion-history/1.0.0";
+
+export const SUPPORTED_PUBLICATION_SCHEMA_VERSIONS = [
+  PUBLICATION_SCHEMA_VERSION,
+  PUBLICATION_SCHEMA_VERSION_V11,
+] as const;
 export const PARSER_VERSION = "registry-2026-parser/1.0.0";
 export const NORMALIZER_VERSION = "registry-2026-normalizer/1.0.0";
 export const VALIDATION_METHOD_VERSION = "registry-2026-validation/1.0.0";
@@ -19,8 +28,41 @@ export const ALLOWED_PUBLICATION_TOP_LEVEL_KEYS = [
   "normalizerVersion",
   "source",
   "limitations",
+  "lineage",
   "applications",
 ] as const;
+
+export const ALLOWED_LINEAGE_KEYS = [
+  "intakeAdapterVersion",
+  "wireSchemaVersion",
+  "rawSha256",
+  "pipelineSourceId",
+  "pipelineSourceVersion",
+  "manifestAttemptId",
+  "fetchUrl",
+  "retrievedAt",
+  "httpStatus",
+  "adapterId",
+  "adapterSchemaVersion",
+  "redirectChain",
+  "responseHeaderDigest",
+] as const;
+
+export type PublicationLineage = {
+  intakeAdapterVersion: string;
+  wireSchemaVersion: string;
+  rawSha256: string;
+  pipelineSourceId: string;
+  pipelineSourceVersion: number;
+  manifestAttemptId: string;
+  fetchUrl: string;
+  retrievedAt: string;
+  httpStatus: number;
+  adapterId: string;
+  adapterSchemaVersion: string;
+  redirectChain: string[];
+  responseHeaderDigest: string | null;
+};
 
 export const ALLOWED_APPLICATION_KEYS = [
   "id",
@@ -56,8 +98,10 @@ export type Registry2026ApplicationRow = {
   confidence: number;
 };
 
+export type PublicationSchemaVersion = (typeof SUPPORTED_PUBLICATION_SCHEMA_VERSIONS)[number];
+
 export type Registry2026PublicationSnapshot = {
-  schemaVersion: typeof PUBLICATION_SCHEMA_VERSION;
+  schemaVersion: PublicationSchemaVersion;
   publicationKind: PublicationKind;
   snapshotId: string;
   fixtureId?: string;
@@ -67,6 +111,7 @@ export type Registry2026PublicationSnapshot = {
   normalizerVersion: string;
   source: { name: string; url: string; evidenceClass: string };
   limitations: string[];
+  lineage?: PublicationLineage;
   applications: Registry2026ApplicationRow[];
 };
 

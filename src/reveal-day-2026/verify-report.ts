@@ -4,6 +4,7 @@ import { buildComparisonUnlockReport } from "./comparison-unlock";
 import { assertNoFixtureContaminationInRealBuild } from "./contamination";
 import type { DryRunDiagnostics, Registry2026PublicationSnapshot } from "./types";
 import { ORGANIZATION_RESOLUTION_METHOD } from "./types";
+import type { SanityCheckReport } from "./sanity-checks";
 
 export type RevealDayVerificationReport = {
   reportVersion: "reveal-day-verification/1.0.0";
@@ -34,6 +35,8 @@ export type RevealDayVerificationReport = {
   claimActuality: ClaimActualityState;
   eligibilityChanges: ReturnType<typeof buildComparisonUnlockReport>;
   uiMetricsNewlyUnlocked: string[];
+  sanity: SanityCheckReport;
+  lineage: Registry2026PublicationSnapshot["lineage"] | null;
 };
 
 export async function buildRevealDayVerificationReport(
@@ -41,6 +44,7 @@ export async function buildRevealDayVerificationReport(
   diagnostics: DryRunDiagnostics,
   claimState: ClaimActualityState,
   workspaceRoot: string,
+  sanity: SanityCheckReport,
 ): Promise<RevealDayVerificationReport> {
   const contamination = assertNoFixtureContaminationInRealBuild(snapshot, "verify");
   if (!contamination.ok && snapshot.publicationKind === "immutable-publication") {
@@ -86,5 +90,7 @@ export async function buildRevealDayVerificationReport(
     uiMetricsNewlyUnlocked: unlock.metrics
       .filter((m) => m.unlockStatus === "newly-eligible")
       .map((m) => m.metricId),
+    sanity,
+    lineage: snapshot.lineage ?? null,
   };
 }

@@ -7,6 +7,8 @@ import type { DryRunDiagnostics } from "./types";
 import { CLAIM_ACTUALITY_STATE_VERSION } from "./types";
 import { isRehearsalPublication } from "./validate";
 import type { Registry2026PublicationSnapshot } from "./types";
+import type { HumanApprovalResult } from "./human-approval";
+import { PUBLICATION_SCHEMA_VERSION_V11 } from "./types";
 
 /** Metrics whose 2026 claim readiness may advance with immutable application publication only. */
 export const APPLICATION_ACTUALITY_METRIC_IDS = [
@@ -23,6 +25,9 @@ export type ClaimActualityState = {
   promotedAt: string | null;
   snapshotId: string | null;
   snapshotContentHash: string | null;
+  rawSha256: string | null;
+  stewardApprovalId: string | null;
+  productApprovalId: string | null;
   promotionGates: {
     snapshotValidated: boolean;
     parserPassed: boolean;
@@ -39,6 +44,9 @@ export const DEFAULT_CLAIM_ACTUALITY_STATE: ClaimActualityState = {
   promotedAt: null,
   snapshotId: null,
   snapshotContentHash: null,
+  rawSha256: null,
+  stewardApprovalId: null,
+  productApprovalId: null,
   promotionGates: {
     snapshotValidated: false,
     parserPassed: false,
@@ -115,6 +123,7 @@ export function evaluateApplicationActualityPromotion(
   snapshot: Registry2026PublicationSnapshot,
   diagnostics: DryRunDiagnostics,
   current: ClaimActualityState,
+  humanApproval?: HumanApprovalResult,
 ): PromotionGateResult {
   const errors: string[] = [];
 
@@ -123,6 +132,16 @@ export function evaluateApplicationActualityPromotion(
   }
   if (snapshot.publicationKind !== "immutable-publication") {
     errors.push(`publicationKind must be immutable-publication (got ${snapshot.publicationKind})`);
+  }
+  if (snapshot.schemaVersion !== PUBLICATION_SCHEMA_VERSION_V11 || !snapshot.lineage) {
+    errors.push(
+      "Promotion requires registry-2026-publication/1.1.0 with explicit raw-byte lineage — never promote hand-edited JSON",
+    );
+  }
+  if (humanApproval && !humanApproval.ok) {
+    errors.push(...humanApproval.errors);
+  } else if (!humanApproval) {
+    errors.push("Human steward and product approvals are required before promote-actuality");
   }
   if (!diagnostics.validation.ok) {
     errors.push("Validation gate failed — resolve validation errors before promotion");
@@ -149,6 +168,7 @@ export function evaluateApplicationActualityPromotion(
   if (!gates.contaminationClear) errors.push("Contamination check failed");
 
   const ok = errors.length === 0;
+  const rawSha256 = snapshot.lineage?.rawSha256 ?? null;
 
   const nextState: ClaimActualityState = ok
     ? {
@@ -157,6 +177,9 @@ export function evaluateApplicationActualityPromotion(
         promotedAt: new Date().toISOString(),
         snapshotId: diagnostics.snapshotId,
         snapshotContentHash: diagnostics.snapshotContentHash,
+        rawSha256,
+        stewardApprovalId: humanApproval?.stewardApprovalId ?? null,
+        productApprovalId: humanApproval?.productApprovalId ?? null,
         promotionGates: gates,
       }
     : {

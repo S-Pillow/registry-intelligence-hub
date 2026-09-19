@@ -25,4 +25,8 @@ export const DEFAULT_FIXTURES: Record<string, FixtureEntry> = {
     filePath: `${fixturesDir}iana-root-zone-tld-schema-json.fixture.json`,
     mediaType: "application/json",
   },
+  "icann-2026-reveal-day-drill-ndjson": {
+    filePath: `${fixturesDir}icann-2026-reveal-day-drill.ndjson`,
+    mediaType: "application/x-ndjson",
+  },
 };

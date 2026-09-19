@@ -92,6 +92,25 @@ export const SOURCE_REGISTRY: readonly SourceDefinition[] = [
     maxBytes: 200_000,
     notes: "docs/source-inventory.md §4.3",
   },
+  {
+    id: "icann-2026-reveal-day-drill-ndjson",
+    version: 1,
+    name: "2026 Reveal Day drill — synthetic NDJSON publication wire (offline only)",
+    owner: "ICANN (synthetic drill fixture)",
+    url: "https://newgtldprogram.icann.org/drill/offline/icann-2026-reveal-day-drill.ndjson",
+    format: "text",
+    mediaTypeHint: "application/x-ndjson",
+    cadence: "Drill-only synthetic artifact — not a live unpublished 2026 fetch.",
+    coverage:
+      "Operator drill wire format for registry-2026-intake-adapter/1.0.0 — 100 synthetic application rows for lineage-complete promotion rehearsal.",
+    effectiveTimeSemantics: "point-in-time-publication",
+    rights: "approved",
+    rightsNote: "Synthetic drill bytes only; explicit steward approval required before actuality promotion.",
+    adapterId: "fixture",
+    schemaVersion: "fixture-adapter/1.0.0",
+    maxBytes: 2_000_000,
+    notes: "Reveal Day operations drill — see docs/reveal-day-operations-drill.md (Project store).",
+  },
 ] as const;
 
 export function getSourceDefinition(sourceId: string): SourceDefinition | undefined {
