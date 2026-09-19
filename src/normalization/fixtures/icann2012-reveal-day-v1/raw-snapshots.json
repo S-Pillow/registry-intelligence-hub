@@ -8,6 +8,14 @@
       "resolvedUrl": "https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
       "retrievedAt": "2026-09-19T05:57:00.000Z",
       "effectiveAt": "2012-06-13T12:00:00.000Z",
+      "provenance": {
+        "sourcePublisher": "ICANN",
+        "sourceLabel": "ICANN 2012 Reveal Day application strings export (CSV)",
+        "originalIcannUrl": "https://newgtlds.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+        "preservedFromUrl": "https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv",
+        "liveOriginStatus": "404",
+        "contentSha256": "a477e5db441a455bd4de10dc855104c1d858895bde571e96e1194c21a55ccff6"
+      },
       "redirectChain": [
         {
           "fromUrl": "https://newgtlds.icann.org/en/program-status/application-results/strings-1200utc-13jun12-en",
@@ -37,6 +45,13 @@
       "resolvedUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
       "retrievedAt": "2026-09-19T05:57:00.000Z",
       "effectiveAt": "2013-02-26T00:00:00.000Z",
+      "provenance": {
+        "sourcePublisher": "ICANN",
+        "sourceLabel": "ICANN preliminary string-similarity contention sets (PDF)",
+        "originalIcannUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",
+        "liveOriginStatus": "available",
+        "contentSha256": "f3096c581f89d8cda88203aeb9895c70de88c1af9d553323737c68371007f63b"
+      },
       "redirectChain": [
         {
           "fromUrl": "https://newgtlds.icann.org/sites/default/files/similarity-contention-26feb13-en.pdf",

@@ -6,7 +6,8 @@ Immutable offline sources for the 1,930-application Reveal Day CSV and the 26 Fe
 
 | File | Role |
 | --- | --- |
-| `sources/strings-1200utc-13jun12-en.csv` | Official Reveal Day application/string/applicant export (preserved via Internet Archive; live ICANN CDN path 404 as of 2026-09-19) |
+| `sources/strings-1200utc-13jun12-en.csv` | **Source:** ICANN 2012 Reveal Day export · **Preserved from:** Internet Archive copy · **Original ICANN URL** retained · live origin **404** (2026-09-19) · hash in `raw-snapshots.json` |
+| `application-taxonomy.json` | Offline `registry-market-taxonomy/1.0` assignments (`scripts/generate-2012-taxonomy-fixture.ts`) |
 | `sources/similarity-contention-26feb13-en.pdf` | Official preliminary contention-set membership (still served from `newgtlds.icann.org`) |
 | `contention-sets.json` | Deterministic PDF extraction (`scripts/extract-2012-contention-sets.py`) — not inferred from identical strings |
 

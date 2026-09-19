@@ -101,10 +101,14 @@ export async function loadFixtureBundle(bundleId: string, workspaceRoot: string)
 
   const rawSnapshots = rawSnapshotFile.snapshots.map((snap, index) => {
     const bytes = snapshotByteInputs[index] ?? snapshotByteInputs[0];
+    const sha256 = sha256Hex(bytes);
     return {
       ...snap,
-      sha256: sha256Hex(bytes),
+      sha256,
       byteCount: bytes.byteLength,
+      provenance: snap.provenance
+        ? { ...snap.provenance, contentSha256: sha256 }
+        : snap.provenance,
     };
   });
 

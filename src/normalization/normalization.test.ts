@@ -120,7 +120,9 @@ describe("2012 normalization foundation", () => {
     const quality = await readFile(join(projectDocsRoot, "normalization-quality-report.md"), "utf8");
     const contract = await readFile(join(projectDocsRoot, "normalization-coverage-contract.md"), "utf8");
     const fullReport = await readFile(join(projectDocsRoot, "2012-full-round-quality-report.md"), "utf8");
+    const baseline = await readFile(join(projectDocsRoot, "2012-comparison-baseline-contract.md"), "utf8");
     expect(domain).toContain("raw snapshot");
+    expect(baseline).toContain("registry-market-taxonomy/1.0");
     expect(domain).toContain("REQUIRES_REVIEW");
     expect(contract).toContain("Reveal Day intelligence parity");
     expect(fullReport).toContain("icann2012-reveal-day-v1");

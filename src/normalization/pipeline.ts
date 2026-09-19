@@ -37,7 +37,10 @@ export async function runNormalization(options: NormalizeOptions): Promise<Norma
   ];
   if (loaded.roundAccounting) {
     limitations.push(
-      `Round accounting: ${loaded.roundAccounting.applicationRowCount} application rows; ${loaded.roundAccounting.contentionSetCount} official contention sets extracted; ${loaded.roundAccounting.contentionUniqueApplicationIds} applications with official contention membership.`,
+      `Round accounting: ${loaded.roundAccounting.applicationRowCount} application rows; ${loaded.roundAccounting.contentionUniqueApplicationIds} applications with official contention membership (754 expected).`,
+    );
+    limitations.push(
+      "Contention set-entity count from PDF extraction is reconciliation-gated — do not publish as UI intelligence (see contention-reconcile report).",
     );
   }
 
@@ -73,7 +76,11 @@ export async function runNormalization(options: NormalizeOptions): Promise<Norma
     report,
   });
 
-  const manifest: BuildManifest = { ...manifestBase, outputContentHash };
+  const manifest: BuildManifest = {
+    ...manifestBase,
+    outputContentHash,
+    sourceSnapshots: loaded.rawSnapshots,
+  };
 
   return {
     manifest,

@@ -10,7 +10,8 @@ Documents how `icann2012-reveal-day-v1` bytes were obtained. **No bulk-fetch leg
 | Resolved URL (2026-09-19) | `https://gtldresult.icann.org/application-result/applicationstatus` (301 from Reveal Day page) |
 | Structured export (historical) | `http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv` |
 | Live ICANN origin path (2026-09-19) | `https://newgtlds.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv` → **404** |
-| Preserved retrieval | `https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv` |
+| Preserved retrieval (not publisher) | `https://web.archive.org/web/20120615172359id_/http://newgtlds-cloudfront.icann.org/sites/default/files/reveal/strings-1200utc-13jun12-en.csv` |
+| Source publisher | **ICANN** (2012 Reveal Day export) |
 | Effective time | `2012-06-13T12:00:00.000Z` (Reveal Day publication) |
 | Row count | 1,930 applications (+ header) |
 

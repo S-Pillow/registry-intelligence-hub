@@ -5,6 +5,11 @@
   "setCount": 234,
   "applicationMembershipCount": 754,
   "uniqueApplicationIds": 754,
+  "setCountIntelligence": {
+    "status": "blocked",
+    "icannCitedSetEntityCount": 232,
+    "note": "Membership (754 applications) is authoritative; extracted set-entity count is not for UI intelligence until reconciliation gates pass."
+  },
   "sets": [
     {
       "setId": "ICS-2012-similarity-1",

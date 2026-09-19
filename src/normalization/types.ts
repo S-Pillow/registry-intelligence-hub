@@ -33,6 +33,22 @@ export interface RedirectHop {
   observedAt: string;
 }
 
+/** Immutable source attribution — Archive is never the publisher. */
+export interface SnapshotSourceProvenance {
+  /** Authoritative publisher of the underlying dataset (e.g. ICANN). */
+  sourcePublisher: string;
+  /** Human-readable source label (e.g. ICANN 2012 Reveal Day export). */
+  sourceLabel: string;
+  /** Canonical ICANN URL retained for lineage (may 404 on live origin). */
+  originalIcannUrl: string;
+  /** When bytes were preserved from Internet Archive instead of live ICANN origin. */
+  preservedFromUrl?: string;
+  /** Live ICANN origin reachability at preservation time. */
+  liveOriginStatus: "available" | "unavailable" | "404";
+  /** Content hash of preserved bytes (SHA-256 hex). */
+  contentSha256: string;
+}
+
 export interface RawSnapshotRef {
   snapshotId: string;
   sourceId: string;
@@ -41,6 +57,9 @@ export interface RawSnapshotRef {
   byteCount: number;
   retrievedAt: string;
   effectiveAt: string | null;
+  requestedUrl?: string;
+  resolvedUrl?: string;
+  provenance?: SnapshotSourceProvenance;
   redirectChain: RedirectHop[];
 }
 
@@ -259,6 +278,8 @@ export interface BuildManifest {
   entityCount: number;
   observationCount: number;
   parsedRecordCount: number;
+  /** Snapshot-level source provenance copied from fixture bundle at build time. */
+  sourceSnapshots?: RawSnapshotRef[];
 }
 
 export interface NormalizationArtifacts {
