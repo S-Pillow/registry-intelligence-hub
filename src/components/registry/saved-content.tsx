@@ -272,6 +272,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
           label="Brief this watchlist"
           defaultName={`Briefing: ${list.name}`}
           disabled={list.items.length === 0}
+          disabledTitle="Add at least one entity to this watchlist before briefing it."
           entryPath="current-view"
         />
 

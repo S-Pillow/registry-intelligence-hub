@@ -404,7 +404,10 @@ function BriefingWorkspace({ id }: { id: string }) {
           <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4 shrink-0" />Rehearsal fixture only — this Briefing proves the workflow and calculation contract; it is not an official 2026 publication.</div>
           <BriefingDriftBanner definition={definition} edition={edition} />
           {edition.status === "superseded" && edition.supersededByEditionId && (
-            <p className="text-xs font-semibold text-slate-600">Superseded by a newer edition — <button type="button" className="underline" onClick={() => { /* current edition is always shown; this note just explains provenance */ }}>this is a read-only historical record</button>.</p>
+            <p className="text-xs font-semibold text-slate-600">
+              Superseded by a newer edition — this is a read-only historical record.{" "}
+              <Link href={`/tools/registry-intelligence-hub/briefings/${definition.id}`} className="underline">Open the current edition</Link>.
+            </p>
           )}
         </CardContent>
       </Card>

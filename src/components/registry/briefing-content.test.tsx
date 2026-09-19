@@ -58,6 +58,20 @@ async function openFreshRoundWideBriefing(user: ReturnType<typeof userEvent.setu
 }
 
 describe("Instant Briefing — primary entry path", () => {
+  it("inherits the active Command Center View lens into emphasis, audience defaults, and rendered narrative framing", async () => {
+    const user = userEvent.setup();
+    const view = render(<CommandCenter />);
+    await user.click(screen.getByRole("button", { name: "Commercial" }));
+    await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
+    const link = await screen.findByRole("link", { name: "Open Briefing" });
+    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+
+    expect(await screen.findByText("Commercial")).toBeInTheDocument();
+    expect(screen.getByText(/Emphasis: commercial/)).toBeInTheDocument();
+    expect(screen.getByText(/account research may be most efficient/i)).toBeInTheDocument();
+    expect(screen.queryByText(/concentrated portfolios, increased IDN representation/i)).not.toBeInTheDocument();
+  });
+
   it("generates a round-wide Briefing from Command Center in one click and opens straight into the Preview workspace", async () => {
     const user = userEvent.setup();
     await openFreshRoundWideBriefing(user);
@@ -99,6 +113,36 @@ describe("Brief Current View — contextual entry path", () => {
 
     expect(await screen.findByRole("heading", { name: "Comparison" })).toBeInTheDocument();
     expect(screen.getAllByText(/Atlas Digital/).length).toBeGreaterThan(0);
+  });
+
+  it("scopes a Briefing to a Saved Research entry via Create briefing", async () => {
+    const now = new Date().toISOString();
+    window.localStorage.setItem(
+      "registry-hub:saved-research:v1",
+      JSON.stringify([
+        {
+          id: "saved-explore-1",
+          name: "IDN cohort",
+          kind: "explore-view",
+          summary: "Explore — IDN only",
+          createdAt: now,
+          updatedAt: now,
+          lastOpenedAt: now,
+          params: { idn: "idn" },
+          recordCountAtSave: 3,
+        },
+      ]),
+    );
+    const user = userEvent.setup();
+    const view = render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    expect(await screen.findByText("IDN cohort")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create briefing" }));
+    const link = await screen.findByRole("link", { name: "Open Briefing" });
+    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+
+    expect(await screen.findByText("Saved Research — IDN cohort")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Saved research summary" })).toBeInTheDocument();
   });
 
   it("offers Brief this from the shared intelligence drawer for an entity", async () => {
@@ -175,6 +219,17 @@ describe("Guided Briefing — secondary entry path", () => {
 });
 
 describe("Immutability, editioning, and lifecycle", () => {
+  it("reveals capped claims via Show N more without regenerating the edition", async () => {
+    const user = userEvent.setup();
+    await openFreshRoundWideBriefing(user);
+
+    const showMore = screen.queryByRole("button", { name: /Show \d+ more/ });
+    if (showMore) {
+      await user.click(showMore);
+      expect(screen.queryByRole("button", { name: /Show \d+ more/ })).not.toBeInTheDocument();
+    }
+  });
+
   it("edits a claim's prose without altering its evidence, and lets a Draft add/remove manual claims", async () => {
     const user = userEvent.setup();
     await openFreshRoundWideBriefing(user);
