@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -15,10 +15,22 @@ import {
   Printer,
   ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AUDIENCES,
@@ -493,7 +505,18 @@ function BriefingWorkspace({ id }: { id: string }) {
 
 type ScopeChoice = "round-wide" | "entity" | "watchlist" | "saved-research" | "compare-selection";
 
-function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void }) {
+const EMPHASIS_LABEL: Record<Lens, string> = { all: "All", commercial: "Commercial", strategy: "Strategy", marketing: "Marketing" };
+const DETAIL_LEVEL_LABEL: Record<DetailLevel, string> = { brief: "Brief", standard: "Standard", deep: "Deep" };
+const ENTITY_TYPE_LABEL: Record<EntityType, string> = { organizations: "Organizations", applications: "Applications", categories: "Categories" };
+
+/**
+ * Every wizard step of "New Briefing" is a full, real cancel point
+ * (briefings-design.md addendum: contained UX correction). Step 1 has made
+ * no meaningful commitment yet, so Cancel and Esc discard immediately.
+ * Steps 2–3 have already committed to a scope, so Cancel and Esc show a
+ * lightweight confirmation instead of silently discarding a real choice.
+ */
+function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitionId: string) => void; onCancel: () => void }) {
   const { savedWork, compareItems } = useInvestigation();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [scopeChoice, setScopeChoice] = useState<ScopeChoice>("round-wide");
@@ -505,9 +528,36 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
   const [emphasis, setEmphasis] = useState<Lens>("all");
   const [detailLevel, setDetailLevel] = useState<DetailLevel>("brief");
   const [sections, setSections] = useState<Set<BriefingSectionId>>(new Set(defaultSectionsForScope("round-wide")));
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [openMenuCount, setOpenMenuCount] = useState(0);
 
   const entityOptions = useMemo(() => listEntityOptions(entityType), [entityType]);
   const compareSelectionAvailable = compareItems.length >= 2 && Boolean(compareItems[0].entityType);
+
+  const requestCancel = useCallback(() => {
+    if (step > 1) {
+      setConfirmDiscardOpen(true);
+    } else {
+      onCancel();
+    }
+  }, [step, onCancel]);
+
+  // Esc must behave exactly like Cancel — but never while a Select popup or
+  // the discard-confirmation dialog is open; those overlays own Esc via
+  // their own standard close behavior (closing just the overlay, not the
+  // wizard). The listener is only attached at all while nothing else is
+  // open, so it can never race a popup's own Escape handling.
+  useEffect(() => {
+    if (openMenuCount > 0 || confirmDiscardOpen) return undefined;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      requestCancel();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [openMenuCount, confirmDiscardOpen, requestCancel]);
+
+  const onMenuOpenChange = useCallback((open: boolean) => setOpenMenuCount((count) => count + (open ? 1 : -1)), []);
 
   const scopeForChoice = (): BriefingScope | null => {
     if (scopeChoice === "round-wide") return { kind: "round-wide" };
@@ -548,7 +598,12 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
   return (
     <Card className="border-slate-300">
       <CardContent className="space-y-4 pt-5">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">New Briefing — step {step} of 3</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">New Briefing — step {step} of 3</p>
+          <button type="button" aria-label="Cancel New Briefing" onClick={requestCancel} className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]">
+            <X className="size-4" />
+          </button>
+        </div>
 
         {step === 1 && (
           <div className="space-y-3">
@@ -570,39 +625,59 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
 
             {scopeChoice === "entity" && (
               <div className="flex flex-wrap gap-2">
-                <select aria-label="Entity type" value={entityType} onChange={(event) => { setEntityType(event.target.value as EntityType); setEntityKey(""); }} className="h-9 rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="organizations">Organizations</option>
-                  <option value="applications">Applications</option>
-                  <option value="categories">Categories</option>
-                </select>
-                <select aria-label="Entity" value={entityKey} onChange={(event) => setEntityKey(event.target.value)} className="h-9 min-w-56 rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="">Choose one…</option>
-                  {entityOptions.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
-                </select>
+                <Select value={entityType} onValueChange={(value) => { setEntityType(value as EntityType); setEntityKey(""); }} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Entity type" className="h-9 bg-white">
+                    <SelectValue>{(value: EntityType | null) => (value ? ENTITY_TYPE_LABEL[value] : "Choose one…")}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="organizations">Organizations</SelectItem>
+                    <SelectItem value="applications">Applications</SelectItem>
+                    <SelectItem value="categories">Categories</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={entityKey || null} onValueChange={(value) => setEntityKey(value ?? "")} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Entity" className="h-9 min-w-56 bg-white">
+                    <SelectValue placeholder="Choose one…">{(value: string | null) => entityOptions.find((option) => option.key === value)?.label ?? "Choose one…"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entityOptions.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
             {scopeChoice === "watchlist" && (
               savedWork.watchlists.length === 0 ? <p className="text-sm text-slate-600">No watchlists yet.</p> : (
-                <select aria-label="Watchlist" value={watchlistId} onChange={(event) => setWatchlistId(event.target.value)} className="h-9 min-w-56 rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="">Choose one…</option>
-                  {savedWork.watchlists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}
-                </select>
+                <Select value={watchlistId || null} onValueChange={(value) => setWatchlistId(value ?? "")} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Watchlist" className="h-9 min-w-56 bg-white">
+                    <SelectValue placeholder="Choose one…">{(value: string | null) => savedWork.watchlists.find((list) => list.id === value)?.name ?? "Choose one…"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedWork.watchlists.map((list) => <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               )
             )}
 
             {scopeChoice === "saved-research" && (
               savedWork.savedResearch.length === 0 ? <p className="text-sm text-slate-600">No saved research yet.</p> : (
-                <select aria-label="Saved research" value={savedResearchId} onChange={(event) => setSavedResearchId(event.target.value)} className="h-9 min-w-56 rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="">Choose one…</option>
-                  {savedWork.savedResearch.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
-                </select>
+                <Select value={savedResearchId || null} onValueChange={(value) => setSavedResearchId(value ?? "")} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Saved research" className="h-9 min-w-56 bg-white">
+                    <SelectValue placeholder="Choose one…">{(value: string | null) => savedWork.savedResearch.find((entry) => entry.id === value)?.name ?? "Choose one…"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedWork.savedResearch.map((entry) => <SelectItem key={entry.id} value={entry.id}>{entry.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               )
             )}
 
             {scopeChoice === "compare-selection" && !compareSelectionAvailable && <p className="text-sm text-slate-600">Select at least two like entities in Compare first.</p>}
 
-            <div className="flex justify-end"><Button disabled={!scope} onClick={() => setStep(2)}>Next</Button></div>
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+              <Button disabled={!scope} onClick={() => setStep(2)}>Next</Button>
+            </div>
           </div>
         )}
 
@@ -611,27 +686,52 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
             <h3 className="text-sm font-bold text-slate-900">2. Audience, emphasis, and detail level</h3>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-xs font-bold text-slate-700">Audience
-                <select aria-label="Audience" value={audience} onChange={(event) => { const nextAudience = event.target.value as AudienceId; setAudience(nextAudience); setEmphasis(defaultEmphasisForAudience(nextAudience)); setDetailLevel(defaultDetailLevelForAudience(nextAudience)); }} className="mt-1 block h-9 w-full rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  {AUDIENCES.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
-                </select>
+                <Select
+                  value={audience}
+                  onValueChange={(value) => { const nextAudience = value as AudienceId; setAudience(nextAudience); setEmphasis(defaultEmphasisForAudience(nextAudience)); setDetailLevel(defaultDetailLevelForAudience(nextAudience)); }}
+                  onOpenChange={onMenuOpenChange}
+                >
+                  <SelectTrigger aria-label="Audience" className="mt-1 block h-9 w-full bg-white">
+                    <SelectValue>{(value: AudienceId) => audienceLabel(value)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCES.map((entry) => <SelectItem key={entry.id} value={entry.id}>{entry.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </label>
               <label className="text-xs font-bold text-slate-700">Emphasis
-                <select aria-label="Emphasis" value={emphasis} onChange={(event) => setEmphasis(event.target.value as Lens)} className="mt-1 block h-9 w-full rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="all">All</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="strategy">Strategy</option>
-                  <option value="marketing">Marketing</option>
-                </select>
+                <Select value={emphasis} onValueChange={(value) => setEmphasis(value as Lens)} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Emphasis" className="mt-1 block h-9 w-full bg-white">
+                    <SelectValue>{(value: Lens) => EMPHASIS_LABEL[value]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="strategy">Strategy</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
               <label className="text-xs font-bold text-slate-700">Detail level
-                <select aria-label="Detail level" value={detailLevel} onChange={(event) => setDetailLevel(event.target.value as DetailLevel)} className="mt-1 block h-9 w-full rounded-lg border border-slate-400 bg-white px-2 text-sm">
-                  <option value="brief">Brief</option>
-                  <option value="standard">Standard</option>
-                  <option value="deep">Deep</option>
-                </select>
+                <Select value={detailLevel} onValueChange={(value) => setDetailLevel(value as DetailLevel)} onOpenChange={onMenuOpenChange}>
+                  <SelectTrigger aria-label="Detail level" className="mt-1 block h-9 w-full bg-white">
+                    <SelectValue>{(value: DetailLevel) => DETAIL_LEVEL_LABEL[value]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="brief">Brief</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="deep">Deep</SelectItem>
+                  </SelectContent>
+                </Select>
               </label>
             </div>
-            <div className="flex justify-between"><Button variant="ghost" onClick={() => setStep(1)}>Back</Button><Button onClick={() => setStep(3)}>Next</Button></div>
+            <div className="flex justify-between">
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setStep(1)}>Back</Button>
+                <Button variant="ghost" onClick={requestCancel}>Cancel</Button>
+              </div>
+              <Button onClick={() => setStep(3)}>Next</Button>
+            </div>
           </div>
         )}
 
@@ -655,7 +755,10 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
               ))}
             </ul>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
+                <Button variant="ghost" onClick={requestCancel}>Cancel</Button>
+              </div>
               <Button
                 disabled={!canGenerate}
                 className="bg-[#007d65] hover:bg-[#006a56]"
@@ -670,7 +773,7 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
                     sectionsWanted: [...sections],
                     scope,
                   });
-                  onDone(created.definition.id);
+                  onGenerated(created.definition.id);
                 }}
               >
                 Generate
@@ -679,6 +782,19 @@ function GuidedBriefingForm({ onDone }: { onDone: (definitionId: string) => void
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this briefing draft?</AlertDialogTitle>
+            <AlertDialogDescription>Your scope, audience, emphasis, and section choices for this New Briefing will be lost.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => { setConfirmDiscardOpen(false); onCancel(); }}>Discard draft</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -714,9 +830,43 @@ function BriefingCard({ definition }: { definition: BriefingDefinition }) {
   );
 }
 
+/**
+ * Opening "New Briefing" pushes one history checkpoint so browser Back
+ * closes the wizard and lands back on this same Briefings list (with its
+ * scroll position naturally intact, since the list stays mounted underneath
+ * the wizard the whole time) instead of navigating away from Briefings
+ * entirely. Closing the wizard any other way (Cancel, Esc, Generate) calls
+ * `history.back()` itself to consume that checkpoint, so a normal Cancel
+ * never leaves a dangling entry that would otherwise require two Back
+ * presses to leave the page.
+ */
 function BriefingsHub() {
   const { savedWork } = useInvestigation();
   const [creating, setCreating] = useState(false);
+  const wizardHistoryPushedRef = useRef(false);
+
+  const openWizard = useCallback(() => {
+    window.history.pushState({ briefingsNewWizardOpen: true }, "", window.location.href);
+    wizardHistoryPushedRef.current = true;
+    setCreating(true);
+  }, []);
+
+  const closeWizard = useCallback(() => {
+    setCreating(false);
+    if (wizardHistoryPushedRef.current) {
+      wizardHistoryPushedRef.current = false;
+      window.history.back();
+    }
+  }, []);
+
+  useEffect(() => {
+    function handlePopState() {
+      wizardHistoryPushedRef.current = false;
+      setCreating(false);
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   if (!savedWork.hydrated) {
     return <div className="space-y-3">{Array.from({ length: 2 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}</div>;
@@ -726,10 +876,10 @@ function BriefingsHub() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-slate-700">Briefings turn an existing scope — round-wide, an entity, a Watchlist, Saved Research, or a Compare selection — into a concise, editable, source-backed presentation. Nothing here is computed that isn&apos;t already visible elsewhere in the product.</p>
-        {!creating && <Button className="bg-[#007d65] hover:bg-[#006a56]" onClick={() => setCreating(true)}><Plus />New Briefing</Button>}
+        {!creating && <Button className="bg-[#007d65] hover:bg-[#006a56]" onClick={openWizard}><Plus />New Briefing</Button>}
       </div>
 
-      {creating && <GuidedBriefingForm onDone={() => setCreating(false)} />}
+      {creating && <GuidedBriefingForm onGenerated={closeWizard} onCancel={closeWizard} />}
 
       {savedWork.briefingDefinitions.length === 0 ? (
         <Card className="border-dashed py-12 text-center">

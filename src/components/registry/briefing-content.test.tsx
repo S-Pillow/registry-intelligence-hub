@@ -28,6 +28,26 @@ function idFromHref(link: HTMLElement): string {
   return link.getAttribute("href")!.split("/").pop()!;
 }
 
+/**
+ * Every wizard dropdown is a portal-based `Select` (briefings-design.md
+ * addendum: body-portal layering fix), not a native `<select>`, so picking a
+ * value means opening its combobox trigger and clicking the matching
+ * `option` role — `userEvent.selectOptions` only works on native selects.
+ */
+async function pickOption(user: ReturnType<typeof userEvent.setup>, comboboxName: string, optionName: string) {
+  await user.click(screen.getByRole("combobox", { name: comboboxName }));
+  await user.click(await screen.findByRole("option", { name: optionName }));
+}
+
+/** Opens the named combobox, reads its currently rendered option labels, then closes it again with Escape. */
+async function readOptionLabels(user: ReturnType<typeof userEvent.setup>, comboboxName: string): Promise<string[]> {
+  await user.click(screen.getByRole("combobox", { name: comboboxName }));
+  const options = await screen.findAllByRole("option");
+  const labels = options.map((option) => option.textContent ?? "");
+  await user.keyboard("{Escape}");
+  return labels;
+}
+
 async function openFreshRoundWideBriefing(user: ReturnType<typeof userEvent.setup>) {
   const view = render(<CommandCenter />);
   await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
@@ -101,13 +121,12 @@ describe("Guided Briefing — secondary entry path", () => {
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Next" }));
-    const audienceSelect = screen.getByRole("combobox", { name: "Audience" }) as HTMLSelectElement;
-    const optionLabels = Array.from(audienceSelect.options).map((option) => option.textContent);
+    const optionLabels = await readOptionLabels(user, "Audience");
     expect(optionLabels).toEqual(["Executive", "Commercial", "Product & Strategy", "Marketing"]);
 
-    await user.selectOptions(audienceSelect, "marketing");
-    expect((screen.getByRole("combobox", { name: "Emphasis" }) as HTMLSelectElement).value).toBe("marketing");
-    expect((screen.getByRole("combobox", { name: "Detail level" }) as HTMLSelectElement).value).toBe("standard");
+    await pickOption(user, "Audience", "Marketing");
+    expect(screen.getByRole("combobox", { name: "Emphasis" })).toHaveTextContent("Marketing");
+    expect(screen.getByRole("combobox", { name: "Detail level" })).toHaveTextContent("Standard");
   });
 
   it("walks scope → audience → sections and generates a Briefing scoped to a chosen entity", async () => {
@@ -116,11 +135,11 @@ describe("Guided Briefing — secondary entry path", () => {
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Entity" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "Entity type" }), "organizations");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Entity" }), "Atlas Digital");
+    await pickOption(user, "Entity type", "Organizations");
+    await pickOption(user, "Entity", "Atlas Digital");
     await user.click(screen.getByRole("button", { name: "Next" }));
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Audience" }), "commercial");
+    await pickOption(user, "Audience", "Commercial");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
@@ -141,9 +160,8 @@ describe("Guided Briefing — secondary entry path", () => {
     const hub = render(<CommandCenter view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Watchlist" }));
-    const watchlistSelect = screen.getByRole("combobox", { name: "Watchlist" }) as HTMLSelectElement;
-    expect(Array.from(watchlistSelect.options).map((option) => option.textContent)).toContain("Quick Watchlist");
-    await user.selectOptions(watchlistSelect, "Quick Watchlist");
+    expect(await readOptionLabels(user, "Watchlist")).toContain("Quick Watchlist");
+    await pickOption(user, "Watchlist", "Quick Watchlist");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByRole("button", { name: "Generate" }));
@@ -243,6 +261,158 @@ describe("Evidence and provenance integrity", () => {
     expect(screen.getByText(/nothing in this Briefing is AI-generated today/)).toBeInTheDocument();
     expect(screen.getAllByText("Authoritative fact").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Calculated metric").length).toBeGreaterThan(0);
+  });
+});
+
+describe("New Briefing wizard — portal layering, cancel, Escape, and Back (contained UX correction)", () => {
+  it("renders every wizard dropdown's popup through a body portal, never nested inside the (overflow-hidden) Card that triggers it", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const trigger = screen.getByRole("combobox", { name: "Audience" });
+    const triggerCard = trigger.closest("[data-slot='card']");
+    expect(triggerCard).not.toBeNull();
+
+    await user.click(trigger);
+    const options = await screen.findAllByRole("option");
+    expect(options.length).toBeGreaterThan(0);
+    for (const option of options) {
+      expect(option.closest("[data-slot='card']")).toBeNull();
+      expect(triggerCard!.contains(option)).toBe(false);
+      expect(document.body.contains(option)).toBe(true);
+    }
+  });
+
+  it("regression-checks every wizard dropdown across all three steps for the same body-portal layering", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Entity" }));
+
+    for (const name of ["Entity type", "Entity"]) {
+      await user.click(screen.getByRole("combobox", { name }));
+      const options = await screen.findAllByRole("option");
+      for (const option of options) expect(option.closest("[data-slot='card']")).toBeNull();
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryAllByRole("option")).toHaveLength(0));
+    }
+
+    // Switch back to a scope that's valid without further choices before advancing.
+    await user.click(screen.getByRole("button", { name: "Round-wide" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    for (const name of ["Audience", "Emphasis", "Detail level"]) {
+      await user.click(screen.getByRole("combobox", { name }));
+      const options = await screen.findAllByRole("option");
+      for (const option of options) expect(option.closest("[data-slot='card']")).toBeNull();
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryAllByRole("option")).toHaveLength(0));
+    }
+  });
+
+  it("Step 1 Cancel discards immediately with no confirmation, since no meaningful choice has been made yet", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    expect(screen.getByText("New Briefing — step 1 of 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Discard this briefing draft?")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New Briefing" })).toBeInTheDocument();
+  });
+
+  it("the top-right close icon is an equivalent Cancel affordance on step 1", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Cancel New Briefing" }));
+    expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument();
+  });
+
+  it("Steps 2 and 3 show a 'Discard this briefing draft?' confirmation on Cancel, and only discard on explicit confirmation", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Next" })); // step 2 — a scope has already been committed
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByText("Discard this briefing draft?")).toBeInTheDocument();
+
+    // "Keep editing" only dismisses the confirmation — the draft (and step) survive untouched.
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByText("Discard this briefing draft?")).not.toBeInTheDocument();
+    expect(screen.getByText("New Briefing — step 2 of 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next" })); // step 3
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByText("Discard this briefing draft?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New Briefing" })).toBeInTheDocument();
+  });
+
+  it("Escape closes an open dropdown without canceling the wizard, and only cancels the wizard once no dropdown is open", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Entity" }));
+
+    await user.click(screen.getByRole("combobox", { name: "Entity type" }));
+    expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryAllByRole("option")).toHaveLength(0));
+    expect(screen.getByText("New Briefing — step 1 of 3")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument();
+  });
+
+  it("Escape on a dirty step opens the discard confirmation, and a second Escape only dismisses that confirmation (never both at once)", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    await user.click(screen.getByRole("button", { name: "Next" })); // step 2, dirty
+
+    await user.keyboard("{Escape}");
+    expect(await screen.findByText("Discard this briefing draft?")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText("Discard this briefing draft?")).not.toBeInTheDocument());
+    expect(screen.getByText("New Briefing — step 2 of 3")).toBeInTheDocument();
+  });
+
+  it("browser Back closes the New Briefing wizard and returns to the Briefings list instead of navigating away, with prior Briefings preserved", async () => {
+    const user = userEvent.setup();
+    const view = render(<CommandCenter />);
+    await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
+    await screen.findByRole("link", { name: "Open Briefing" });
+    view.rerender(<CommandCenter view="briefings" />);
+    expect(await screen.findByText("Briefing: Round-wide")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    expect(screen.getByText("New Briefing — step 1 of 3")).toBeInTheDocument();
+
+    window.history.back();
+
+    await waitFor(() => expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: "Briefings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New Briefing" })).toBeInTheDocument();
+    expect(screen.getByText("Briefing: Round-wide")).toBeInTheDocument();
+  });
+
+  it("does not trap a normal Cancel behind an extra history entry — Cancel consumes the checkpoint it pushed on open", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="briefings" />);
+    const startingState: unknown = window.history.state;
+
+    await user.click(screen.getByRole("button", { name: "New Briefing" }));
+    expect(window.history.state).toEqual({ briefingsNewWizardOpen: true });
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(window.history.state).toEqual(startingState));
   });
 });
 
