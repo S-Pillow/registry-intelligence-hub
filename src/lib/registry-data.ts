@@ -92,6 +92,45 @@ export function exploreResearchHref(query: string) {
   return `/tools/registry-intelligence-hub/explore${suffix}`;
 }
 
+/** Supporting records shown in Round Pulse provenance — aligned with Explore filter semantics. */
+export function recordsForRoundPulseFilter(filter: string, applications: Application[] = fixture.applications) {
+  if (filter === "idn") return applications.filter((item) => item.idn);
+  if (filter === "contention") return applications.filter((item) => item.contentionSet);
+  return applications;
+}
+
+/** Command Center Round Pulse → Explore drill-down with composable URL state. */
+export function exploreDrillDownHref(metricFilter: string) {
+  const params = new URLSearchParams();
+  switch (metricFilter) {
+    case "strings":
+      params.set("entity", "strings");
+      break;
+    case "organizations":
+      params.set("entity", "organizations");
+      break;
+    case "idn":
+      params.set("idn", "idn");
+      break;
+    case "contention":
+      params.set("contention", "in");
+      break;
+    default:
+      break;
+  }
+  const qs = params.toString();
+  return `/tools/registry-intelligence-hub/explore${qs ? `?${qs}` : ""}`;
+}
+
+/** Supporting-chart and drawer “View full” destinations into Explore. */
+export function exploreEntityResearchHref(entity: "organizations" | "categories" | "applications", key: string) {
+  const params = new URLSearchParams();
+  params.set("entity", entity);
+  if (entity === "applications") params.set("ids", key);
+  else params.set("q", key);
+  return `/tools/registry-intelligence-hub/explore?${params}`;
+}
+
 export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(filters).filter(([key, value]) => {

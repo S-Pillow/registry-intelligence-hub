@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { exploreResearchHref } from "@/lib/registry-data";
+import { exploreDrillDownHref, exploreEntityResearchHref, exploreResearchHref } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
 
 beforeEach(() => {
@@ -76,7 +76,7 @@ describe("Command Center interactions", () => {
     const search = screen.getByRole("textbox", { name: "Search fixture records" });
     await user.type(search, "Atlas");
     expect(exploreResearchHref("Atlas")).toBe("/tools/registry-intelligence-hub/explore?q=Atlas");
-    expect(screen.getByRole("link", { name: /Open in Explore/ })).toHaveAttribute("href", "/tools/registry-intelligence-hub/explore?q=Atlas");
+    expect(screen.getByRole("link", { name: "Open in Explore" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/explore?q=Atlas");
   });
 
   it("opens provenance for snapshot lineage from dataset health", async () => {
@@ -159,6 +159,62 @@ describe("Explore interactions", () => {
 
     expect(screen.getByText("No records match this research view")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Clear filters" }).length).toBeGreaterThan(0);
+  });
+
+  it("focuses Explore search with Ctrl/Cmd+K", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" />);
+    const search = screen.getByRole("textbox", { name: "Search all registry records" });
+    await user.keyboard("{Control>}k{/Control}");
+    expect(search).toHaveFocus();
+  });
+
+  it("covers Explore loading and error rehearsal states", () => {
+    const { rerender } = render(<CommandCenter view="explore" state="loading" />);
+    expect(screen.getByLabelText("Loading Explore")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Search all registry records" })).toBeInTheDocument();
+
+    rerender(<CommandCenter view="explore" state="error" />);
+    expect(screen.getByText("Explore is temporarily unavailable")).toBeInTheDocument();
+  });
+
+  it("disables compare and watch in strings browse with explicit guidance", () => {
+    render(<CommandCenter view="explore" exploreParams={{ entity: "strings" }} />);
+    const compare = screen.getAllByRole("button", { name: /\+ Compare/ })[0];
+    expect(compare).toBeDisabled();
+    expect(compare).toHaveAttribute("title", expect.stringContaining("Strings browse"));
+  });
+
+  it("writes sort choice to shareable URL state", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations", sort: "name-asc" }} />);
+    const rows = screen.getAllByRole("row");
+    expect(within(rows[1]).getByText("Atlas Digital")).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sort records" }), "contention-desc");
+    expect(window.location.search).toContain("sort=contention-desc");
+  });
+
+  it("shows catalog-gated historical disclosure without local comparison gates", () => {
+    render(<CommandCenter view="explore" />);
+    expect(screen.getByText(/Historical intelligence follows/)).toBeInTheDocument();
+    expect(screen.getByText(/cross-round comparison withheld/i)).toBeInTheDocument();
+    expect(screen.queryByText(/BLOCKED_/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Command Center → Explore drill-down", () => {
+  it("links Round Pulse metrics and supporting charts into Explore", () => {
+    render(<CommandCenter />);
+    expect(screen.getByRole("link", { name: "Open IDN applications in Explore" })).toHaveAttribute("href", exploreDrillDownHref("idn"));
+    expect(screen.getByRole("link", { name: "Open Applications in Explore" })).toHaveAttribute("href", exploreDrillDownHref("all"));
+    expect(screen.getByRole("link", { name: "Open Atlas Digital in Explore" })).toHaveAttribute(
+      "href",
+      exploreEntityResearchHref("organizations", "Atlas Digital"),
+    );
+    expect(screen.getByRole("link", { name: "Open Technology category in Explore" })).toHaveAttribute(
+      "href",
+      exploreEntityResearchHref("categories", "Technology"),
+    );
   });
 });
 

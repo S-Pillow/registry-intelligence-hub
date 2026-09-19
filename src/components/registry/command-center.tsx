@@ -57,7 +57,10 @@ import {
   type CompareSectionId,
   type Lens,
   lensInterpretations,
+  exploreDrillDownHref,
+  exploreEntityResearchHref,
   exploreResearchHref,
+  recordsForRoundPulseFilter,
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
@@ -206,6 +209,53 @@ function QuickCompareButton({ item, className = "" }: { item: InvestigationItem;
     <button type="button" disabled={selected || incompatible || compareItems.length >= 4} onClick={() => addCompare(item)} className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:border-[#007d65] hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`} aria-label={`${selected ? "Added to compare" : incompatible ? "Incompatible comparison type" : "Add to compare"} ${item.label}`}>
       <GitCompareArrows className="size-3.5" />{selected ? "Added" : "+ Compare"}
     </button>
+  );
+}
+
+const EXPLORE_STRINGS_ACTION_UNAVAILABLE =
+  "Strings browse groups by applied string. Switch to Applications, Organizations, or Categories to compare or watch entities.";
+
+function ExploreEntityActions({
+  investigationItem,
+  className = "",
+}: {
+  investigationItem: InvestigationItem;
+  className?: string;
+}) {
+  const canActOnEntity = Boolean(investigationItem.entityType && investigationItem.entityKey);
+  return (
+    <div className={`flex gap-2 ${className}`}>
+      <ProvenanceSheet
+        {...investigationItem}
+        triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+        trigger="Investigate"
+      />
+      {canActOnEntity ? (
+        <>
+          <QuickCompareButton item={investigationItem} />
+          <QuickWatchButton item={investigationItem} />
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            disabled
+            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
+          >
+            <GitCompareArrows className="size-3.5" />+ Compare
+          </button>
+          <button
+            type="button"
+            disabled
+            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
+          >
+            <Star className="size-3.5" />Watch
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -477,44 +527,49 @@ function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
 }
 
 function MetricCards() {
-  const recordsFor = (filter: string) => {
-    if (filter === "idn") return registryFixture.applications.filter((item) => item.idn);
-    if (filter === "contention") return registryFixture.applications.filter((item) => item.contentionSet);
-    return registryFixture.applications;
-  };
-
   const metrics = roundPulse as (PresentedHistoricalMetric & { delta: string })[];
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
       {metrics.map((metric) => (
-        <ProvenanceSheet
+        <div
           key={metric.id}
-          id={`metric-${metric.id}`}
-          kind="metric"
-          label={`${metric.label}: ${metric.value}`}
-          records={recordsFor(metric.filter)}
-          triggerClassName={`group min-h-32 rounded-xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65] ${metricCardSurfaceClass(metric)}`}
-          trigger={
-            <>
-              <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-600">
-                {metric.label}<ChevronRight className="size-4 text-[#007d65] transition group-hover:translate-x-0.5" />
-              </span>
-              <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.historicalFact ? metric.historicalFact.value : metric.value}</span>
-              {metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
-              <MetricReadinessCaption metric={metric} />
-              <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
-            </>
-          }
-        />
+          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)}`}
+        >
+          <ProvenanceSheet
+            id={`metric-${metric.id}`}
+            kind="metric"
+            label={`${metric.label}: ${metric.value}`}
+            records={recordsForRoundPulseFilter(metric.filter)}
+            triggerClassName="group flex flex-1 flex-col p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
+            trigger={
+              <>
+                <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-600">
+                  {metric.label}<ChevronRight className="size-4 text-[#007d65] transition group-hover:translate-x-0.5" />
+                </span>
+                <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.historicalFact ? metric.historicalFact.value : metric.value}</span>
+                {metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
+                <MetricReadinessCaption metric={metric} />
+                <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
+              </>
+            }
+          />
+          <Link
+            href={exploreDrillDownHref(metric.filter)}
+            aria-label={`Open ${metric.label} in Explore`}
+            className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
+          >
+            Open in Explore<ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       ))}
     </div>
   );
 }
 
-function LoadingState() {
+function LoadingState({ surface = "command" }: { surface?: "command" | "explore" }) {
   return (
-    <div aria-live="polite" aria-label="Loading Command Center" className="space-y-6">
+    <div aria-live="polite" aria-label={surface === "explore" ? "Loading Explore" : "Loading Command Center"} className="space-y-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
       <div className="grid gap-6 lg:grid-cols-5"><Skeleton className="h-96 lg:col-span-3" /><Skeleton className="h-96 lg:col-span-2" /></div>
     </div>
@@ -661,7 +716,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </div>
       </div>
 
-      {state === "loading" ? <LoadingState /> : state === "error" ? (
+      {state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
         <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/tools/registry-intelligence-hub/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : state === "empty" || !rows.length ? (
         <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
@@ -677,7 +732,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                 const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
                 const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
                 const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><div className="flex gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} /><QuickWatchButton item={investigationItem} /></div></td></tr>;
+                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} /></td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -685,7 +740,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
             const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
             const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><div className="mt-3 flex flex-wrap gap-2"><ProvenanceSheet {...investigationItem} triggerClassName="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-[#007d65] px-3 text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger="Investigate" /><QuickCompareButton item={investigationItem} className="flex-1" /><QuickWatchButton item={investigationItem} className="flex-1" /></div></div>;
+            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
           })}</div>
         </section>
       )}
@@ -1313,7 +1368,13 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     )}
                     {portfolioRanking.slice(0, 5).map((item, index) => {
                       const records = registryFixture.applications.filter((record) => record.organization === item.organization);
-                      return <ProvenanceSheet key={item.organization} id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />;
+                      const exploreHref = exploreEntityResearchHref("organizations", item.organization);
+                      return (
+                        <div key={item.organization} className="rounded-lg hover:bg-emerald-50/60">
+                          <ProvenanceSheet id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />
+                          <Link href={exploreHref} aria-label={`Open ${item.organization} in Explore`} className="mx-2 mb-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">Open in Explore<ArrowRight className="size-3" /></Link>
+                        </div>
+                      );
                     })}
                   </CardContent>
                 </Card>
@@ -1321,9 +1382,15 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <Card className="border-slate-300 lg:col-span-2">
                   <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">APPLICATION MIX</p><CardTitle className="text-lg">Interest by category</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
-                    {categoryMix.map((item, index) => (
-                      <ProvenanceSheet key={item.category} id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
-                    ))}
+                    {categoryMix.map((item, index) => {
+                      const exploreHref = exploreEntityResearchHref("categories", item.category);
+                      return (
+                        <div key={item.category} className="rounded-lg hover:bg-emerald-50/60">
+                          <ProvenanceSheet id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
+                          <Link href={exploreHref} aria-label={`Open ${item.category} category in Explore`} className="mx-2 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">Open in Explore<ArrowRight className="size-3" /></Link>
+                        </div>
+                      );
+                    })}
                     <p className="pt-3 text-xs leading-5 text-slate-600">Market demand is <strong>not available</strong> pending source-rights review; no proxy is substituted.</p>
                   </CardContent>
                 </Card>
