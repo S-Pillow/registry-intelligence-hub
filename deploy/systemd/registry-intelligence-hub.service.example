@@ -1,5 +1,6 @@
-# Example systemd unit — Registry Intelligence Hub (production rehearsal)
-# Install on Ubuntu ForgeForward host (adjust User, WorkingDirectory, EnvironmentFile).
+# Example systemd unit — Registry Intelligence Hub (optional alternate hosts)
+# srv766238 uses PM2 (deploy/ecosystem.config.cjs.example, cwd /root/registry_hub), not systemd.
+# Install on Ubuntu hosts that prefer systemd (adjust User, WorkingDirectory, EnvironmentFile).
 #
 #   sudo cp deploy/systemd/registry-intelligence-hub.service.example \
 #     /etc/systemd/system/registry-intelligence-hub.service
@@ -18,6 +19,7 @@ Type=simple
 User=forgeforward
 Group=forgeforward
 WorkingDirectory=/opt/registry-intelligence-hub
+# srv766238: use /root/registry_hub under PM2 instead — do not assume /opt on that VPS.
 EnvironmentFile=-/etc/registry-intelligence-hub/env
 Environment=NODE_ENV=production
 Environment=HUB_HOST=127.0.0.1

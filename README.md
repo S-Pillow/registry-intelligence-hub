@@ -6,7 +6,7 @@ The fixture is explicitly synthetic rehearsal data. It must not be treated as th
 
 ## Run locally
 
-Requires Node.js **>=20.9.0** (see `package.json` `engines`; Next 16 lockfile minimum). Node **22+** is recommended for parity with CI and future ForgeForward hosts.
+Requires Node.js **>=20.9.0** (see `package.json` `engines`; Next 16 lockfile minimum). Node **22+** is recommended for **CI parity** only — production hosts on **20.x** (e.g. srv766238 at 20.19.0) are supported.
 
 ```bash
 npm install
@@ -42,7 +42,7 @@ Then open `http://127.0.0.1:43123/tools/registry-intelligence-hub`.
 
 ## Production rehearsal deploy (ForgeForward / Ubuntu)
 
-Full operator contract (route, feature flag, env, smoke): Project store `docs/production-rehearsal-hub-deploy.md` (Registry Intelligence Hub Agent Store).
+Full operator contract (PM2, nginx, ToolsPage catalog, env, smoke): Project store `docs/production-rehearsal-hub-deploy.md` and `docs/rih-basepath-shared-vps-deploy.md` (Registry Intelligence Hub Agent Store).
 
 Minimal rehearsal on a host:
 
@@ -54,11 +54,11 @@ rm -f .data/reveal-2026/claim-actuality-state.json
 npm run smoke
 ```
 
-Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` with `features.registryIntelligenceHubCatalog` enabled only after smoke passes. Templates: `.env.production.rehearsal.example`, `deploy/systemd/registry-intelligence-hub.service.example`, `deploy/ecosystem.config.cjs.example` (PM2). **PM2/systemd:** run `npm run build` then `npm run start -- -H 127.0.0.1 -p 43123` only — do not use `hub:production` under a process manager (that script builds and frees port 43123). Staging Path B/C drill (`npm run staging:path-bc-drill`) is optional on staging only — not required for production rehearsal.
+Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` after loopback smoke passes. **Live Tools catalog:** add a card in ForgeForward `ToolsPage.jsx` (hardcoded `tools` array) and rebuild the Vite frontend — not `features.registryIntelligenceHubCatalog` (repo `src/config/features.ts` is Hub-internal only). **srv766238:** PM2 via `deploy/ecosystem.config.cjs.example`, cwd `/root/registry_hub`; `deploy/systemd/…` is for optional alternate hosts. Run `npm run build` then `npm run start -- -H 127.0.0.1 -p 43123` under PM2 — do not use `hub:production` under a process manager. Run **`npm run smoke` before first PM2 start** (or stop PM2 before later smoke — smoke uses port 43123). Staging Path B/C drill (`npm run staging:path-bc-drill`) is optional on staging only — not required for production rehearsal.
 
 ## Phase 0 boundaries
 
-- `features.registryIntelligenceHubCatalog` is disabled. No catalog card or production routing is enabled.
+- Repo `features.registryIntelligenceHubCatalog` (`src/config/features.ts`) is for Hub-internal/dev defaults only; it does **not** gate the live ForgeForward Tools page.
 - No production server, database, authentication, or external write integration is used.
 - Immutable fixture metadata and hashes live in `src/data/fixtures/manifest.json`.
 - Rehearsal-round intelligence is calculated in `src/lib/registry-data.ts`.
