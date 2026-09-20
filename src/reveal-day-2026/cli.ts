@@ -28,6 +28,8 @@ import {
 } from "./promotion-history";
 import { runSanityChecks } from "./sanity-checks";
 import { buildRevealDayVerificationReport } from "./verify-report";
+import { buildBrowserApplicationPayloadFromPublication } from "../lib/registry-application-payload";
+import { writeFile } from "node:fs/promises";
 
 const DEFAULT_STATE = "./.data/reveal-2026/claim-actuality-state.json";
 const DEFAULT_PIPELINE_ROOT = "./.data/source-pipeline";
@@ -47,6 +49,7 @@ Usage:
   npm run reveal-2026 -- promote-actuality --snapshot <path> --steward-approval <id> --product-approval <id> [--state <path>] [--history <path>]
   npm run reveal-2026 -- promotion-history [--history <path>]
   npm run reveal-2026 -- verify-reveal-day [--snapshot <path>] [--state <path>] [--workspace <dir>] [--expected-application-count <n>]
+  npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -81,6 +84,30 @@ async function main(): Promise<void> {
   const snapshotPath = values.snapshot ?? join(workspaceRoot, DEFAULT_REHEARSAL_SNAPSHOT);
 
   switch (command) {
+    case "build-browser-payload": {
+      if (!values.snapshot) {
+        throw new Error("build-browser-payload requires --snapshot");
+      }
+      const snapshot = await loadPublicationSnapshotFromPath(snapshotPath);
+      const payload = buildBrowserApplicationPayloadFromPublication(snapshot);
+      const outPath = values.out ?? join(workspaceRoot, "src/data/fixtures/drill-2026-registry-applications.payload.json");
+      await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`);
+      console.log(
+        JSON.stringify(
+          {
+            outPath,
+            payloadVersion: payload.payloadVersion,
+            snapshotId: payload.snapshotId,
+            snapshotContentHash: payload.snapshotContentHash,
+            applicationCount: payload.applications.length,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
     case "dry-run": {
       const snapshot = await loadPublicationSnapshotFromPath(snapshotPath);
       const diagnostics = runDryRunIngestion(snapshot);

@@ -223,7 +223,11 @@ export function lensWhyMattersCondensedLabel(lens: Lens) {
 }
 
 /** The record set a saved/briefed Explore view or Compare configuration resolves to right now — shared by Saved's change-since-visit count and Briefings' generator/drift disclosure. */
-export function recordsForParams(kind: "explore-view" | "compare-config", params: Record<string, string>): Application[] {
+export function recordsForParams(
+  kind: "explore-view" | "compare-config",
+  params: Record<string, string>,
+  applications: Application[] = fixture.applications,
+): Application[] {
   if (kind === "explore-view") {
     const filters: ExploreFilterState = {
       q: params.q ?? "",
@@ -234,11 +238,11 @@ export function recordsForParams(kind: "explore-view" | "compare-config", params
       idn: params.idn ?? "all",
       ids: params.ids ?? "",
     };
-    return filterApplicationsByExplore(fixture.applications, filters);
+    return filterApplicationsByExplore(applications, filters);
   }
   const type = (params.type as EntityType) ?? "organizations";
   const ids = (params.ids ?? "").split(",").filter(Boolean);
-  return ids.flatMap((id) => recordsForEntity(type, id));
+  return ids.flatMap((id) => recordsForEntity(type, id, applications));
 }
 
 export function describeCompareSelection(entityType: EntityType, labels: string[]) {
@@ -263,7 +267,11 @@ function compareHrefFromSelection(type: EntityType, ids: string[], origin: strin
 }
 
 /** Validates a saved or derived Compare selection (2–4 like entities that resolve in the fixture). */
-export function savedComparePromotionFromParams(params: Record<string, string>, originLabel: string): SavedComparePromotion {
+export function savedComparePromotionFromParams(
+  params: Record<string, string>,
+  originLabel: string,
+  applications: Application[] = fixture.applications,
+): SavedComparePromotion {
   const type = params.type as EntityType;
   if (!COMPARE_CAPABLE_ENTITY_TYPES.includes(type)) {
     return { eligible: false, href: "", disabledReason: "Saved comparison is missing a comparable entity type (organizations, applications, or categories)." };
@@ -275,7 +283,7 @@ export function savedComparePromotionFromParams(params: Record<string, string>, 
   if (ids.length > 4) {
     return { eligible: false, href: "", disabledReason: "Compare supports up to four like entities — narrow this selection." };
   }
-  const resolved = ids.filter((id) => recordsForEntity(type, id).length > 0);
+  const resolved = ids.filter((id) => recordsForEntity(type, id, applications).length > 0);
   if (resolved.length < 2) {
     return { eligible: false, href: "", disabledReason: "Fewer than two saved entities still resolve in this fixture." };
   }
@@ -287,7 +295,11 @@ export function savedComparePromotionFromParams(params: Record<string, string>, 
 }
 
 /** Derives a Compare promotion from a saved Explore cohort when browse mode is entity-comparable. */
-export function savedExploreComparePromotion(params: Record<string, string>, originLabel: string): SavedComparePromotion {
+export function savedExploreComparePromotion(
+  params: Record<string, string>,
+  originLabel: string,
+  applications: Application[] = fixture.applications,
+): SavedComparePromotion {
   const browse = params.entity ?? "applications";
   if (browse === "strings") {
     return { eligible: false, href: "", disabledReason: "Compare is unavailable in Strings browse — reopen in organizations, applications, or categories." };
@@ -296,7 +308,7 @@ export function savedExploreComparePromotion(params: Record<string, string>, ori
   if (!COMPARE_CAPABLE_ENTITY_TYPES.includes(type)) {
     return { eligible: false, href: "", disabledReason: "This saved view is not in a comparable browse mode." };
   }
-  const apps = recordsForParams("explore-view", params);
+  const apps = recordsForParams("explore-view", params, applications);
   const keys = type === "applications"
     ? [...new Set(apps.map((record) => record.id))]
     : type === "organizations"
@@ -311,21 +323,27 @@ export function savedExploreComparePromotion(params: Record<string, string>, ori
   return { eligible: true, href: compareHrefFromSelection(type, keys, originLabel), disabledReason: "" };
 }
 
-export function savedResearchComparePromotion(entry: { kind: "explore-view" | "compare-config"; name: string; params: Record<string, string> }): SavedComparePromotion {
+export function savedResearchComparePromotion(
+  entry: { kind: "explore-view" | "compare-config"; name: string; params: Record<string, string> },
+  applications: Application[] = fixture.applications,
+): SavedComparePromotion {
   const origin = `Saved Research: ${entry.name}`;
   return entry.kind === "compare-config"
-    ? savedComparePromotionFromParams(entry.params, origin)
-    : savedExploreComparePromotion(entry.params, origin);
+    ? savedComparePromotionFromParams(entry.params, origin, applications)
+    : savedExploreComparePromotion(entry.params, origin, applications);
 }
 
-export function savedResearchBriefingEligible(entry: { kind: "explore-view" | "compare-config"; params: Record<string, string> }): { eligible: boolean; disabledReason: string } {
+export function savedResearchBriefingEligible(
+  entry: { kind: "explore-view" | "compare-config"; params: Record<string, string> },
+  applications: Application[] = fixture.applications,
+): { eligible: boolean; disabledReason: string } {
   if (entry.kind === "compare-config") {
-    const promotion = savedComparePromotionFromParams(entry.params, "");
+    const promotion = savedComparePromotionFromParams(entry.params, "", applications);
     return promotion.eligible
       ? { eligible: true, disabledReason: "" }
       : { eligible: false, disabledReason: promotion.disabledReason || "Create briefing needs a valid 2–4 entity comparison." };
   }
-  if (recordsForParams("explore-view", entry.params).length === 0) {
+  if (recordsForParams("explore-view", entry.params, applications).length === 0) {
     return { eligible: false, disabledReason: "No records match this saved cohort — nothing to brief." };
   }
   return { eligible: true, disabledReason: "" };
@@ -728,9 +746,10 @@ const investigationOrganizationOrderByLens: Record<Lens, string[]> = {
 };
 
 /** Investigation queue ordering — same three organizations, lens-prioritized ranking. */
-export function applicantsInvestigationQueueForLens(lens: Lens) {
+export function applicantsInvestigationQueueForLens(lens: Lens, applications: Application[] = fixture.applications) {
   const order = investigationOrganizationOrderByLens[lens];
-  return [...applicantsToWatch].sort((a, b) => {
+  const watchlist = buildApplicantsToWatch(applications);
+  return [...watchlist].sort((a, b) => {
     const ai = order.indexOf(a.organization);
     const bi = order.indexOf(b.organization);
     return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
@@ -759,10 +778,13 @@ export const investigationQueueLensNote: Record<Lens, string> = {
  * and a `watchlist`-scoped Briefing (briefings-design.md §12) so both read
  * the same numbers from one implementation.
  */
-export function computeWatchlistIntelligence(items: { entityType: EntityType; entityKey: string; recordCountAtAdd: number }[]) {
+export function computeWatchlistIntelligence(
+  items: { entityType: EntityType; entityKey: string; recordCountAtAdd: number }[],
+  applications: Application[] = fixture.applications,
+) {
   let changed = 0;
   const records = items.flatMap((item) => {
-    const current = recordsForEntity(item.entityType, item.entityKey);
+    const current = recordsForEntity(item.entityType, item.entityKey, applications);
     if (current.length !== item.recordCountAtAdd) changed += 1;
     return current;
   });

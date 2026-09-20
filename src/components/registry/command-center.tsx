@@ -35,8 +35,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   applicantsInvestigationQueueForLens,
-  biggestChanges,
-  categoryMix,
+  buildBiggestChanges,
+  buildCategoryMix,
+  buildPortfolioRanking,
   cellDiffersFromBaseline,
   COMPARE_DIMENSIONS_VERSION,
   COMPARE_TIME_BASIS,
@@ -47,8 +48,6 @@ import {
   listEntityOptions,
   nonDefaultExploreFilterParams,
   numericCellDelta,
-  portfolioRanking,
-  registryFixture,
   rowHasDifference,
   buildRoundPulse,
   insightEmphasisForLens,
@@ -82,6 +81,7 @@ import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
+import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 
 export type { SavedParams };
 import {
@@ -199,6 +199,7 @@ function ProvenanceSheet({
   accessibilityLabel?: string;
 }) {
   const { investigate } = useInvestigation();
+  const registryFixture = useHubRegistryDocument();
   const item: InvestigationItem = {
     id: id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     label,
@@ -368,6 +369,7 @@ function IntelligenceDrawer({
   item: InvestigationItem | null;
   onClose: () => void;
 }) {
+  const registryFixture = useHubRegistryDocument();
   const [showFull, setShowFull] = useState(false);
   const { addCompare, toggleWatch, watchedIds, compareItems, savedWork } = useInvestigation();
   const isDerived = item?.kind === "signal";
@@ -684,6 +686,8 @@ export type ExploreParams = {
 
 function ExploreContent({ state, initial }: { state: ViewState; initial: ExploreParams }) {
   const claimActualityState = useHubClaimActualityState();
+  const { mode: registryPayloadMode } = useHubRegistryData();
+  const registryFixture = useHubRegistryDocument();
   const [filters, setFilters] = useState({
     q: initial.q ?? "",
     entity: initial.entity ?? "applications",
@@ -696,8 +700,8 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     ids: initial.ids ?? "",
   });
   const searchRef = useRef<HTMLInputElement>(null);
-  const categories = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.category))].sort(), []);
-  const regions = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.region))].sort(), []);
+  const categories = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.category))].sort(), [registryFixture.applications]);
+  const regions = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.region))].sort(), [registryFixture.applications]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -718,7 +722,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
-  const applications = useMemo(() => filterApplicationsByExplore(registryFixture.applications, filters), [filters]);
+  const applications = useMemo(() => filterApplicationsByExplore(registryFixture.applications, filters), [filters, registryFixture.applications]);
 
   const rows = useMemo(() => {
     type ExploreRow = { id: string; name: string; detail: string; records: Application[] };
@@ -747,7 +751,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Search and compose evidence-backed filters across applications, organizations, strings, categories, regions, participation, contention, and IDNs.</p></div>
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture only</div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{registryPayloadMode === "promoted-2026" ? "Promoted 2026 application snapshot" : "Rehearsal fixture only"}</div>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
@@ -843,10 +847,11 @@ export type CompareParams = {
  */
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
   const claimActualityState = useHubClaimActualityState();
+  const registryFixture = useHubRegistryDocument();
   const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
   const [type, setType] = useState<CompareEntityType>(initialType);
   const [selected, setSelected] = useState(() => {
-    const valid = new Set(listEntityOptions(initialType).map((item) => item.key));
+    const valid = new Set(listEntityOptions(initialType, registryFixture.applications).map((item) => item.key));
     return (initial.ids ?? "").split(",").filter((id) => valid.has(id)).slice(0, 4);
   });
   const [pending, setPending] = useState("");
@@ -856,7 +861,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   const [showAllDifferences, setShowAllDifferences] = useState(false);
   const [lastDifferencesSelectionKey, setLastDifferencesSelectionKey] = useState("");
   const [originContext] = useState(() => initial.origin || "Direct entity selection in Compare");
-  const options = useMemo(() => listEntityOptions(type), [type]);
+  const options = useMemo(() => listEntityOptions(type, registryFixture.applications), [type, registryFixture.applications]);
   const singular = type === "categories" ? "category" : type.slice(0, -1);
   const entities = selected.map((key) => options.find((item) => item.key === key)).filter((item): item is NonNullable<typeof item> => Boolean(item));
   const available = options.filter((item) => !selected.includes(item.key));
@@ -1156,6 +1161,13 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
 
 export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
   const claimActualityState = useHubClaimActualityState();
+  const registryFixture = useHubRegistryDocument();
+  const portfolioRanking = useMemo(() => buildPortfolioRanking(registryFixture.applications), [registryFixture.applications]);
+  const categoryMix = useMemo(() => buildCategoryMix(registryFixture.applications), [registryFixture.applications]);
+  const biggestChanges = useMemo(
+    () => buildBiggestChanges(registryFixture.applications, registryFixture.historicalContext),
+    [registryFixture.applications, registryFixture.historicalContext],
+  );
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const briefingLens = briefingAudienceForLens(lens);
@@ -1166,17 +1178,20 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const searchRef = useRef<HTMLInputElement>(null);
   const filtered = useMemo(() => registryFixture.applications.filter((item) =>
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
-  ), [query]);
+  ), [query, registryFixture.applications]);
   const activeLens = lens as Lens;
   const visibleInsights = useMemo(() => standoutInsightsForLens(activeLens), [activeLens]);
-  const investigationQueue = useMemo(() => applicantsInvestigationQueueForLens(activeLens), [activeLens]);
+  const investigationQueue = useMemo(
+    () => applicantsInvestigationQueueForLens(activeLens, registryFixture.applications),
+    [activeLens, registryFixture.applications],
+  );
   const glanceMetrics = useMemo(
     () => buildRevealDayGlanceMetrics(registryFixture.applications, claimActualityState),
-    [claimActualityState],
+    [claimActualityState, registryFixture.applications],
   );
   const roundPulseMetrics = useMemo(
     () => buildRoundPulse(registryFixture.applications, claimActualityState),
-    [claimActualityState],
+    [claimActualityState, registryFixture.applications],
   );
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;

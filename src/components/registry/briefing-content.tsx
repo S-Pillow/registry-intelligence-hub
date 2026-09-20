@@ -53,7 +53,8 @@ import {
   type EvidenceRef,
   type TruthClass,
 } from "@/lib/briefing-data";
-import { listEntityOptions, registryFixture, type EntityType, type Lens } from "@/lib/registry-data";
+import { listEntityOptions, type EntityType, type Lens } from "@/lib/registry-data";
+import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { summarizeChangeSinceVisit } from "@/lib/saved-change-summary";
 import { useInvestigation } from "@/components/registry/investigation-context";
 
@@ -145,7 +146,8 @@ function DeleteControl({ name, onConfirm }: { name: string; onConfirm: () => voi
  */
 function EvidenceButton({ evidence }: { evidence: EvidenceRef }) {
   const { investigate } = useInvestigation();
-  const records = useMemo(() => registryFixture.applications.filter((record) => evidence.recordIds.includes(record.id)), [evidence]);
+  const applications = useHubRegistryDocument().applications;
+  const records = useMemo(() => applications.filter((record) => evidence.recordIds.includes(record.id)), [evidence, applications]);
   return (
     <button
       type="button"
@@ -333,6 +335,7 @@ function buildPlainTextCopy(definition: BriefingDefinition, edition: BriefingEdi
 }
 
 function BriefingWorkspace({ id }: { id: string }) {
+  const registryFixture = useHubRegistryDocument();
   const { savedWork } = useInvestigation();
   const definition = savedWork.briefingDefinitions.find((entry) => entry.id === id);
   const edition = definition ? savedWork.briefingEditions.find((entry) => entry.id === definition.currentEditionId) : undefined;
@@ -901,6 +904,7 @@ function BriefingsHub() {
 
 export function BriefingsContent({ state, briefingId }: { state: ViewState; briefingId?: string }) {
   const { savedWork } = useInvestigation();
+  const registryFixture = useHubRegistryDocument();
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">

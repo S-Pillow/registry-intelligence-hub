@@ -31,7 +31,6 @@ import {
   listEntityOptions,
   recordsForEntity,
   recordsForParams,
-  registryFixture,
   savedResearchBriefingEligible,
   savedResearchComparePromotion,
   type EntityType,
@@ -39,6 +38,7 @@ import {
 import { summarizeChangeSinceVisit, type ChangeSinceVisitSummary } from "@/lib/saved-change-summary";
 import type { SavedResearch, Watchlist, WatchlistItem } from "@/lib/saved-storage";
 import { useInvestigation } from "@/components/registry/investigation-context";
+import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { BriefThisButton } from "@/components/registry/briefing-content";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
@@ -71,12 +71,12 @@ function recordedCountForWatchlist(items: WatchlistItem[]) {
   return items.reduce((sum, item) => sum + item.recordCountAtAdd, 0);
 }
 
-function currentCountForWatchlist(items: WatchlistItem[]) {
-  return items.reduce((sum, item) => sum + recordsForEntity(item.entityType, item.entityKey).length, 0);
+function currentCountForWatchlist(items: WatchlistItem[], applications: ReturnType<typeof useHubRegistryDocument>["applications"]) {
+  return items.reduce((sum, item) => sum + recordsForEntity(item.entityType, item.entityKey, applications).length, 0);
 }
 
-function currentCountForSavedResearch(entry: SavedResearch) {
-  return recordsForParams(entry.kind, entry.params).length;
+function currentCountForSavedResearch(entry: SavedResearch, applications: ReturnType<typeof useHubRegistryDocument>["applications"]) {
+  return recordsForParams(entry.kind, entry.params, applications).length;
 }
 
 function openHrefForSavedResearch(entry: SavedResearch) {
@@ -211,22 +211,24 @@ function WatchlistReviewPanel({ list, change }: { list: Watchlist; change: Chang
  */
 function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; expanded: boolean; onToggleExpand: () => void }) {
   const { savedWork, investigate } = useInvestigation();
+  const registryFixture = useHubRegistryDocument();
+  const applications = registryFixture.applications;
   const [addType, setAddType] = useState<EntityType>("organizations");
   const [addKey, setAddKey] = useState("");
 
   const change = useMemo(() => summarizeChangeSinceVisit({
     lastOpenedAt: list.lastOpenedAt,
     recordedCount: recordedCountForWatchlist(list.items),
-    currentCount: currentCountForWatchlist(list.items),
+    currentCount: currentCountForWatchlist(list.items, applications),
     fixtureChangedAt: savedWork.fixtureChangedAt,
     subject: "supporting-record",
-  }), [list, savedWork.fixtureChangedAt]);
+  }), [list, savedWork.fixtureChangedAt, applications]);
 
-  const intelligence = useMemo(() => computeWatchlistIntelligence(list.items), [list.items]);
+  const intelligence = useMemo(() => computeWatchlistIntelligence(list.items, applications), [list.items, applications]);
 
   const addOptions = useMemo(
-    () => listEntityOptions(addType).filter((option) => !list.items.some((item) => item.entityType === addType && item.entityKey === option.key)),
-    [addType, list.items]
+    () => listEntityOptions(addType, applications).filter((option) => !list.items.some((item) => item.entityType === addType && item.entityKey === option.key)),
+    [addType, list.items, applications],
   );
 
   const groupedByType = useMemo(() => {
@@ -426,8 +428,8 @@ function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
  * of silently recomputing against a different fixture state. Falls back
  * gracefully for comparisons saved before this metadata existed.
  */
-function compareReproducibilityLine(entry: SavedResearch): string {
-  const snapshot = entry.params.snapshotId ?? registryFixture.snapshotId;
+function compareReproducibilityLine(entry: SavedResearch, snapshotId: string): string {
+  const snapshot = entry.params.snapshotId ?? snapshotId;
   const timeBasisRaw = entry.params.timeBasis ?? COMPARE_TIME_BASIS;
   const timeBasisLabel = timeBasisRaw === COMPARE_TIME_BASIS ? "Reveal Day (pinned)" : timeBasisRaw;
   const dimensions = entry.params.dimensionsVersion ?? "pre-1.1.0 (legacy)";
@@ -436,8 +438,9 @@ function compareReproducibilityLine(entry: SavedResearch): string {
 }
 
 function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
-  const comparePromotion = useMemo(() => savedResearchComparePromotion(entry), [entry]);
-  const briefingEligible = useMemo(() => savedResearchBriefingEligible(entry), [entry]);
+  const applications = useHubRegistryDocument().applications;
+  const comparePromotion = useMemo(() => savedResearchComparePromotion(entry, applications), [entry, applications]);
+  const briefingEligible = useMemo(() => savedResearchBriefingEligible(entry, applications), [entry, applications]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -479,7 +482,9 @@ function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
  */
 function SavedResearchCard({ entry }: { entry: SavedResearch }) {
   const { savedWork } = useInvestigation();
-  const currentCount = useMemo(() => currentCountForSavedResearch(entry), [entry]);
+  const registryFixture = useHubRegistryDocument();
+  const applications = registryFixture.applications;
+  const currentCount = useMemo(() => currentCountForSavedResearch(entry, applications), [entry, applications]);
 
   const change = useMemo(() => summarizeChangeSinceVisit({
     lastOpenedAt: entry.lastOpenedAt,
@@ -502,7 +507,7 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
           <p className="max-w-xl text-xs text-slate-700">{entry.summary}</p>
           <p className="mt-1.5 text-xs text-slate-600">Result count: <strong className="font-bold text-slate-900">{currentCount}</strong>{currentCount !== entry.recordCountAtSave ? ` (was ${entry.recordCountAtSave} at save)` : " (unchanged since save)"}</p>
           <p className="mt-1 text-xs text-slate-500">Saved {formatDateTime(entry.createdAt)} · Last opened {formatDateTime(entry.lastOpenedAt)} · Updated {formatDateTime(entry.updatedAt)}</p>
-          {entry.kind === "compare-config" && <p className="mt-1 text-xs text-slate-500">{compareReproducibilityLine(entry)}</p>}
+          {entry.kind === "compare-config" && <p className="mt-1 text-xs text-slate-500">{compareReproducibilityLine(entry, registryFixture.snapshotId)}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <Link href={openHrefForSavedResearch(entry)} onClick={() => savedWork.markSavedResearchOpened(entry.id)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]">
@@ -547,6 +552,7 @@ function SavedResearchTab() {
 }
 
 export function SavedContent({ state, initial }: { state: ViewState; initial: SavedParams }) {
+  const registryFixture = useHubRegistryDocument();
   const [tab, setTab] = useState(initial.tab === "research" ? "research" : "watchlists");
 
   useEffect(() => {
