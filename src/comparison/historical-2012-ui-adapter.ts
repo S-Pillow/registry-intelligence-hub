@@ -117,9 +117,9 @@ function pulseMeta(entry: ResolvedMetricEligibility) {
 
 function historicalStatusLine(entry: ResolvedMetricEligibility): string {
   if (entry.comparisonAllowed) {
-    return "Historical baseline — 2012 Reveal Day; cross-round comparison enabled for approved application counts.";
+    return "Historical aggregate fact — 2012 Reveal Day; cross-round comparison enabled for approved application counts.";
   }
-  return "Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.";
+  return "Historical aggregate fact — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.";
 }
 
 function rehearsalDeltaBlocked(): string {

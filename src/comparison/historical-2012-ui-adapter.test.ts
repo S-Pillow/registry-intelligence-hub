@@ -40,6 +40,7 @@ describe("historical-2012-ui-adapter", () => {
     const apps = pulse.find((m) => m.metricId === "application-count");
     expect(apps?.value).toBe(1930);
     expect(apps?.historicalFact?.value).toBe(1930);
+    expect(apps?.deltaLabel).toMatch(/Historical aggregate fact/i);
     expect(apps?.deltaLabel).toMatch(/2026 comparison pending publication/i);
     expect(apps?.deltaLabel).not.toMatch(/\+.*vs 2012/i);
     expect(apps?.comparisonAllowed).toBe(false);

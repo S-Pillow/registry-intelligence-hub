@@ -285,10 +285,19 @@ describe("Explore interactions", () => {
 });
 
 describe("Command Center → Explore drill-down", () => {
-  it("links Round Pulse metrics and supporting charts into Explore", () => {
+  it("links rehearsal Round Pulse metrics and supporting charts into Explore — not historical aggregates", () => {
     render(<CommandCenter />);
-    expect(screen.getByRole("link", { name: "Open IDN applications in Explore" })).toHaveAttribute("href", exploreDrillDownHref("idn"));
-    expect(screen.getByRole("link", { name: "Open Applications in Explore" })).toHaveAttribute("href", exploreDrillDownHref("all"));
+    expect(screen.queryByRole("link", { name: "Open IDN applications in Explore" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Applications in Explore" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Unique strings in Explore" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Organizations in Explore" })).toHaveAttribute(
+      "href",
+      exploreDrillDownHref("organizations"),
+    );
+    expect(screen.getByRole("link", { name: "Open Initial contention sets in Explore" })).toHaveAttribute(
+      "href",
+      exploreDrillDownHref("contention"),
+    );
     expect(screen.getByRole("link", { name: "Open Atlas Digital in Explore" })).toHaveAttribute(
       "href",
       exploreEntityResearchHref("organizations", "Atlas Digital"),
@@ -568,14 +577,15 @@ describe("Investigate — shared intelligence drawer", () => {
     );
   });
 
-  it("separates approved 2012 baselines from rehearsal supporting records in Round Pulse", async () => {
+  it("separates approved 2012 historical aggregates from rehearsal entity browse in Round Pulse", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
-    expect(await screen.findByText("Approved 2012 baseline")).toBeInTheDocument();
-    expect(screen.getByText(/rehearsal fixture browse context/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute("href", exploreDrillDownHref("all"));
+    expect(await screen.findByText("Approved 2012 historical aggregate")).toBeInTheDocument();
+    expect(screen.getByText(/Entity-level historical records not yet loaded/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "View full" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/SUPPORTING RECORDS · 12/)).not.toBeInTheDocument();
   });
 
   it("opens glance baseline cards without internal eligibility codes", async () => {
@@ -585,7 +595,7 @@ describe("Investigate — shared intelligence drawer", () => {
     await user.click(screen.getByRole("button", { name: "View intelligence for Application count: 1930 (2012 approved baseline)" }));
     expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
     expect(screen.queryByText(/BLOCKED_/)).not.toBeInTheDocument();
-    expect(screen.getByText(/No entity-level 2012 records/)).toBeInTheDocument();
+    expect(screen.getByText(/Entity-level historical records not yet loaded/i)).toBeInTheDocument();
   });
 
   it("labels signal insights as calculated and dataset health as action-unavailable", async () => {

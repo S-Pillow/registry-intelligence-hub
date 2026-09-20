@@ -69,7 +69,8 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreResearchHref,
-  recordsForRoundPulseFilter,
+  ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+  roundPulseSupportingRecords,
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
@@ -384,7 +385,9 @@ function IntelligenceDrawer({
   };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
   const fullHref = item ? exploreFullHrefForInvestigation(item) : "#";
-  const showViewFull = Boolean(item && canAct && (item.records.length > 0 || item.exploreFullHref));
+  const showViewFull = Boolean(
+    item && canAct && !item.historicalFact && (item.records.length > 0 || item.exploreFullHref),
+  );
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
@@ -399,10 +402,10 @@ function IntelligenceDrawer({
             <div className="space-y-6 px-6 pb-8">
               {item.historicalFact && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Approved 2012 baseline</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Approved 2012 historical aggregate</p>
                   <p className="mt-2 text-2xl font-bold text-slate-950">{item.historicalFact.value}</p>
                   <HistoricalFactCaption fact={item.historicalFact} />
-                  <p className="mt-2 text-xs text-slate-700">Supporting records below, when present, are rehearsal fixture browse context — not mixed into the 2012 aggregate.</p>
+                  <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
                 </div>
               )}
 
@@ -479,14 +482,12 @@ function IntelligenceDrawer({
                 </dl>
               </section>
 
-              {item.kind !== "coverage" && (
+              {item.kind !== "coverage" && !(item.historicalFact && item.records.length === 0) && (
                 <section>
                   <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SUPPORTING RECORDS · {item.records.length}</h3>
                   {item.records.length === 0 ? (
                     <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-700">
-                      {item.historicalFact
-                        ? "No entity-level 2012 records ship in this hub — the approved baseline above is aggregate-only. Use View full to browse the rehearsal fixture cohort."
-                        : "No supporting records are attached to this investigation item."}
+                      No supporting records are attached to this investigation item.
                     </p>
                   ) : (
                     <>
@@ -586,7 +587,7 @@ function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string;
 function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) {
   return (
     <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
-      Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.
+      Historical aggregate fact — 2012 Reveal Day (ICANN source, archived-copy preservation). Not entity-level browse. 2026 comparison pending publication.
     </span>
   );
 }
@@ -599,10 +600,12 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
       {metrics.map((metric) => {
         const isFocused = emphasized.has(metric.filter);
         const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
+        const isHistoricalAggregate = Boolean(metric.historicalFact);
         return (
         <div
           key={metric.id}
           data-lens-emphasized={isFocused ? "true" : undefined}
+          data-historical-aggregate={isHistoricalAggregate ? "true" : undefined}
           className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${isFocused ? "border-[#007d65] bg-emerald-50/70 shadow-md ring-1 ring-[#72dfb4]/40" : ""}`}
         >
           {focusMarker ? (
@@ -610,13 +613,18 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
               View focus · {focusMarker}
             </p>
           ) : null}
+          {isHistoricalAggregate ? (
+            <p className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]">
+              Historical aggregate · 2012 Reveal Day
+            </p>
+          ) : null}
           <ProvenanceSheet
             id={`metric-${metric.id}`}
             kind="metric"
-            label={`${metric.label}: ${metric.value}`}
-            records={recordsForRoundPulseFilter(metric.filter)}
+            label={`${metric.label}: ${metric.historicalFact ? metric.historicalFact.value : metric.value}`}
+            records={roundPulseSupportingRecords(metric)}
             historicalFact={metric.historicalFact}
-            exploreFullHref={exploreDrillDownHref(metric.filter)}
+            exploreFullHref={isHistoricalAggregate ? undefined : exploreDrillDownHref(metric.filter)}
             triggerClassName="group flex flex-1 flex-col p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
             trigger={
               <>
@@ -626,17 +634,28 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
                 <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.historicalFact ? metric.historicalFact.value : metric.value}</span>
                 {metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
                 <MetricReadinessCaption metric={metric} />
-                <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Investigate records</span>
+                <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {isHistoricalAggregate ? "View aggregate provenance" : "Investigate records"}
+                </span>
               </>
             }
           />
-          <Link
-            href={exploreDrillDownHref(metric.filter)}
-            aria-label={`Open ${metric.label} in Explore`}
-            className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
-          >
-            Open in Explore<ArrowRight className="size-3.5" />
-          </Link>
+          {isHistoricalAggregate ? (
+            <p
+              className="flex items-center border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"
+              title={ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}
+            >
+              Entity browse deferred
+            </p>
+          ) : (
+            <Link
+              href={exploreDrillDownHref(metric.filter)}
+              aria-label={`Open ${metric.label} in Explore`}
+              className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
+            >
+              Open in Explore<ArrowRight className="size-3.5" />
+            </Link>
+          )}
         </div>
       );
       })}
@@ -1373,12 +1392,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 {glanceMetrics.map((fact) => {
-                  const exploreFullHref =
-                    fact.metricId === "unique-applied-strings"
-                      ? exploreDrillDownHref("strings")
-                      : fact.metricId === "idn-applications"
-                        ? exploreDrillDownHref("idn")
-                        : exploreDrillDownHref("all");
                   return (
                     <ProvenanceSheet
                       key={fact.metricId}
@@ -1387,7 +1400,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       label={`${fact.label}: ${fact.value} (2012 approved baseline)`}
                       records={[]}
                       historicalFact={fact}
-                      exploreFullHref={exploreFullHref}
                       triggerClassName="group rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
                       trigger={
                         <>

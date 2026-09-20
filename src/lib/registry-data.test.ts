@@ -22,6 +22,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreResearchHref,
+  roundPulseSupportingRecords,
   numericCellDelta,
   recordsForEntity,
   rowHasDifference,
@@ -36,6 +37,19 @@ describe("immutable registry fixture", () => {
     expect(bytes.byteLength).toBe(declared.size);
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(declared.sha256);
     expect(manifest.immutable).toBe(true);
+  });
+});
+
+describe("Round Pulse supporting records", () => {
+  it("returns no rehearsal rows for approved 2012 historical aggregate cards", () => {
+    const pulse = buildRoundPulse(fixture.applications);
+    const historical = pulse.filter((metric) => metric.historicalFact);
+    expect(historical.map((m) => m.id).sort()).toEqual(["applications", "idn", "strings"]);
+    for (const metric of historical) {
+      expect(roundPulseSupportingRecords(metric)).toEqual([]);
+    }
+    const rehearsal = pulse.find((m) => m.id === "organizations");
+    expect(roundPulseSupportingRecords(rehearsal!)).toHaveLength(fixture.applications.length);
   });
 });
 

@@ -97,11 +97,23 @@ export function exploreResearchHref(query: string) {
   return `${hubPath("/explore")}${suffix}`;
 }
 
-/** Supporting records shown in Round Pulse provenance — aligned with Explore filter semantics. */
+/** Rehearsal 2026 cohort rows for Round Pulse drill-down — never mixed into approved 2012 aggregate cards. */
 export function recordsForRoundPulseFilter(filter: string, applications: Application[] = fixture.applications) {
   if (filter === "idn") return applications.filter((item) => item.idn);
   if (filter === "contention") return applications.filter((item) => item.contentionSet);
   return applications;
+}
+
+export const ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE =
+  "Entity-level historical records not yet loaded — this card is an approved 2012 aggregate fact only.";
+
+/** Round Pulse supporting records: empty for historical aggregate facts; rehearsal fixture otherwise. */
+export function roundPulseSupportingRecords(
+  metric: { filter: string; historicalFact?: unknown },
+  applications: Application[] = fixture.applications,
+) {
+  if (metric.historicalFact) return [];
+  return recordsForRoundPulseFilter(metric.filter, applications);
 }
 
 /** Command Center Round Pulse → Explore drill-down with composable URL state. */
