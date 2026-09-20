@@ -42,6 +42,31 @@ afterEach(() => {
 });
 
 describe("Explore 2012 historical — application table columns (D1)", () => {
+  it("shows participation filter as unavailable for the 2012 corpus", () => {
+    renderHistoricalExplore({
+      dataset: "2012-historical",
+      entity: "applications",
+      ids: "1-1386-27446",
+    });
+
+    const participation = screen.getByLabelText("Filter by participation");
+    expect(participation).toBeDisabled();
+    expect(participation).toHaveValue("unsupported");
+    expect(screen.getByRole("option", { name: "Not in 2012 corpus" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "New + returning" })).not.toBeInTheDocument();
+  });
+
+  it("does not apply returning-only URL status against 2012 rows", () => {
+    renderHistoricalExplore({
+      dataset: "2012-historical",
+      entity: "applications",
+      status: "returning",
+      ids: "1-1386-27446",
+    });
+
+    expect(screen.getByText(/1 applications result/i)).toBeInTheDocument();
+  });
+
   it("renders per-application columns without Applications or Participation headers", () => {
     renderHistoricalExplore({
       dataset: "2012-historical",

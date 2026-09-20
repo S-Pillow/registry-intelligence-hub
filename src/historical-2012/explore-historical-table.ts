@@ -29,3 +29,11 @@ export function historical2012ContentionMembershipLabel(
 export function historical2012IdnLabel(idn: boolean): string {
   return idn ? "IDN" : "Non-IDN";
 }
+
+/** Explore filter bar value when participation (new/returning) is not present on 2012 payload rows. */
+export const HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED = "unsupported" as const;
+
+/** Strip 2026-only participation filters before querying the 2012 corpus. */
+export function exploreFiltersFor2012Historical<T extends { status: string }>(filters: T): T {
+  return { ...filters, status: "all" };
+}

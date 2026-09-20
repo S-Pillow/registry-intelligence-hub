@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  exploreFiltersFor2012Historical,
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
   historical2012ContentionMembershipLabel,
   historical2012IdnLabel,
@@ -23,6 +24,15 @@ describe("2012 historical Explore application table model", () => {
     ]);
     expect(HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS).not.toContain("Applications");
     expect(HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS).not.toContain("Participation");
+  });
+
+  it("ignores 2026 participation filters when querying the 2012 corpus", () => {
+    expect(
+      exploreFiltersFor2012Historical({
+        status: "returning",
+        entity: "applications",
+      }),
+    ).toEqual({ status: "all", entity: "applications" });
   });
 
   it("formats contention and IDN from payload fields only", () => {

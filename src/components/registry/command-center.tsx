@@ -37,6 +37,8 @@ import {
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
   historical2012ContentionMembershipLabel,
   historical2012IdnLabel,
+  exploreFiltersFor2012Historical,
+  HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
 } from "@/historical-2012/explore-historical-table";
 import {
@@ -790,6 +792,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     const params = new URLSearchParams();
     if (is2012Historical) params.set("dataset", "2012-historical");
     Object.entries(filters).forEach(([key, value]) => {
+      if (is2012Historical && key === "status") return;
       if (value && !["all", "applications", "applications-desc"].includes(value)) params.set(key, value);
     });
     window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
@@ -806,9 +809,11 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
+  const exploreFilters = is2012Historical ? exploreFiltersFor2012Historical(filters) : filters;
+
   const applications = useMemo(
-    () => filterApplicationsByExplore(activeDocument.applications, filters),
-    [filters, activeDocument.applications],
+    () => filterApplicationsByExplore(activeDocument.applications, exploreFilters),
+    [exploreFilters, activeDocument.applications],
   );
 
   const rows = useMemo(() => {
@@ -901,7 +906,29 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
           <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></select></label>
           <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Region<select aria-label="Filter by region" value={filters.region} onChange={(event) => update("region", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label className="text-xs font-bold text-slate-700">Participation<select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} disabled={is2012Historical} title={is2012Historical ? "Returning-applicant participation is a 2026 concept — not used for 2012 historical rows." : undefined} className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}><option value="all">New + returning</option><option value="new">New</option><option value="returning">Returning</option></select></label>
+          {is2012Historical ? (
+            <label className="text-xs font-bold text-slate-700">
+              Participation
+              <select
+                aria-label="Filter by participation"
+                value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}
+                disabled
+                title="The 2012 Reveal Day application corpus does not include new/returning participation fields."
+                className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <option value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}>Not in 2012 corpus</option>
+              </select>
+            </label>
+          ) : (
+            <label className="text-xs font-bold text-slate-700">
+              Participation
+              <select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} className={`${selectClass} mt-1`}>
+                <option value="all">New + returning</option>
+                <option value="new">New</option>
+                <option value="returning">Returning</option>
+              </select>
+            </label>
+          )}
           <label className="text-xs font-bold text-slate-700">Contention<select aria-label="Filter by contention" value={filters.contention} onChange={(event) => update("contention", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All states</option><option value="in">In initial contention</option><option value="out">Not in contention</option></select></label>
           <label className="text-xs font-bold text-slate-700">IDN<select aria-label="Filter by IDN" value={filters.idn} onChange={(event) => update("idn", event.target.value)} className={`${selectClass} mt-1`}><option value="all">IDN + non-IDN</option><option value="idn">IDN only</option><option value="non-idn">Non-IDN</option></select></label>
           <label className="text-xs font-bold text-slate-700">Sort<select aria-label="Sort records" value={filters.sort} onChange={(event) => update("sort", event.target.value)} className={`${selectClass} mt-1`}><option value="applications-desc">Applications, high to low</option><option value="name-asc">Name, A–Z</option><option value="contention-desc">Contention first</option></select></label>
