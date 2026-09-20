@@ -14,7 +14,8 @@
     "reveal-2026": "tsx src/reveal-day-2026/cli.ts",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "smoke": "npm run build && node scripts/production-smoke.mjs",
-    "hub:production": "node scripts/start-hub-production.mjs"
+    "hub:production": "node scripts/start-hub-production.mjs",
+    "staging:path-bc-drill": "node scripts/staging-path-bc-drill.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
