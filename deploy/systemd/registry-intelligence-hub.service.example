@@ -1,0 +1,29 @@
+# Example systemd unit — Registry Intelligence Hub (production rehearsal)
+# Install on Ubuntu ForgeForward host (adjust User, WorkingDirectory, EnvironmentFile).
+#
+#   sudo cp deploy/systemd/registry-intelligence-hub.service.example \
+#     /etc/systemd/system/registry-intelligence-hub.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now registry-intelligence-hub
+#
+# After every `npm run build`, restart so HTML and /_next/static stay aligned.
+
+[Unit]
+Description=Registry Intelligence Hub (Next.js production)
+After=network.target
+
+[Service]
+Type=simple
+User=forgeforward
+Group=forgeforward
+WorkingDirectory=/opt/registry-intelligence-hub
+EnvironmentFile=-/etc/registry-intelligence-hub/env
+Environment=NODE_ENV=production
+Environment=HUB_HOST=127.0.0.1
+Environment=HUB_PORT=43123
+ExecStart=/usr/bin/npx next start -H ${HUB_HOST} -p ${HUB_PORT}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

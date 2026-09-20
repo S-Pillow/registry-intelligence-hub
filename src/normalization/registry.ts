@@ -29,7 +29,7 @@ export const FIXTURE_BUNDLE_REGISTRY: FixtureBundleDefinition[] = [
     version: 1,
     label: "ICANN 2012 Reveal Day applications (full round)",
     coverageNote:
-      "Full 1,930-application Reveal Day CSV plus official string-similarity contention PDF extraction — offline fixtures only; not wired to UI intelligence.",
+      "Full 1,930-application Reveal Day CSV plus official string-similarity contention PDF extraction — offline normalization; Command Center exposes three approved count metrics via historical-2012-ui-adapter/1.0.0 only.",
     roundProgramYear: 2012,
     fixtureRoot: "src/normalization/fixtures/icann2012-reveal-day-v1",
     applicationFormat: "reveal-day-csv",

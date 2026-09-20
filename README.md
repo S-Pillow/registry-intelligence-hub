@@ -40,6 +40,22 @@ npm run hub:production
 
 Then open `http://127.0.0.1:43123/tools/registry-intelligence-hub`.
 
+## Production rehearsal deploy (ForgeForward / Ubuntu)
+
+Full operator contract (route, feature flag, env, smoke): Project store `docs/production-rehearsal-hub-deploy.md` (Registry Intelligence Hub Agent Store).
+
+Minimal rehearsal on a host:
+
+```bash
+npm ci
+npm run verify
+# Rehearsal default — do not export REGISTRY_HUB_* claim/payload pins; remove any stray promotion file:
+rm -f .data/reveal-2026/claim-actuality-state.json
+npm run smoke
+```
+
+Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` with `features.registryIntelligenceHubCatalog` enabled only after smoke passes. Templates: `.env.production.rehearsal.example`, `deploy/systemd/registry-intelligence-hub.service.example`. Staging Path B/C drill (`npm run staging:path-bc-drill`) is optional on staging only — not required for production rehearsal.
+
 ## Phase 0 boundaries
 
 - `features.registryIntelligenceHubCatalog` is disabled. No catalog card or production routing is enabled.

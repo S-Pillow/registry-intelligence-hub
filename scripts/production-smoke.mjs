@@ -23,6 +23,27 @@ async function fetchOk(url, attempts = 8) {
   return last;
 }
 
+/** Rehearsal deploy default: no REGISTRY_HUB_* pins → 12-app fixture + 2012 approved baseline counts. */
+function assertRehearsalProductionContract(html) {
+  if (process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON?.trim()) return;
+  if (process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_JSON?.trim()) return;
+  if (process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH?.trim()) return;
+  if (process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_PATH?.trim()) return;
+
+  if (!html.includes("Rehearsal data only")) {
+    throw new Error("Command Center missing rehearsal banner (unexpected promoted claim/payload?)");
+  }
+  if (!html.includes("snap-rehearsal-2026-09-16")) {
+    throw new Error("Command Center missing rehearsal snapshot id (12-app fixture)");
+  }
+  if (!html.includes("1930")) {
+    throw new Error("Command Center missing 2012 approved baseline application count (1930)");
+  }
+  if (!html.includes("2026 comparison pending publication")) {
+    throw new Error("Command Center missing gated cross-round delta copy for rehearsal 2026");
+  }
+}
+
 async function assertClientChunksResolvable(html, pagePath) {
   const scripts = [...new Set([...html.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((match) => match[0]))];
   for (const script of scripts) {
@@ -87,6 +108,7 @@ try {
     }
     if (path === "/tools/registry-intelligence-hub") {
       await assertClientChunksResolvable(html, path);
+      assertRehearsalProductionContract(html);
     }
   }
 
