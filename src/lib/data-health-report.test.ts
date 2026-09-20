@@ -3,21 +3,30 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { DEFAULT_CLAIM_ACTUALITY_STATE } from "@/reveal-day-2026/claim-actuality";
-import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
+import { approvedApplicationActualityPromotionFixture } from "@/lib/claim-actuality-browser-wiring.test";
+import {
+  buildBrowserApplicationPayloadFromPublication,
+  resolveActiveRegistryApplicationsDocument,
+} from "@/lib/registry-application-payload";
+import { loadPublicationSnapshotFromPath } from "@/reveal-day-2026/dry-run";
 import {
   buildDataHealthSnapshot,
+  humanizePayloadSelectionReason,
   OFFLINE_2012_TAXONOMY_CLASSIFIED,
 } from "@/lib/data-health-report";
 
-describe("data-health-report", () => {
-  const defaultResolution = {
-    document: rehearsalRegistryApplicationsDocument(),
-    mode: "rehearsal" as const,
-    selectionReason: "rehearsal-default" as const,
-  };
+const DRILL_PUBLICATION = join(
+  process.cwd(),
+  "src/reveal-day-2026/fixtures/drill-2026-intake-v1/publication.snapshot.json",
+);
 
+describe("data-health-report", () => {
   it("reflects approved 2012 aggregates, rehearsal browser payload, and NOT_PUBLISHED 2026", () => {
-    const snapshot = buildDataHealthSnapshot(DEFAULT_CLAIM_ACTUALITY_STATE, defaultResolution);
+    const rehearsalResolution = resolveActiveRegistryApplicationsDocument(
+      DEFAULT_CLAIM_ACTUALITY_STATE,
+      null,
+    );
+    const snapshot = buildDataHealthSnapshot(DEFAULT_CLAIM_ACTUALITY_STATE, rehearsalResolution);
 
     expect(snapshot.browserDataState.approved2012Aggregates).toEqual({
       applications: 1930,
@@ -28,10 +37,18 @@ describe("data-health-report", () => {
     expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
     expect(snapshot.publicationReadiness.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
     expect(snapshot.browserDataState.real2026Publication).toMatch(/Not published/i);
+    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
+      /Rehearsal payload/i,
+    );
+    expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "actuality")?.status).toBe("pending");
   });
 
   it("keeps blocked method and coverage metrics gated in intelligence readiness", () => {
-    const snapshot = buildDataHealthSnapshot(DEFAULT_CLAIM_ACTUALITY_STATE, defaultResolution);
+    const rehearsalResolution = resolveActiveRegistryApplicationsDocument(
+      DEFAULT_CLAIM_ACTUALITY_STATE,
+      null,
+    );
+    const snapshot = buildDataHealthSnapshot(DEFAULT_CLAIM_ACTUALITY_STATE, rehearsalResolution);
     const contention = snapshot.intelligenceReadiness.find((r) => r.metricId === "contention-set-count");
     const categoryMix = snapshot.intelligenceReadiness.find((r) => r.metricId === "category-mix");
     const orgCount = snapshot.intelligenceReadiness.find((r) => r.metricId === "organization-round-count");
@@ -47,7 +64,10 @@ describe("data-health-report", () => {
   });
 
   it("documents Ticket B coverage facts in limitations", () => {
-    const snapshot = buildDataHealthSnapshot(DEFAULT_CLAIM_ACTUALITY_STATE, defaultResolution);
+    const snapshot = buildDataHealthSnapshot(
+      DEFAULT_CLAIM_ACTUALITY_STATE,
+      resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null),
+    );
     const joined = snapshot.coverageLimitations.join(" ");
     expect(joined).toContain("1930");
     expect(joined).toContain(`${OFFLINE_2012_TAXONOMY_CLASSIFIED}/1930`);
@@ -67,5 +87,58 @@ describe("data-health-report", () => {
     const classified = raw.records.filter((a) => a.reviewState !== "unclassified").length;
     expect(classified).toBe(OFFLINE_2012_TAXONOMY_CLASSIFIED);
     expect(classified + (APPROVED_2012_BASELINE.applications - classified)).toBe(1930);
+  });
+
+  it("promoted claim with matching drill payload surfaces promoted browser mode and unlock checklist", async () => {
+    const publication = await loadPublicationSnapshotFromPath(DRILL_PUBLICATION);
+    const payload = buildBrowserApplicationPayloadFromPublication(publication);
+    if (!payload.snapshotContentHash) throw new Error("expected drill content hash");
+    const promoted = {
+      ...approvedApplicationActualityPromotionFixture(),
+      snapshotId: payload.snapshotId,
+      snapshotContentHash: payload.snapshotContentHash,
+    };
+    const resolution = resolveActiveRegistryApplicationsDocument(promoted, payload);
+    expect(resolution.mode).toBe("promoted-2026");
+    expect(resolution.selectionReason).toBe("promoted-active");
+
+    const snapshot = buildDataHealthSnapshot(promoted, resolution);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/100-record/);
+    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
+      /Promoted 2026/i,
+    );
+    expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "browser-payload")?.status).toBe(
+      "complete",
+    );
+
+    const comparable = snapshot.intelligenceReadiness.filter((r) => r.methodReadiness === "COMPARABLE");
+    expect(comparable.some((r) => r.comparisonAllowed)).toBe(true);
+    expect(comparable.some((r) => r.round2026 === "REAL_SOURCE_READY")).toBe(true);
+  });
+
+  it("mismatched promotion pins fail closed to rehearsal in snapshot resolution inputs", async () => {
+    const publication = await loadPublicationSnapshotFromPath(DRILL_PUBLICATION);
+    const payload = buildBrowserApplicationPayloadFromPublication(publication);
+    if (!payload.snapshotContentHash) throw new Error("expected drill content hash");
+    const promoted = {
+      ...approvedApplicationActualityPromotionFixture(),
+      snapshotId: payload.snapshotId,
+      snapshotContentHash: payload.snapshotContentHash,
+    };
+
+    const hashMismatch = resolveActiveRegistryApplicationsDocument(
+      { ...promoted, snapshotContentHash: "wrong-hash" },
+      payload,
+    );
+    expect(hashMismatch.mode).toBe("rehearsal");
+    expect(hashMismatch.selectionReason).toBe("content-hash-mismatch");
+    expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed/i);
+
+    const snapshot = buildDataHealthSnapshot(promoted, hashMismatch);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "browser-payload")?.status).toBe(
+      "warning",
+    );
+    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(/Rehearsal/i);
   });
 });

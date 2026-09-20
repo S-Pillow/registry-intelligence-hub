@@ -64,8 +64,24 @@ export type IntelligenceReadinessRow = {
   explanation: string;
 };
 
+export type CurrentStateSummaryRow = {
+  id: string;
+  title: string;
+  primary: string;
+  secondary?: string;
+  tone: "ready" | "partial" | "blocked" | "muted" | "context";
+};
+
+export type PublicationChecklistItem = {
+  id: string;
+  label: string;
+  status: "complete" | "pending" | "blocked" | "warning";
+  detail: string;
+};
+
 export type DataHealthSnapshot = {
   catalogVersion: string;
+  currentStateSummary: CurrentStateSummaryRow[];
   sourceHealth: SourceHealthRow[];
   intelligenceReadiness: IntelligenceReadinessRow[];
   browserDataState: {
@@ -87,8 +103,163 @@ export type DataHealthSnapshot = {
     comparableMetricsTotal: number;
     unlockSummary: string;
     prerequisites: string[];
+    checklist: PublicationChecklistItem[];
   };
 };
+
+export function humanizeMethodReadiness(readiness: MetricReadiness | string): string {
+  if (readiness === "COMPARABLE") return "Comparable method";
+  if (readiness === "PARTIAL") return "Partial method";
+  if (readiness === "BLOCKED_METHOD") return "Blocked by method";
+  if (readiness === "BLOCKED_COVERAGE") return "Blocked by coverage";
+  if (readiness === "BLOCKED_SOURCE") return "Blocked by source";
+  if (readiness === "NOT_APPLICABLE") return "Not applicable";
+  return String(readiness).replaceAll("_", " ").toLowerCase();
+}
+
+export function humanizeClaimReadiness(readiness: ClaimReadiness | string): string {
+  if (readiness === "REAL_SOURCE_READY") return "Approved source ready";
+  if (readiness === "HISTORICAL_ONLY") return "Historical baseline only";
+  if (readiness === "REHEARSAL_ONLY") return "Rehearsal fixture only";
+  if (readiness === "NOT_PUBLISHED") return "Not published";
+  return String(readiness).replaceAll("_", " ").toLowerCase();
+}
+
+export function humanizeBrowserPayloadMode(mode: HubRegistryDataResolution["mode"]): string {
+  if (mode === "promoted-2026") return "Promoted 2026 payload active";
+  return "Rehearsal payload (12-app drill fixture)";
+}
+
+export function humanizePayloadSelectionReason(
+  reason: HubRegistryDataResolution["selectionReason"],
+): string {
+  switch (reason) {
+    case "rehearsal-default":
+      return "Default rehearsal — no promotion env configured";
+    case "claim-not-promoted":
+      return "2026 claim not promoted — rehearsal fallback";
+    case "payload-not-configured":
+      return "Promoted claim set but browser payload missing — rehearsal fallback";
+    case "snapshot-id-mismatch":
+      return "Snapshot id pin mismatch — fail-closed to rehearsal";
+    case "content-hash-mismatch":
+      return "Content hash pin mismatch — fail-closed to rehearsal";
+    case "promoted-active":
+      return "Pins match promoted publication — payload active";
+    default:
+      return reason;
+  }
+}
+
+function buildCurrentStateSummary(
+  claimActuality: ClaimActualityState,
+  resolution: HubRegistryDataResolution,
+  comparableUnlocked: number,
+  comparableTotal: number,
+): CurrentStateSummaryRow[] {
+  const agg = APPROVED_2012_BASELINE;
+  const comparisonPrimary =
+    comparableUnlocked > 0
+      ? `${comparableUnlocked} of ${comparableTotal} comparable metrics unlocked`
+      : comparableTotal > 0
+        ? "All comparable metrics gated"
+        : "No comparable metrics at current method readiness";
+
+  return [
+    {
+      id: "browser-mode",
+      title: "Browser payload mode",
+      primary: humanizeBrowserPayloadMode(resolution.mode),
+      secondary: resolution.mode,
+      tone: resolution.mode === "promoted-2026" ? "ready" : "context",
+    },
+    {
+      id: "2012-aggregates",
+      title: "2012 aggregate readiness",
+      primary: `${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline in UI)`,
+      secondary: "Entity-level 2012 rows not loaded in browser",
+      tone: "partial",
+    },
+    {
+      id: "2012-entity-browser",
+      title: "2012 entity browser",
+      primary: "Not loaded — aggregate-only historical counts",
+      secondary: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+      tone: "blocked",
+    },
+    {
+      id: "2026-publication",
+      title: "2026 publication state",
+      primary:
+        claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY"
+          ? "Real 2026 application source promoted"
+          : "Not published — rehearsal identity only",
+      secondary: claimActuality.round2026ApplicationActuality,
+      tone:
+        claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY" ? "ready" : "muted",
+    },
+    {
+      id: "cross-round",
+      title: "Cross-round comparison",
+      primary: comparisonPrimary,
+      secondary:
+        claimActuality.round2026ApplicationActuality === "NOT_PUBLISHED"
+          ? "2026 NOT_PUBLISHED gates application-count family"
+          : `${comparableUnlocked}/${comparableTotal} COMPARABLE allow comparison`,
+      tone: comparableUnlocked > 0 ? "ready" : "partial",
+    },
+  ];
+}
+
+function buildPublicationChecklist(
+  claimActuality: ClaimActualityState,
+  resolution: HubRegistryDataResolution,
+  comparableUnlocked: number,
+): PublicationChecklistItem[] {
+  const actualityComplete = claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY";
+  const payloadComplete = resolution.selectionReason === "promoted-active";
+  const payloadWarning =
+    resolution.selectionReason === "snapshot-id-mismatch" ||
+    resolution.selectionReason === "content-hash-mismatch";
+
+  return [
+    {
+      id: "actuality",
+      label: "2026 application actuality promoted",
+      status: actualityComplete ? "complete" : "pending",
+      detail: actualityComplete
+        ? `Promoted${claimActuality.promotedAt ? ` at ${claimActuality.promotedAt}` : ""} · snapshot ${claimActuality.snapshotId ?? "—"}`
+        : "Steward promote-actuality required before real 2026 identity.",
+    },
+    {
+      id: "browser-payload",
+      label: "Hash-matched browser application payload",
+      status: payloadComplete ? "complete" : payloadWarning ? "warning" : "pending",
+      detail: humanizePayloadSelectionReason(resolution.selectionReason),
+    },
+    {
+      id: "org-resolution",
+      label: "Organization resolution steward promotion",
+      status: "pending",
+      detail: `${ORGANIZATION_RESOLUTION_METHOD} — ${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} apps promoted offline; org/portfolio cross-round metrics stay gated.`,
+    },
+    {
+      id: "entity-2012",
+      label: "Entity-level 2012 browser payload (Ticket D)",
+      status: "blocked",
+      detail: "Full-round Explore rows not wired; offline normalized corpus available via CLI only.",
+    },
+    {
+      id: "comparison-unlock",
+      label: "Cross-round comparable metrics unlocked",
+      status: comparableUnlocked > 0 ? "complete" : actualityComplete ? "pending" : "blocked",
+      detail:
+        comparableUnlocked > 0
+          ? `${comparableUnlocked} metric(s) allow cross-round comparison at current actuality.`
+          : "All COMPARABLE metrics remain comparison-gated until publication preconditions are met.",
+    },
+  ];
+}
 
 function methodReadinessLabel(method: MetricReadiness): SourceReadinessLabel {
   if (method === "COMPARABLE") return "Ready";
@@ -241,6 +412,12 @@ export function buildDataHealthSnapshot(
 
   return {
     catalogVersion: METRIC_ELIGIBILITY_CATALOG_VERSION,
+    currentStateSummary: buildCurrentStateSummary(
+      claimActuality,
+      resolution,
+      comparableUnlocked,
+      comparableTotal,
+    ),
     sourceHealth: buildSourceHealthRows(resolution, claimActuality),
     intelligenceReadiness: buildIntelligenceReadinessRows(claimActuality),
     browserDataState: {
@@ -276,6 +453,7 @@ export function buildDataHealthSnapshot(
       comparableMetricsTotal: comparableTotal,
       unlockSummary: `${comparableUnlocked} of ${comparableTotal} COMPARABLE metrics allow cross-round comparison at current actuality.`,
       prerequisites,
+      checklist: buildPublicationChecklist(claimActuality, resolution, comparableUnlocked),
     },
   };
 }
