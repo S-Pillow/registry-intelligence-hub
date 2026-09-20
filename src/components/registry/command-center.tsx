@@ -81,6 +81,7 @@ import {
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
+import { DataHealthContent } from "@/components/registry/data-health-content";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 
@@ -98,6 +99,11 @@ type ViewState = "ready" | "loading" | "empty" | "error";
 export type { CompareEntityType };
 
 const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
+
+function hubNavHref(item: string, index: number): string {
+  if (index === 0) return "/";
+  return `/${item.toLowerCase().replace(/ /g, "-")}`;
+}
 
 const TIME_BASIS_UNAVAILABLE =
   "Unavailable while the 2026 round remains unpublished. Reveal Day shows the approved 2012 baseline and rehearsal fixture context only.";
@@ -138,8 +144,7 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  index < 5 ? <Link key={item} href={index === 0 ? "/" : `/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
-                  <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
+                  <Link key={item} href={hubNavHref(item, index)} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link>
                 ))}
               </nav>
             </SheetContent>
@@ -155,19 +160,13 @@ function HubNav({ active = "Command Center" }: { active?: string }) {
     <div className="border-b bg-white">
       <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
         {navItems.map((item, index) => (
-          index < 5 ? (
-            <Link
-              key={item}
-              href={index === 0 ? "/" : `/${item.toLowerCase()}`}
-              className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
-            >
-              {item}
-            </Link>
-          ) : (
-            <button key={item} className="shrink-0 cursor-not-allowed border-b-2 border-transparent px-3 py-3 text-sm font-medium text-slate-400 opacity-70" disabled title="Planned for a later slice">
-              {item}<span className="ml-1 text-[10px] font-normal uppercase tracking-wide">(planned)</span>
-            </button>
-          )
+          <Link
+            key={item}
+            href={hubNavHref(item, index)}
+            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
+          >
+            {item}
+          </Link>
         ))}
       </div>
     </div>
@@ -1178,7 +1177,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
@@ -1253,8 +1252,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader />
-      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} /> : (
+      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : view === "data-health" ? "Data Health" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>

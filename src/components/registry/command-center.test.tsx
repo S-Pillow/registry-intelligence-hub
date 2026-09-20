@@ -623,12 +623,12 @@ describe("Investigate — shared intelligence drawer", () => {
 });
 
 describe("Saved navigation and one-click Watch", () => {
-  it("enables the Saved and Briefings navigation links while Data Health remains planned", () => {
+  it("enables Saved, Briefings, and Data Health navigation links", () => {
     render(<CommandCenter />);
 
     expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved");
     expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/briefings");
-    expect(screen.getByText("Data Health").closest("button")).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Data Health" })).toHaveAttribute("href", "/data-health");
   });
 
   it("one-click Watches an entity from Explore and reflects the same watched state from the intelligence drawer", async () => {
