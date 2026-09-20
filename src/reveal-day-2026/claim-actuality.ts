@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 import type { ClaimReadiness } from "../comparison/claim-readiness";
 import { METRIC_ELIGIBILITY_CATALOG } from "../comparison/metric-eligibility-catalog";
 import { resolveMetricEligibility } from "../comparison/metric-eligibility";
@@ -56,27 +54,6 @@ export const DEFAULT_CLAIM_ACTUALITY_STATE: ClaimActualityState = {
     contaminationClear: false,
   },
 };
-
-export async function readClaimActualityState(statePath: string): Promise<ClaimActualityState> {
-  try {
-    const text = await readFile(statePath, "utf8");
-    const parsed = JSON.parse(text) as ClaimActualityState;
-    if (parsed.version !== CLAIM_ACTUALITY_STATE_VERSION) {
-      throw new Error(`Unsupported claim actuality state version: ${parsed.version}`);
-    }
-    return parsed;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return { ...DEFAULT_CLAIM_ACTUALITY_STATE };
-    }
-    throw error;
-  }
-}
-
-export async function writeClaimActualityState(statePath: string, state: ClaimActualityState): Promise<void> {
-  await mkdir(dirname(statePath), { recursive: true });
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-}
 
 export function effectiveRound2026ClaimReadiness(
   metricId: string,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 import { registryFixture, type EntityType, type Lens } from "@/lib/registry-data";
 import {
   currentScopeRecordCount,
@@ -30,6 +31,7 @@ import {
 const QUICK_WATCHLIST_NAME = "Quick Watchlist";
 
 export function useSavedWork() {
+  const claimActualityState = useHubClaimActualityState();
   const [storage] = useState<SavedWorkStorage>(() => createSavedWorkStorage());
   const [hydrated, setHydrated] = useState(false);
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
@@ -237,7 +239,7 @@ export function useSavedWork() {
     const now = new Date().toISOString();
     const emphasis = input.emphasis ?? defaultEmphasisForAudience(input.audience);
     const detailLevel = input.detailLevel ?? defaultDetailLevelForAudience(input.audience);
-    const generated = generateEditionContent({ scope: input.scope, emphasis, detailLevel, sectionsWanted: input.sectionsWanted, context: scopeGenerationContext(input.scope) });
+    const generated = generateEditionContent({ scope: input.scope, emphasis, detailLevel, sectionsWanted: input.sectionsWanted, context: scopeGenerationContext(input.scope), claimActualityState });
     const definitionId = generateSavedId("briefing");
     const editionId = generateSavedId("edition");
     const definition: BriefingDefinition = {
@@ -266,7 +268,7 @@ export function useSavedWork() {
       return next;
     });
     return { definition, edition };
-  }, [storage, scopeGenerationContext]);
+  }, [storage, scopeGenerationContext, claimActualityState]);
 
   const renameBriefing = useCallback((id: string, name: string) => {
     setBriefingDefinitions((current) => {
@@ -313,7 +315,7 @@ export function useSavedWork() {
   const updateBriefingToCurrent = useCallback((definitionId: string) => {
     const definition = briefingDefinitions.find((entry) => entry.id === definitionId);
     if (!definition) return;
-    const generated = generateEditionContent({ scope: definition.scope, emphasis: definition.emphasis, detailLevel: definition.detailLevel, sectionsWanted: definition.sectionsWanted, context: scopeGenerationContext(definition.scope) });
+    const generated = generateEditionContent({ scope: definition.scope, emphasis: definition.emphasis, detailLevel: definition.detailLevel, sectionsWanted: definition.sectionsWanted, context: scopeGenerationContext(definition.scope), claimActualityState });
     const newEditionId = generateSavedId("edition");
     const now = new Date().toISOString();
 
@@ -330,7 +332,7 @@ export function useSavedWork() {
       storage.persistBriefingDefinitions(next);
       return next;
     });
-  }, [briefingDefinitions, storage, scopeGenerationContext]);
+  }, [briefingDefinitions, storage, scopeGenerationContext, claimActualityState]);
 
   /**
    * Adjusts a Definition's default detail level for its *next* regeneration

@@ -1,4 +1,9 @@
-import { METRIC_ELIGIBILITY_CATALOG_VERSION, resolveMetricEligibility } from "./metric-eligibility";
+import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+  resolveHubMetricEligibility,
+} from "@/lib/hub-metric-eligibility";
+import { METRIC_ELIGIBILITY_CATALOG_VERSION } from "./metric-eligibility";
 
 /** Hard consumption path — Explore must not invent comparison gates locally. */
 export const EXPLORE_ELIGIBILITY_CATALOG_VERSION = METRIC_ELIGIBILITY_CATALOG_VERSION;
@@ -18,8 +23,10 @@ const EXPLORE_HISTORICAL_METRIC_IDS = [
   "idn-applications",
 ] as const;
 
-export function getExploreHistoricalIntelligencePolicy(): ExploreHistoricalIntelligencePolicy {
-  const resolved = EXPLORE_HISTORICAL_METRIC_IDS.map((id) => resolveMetricEligibility(id)!);
+export function getExploreHistoricalIntelligencePolicy(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): ExploreHistoricalIntelligencePolicy {
+  const resolved = EXPLORE_HISTORICAL_METRIC_IDS.map((id) => resolveHubMetricEligibility(id, claimActualityState)!);
   return {
     catalogVersion: EXPLORE_ELIGIBILITY_CATALOG_VERSION,
     historicalMetricIds: [...EXPLORE_HISTORICAL_METRIC_IDS],
@@ -27,13 +34,18 @@ export function getExploreHistoricalIntelligencePolicy(): ExploreHistoricalIntel
   };
 }
 
-export function exploreCrossRoundComparisonAllowed(metricId: string): boolean {
-  return resolveMetricEligibility(metricId)?.comparisonAllowed ?? false;
+export function exploreCrossRoundComparisonAllowed(
+  metricId: string,
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): boolean {
+  return resolveHubMetricEligibility(metricId, claimActualityState)?.comparisonAllowed ?? false;
 }
 
 /** User-facing disclosure for Explore when rehearsal browsing is allowed but cross-round compare is gated. */
-export function exploreHistoricalComparisonDisclosure(): string {
-  const policy = getExploreHistoricalIntelligencePolicy();
-  const identity = resolveMetricEligibility("returning-participant-identity");
+export function exploreHistoricalComparisonDisclosure(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): string {
+  const policy = getExploreHistoricalIntelligencePolicy(claimActualityState);
+  const identity = resolveHubMetricEligibility("returning-participant-identity", claimActualityState);
   return `Historical intelligence follows ${policy.catalogVersion}. Rehearsal entity browsing only; cross-round comparison withheld while 2026 remains ${identity?.claimReadiness.round2026 ?? "NOT_PUBLISHED"}.`;
 }

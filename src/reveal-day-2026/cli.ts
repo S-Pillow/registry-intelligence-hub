@@ -5,9 +5,11 @@ import { fetchOne } from "../pipeline/pipeline";
 import {
   evaluateApplicationActualityPromotion,
   organizationMetricsRemainGatedAfterApplicationPromotion,
+} from "./claim-actuality";
+import {
   readClaimActualityState,
   writeClaimActualityState,
-} from "./claim-actuality";
+} from "./claim-actuality-persistence";
 import { buildComparisonUnlockReport } from "./comparison-unlock";
 import { assertNoFixtureContaminationInRealBuild } from "./contamination";
 import { loadPublicationSnapshotFromPath, runDryRunIngestion } from "./dry-run";

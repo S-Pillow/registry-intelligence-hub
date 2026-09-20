@@ -1,6 +1,11 @@
 import type { EntityType } from "@/lib/registry-data";
 import type { ClaimReadiness } from "./claim-readiness";
-import { getCompareDimensionEligibility, getMetricEligibility, resolveMetricEligibility } from "./metric-eligibility";
+import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+  resolveHubMetricEligibility,
+} from "@/lib/hub-metric-eligibility";
+import { getCompareDimensionEligibility, getMetricEligibility } from "./metric-eligibility";
 import type { MetricReadiness } from "./readiness";
 import { isReadinessComparable } from "./readiness";
 
@@ -22,8 +27,8 @@ export type CompareRowEligibility = {
   cells: CompareCellEligibility[];
 };
 
-function eligibilityForMetric(metricId: string) {
-  const entry = resolveMetricEligibility(metricId);
+function eligibilityForMetric(metricId: string, claimActualityState: ClaimActualityState) {
+  const entry = resolveHubMetricEligibility(metricId, claimActualityState);
   if (!entry) {
     return {
       methodReadiness: "BLOCKED_METHOD" as MetricReadiness,
@@ -44,8 +49,11 @@ function eligibilityForMetric(metricId: string) {
   };
 }
 
-export function participationStatusCellForApplication(returningFlag: boolean): CompareCellEligibility {
-  const meta = eligibilityForMetric("returning-participant-identity");
+export function participationStatusCellForApplication(
+  returningFlag: boolean,
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): CompareCellEligibility {
+  const meta = eligibilityForMetric("returning-participant-identity", claimActualityState);
   return {
     value: returningFlag
       ? "Fixture flags returning (outcome not verified)"
@@ -56,10 +64,13 @@ export function participationStatusCellForApplication(returningFlag: boolean): C
   };
 }
 
-export function participationStatusCellForOrganization(returningFlag: boolean): CompareCellEligibility {
+export function participationStatusCellForOrganization(
+  returningFlag: boolean,
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): CompareCellEligibility {
   const entry = getCompareDimensionEligibility("participation-status-identity")
     ?? getMetricEligibility("returning-participant-identity");
-  const resolved = entry ? resolveMetricEligibility(entry.metricId) : undefined;
+  const resolved = entry ? resolveHubMetricEligibility(entry.metricId, claimActualityState) : undefined;
   const meta = resolved
     ? {
         methodReadiness: resolved.methodReadiness,
@@ -69,7 +80,7 @@ export function participationStatusCellForOrganization(returningFlag: boolean): 
         source: resolved.source2012,
         method: resolved.method,
       }
-    : eligibilityForMetric("returning-participant-identity");
+    : eligibilityForMetric("returning-participant-identity", claimActualityState);
 
   if (meta.methodReadiness === "BLOCKED_SOURCE") {
     return {
@@ -100,8 +111,11 @@ export function participationStatusCellForOrganization(returningFlag: boolean): 
   };
 }
 
-export function marketDemandCells(entityCount: number): CompareCellEligibility[] {
-  const entry = resolveMetricEligibility("historical-market-demand")!;
+export function marketDemandCells(
+  entityCount: number,
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): CompareCellEligibility[] {
+  const entry = resolveHubMetricEligibility("historical-market-demand", claimActualityState)!;
   return Array.from({ length: entityCount }, () => ({
     value: "Not available — source not approved",
     state: "unavailable",

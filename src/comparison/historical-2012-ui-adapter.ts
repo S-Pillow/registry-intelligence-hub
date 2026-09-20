@@ -2,11 +2,13 @@ import type { Application } from "@/lib/registry-data";
 import { APPROVED_2012_BASELINE } from "./approved-2012-baseline";
 import type { ClaimReadiness } from "./claim-readiness";
 import {
-  getMetricEligibility,
-  requireMetricEligibility,
-  readinessBlocksComparablePresentation,
-  type ResolvedMetricEligibility,
-} from "./metric-eligibility";
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+  requireHubMetricEligibility,
+  hubReadinessBlocksComparablePresentation,
+} from "@/lib/hub-metric-eligibility";
+import type { ResolvedMetricEligibility } from "./metric-eligibility";
+import { getMetricEligibility } from "./metric-eligibility";
 import type { MetricDisplayTier, MetricReadiness } from "./readiness";
 import { isReadinessComparable } from "./readiness";
 
@@ -70,8 +72,11 @@ function baselineValueForMetric(metricId: (typeof APPROVED_UI_SWAP_METRIC_IDS)[n
   return APPROVED_2012_BASELINE.idnApplications;
 }
 
-export function buildApproved2012HistoricalFact(metricId: (typeof APPROVED_UI_SWAP_METRIC_IDS)[number]): HistoricalMetricFact {
-  const entry = requireMetricEligibility(metricId);
+export function buildApproved2012HistoricalFact(
+  metricId: (typeof APPROVED_UI_SWAP_METRIC_IDS)[number],
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): HistoricalMetricFact {
+  const entry = requireHubMetricEligibility(metricId, claimActualityState);
   return {
     metricId,
     value: baselineValueForMetric(metricId),
@@ -88,8 +93,10 @@ export function buildApproved2012HistoricalFact(metricId: (typeof APPROVED_UI_SW
   };
 }
 
-export function buildApproved2012HistoricalFacts(): HistoricalMetricFact[] {
-  return APPROVED_UI_SWAP_METRIC_IDS.map((metricId) => buildApproved2012HistoricalFact(metricId));
+export function buildApproved2012HistoricalFacts(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): HistoricalMetricFact[] {
+  return APPROVED_UI_SWAP_METRIC_IDS.map((metricId) => buildApproved2012HistoricalFact(metricId, claimActualityState));
 }
 
 function uniqueCount<T>(values: T[]) {
@@ -109,6 +116,9 @@ function pulseMeta(entry: ResolvedMetricEligibility) {
 }
 
 function historicalStatusLine(entry: ResolvedMetricEligibility): string {
+  if (entry.comparisonAllowed) {
+    return "Historical baseline — 2012 Reveal Day; cross-round comparison enabled for approved application counts.";
+  }
   return "Historical baseline — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.";
 }
 
@@ -120,18 +130,21 @@ function rehearsalDeltaBlocked(): string {
  * Incremental Command Center round pulse: approved 2012 historical facts for the three count metrics;
  * remaining cards stay on rehearsal fixture with explicit gates.
  */
-export function buildCommandCenterRoundPulse(applications: Application[]): PresentedHistoricalMetric[] {
+export function buildCommandCenterRoundPulse(
+  applications: Application[],
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): PresentedHistoricalMetric[] {
   const baseline = APPROVED_2012_BASELINE;
-  const applicationEntry = requireMetricEligibility("application-count");
-  const stringsEntry = requireMetricEligibility("unique-applied-strings");
-  const orgEntry = requireMetricEligibility("organization-round-count");
-  const regionsEntry = requireMetricEligibility("distinct-regions");
-  const idnEntry = requireMetricEligibility("idn-applications");
-  const contentionEntry = requireMetricEligibility("contention-set-count");
+  const applicationEntry = requireHubMetricEligibility("application-count", claimActualityState);
+  const stringsEntry = requireHubMetricEligibility("unique-applied-strings", claimActualityState);
+  const orgEntry = requireHubMetricEligibility("organization-round-count", claimActualityState);
+  const regionsEntry = requireHubMetricEligibility("distinct-regions", claimActualityState);
+  const idnEntry = requireHubMetricEligibility("idn-applications", claimActualityState);
+  const contentionEntry = requireHubMetricEligibility("contention-set-count", claimActualityState);
 
-  const appFact = buildApproved2012HistoricalFact("application-count");
-  const stringsFact = buildApproved2012HistoricalFact("unique-applied-strings");
-  const idnFact = buildApproved2012HistoricalFact("idn-applications");
+  const appFact = buildApproved2012HistoricalFact("application-count", claimActualityState);
+  const stringsFact = buildApproved2012HistoricalFact("unique-applied-strings", claimActualityState);
+  const idnFact = buildApproved2012HistoricalFact("idn-applications", claimActualityState);
 
   return [
     {
@@ -201,14 +214,21 @@ export function buildCommandCenterRoundPulse(applications: Application[]): Prese
 }
 
 /** Approved 2012 facts for side-by-side glance — structured facts only, no rehearsal comparison. */
-export function buildRevealDayGlanceMetrics(_applications: Application[]): GlanceMetric[] {
-  return buildApproved2012HistoricalFacts();
+export function buildRevealDayGlanceMetrics(
+  _applications: Application[],
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): GlanceMetric[] {
+  return buildApproved2012HistoricalFacts(claimActualityState);
 }
 
 export function isMetricGatedForUi(metricId: string): boolean {
   const entry = getMetricEligibility(metricId);
   if (!entry) return true;
   return readinessBlocksComparablePresentation(entry.methodReadiness);
+}
+
+function readinessBlocksComparablePresentation(methodReadiness: MetricReadiness): boolean {
+  return hubReadinessBlocksComparablePresentation(methodReadiness);
 }
 
 export function approved2012ContentionMembershipNote(): string {

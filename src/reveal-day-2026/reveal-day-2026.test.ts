@@ -6,10 +6,12 @@ import {
   DEFAULT_CLAIM_ACTUALITY_STATE,
   evaluateApplicationActualityPromotion,
   organizationMetricsRemainGatedAfterApplicationPromotion,
-  readClaimActualityState,
   resolveMetricEligibilityWithActuality,
-  writeClaimActualityState,
 } from "./claim-actuality";
+import {
+  readClaimActualityState,
+  writeClaimActualityState,
+} from "./claim-actuality-persistence";
 import { buildComparisonUnlockReport } from "./comparison-unlock";
 import { assertNoFixtureContaminationInRealBuild } from "./contamination";
 import { loadPublicationSnapshotFromPath, runDryRunIngestion } from "./dry-run";

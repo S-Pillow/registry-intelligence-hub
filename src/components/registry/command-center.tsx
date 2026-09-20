@@ -50,7 +50,7 @@ import {
   portfolioRanking,
   registryFixture,
   rowHasDifference,
-  roundPulse,
+  buildRoundPulse,
   insightEmphasisForLens,
   investigationQueueLensNote,
   lensIntelligenceSubtitles,
@@ -72,7 +72,7 @@ import {
   exploreResearchHref,
   recordsForRoundPulseFilter,
 } from "@/lib/registry-data";
-import { buildRevealDayGlanceMetrics, type HistoricalMetricFact, type PresentedHistoricalMetric } from "@/comparison/historical-2012-ui-adapter";
+import { buildRevealDayGlanceMetrics, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import {
   participationStatusCellForApplication,
@@ -81,6 +81,7 @@ import {
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
+import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 
 export type { SavedParams };
 import {
@@ -533,7 +534,7 @@ function ComparisonTray() {
   );
 }
 
-function metricCardSurfaceClass(metric: PresentedHistoricalMetric & { delta: string }) {
+function metricCardSurfaceClass(metric: { displayTier: string }) {
   if (metric.displayTier === "production-ready") {
     return "border-emerald-400/60 bg-white";
   }
@@ -588,8 +589,7 @@ function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) 
   );
 }
 
-function MetricCards({ lens }: { lens: Lens }) {
-  const metrics = roundPulse as (PresentedHistoricalMetric & { delta: string })[];
+function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof buildRoundPulse> }) {
   const emphasized = new Set(roundPulseEmphasisByLens[lens]);
 
   return (
@@ -683,6 +683,7 @@ export type ExploreParams = {
 };
 
 function ExploreContent({ state, initial }: { state: ViewState; initial: ExploreParams }) {
+  const claimActualityState = useHubClaimActualityState();
   const [filters, setFilters] = useState({
     q: initial.q ?? "",
     entity: initial.entity ?? "applications",
@@ -740,7 +741,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
   const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
   const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
-  const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure();
+  const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure(claimActualityState);
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -841,6 +842,7 @@ export type CompareParams = {
  * belong in a v2 proposal, not incremental edits to this component.
  */
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
+  const claimActualityState = useHubClaimActualityState();
   const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
   const [type, setType] = useState<CompareEntityType>(initialType);
   const [selected, setSelected] = useState(() => {
@@ -904,7 +906,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Regions", definition: "Distinct applicant regions in the fixture.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
         { label: "IDN applications", definition: "Applications with a preserved Unicode/A-label representation.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
         { label: "Participation status (identity)", definition: "Cross-round organization identity only — post-Reveal outcomes are not ingested.", section: "historical-participation", cells: entities.map((entity) => {
-          const eligibility = participationStatusCellForOrganization(entity.records.some((record) => record.returning));
+          const eligibility = participationStatusCellForOrganization(entity.records.some((record) => record.returning), claimActualityState);
           return cell(String(eligibility.value), eligibility.state);
         }) },
         { label: "Categories", definition: "Distinct versioned fixture categories represented.", section: "existing-portfolio", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.category))].join(", "))) },
@@ -917,7 +919,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         { label: "Region", definition: "Applicant region derived from published country.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].region)) },
         { label: "Initial contention", definition: "Initial identical-string set at fixture baseline; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records[0].contentionSet ?? "Not applicable")) },
         { label: "Participation status", definition: "Normalized relationship to the 2012 rehearsal cohort — fixture flags only; post-Reveal outcomes are not ingested.", section: "historical-participation", cells: entities.map((entity) => {
-          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning));
+          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning), claimActualityState);
           return cell(String(eligibility.value), eligibility.state);
         }) },
         { label: "Resolved organization", definition: "Illustrative organization relationship; not steward-approved.", section: "existing-portfolio", cells: entities.map((entity) => cell(entity.records[0].organization)) },
@@ -934,7 +936,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", section: "market-context", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
     ];
     return baseRows.map((row) => ({ ...row, cells: row.cells.map((entry, index) => ({ ...entry, entityLabel: entities[index]?.label })) }));
-  }, [entities, type]);
+  }, [entities, type, claimActualityState]);
   const referenceLabel = entities[0]?.label;
 
   const visibleRows = useMemo(() => diffMode === "differences" ? rows.filter(rowHasDifference) : rows, [rows, diffMode]);
@@ -1153,6 +1155,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
 }
 
 export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
+  const claimActualityState = useHubClaimActualityState();
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const briefingLens = briefingAudienceForLens(lens);
@@ -1167,7 +1170,14 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const activeLens = lens as Lens;
   const visibleInsights = useMemo(() => standoutInsightsForLens(activeLens), [activeLens]);
   const investigationQueue = useMemo(() => applicantsInvestigationQueueForLens(activeLens), [activeLens]);
-  const glanceMetrics = useMemo(() => buildRevealDayGlanceMetrics(registryFixture.applications), []);
+  const glanceMetrics = useMemo(
+    () => buildRevealDayGlanceMetrics(registryFixture.applications, claimActualityState),
+    [claimActualityState],
+  );
+  const roundPulseMetrics = useMemo(
+    () => buildRoundPulse(registryFixture.applications, claimActualityState),
+    [claimActualityState],
+  );
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;
 
@@ -1309,7 +1319,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               </div>
               <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
             </div>
-            <MetricCards lens={activeLens} />
+            <MetricCards lens={activeLens} metrics={roundPulseMetrics} />
           </section>
         )}
 

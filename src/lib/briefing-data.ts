@@ -1,5 +1,9 @@
 import { participationStatusCellForApplication } from "@/comparison/compare-dimensions";
 import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+} from "@/lib/hub-metric-eligibility";
+import {
   applicantsToWatch,
   compareSectionLabel,
   compareSectionOrder,
@@ -12,7 +16,7 @@ import {
   recordsForEntity,
   recordsForParams,
   registryFixture,
-  roundPulse,
+  buildRoundPulse,
   standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
@@ -293,7 +297,11 @@ export function compareEntitiesFromParams(params: Record<string, string>): { typ
  * briefings-design.md §12. Not necessarily identical to every row
  * `CompareContent` renders; capped to what a Briefing needs.
  */
-export function buildBriefingCompareRows(type: EntityType, entities: { key: string; label: string; records: Application[] }[]): CompareRowLike[] {
+export function buildBriefingCompareRows(
+  type: EntityType,
+  entities: { key: string; label: string; records: Application[] }[],
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): CompareRowLike[] {
   const cell = (value: unknown, entityLabel: string, state?: CompareCellLike["state"]): CompareCellLike => ({ value, state, entityLabel });
   return [
     { label: "2026 applications", section: "round-activity" as const, cells: entities.map((entity) => cell(entity.records.length, entity.label)) },
@@ -305,7 +313,7 @@ export function buildBriefingCompareRows(type: EntityType, entities: { key: stri
       section: "historical-participation" as const,
       cells: entities.map((entity) => {
         if (type === "applications") {
-          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning));
+          const eligibility = participationStatusCellForApplication(Boolean(entity.records[0]?.returning), claimActualityState);
           return cell(eligibility.value, entity.label, eligibility.state);
         }
         return cell(entity.records.filter((record) => record.returning).length, entity.label);
@@ -315,7 +323,8 @@ export function buildBriefingCompareRows(type: EntityType, entities: { key: stri
   ];
 }
 
-function headlineMetricsRoundWide(emphasis: Lens): BriefingSection {
+function headlineMetricsRoundWide(emphasis: Lens, claimActualityState: ClaimActualityState): BriefingSection {
+  const pulse = buildRoundPulse(registryFixture.applications, claimActualityState);
   const filterRecords: Record<string, Application[]> = {
     all: [...registryFixture.applications],
     strings: [...registryFixture.applications],
@@ -324,7 +333,7 @@ function headlineMetricsRoundWide(emphasis: Lens): BriefingSection {
     idn: registryFixture.applications.filter((record) => record.idn),
     contention: registryFixture.applications.filter((record) => record.contentionSet),
   };
-  const claims = roundPulse.map((metric) =>
+  const claims = pulse.map((metric) =>
     makeClaim({
       text: `${metric.label}: ${metric.value} (${metric.delta}).`,
       truthClass: "calculated-metric",
@@ -505,9 +514,13 @@ function whatStandsOutWatchlist(context: WatchlistScopeContext, detailLevel: Det
 
 type CompareTableResult = { section: BriefingSection; standoutClaims: BriefingClaim[]; limitations: BriefingLimitation[] };
 
-function comparisonTableAndStandout(params: Record<string, string>, detailLevel: DetailLevel): CompareTableResult {
+function comparisonTableAndStandout(
+  params: Record<string, string>,
+  detailLevel: DetailLevel,
+  claimActualityState: ClaimActualityState,
+): CompareTableResult {
   const { type, entities } = compareEntitiesFromParams(params);
-  const rows = buildBriefingCompareRows(type, entities);
+  const rows = buildBriefingCompareRows(type, entities, claimActualityState);
   const limitations: BriefingLimitation[] = [];
   const rowClaims = rows.map((row, rowIndex) => {
     const rowLimitationIds: string[] = [];
@@ -576,6 +589,7 @@ export type GenerateEditionInput = {
   detailLevel: DetailLevel;
   sectionsWanted: BriefingSectionId[];
   context?: GenerationContext;
+  claimActualityState?: ClaimActualityState;
 };
 
 /**
@@ -586,6 +600,7 @@ export type GenerateEditionInput = {
  * call, exactly like every other saved-work entity's `id`).
  */
 export function generateEditionContent(input: GenerateEditionInput): Omit<BriefingEdition, "id" | "definitionId" | "status" | "finalizedAt" | "supersededAt" | "supersededByEditionId"> {
+  const claimActualityState = input.claimActualityState ?? DEFAULT_CLAIM_ACTUALITY_STATE;
   const wanted = new Set(input.sectionsWanted.filter((id) => availableSectionsForScope(input.scope.kind).has(id)));
   const sections: BriefingSection[] = [];
   let limitations = baseLimitations();
@@ -593,7 +608,7 @@ export function generateEditionContent(input: GenerateEditionInput): Omit<Briefi
 
   if (input.scope.kind === "round-wide") {
     recordedScopeCount = registryFixture.applications.length;
-    if (wanted.has("headline-metrics")) sections.push(headlineMetricsRoundWide(input.emphasis));
+    if (wanted.has("headline-metrics")) sections.push(headlineMetricsRoundWide(input.emphasis, claimActualityState));
     if (wanted.has("what-stands-out")) sections.push(whatStandsOutRoundWide(input.emphasis, input.detailLevel));
   } else if (input.scope.kind === "entity") {
     const records = recordsForEntity(input.scope.entityType, input.scope.entityKey);
@@ -612,7 +627,7 @@ export function generateEditionContent(input: GenerateEditionInput): Omit<Briefi
     if (wanted.has("headline-metrics")) sections.push(headlineMetricsCompare(input.scope.params));
     let compareStandout: BriefingClaim[] = [];
     if (wanted.has("comparison-table")) {
-      const result = comparisonTableAndStandout(input.scope.params, input.detailLevel);
+      const result = comparisonTableAndStandout(input.scope.params, input.detailLevel, claimActualityState);
       sections.push(result.section);
       compareStandout = result.standoutClaims;
       limitations = [...limitations, ...result.limitations];

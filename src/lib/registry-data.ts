@@ -1,5 +1,9 @@
 import fixture from "@/data/fixtures/registry-applications.json";
 import { buildCommandCenterRoundPulse } from "@/comparison/historical-2012-ui-adapter";
+import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+} from "@/lib/hub-metric-eligibility";
 
 export type Application = (typeof fixture.applications)[number];
 export type HistoricalContext = typeof fixture.historicalContext;
@@ -523,8 +527,11 @@ export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
-export function buildRoundPulse(applications: Application[]) {
-  return buildCommandCenterRoundPulse(applications).map((metric) => ({
+export function buildRoundPulse(
+  applications: Application[],
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+) {
+  return buildCommandCenterRoundPulse(applications, claimActualityState).map((metric) => ({
     id: metric.id,
     label: metric.label,
     value: metric.value,

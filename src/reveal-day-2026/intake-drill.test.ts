@@ -3,7 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { fetchOne } from "../pipeline/pipeline";
-import { evaluateApplicationActualityPromotion, readClaimActualityState } from "./claim-actuality";
+import { evaluateApplicationActualityPromotion } from "./claim-actuality";
+import { readClaimActualityState } from "./claim-actuality-persistence";
 import { loadPublicationSnapshotFromPath, runDryRunIngestion } from "./dry-run";
 import { evaluateHumanApprovals } from "./human-approval";
 import {

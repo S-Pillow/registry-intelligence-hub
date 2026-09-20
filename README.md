@@ -47,6 +47,7 @@ Then open `http://127.0.0.1:43123/tools/registry-intelligence-hub`.
 - Immutable fixture metadata and hashes live in `src/data/fixtures/manifest.json`.
 - Rehearsal-round intelligence is calculated in `src/lib/registry-data.ts`.
 - Approved **2012 Reveal Day** comparison facts and eligibility gates live in `src/comparison/` (`metric-eligibility-catalog/1.0.0`, `historical-2012-ui-adapter/1.0.0`). Cross-round org identity links use `cross-round-identity/1.0.0` (`npm run normalize -- cross-round-identity`).
+- **2026 claim actuality (browser)** — Hub routes load promoted state once per request in `src/app/tools/registry-intelligence-hub/layout.tsx` via `loadPromotedClaimActualityState()` (`src/lib/claim-actuality-server.ts`). Eligibility for Command Center, Explore, Compare, and Briefings resolves through `resolveHubMetricEligibility()` (`src/lib/hub-metric-eligibility.ts`). Production may supply state either as on-disk JSON (default `.data/reveal-2026/claim-actuality-state.json`, override with `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH`) or inline JSON in `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON` (full `claim-actuality-state/1.0.0` document from `npm run reveal-2026 -- promote-actuality`). Env JSON takes precedence over the file. With no promoted state, 2026 remains `NOT_PUBLISHED` and cross-round comparison stays gated.
 
 ## Source inventory and snapshot pipeline
 
