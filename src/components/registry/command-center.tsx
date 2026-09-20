@@ -34,6 +34,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
+  historical2012ContentionMembershipLabel,
+  historical2012IdnLabel,
+  isHistorical2012ApplicationBrowse,
+} from "@/historical-2012/explore-historical-table";
+import {
   applicantsInvestigationQueueForLens,
   buildBiggestChanges,
   buildCategoryMix,
@@ -837,6 +843,24 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
 
   const explore2012Href = `${hubPath("/explore")}?dataset=2012-historical`;
   const explore2026Href = hubPath("/explore");
+  const historicalApplicationBrowse = isHistorical2012ApplicationBrowse(is2012Historical, filters.entity);
+
+  const buildExploreInvestigationItem = (
+    row: { id: string; name: string; records: Application[] },
+    idPrefix: string,
+  ): InvestigationItem => {
+    const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
+    const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
+    return {
+      id: `${idPrefix}-${row.id}`,
+      kind,
+      label: row.name,
+      records: row.records,
+      entityType,
+      entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
+      exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
+    };
+  };
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -915,39 +939,84 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       ) : (
         <section className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th><th className="p-3">Actions</th></tr></thead>
-              <tbody>{rows.map((row) => {
-                const returning = row.records.filter((item) => item.returning).length;
-                const contention = row.records.filter((item) => item.contentionSet).length;
-                const idn = row.records.filter((item) => item.idn).length;
-                const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
-                const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
-                const investigationItem: InvestigationItem = {
-                  id: `explore-${row.id}`,
-                  kind,
-                  label: row.name,
-                  records: row.records,
-                  entityType,
-                  entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
-                  exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
-                };
-                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{is2012Historical ? "2012 Reveal Day" : returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{is2012Historical ? "2012 CSV" : "Source-backed"}</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td></tr>;
-              })}</tbody>
-            </table>
+            {historicalApplicationBrowse ? (
+              <table className="w-full min-w-[1100px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700">
+                    {HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS.map((header) => (
+                      <th key={header} className="p-3">{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const application = row.records[0];
+                    const investigationItem = buildExploreInvestigationItem(row, "explore");
+                    return (
+                      <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50">
+                        <td className="p-3">
+                          <ProvenanceSheet
+                            {...investigationItem}
+                            triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                            trigger={(
+                              <strong className="flex items-center gap-1 text-slate-950">
+                                {row.name}
+                                <ChevronRight className="size-4 text-[#007d65]" />
+                              </strong>
+                            )}
+                          />
+                        </td>
+                        <td className="p-3 font-mono text-xs text-slate-800">{application.id}</td>
+                        <td className="p-3 text-slate-800">{application.applicant}</td>
+                        <td className="p-3 text-slate-700">{application.region}</td>
+                        <td className="p-3 font-mono text-xs text-slate-700">{historical2012ContentionMembershipLabel(application.contentionSet)}</td>
+                        <td className="p-3 text-slate-700">{historical2012IdnLabel(application.idn)}</td>
+                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge></td>
+                        <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full min-w-[900px] text-sm">
+                <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th><th className="p-3">Actions</th></tr></thead>
+                <tbody>{rows.map((row) => {
+                  const returning = row.records.filter((item) => item.returning).length;
+                  const contention = row.records.filter((item) => item.contentionSet).length;
+                  const idn = row.records.filter((item) => item.idn).length;
+                  const investigationItem = buildExploreInvestigationItem(row, "explore");
+                  return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{is2012Historical ? "2012 Reveal Day" : returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{is2012Historical ? "2012 CSV" : "Source-backed"}</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td></tr>;
+                })}</tbody>
+              </table>
+            )}
           </div>
           <div className="divide-y md:hidden">{rows.map((row) => {
-            const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
-            const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
-            const investigationItem: InvestigationItem = {
-              id: `explore-mobile-${row.id}`,
-              kind,
-              label: row.name,
-              records: row.records,
-              entityType,
-              entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
-              exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
-            };
+            const investigationItem = buildExploreInvestigationItem(row, "explore-mobile");
+            if (historicalApplicationBrowse) {
+              const application = row.records[0];
+              return (
+                <div key={row.id} className="p-4">
+                  <ProvenanceSheet
+                    {...investigationItem}
+                    triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                    trigger={(
+                      <>
+                        <span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span>
+                        <span className="mt-2 block font-mono text-xs text-slate-600">{application.id}</span>
+                        <span className="mt-1 block text-xs text-slate-700">{application.applicant} · {application.region}</span>
+                        <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+                          <Badge variant="outline">{historical2012ContentionMembershipLabel(application.contentionSet)}</Badge>
+                          <Badge variant="secondary">{historical2012IdnLabel(application.idn)}</Badge>
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge>
+                        </span>
+                      </>
+                    )}
+                  />
+                  <ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" />
+                </div>
+              );
+            }
             return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
           })}</div>
         </section>
