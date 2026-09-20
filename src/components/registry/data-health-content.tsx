@@ -16,6 +16,7 @@ import {
   type PublicationChecklistItem,
 } from "@/lib/data-health-report";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
+import { useHistorical2012Payload } from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData } from "@/components/registry/hub-registry-data-provider";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
@@ -118,9 +119,10 @@ function ChecklistStatus({ item }: { item: PublicationChecklistItem }) {
 export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
   const claimActuality = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();
+  const historical2012 = useHistorical2012Payload();
   const snapshot = useMemo(
-    () => buildDataHealthSnapshot(claimActuality, registryResolution),
-    [claimActuality, registryResolution],
+    () => buildDataHealthSnapshot(claimActuality, registryResolution, historical2012),
+    [claimActuality, registryResolution, historical2012],
   );
 
   if (state === "loading") {

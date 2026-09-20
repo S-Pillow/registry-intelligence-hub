@@ -6,6 +6,7 @@ import {
 import type { ClaimReadiness } from "@/comparison/claim-readiness";
 import type { MetricReadiness } from "@/comparison/readiness";
 import { resolveHubMetricEligibility } from "@/lib/hub-metric-eligibility";
+import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
 import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
 import { ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE } from "@/lib/registry-data";
 import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
@@ -88,8 +89,11 @@ export type DataHealthSnapshot = {
   intelligenceReadiness: IntelligenceReadinessRow[];
   browserDataState: {
     approved2012Aggregates: { applications: number; uniqueStrings: number; idnApplications: number };
-    entityLevel2012InBrowser: false;
+    entityLevel2012InBrowser: boolean;
     entityLevel2012Message: string;
+    historical2012PayloadStatus: "not-loaded" | "loaded";
+    historical2012CorpusHash?: string;
+    historical2012SnapshotId?: string;
     offlineNormalizedCorpus: string;
     browserEntityDataset: string;
     real2026Publication: string;
@@ -156,10 +160,12 @@ export function humanizePayloadSelectionReason(
 function buildCurrentStateSummary(
   claimActuality: ClaimActualityState,
   resolution: HubRegistryDataResolution,
+  historical2012: Historical2012PayloadResolution,
   comparableUnlocked: number,
   comparableTotal: number,
 ): CurrentStateSummaryRow[] {
   const agg = APPROVED_2012_BASELINE;
+  const historical2012Loaded = historical2012.status === "loaded";
   const comparisonPrimary =
     comparableUnlocked > 0
       ? `${comparableUnlocked} of ${comparableTotal} comparable metrics unlocked`
@@ -179,17 +185,25 @@ function buildCurrentStateSummary(
       id: "2012-aggregates",
       title: "2012 aggregate readiness",
       primary: `Ready — ${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline wired in UI)`,
-      secondary: "Entity-level 2012 rows not loaded in browser",
+      secondary: historical2012Loaded
+        ? "Entity browser loaded separately — aggregates unchanged"
+        : "Entity-level 2012 rows not loaded in browser",
       tone: "ready",
       badgeLabel: "Ready",
     },
     {
       id: "2012-entity-browser",
       title: "2012 entity browser",
-      primary: "Not loaded — aggregate-only historical counts",
-      secondary: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
-      tone: "muted",
-      badgeLabel: "Not loaded",
+      primary: historical2012Loaded
+        ? `Loaded — ${historical2012.document.applications.length} applications · ${historical2012.document.payloadVersion}`
+        : "Not loaded — aggregate-only historical counts",
+      secondary: historical2012Loaded
+        ? `Corpus ${historical2012.document.corpusContentHash.slice(0, 12)}… · source ${historical2012.document.provenance.inputContentHash.slice(0, 12)}… (offline normalization input)`
+        : historical2012.status === "not-loaded"
+          ? historical2012.errorMessage
+          : ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+      tone: historical2012Loaded ? "ready" : "muted",
+      badgeLabel: historical2012Loaded ? "Loaded" : "Not loaded",
     },
     {
       id: "2026-publication",
@@ -219,8 +233,10 @@ function buildCurrentStateSummary(
 function buildPublicationChecklist(
   claimActuality: ClaimActualityState,
   resolution: HubRegistryDataResolution,
+  historical2012: Historical2012PayloadResolution,
   comparableUnlocked: number,
 ): PublicationChecklistItem[] {
+  const historical2012Loaded = historical2012.status === "loaded";
   const actualityComplete = claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY";
   const payloadComplete = resolution.selectionReason === "promoted-active";
   const payloadWarning =
@@ -250,9 +266,13 @@ function buildPublicationChecklist(
     },
     {
       id: "entity-2012",
-      label: "Entity-level 2012 browser payload (Ticket D)",
-      status: "blocked",
-      detail: "Full-round Explore rows not wired; offline normalized corpus available via CLI only.",
+      label: "Entity-level 2012 browser payload (Ticket D1)",
+      status: historical2012Loaded ? "complete" : "pending",
+      detail: historical2012Loaded
+        ? `${historical2012.document.applications.length} rows · Explore ?dataset=2012-historical · hash ${historical2012.document.corpusContentHash.slice(0, 16)}…`
+        : historical2012.status === "not-loaded"
+          ? historical2012.errorMessage
+          : "Configure REGISTRY_HUB_2012_APPLICATION_PAYLOAD_* — no fallback to rehearsal.",
     },
     {
       id: "comparison-unlock",
@@ -293,9 +313,15 @@ function intelligenceExplanation(
 export function buildSourceHealthRows(
   resolution: HubRegistryDataResolution,
   claimActuality: ClaimActualityState,
+  historical2012: Historical2012PayloadResolution = {
+    status: "not-loaded",
+    reason: "not-configured",
+    errorMessage: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+  },
 ): SourceHealthRow[] {
   const baseline = APPROVED_2012_BASELINE;
   const doc = resolution.document;
+  const historical2012Loaded = historical2012.status === "loaded";
 
   return [
     {
@@ -305,7 +331,9 @@ export function buildSourceHealthRows(
       snapshotOrVersion: `${APPROVED_2012_BASELINE_BUNDLE} · ${baseline.parserVersion}`,
       coverage: `${baseline.applications} applications (offline CSV)`,
       readiness: "Ready",
-      limitation: "Browser shows approved aggregate counts only — not entity rows.",
+      limitation: historical2012Loaded
+        ? "Entity rows available via dedicated 2012 browser payload — not mixed with 2026 rehearsal."
+        : "Browser shows approved aggregate counts only until 2012 payload is configured.",
     },
     {
       id: "2012-contention-pdf",
@@ -319,11 +347,17 @@ export function buildSourceHealthRows(
     {
       id: "2012-normalized-corpus",
       name: "2012 normalized application corpus",
-      classification: "Offline only",
-      snapshotOrVersion: baseline.bundleId,
-      coverage: `${baseline.applications} observations (CLI normalize + verify)`,
-      readiness: "Browser not loaded",
-      limitation: "Full-round entity payload not wired to Explore (Ticket D not started).",
+      classification: historical2012Loaded ? "Browser payload" : "Offline only",
+      snapshotOrVersion: historical2012Loaded
+        ? `${historical2012.document.payloadVersion} · ${historical2012.document.corpusContentHash.slice(0, 12)}…`
+        : baseline.bundleId,
+      coverage: historical2012Loaded
+        ? `${historical2012.document.applications.length} runtime-loaded Explore rows`
+        : `${baseline.applications} observations (CLI normalize + verify)`,
+      readiness: historical2012Loaded ? "Ready" : "Browser not loaded",
+      limitation: historical2012Loaded
+        ? "Generated artifact from offline normalization input — organization/category coverage unchanged."
+        : "Configure REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH or _JSON for Explore historical mode.",
     },
     {
       id: "2012-org-promotion",
@@ -399,7 +433,13 @@ export function buildIntelligenceReadinessRows(
 export function buildDataHealthSnapshot(
   claimActuality: ClaimActualityState,
   resolution: HubRegistryDataResolution,
+  historical2012: Historical2012PayloadResolution = {
+    status: "not-loaded",
+    reason: "not-configured",
+    errorMessage: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+  },
 ): DataHealthSnapshot {
+  const historical2012Loaded = historical2012.status === "loaded";
   const unlock = buildComparisonUnlockReport(claimActuality);
   const comparableTotal = unlock.metrics.filter((m) => m.methodReadiness === "COMPARABLE").length;
   const comparableUnlocked = unlock.metrics.filter((m) => m.comparisonAllowed).length;
@@ -408,7 +448,9 @@ export function buildDataHealthSnapshot(
     "Immutable 2026 publication validated and promoted via reveal-2026 promote-actuality (application actuality only).",
     "Hash-matched browser application payload configured for the promoted snapshot.",
     `${ORGANIZATION_RESOLUTION_METHOD} steward promotion before organization or portfolio cross-round metrics unlock.`,
-    "Entity-level 2012 browser payload generation (Ticket D) before full-round Explore rows.",
+    historical2012Loaded
+      ? "Explore historical mode (D1) active — Compare and org/portfolio unlock remain deferred (D2+)."
+      : "Entity-level 2012 browser payload (REGISTRY_HUB_2012_APPLICATION_PAYLOAD_*) before Explore historical rows.",
   ];
 
   if (claimActuality.round2026ApplicationActuality === "NOT_PUBLISHED") {
@@ -420,10 +462,11 @@ export function buildDataHealthSnapshot(
     currentStateSummary: buildCurrentStateSummary(
       claimActuality,
       resolution,
+      historical2012,
       comparableUnlocked,
       comparableTotal,
     ),
-    sourceHealth: buildSourceHealthRows(resolution, claimActuality),
+    sourceHealth: buildSourceHealthRows(resolution, claimActuality, historical2012),
     intelligenceReadiness: buildIntelligenceReadinessRows(claimActuality),
     browserDataState: {
       approved2012Aggregates: {
@@ -431,9 +474,20 @@ export function buildDataHealthSnapshot(
         uniqueStrings: APPROVED_2012_BASELINE.uniqueStrings,
         idnApplications: APPROVED_2012_BASELINE.idnApplications,
       },
-      entityLevel2012InBrowser: false,
-      entityLevel2012Message: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
-      offlineNormalizedCorpus: `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
+      entityLevel2012InBrowser: historical2012Loaded,
+      entityLevel2012Message: historical2012Loaded
+        ? `Historical 2012 entity browser loaded (${historical2012.document.applications.length} applications) — use Explore ?dataset=2012-historical; 2026 rehearsal remains the default dataset.`
+        : ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+      historical2012PayloadStatus: historical2012Loaded ? "loaded" : "not-loaded",
+      ...(historical2012Loaded
+        ? {
+            historical2012CorpusHash: historical2012.document.corpusContentHash,
+            historical2012SnapshotId: historical2012.document.snapshotId,
+          }
+        : {}),
+      offlineNormalizedCorpus: historical2012Loaded
+        ? `Offline normalization (${APPROVED_2012_BASELINE_BUNDLE}) materialized as browser payload ${historical2012.document.corpusContentHash.slice(0, 16)}…`
+        : `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
       browserEntityDataset: `${resolution.document.applications.length}-record ${resolution.mode === "rehearsal" ? "2026 rehearsal" : "promoted 2026"} fixture (${resolution.document.fixtureId ?? resolution.document.snapshotId})`,
       real2026Publication:
         claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY"
@@ -443,7 +497,9 @@ export function buildDataHealthSnapshot(
         "Rehearsal entities (Atlas Digital, Kizuna, Northstar Group, Harbor Brands, Future MENA, etc.) are curated 2026 drill names — not 2012 Reveal Day applicants.",
     },
     coverageLimitations: [
-      `${APPROVED_2012_BASELINE.applications} applications in approved 2012 baseline (aggregate-only in browser).`,
+      historical2012Loaded
+        ? `${APPROVED_2012_BASELINE.applications} applications in approved 2012 baseline — entity rows loaded in Explore historical mode only (not merged with 2026 rehearsal).`
+        : `${APPROVED_2012_BASELINE.applications} applications in approved 2012 baseline (aggregate-only in browser).`,
       `Taxonomy ${OFFLINE_2012_TAXONOMY_CLASSIFIED}/${APPROVED_2012_BASELINE.applications} classified — category-mix remains BLOCKED_COVERAGE.`,
       `${APPROVED_2012_BASELINE.contentionMembershipApplications} contention PDF memberships; set count blocked (${APPROVED_2012_BASELINE.extractedContentionSetEntities} vs ${APPROVED_2012_BASELINE.icannCitedContentionSetEntities}).`,
       `Organization resolution partial — ${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} promoted applications (~${Math.round((OFFLINE_2012_ORG_PROMOTED_APPLICATIONS / APPROVED_2012_BASELINE.applications) * 100)}%); no round-wide org rankings.`,
@@ -458,7 +514,7 @@ export function buildDataHealthSnapshot(
       comparableMetricsTotal: comparableTotal,
       unlockSummary: `${comparableUnlocked} of ${comparableTotal} COMPARABLE metrics allow cross-round comparison at current actuality.`,
       prerequisites,
-      checklist: buildPublicationChecklist(claimActuality, resolution, comparableUnlocked),
+      checklist: buildPublicationChecklist(claimActuality, resolution, historical2012, comparableUnlocked),
     },
   };
 }

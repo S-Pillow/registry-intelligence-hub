@@ -83,7 +83,9 @@ import { SavedContent, type SavedParams } from "@/components/registry/saved-cont
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 import { DataHealthContent } from "@/components/registry/data-health-content";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
+import { useHistorical2012Payload } from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
+import { hubPath } from "@/lib/hub-paths";
 
 export type { SavedParams };
 import {
@@ -239,14 +241,19 @@ function QuickCompareButton({ item, className = "" }: { item: InvestigationItem;
 const EXPLORE_STRINGS_ACTION_UNAVAILABLE =
   "Strings browse groups by applied string. Switch to Applications, Organizations, or Categories to compare or watch entities.";
 
+const EXPLORE_2012_COMPARE_DEFERRED =
+  "Cross-round Compare is deferred for Ticket D1 — historical 2012 Explore is read-only research.";
+
 function ExploreEntityActions({
   investigationItem,
   className = "",
+  compareWatchDisabled = false,
 }: {
   investigationItem: InvestigationItem;
   className?: string;
+  compareWatchDisabled?: boolean;
 }) {
-  const canActOnEntity = Boolean(investigationItem.entityType && investigationItem.entityKey);
+  const canActOnEntity = Boolean(investigationItem.entityType && investigationItem.entityKey) && !compareWatchDisabled;
   return (
     <div className={`flex gap-2 ${className}`}>
       <ProvenanceSheet
@@ -264,7 +271,7 @@ function ExploreEntityActions({
           <button
             type="button"
             disabled
-            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            title={compareWatchDisabled ? EXPLORE_2012_COMPARE_DEFERRED : EXPLORE_STRINGS_ACTION_UNAVAILABLE}
             className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
           >
             <GitCompareArrows className="size-3.5" />+ Compare
@@ -272,7 +279,7 @@ function ExploreEntityActions({
           <button
             type="button"
             disabled
-            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            title={compareWatchDisabled ? EXPLORE_2012_COMPARE_DEFERRED : EXPLORE_STRINGS_ACTION_UNAVAILABLE}
             className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
           >
             <Star className="size-3.5" />Watch
@@ -691,7 +698,10 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
   );
 }
 
+export type ExploreDatasetMode = "2026-rehearsal" | "2012-historical";
+
 export type ExploreParams = {
+  dataset?: string;
   q?: string;
   entity?: string;
   category?: string;
@@ -703,10 +713,20 @@ export type ExploreParams = {
   ids?: string;
 };
 
+function exploreDatasetFromParam(value: string | undefined): ExploreDatasetMode {
+  return value === "2012-historical" ? "2012-historical" : "2026-rehearsal";
+}
+
 function ExploreContent({ state, initial }: { state: ViewState; initial: ExploreParams }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
+  const historical2012 = useHistorical2012Payload();
+  const datasetMode = exploreDatasetFromParam(initial.dataset);
+  const is2012Historical = datasetMode === "2012-historical";
+  const historical2012Loaded = historical2012.status === "loaded";
+  const activeDocument =
+    is2012Historical && historical2012Loaded ? historical2012.document : registryFixture;
   const [filters, setFilters] = useState({
     q: initial.q ?? "",
     entity: initial.entity ?? "applications",
@@ -719,16 +739,17 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     ids: initial.ids ?? "",
   });
   const searchRef = useRef<HTMLInputElement>(null);
-  const categories = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.category))].sort(), [registryFixture.applications]);
-  const regions = useMemo(() => [...new Set(registryFixture.applications.map((item) => item.region))].sort(), [registryFixture.applications]);
+  const categories = useMemo(() => [...new Set(activeDocument.applications.map((item) => item.category))].sort(), [activeDocument.applications]);
+  const regions = useMemo(() => [...new Set(activeDocument.applications.map((item) => item.region))].sort(), [activeDocument.applications]);
 
   useEffect(() => {
     const params = new URLSearchParams();
+    if (is2012Historical) params.set("dataset", "2012-historical");
     Object.entries(filters).forEach(([key, value]) => {
       if (value && !["all", "applications", "applications-desc"].includes(value)) params.set(key, value);
     });
     window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
-  }, [filters]);
+  }, [filters, is2012Historical]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -741,7 +762,10 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
-  const applications = useMemo(() => filterApplicationsByExplore(registryFixture.applications, filters), [filters, registryFixture.applications]);
+  const applications = useMemo(
+    () => filterApplicationsByExplore(activeDocument.applications, filters),
+    [filters, activeDocument.applications],
+  );
 
   const rows = useMemo(() => {
     type ExploreRow = { id: string; name: string; detail: string; records: Application[] };
@@ -765,17 +789,45 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
   const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
   const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure(claimActualityState);
+  const datasetBadge = is2012Historical
+    ? historical2012Loaded
+      ? `2012 Reveal Day historical · ${historical2012.document.applications.length} applications`
+      : "2012 historical — payload not loaded"
+    : registryPayloadMode === "promoted-2026"
+      ? "Promoted 2026 application snapshot"
+      : "2026 rehearsal fixture (12 applications)";
+
+  const explore2012Href = `${hubPath("/explore")}?dataset=2012-historical`;
+  const explore2026Href = hubPath("/explore");
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Search and compose evidence-backed filters across applications, organizations, strings, categories, regions, participation, contention, and IDNs.</p></div>
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{registryPayloadMode === "promoted-2026" ? "Promoted 2026 application snapshot" : "Rehearsal fixture only"}</div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{is2012Historical ? "Browse the full 2012 Reveal Day application corpus — separate from the 2026 rehearsal cohort." : "Search and compose evidence-backed filters across the active 2026 browser dataset (rehearsal or promoted snapshot)."}</p></div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{datasetBadge}</div>
       </div>
 
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
-        {exploreHistoricalDisclosure}
+      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
+        <span className="text-slate-600">Dataset:</span>
+        <Link href={explore2026Href} className={`rounded-lg px-3 py-1.5 ${!is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2026 rehearsal / promoted</Link>
+        <Link href={explore2012Href} className={`rounded-lg px-3 py-1.5 ${is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2012 historical applications</Link>
       </div>
+
+      {!is2012Historical ? (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
+          {exploreHistoricalDisclosure}
+        </div>
+      ) : null}
+
+      {is2012Historical && !historical2012Loaded ? (
+        <Card className="mb-5 border-amber-200 bg-amber-50">
+          <CardContent className="py-6 text-sm text-amber-950">
+            <p className="font-bold">2012 historical payload not loaded</p>
+            <p className="mt-2">{historical2012.status === "not-loaded" ? historical2012.errorMessage : "Unknown load state."}</p>
+            <p className="mt-2 text-xs">The Hub will not fall back to the 12-application 2026 rehearsal when this mode is selected.</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
         <label className="relative block">
@@ -787,7 +839,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
           <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></select></label>
           <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
           <label className="text-xs font-bold text-slate-700">Region<select aria-label="Filter by region" value={filters.region} onChange={(event) => update("region", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label className="text-xs font-bold text-slate-700">Participation<select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} className={`${selectClass} mt-1`}><option value="all">New + returning</option><option value="new">New</option><option value="returning">Returning</option></select></label>
+          <label className="text-xs font-bold text-slate-700">Participation<select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} disabled={is2012Historical} title={is2012Historical ? "Returning-applicant participation is a 2026 concept — not used for 2012 historical rows." : undefined} className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}><option value="all">New + returning</option><option value="new">New</option><option value="returning">Returning</option></select></label>
           <label className="text-xs font-bold text-slate-700">Contention<select aria-label="Filter by contention" value={filters.contention} onChange={(event) => update("contention", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All states</option><option value="in">In initial contention</option><option value="out">Not in contention</option></select></label>
           <label className="text-xs font-bold text-slate-700">IDN<select aria-label="Filter by IDN" value={filters.idn} onChange={(event) => update("idn", event.target.value)} className={`${selectClass} mt-1`}><option value="all">IDN + non-IDN</option><option value="idn">IDN only</option><option value="non-idn">Non-IDN</option></select></label>
           <label className="text-xs font-bold text-slate-700">Sort<select aria-label="Sort records" value={filters.sort} onChange={(event) => update("sort", event.target.value)} className={`${selectClass} mt-1`}><option value="applications-desc">Applications, high to low</option><option value="name-asc">Name, A–Z</option><option value="contention-desc">Contention first</option></select></label>
@@ -817,7 +869,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </div>
       </div>
 
-      {state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
+      {is2012Historical && !historical2012Loaded ? null : state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
         <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : state === "empty" || !rows.length ? (
         <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
@@ -833,7 +885,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                 const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
                 const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
                 const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">Source-backed</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} /></td></tr>;
+                return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{is2012Historical ? "2012 Reveal Day" : returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{is2012Historical ? "2012 CSV" : "Source-backed"}</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -841,12 +893,12 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
             const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
             const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
-            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
+            return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
           })}</div>
         </section>
       )}
 
-      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Snapshot {registryFixture.snapshotId}</span><span>Field-level provenance · fixture coverage disclosed · no unavailable value shown as zero</span></footer>
+      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Snapshot {activeDocument.snapshotId}{is2012Historical && historical2012Loaded ? ` · corpus ${historical2012.document.corpusContentHash.slice(0, 12)}…` : ""}</span><span>{is2012Historical ? "2012 historical dataset — not mixed with 2026 rehearsal rows" : "Field-level provenance · fixture coverage disclosed · no unavailable value shown as zero"}</span></footer>
     </main>
   );
 }

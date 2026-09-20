@@ -9,6 +9,9 @@ import {
   resolveActiveRegistryApplicationsDocument,
 } from "@/lib/registry-application-payload";
 import { loadPublicationSnapshotFromPath } from "@/reveal-day-2026/dry-run";
+import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
+import { parse2012ApplicationPayloadJson } from "@/historical-2012/payload-server";
+import { resolveHistorical2012BrowserPayload } from "@/historical-2012/payload-shared";
 import {
   buildDataHealthSnapshot,
   humanizePayloadSelectionReason,
@@ -157,5 +160,33 @@ describe("data-health-report", () => {
       "warning",
     );
     expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(/Rehearsal/i);
+  });
+
+  it("marks 2012 entity browser loaded when historical payload resolves", async () => {
+    const text = await readFile(
+      join(process.cwd(), "src/data/fixtures/registry-2012-applications.payload.json"),
+      "utf8",
+    );
+    const document = parse2012ApplicationPayloadJson(text);
+    const historical2012 = resolveHistorical2012BrowserPayload(
+      document,
+      APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH,
+    );
+    expect(historical2012.status).toBe("loaded");
+
+    const rehearsalResolution = resolveActiveRegistryApplicationsDocument(
+      DEFAULT_CLAIM_ACTUALITY_STATE,
+      null,
+    );
+    const snapshot = buildDataHealthSnapshot(
+      DEFAULT_CLAIM_ACTUALITY_STATE,
+      rehearsalResolution,
+      historical2012,
+    );
+    expect(snapshot.browserDataState.entityLevel2012InBrowser).toBe(true);
+    expect(snapshot.browserDataState.historical2012CorpusHash).toBe(APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH);
+    expect(snapshot.currentStateSummary.find((r) => r.id === "2012-entity-browser")?.badgeLabel).toBe("Loaded");
+    expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "entity-2012")?.status).toBe("complete");
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
   });
 });

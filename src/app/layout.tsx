@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { HubClaimActualityProvider } from "@/components/registry/hub-claim-actuality-provider";
+import { HubHistorical2012Provider } from "@/components/registry/hub-historical-2012-provider";
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
+import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import "./globals.css";
 
@@ -30,7 +32,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const claimActualityState = await loadPromotedClaimActualityState();
-  const registryData = await loadHubRegistryData(claimActualityState);
+  const [registryData, historical2012] = await Promise.all([
+    loadHubRegistryData(claimActualityState),
+    loadHistorical2012PayloadResolution(),
+  ]);
   return (
     <html
       lang="en"
@@ -38,7 +43,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <HubClaimActualityProvider claimActualityState={claimActualityState}>
-          <HubRegistryDataProvider resolution={registryData}>{children}</HubRegistryDataProvider>
+          <HubRegistryDataProvider resolution={registryData}>
+            <HubHistorical2012Provider resolution={historical2012}>{children}</HubHistorical2012Provider>
+          </HubRegistryDataProvider>
         </HubClaimActualityProvider>
       </body>
     </html>

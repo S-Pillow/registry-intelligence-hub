@@ -5,7 +5,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DataHealthContent } from "@/components/registry/data-health-content";
 import { HubClaimActualityProvider } from "@/components/registry/hub-claim-actuality-provider";
+import { HubHistorical2012Provider } from "@/components/registry/hub-historical-2012-provider";
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
+import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
 import { DEFAULT_CLAIM_ACTUALITY_STATE } from "@/reveal-day-2026/claim-actuality";
 import { approvedApplicationActualityPromotionFixture } from "@/lib/claim-actuality-browser-wiring.test";
 import {
@@ -23,11 +25,18 @@ const DRILL_PUBLICATION = join(
 function renderDataHealth(
   claimActuality = DEFAULT_CLAIM_ACTUALITY_STATE,
   resolution = resolveActiveRegistryApplicationsDocument(claimActuality, null),
+  historical2012: Historical2012PayloadResolution = {
+    status: "not-loaded",
+    reason: "not-configured",
+    errorMessage: "not configured",
+  },
 ) {
   return render(
     <HubClaimActualityProvider claimActualityState={claimActuality}>
       <HubRegistryDataProvider resolution={resolution}>
-        <DataHealthContent />
+        <HubHistorical2012Provider resolution={historical2012}>
+          <DataHealthContent />
+        </HubHistorical2012Provider>
       </HubRegistryDataProvider>
     </HubClaimActualityProvider>,
   );

@@ -1,7 +1,18 @@
 import { CommandCenter, type ExploreParams } from "@/components/registry/command-center";
 
 const allowedStates = new Set(["ready", "loading", "empty", "error"]);
-const keys: (keyof ExploreParams)[] = ["q", "entity", "category", "region", "status", "contention", "idn", "sort", "ids"];
+const keys: (keyof ExploreParams)[] = [
+  "dataset",
+  "q",
+  "entity",
+  "category",
+  "region",
+  "status",
+  "contention",
+  "idn",
+  "sort",
+  "ids",
+];
 
 export default async function ExplorePage({
   searchParams,

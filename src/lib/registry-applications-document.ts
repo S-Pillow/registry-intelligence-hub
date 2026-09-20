@@ -2,7 +2,7 @@ import type { Application, HistoricalContext } from "@/lib/registry-data";
 
 export type RegistryApplicationsDocument = {
   payloadVersion: string;
-  payloadMode?: "rehearsal" | "promoted-2026";
+  payloadMode?: "rehearsal" | "promoted-2026" | "historical-2012";
   fixtureId?: string;
   snapshotId: string;
   snapshotContentHash?: string;
