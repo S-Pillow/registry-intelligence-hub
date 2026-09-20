@@ -70,6 +70,8 @@ export type CurrentStateSummaryRow = {
   primary: string;
   secondary?: string;
   tone: "ready" | "partial" | "blocked" | "muted" | "context";
+  /** Operator-facing status chip; overrides tone-derived default in the UI. */
+  badgeLabel?: string;
 };
 
 export type PublicationChecklistItem = {
@@ -176,16 +178,18 @@ function buildCurrentStateSummary(
     {
       id: "2012-aggregates",
       title: "2012 aggregate readiness",
-      primary: `${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline in UI)`,
+      primary: `Ready — ${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline wired in UI)`,
       secondary: "Entity-level 2012 rows not loaded in browser",
-      tone: "partial",
+      tone: "ready",
+      badgeLabel: "Ready",
     },
     {
       id: "2012-entity-browser",
       title: "2012 entity browser",
       primary: "Not loaded — aggregate-only historical counts",
       secondary: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
-      tone: "blocked",
+      tone: "muted",
+      badgeLabel: "Not loaded",
     },
     {
       id: "2026-publication",
@@ -204,9 +208,10 @@ function buildCurrentStateSummary(
       primary: comparisonPrimary,
       secondary:
         claimActuality.round2026ApplicationActuality === "NOT_PUBLISHED"
-          ? "2026 NOT_PUBLISHED gates application-count family"
-          : `${comparableUnlocked}/${comparableTotal} COMPARABLE allow comparison`,
-      tone: comparableUnlocked > 0 ? "ready" : "partial",
+          ? "2026 not published — application-count family remains gated"
+          : `${comparableUnlocked}/${comparableTotal} comparable metrics allow cross-round comparison`,
+      tone: comparableUnlocked > 0 ? "ready" : "muted",
+      badgeLabel: comparableUnlocked > 0 ? undefined : "Gated",
     },
   ];
 }

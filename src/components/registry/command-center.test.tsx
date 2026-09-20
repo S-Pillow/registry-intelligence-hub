@@ -631,6 +631,16 @@ describe("Saved navigation and one-click Watch", () => {
     expect(screen.getByRole("link", { name: "Data Health" })).toHaveAttribute("href", "/data-health");
   });
 
+  it("exposes Briefings and Data Health in Hub nav without relying on horizontal scroll", () => {
+    render(<CommandCenter view="data-health" />);
+
+    const briefings = screen.getByRole("link", { name: "Briefings" });
+    const dataHealth = screen.getByRole("link", { name: "Data Health" });
+    expect(briefings).toHaveAttribute("href", "/briefings");
+    expect(dataHealth).toHaveAttribute("href", "/data-health");
+    expect(dataHealth).toHaveAttribute("aria-current", "page");
+  });
+
   it("one-click Watches an entity from Explore and reflects the same watched state from the intelligence drawer", async () => {
     const user = userEvent.setup();
     render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);

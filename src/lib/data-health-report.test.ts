@@ -40,6 +40,19 @@ describe("data-health-report", () => {
     expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
       /Rehearsal payload/i,
     );
+    const aggregates = snapshot.currentStateSummary.find((r) => r.id === "2012-aggregates");
+    expect(aggregates?.badgeLabel).toBe("Ready");
+    expect(aggregates?.tone).toBe("ready");
+    expect(aggregates?.primary).toMatch(/1930/);
+
+    const entityBrowser = snapshot.currentStateSummary.find((r) => r.id === "2012-entity-browser");
+    expect(entityBrowser?.badgeLabel).toBe("Not loaded");
+    expect(entityBrowser?.tone).not.toBe("blocked");
+
+    const crossRound = snapshot.currentStateSummary.find((r) => r.id === "cross-round");
+    expect(crossRound?.badgeLabel).toBe("Gated");
+    expect(crossRound?.tone).not.toBe("partial");
+
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "actuality")?.status).toBe("pending");
   });
 
@@ -114,6 +127,10 @@ describe("data-health-report", () => {
     const comparable = snapshot.intelligenceReadiness.filter((r) => r.methodReadiness === "COMPARABLE");
     expect(comparable.some((r) => r.comparisonAllowed)).toBe(true);
     expect(comparable.some((r) => r.round2026 === "REAL_SOURCE_READY")).toBe(true);
+
+    const crossRound = snapshot.currentStateSummary.find((r) => r.id === "cross-round");
+    expect(crossRound?.badgeLabel).toBeUndefined();
+    expect(crossRound?.tone).toBe("ready");
   });
 
   it("mismatched promotion pins fail closed to rehearsal in snapshot resolution inputs", async () => {

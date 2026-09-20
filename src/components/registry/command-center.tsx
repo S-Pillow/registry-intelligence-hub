@@ -158,12 +158,13 @@ function ShellHeader() {
 function HubNav({ active = "Command Center" }: { active?: string }) {
   return (
     <div className="border-b bg-white">
-      <div className="mx-auto flex max-w-[1480px] items-center gap-1 overflow-x-auto px-4 sm:px-6">
+      <div className="mx-auto grid max-w-[1480px] grid-cols-3 gap-x-0 gap-y-0 px-2 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto sm:px-6">
         {navItems.map((item, index) => (
           <Link
             key={item}
             href={hubNavHref(item, index)}
-            className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
+            aria-current={active === item ? "page" : undefined}
+            className={`border-b-2 px-2 py-2.5 text-center text-xs font-semibold leading-tight sm:shrink-0 sm:px-3 sm:py-3 sm:text-left sm:text-sm ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
           >
             {item}
           </Link>

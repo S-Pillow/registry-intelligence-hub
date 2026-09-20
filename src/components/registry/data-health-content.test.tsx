@@ -53,6 +53,19 @@ describe("DataHealthContent", () => {
     expect(screen.getAllByText(/Comparable method/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Blocked by method/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Prerequisite checklist/i)).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "2012 aggregate readiness" }).closest("li")).toHaveTextContent(
+      /Ready/,
+    );
+    expect(screen.getByRole("heading", { name: "2012 entity browser" }).closest("li")).toHaveTextContent(
+      /Not loaded/,
+    );
+    expect(screen.queryByRole("heading", { name: "2012 entity browser" })?.closest("li")).not.toHaveTextContent(
+      /Blocked/,
+    );
+    expect(screen.getByRole("heading", { name: "Cross-round comparison" }).closest("li")).toHaveTextContent(
+      /Gated/,
+    );
   });
 
   it("renders promoted claim with matching payload (drill fixture pattern)", async () => {

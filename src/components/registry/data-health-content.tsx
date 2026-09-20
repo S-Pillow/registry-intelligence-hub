@@ -41,7 +41,8 @@ function StatusBadge({ label }: { label: string }) {
 
 function SummaryToneBadge({ row }: { row: CurrentStateSummaryRow }) {
   const label =
-    row.tone === "ready"
+    row.badgeLabel ??
+    (row.tone === "ready"
       ? "On track"
       : row.tone === "partial"
         ? "Partial"
@@ -49,17 +50,21 @@ function SummaryToneBadge({ row }: { row: CurrentStateSummaryRow }) {
           ? "Blocked"
           : row.tone === "context"
             ? "Rehearsal"
-            : "Pending";
+            : "Pending");
   const className =
-    row.tone === "ready"
+    label === "Ready" || row.tone === "ready"
       ? "bg-emerald-100 text-[#006a56]"
-      : row.tone === "partial"
-        ? "bg-amber-100 text-amber-900"
-        : row.tone === "blocked"
-          ? "bg-rose-100 text-rose-900"
-          : row.tone === "context"
-            ? "bg-sky-100 text-sky-900"
-            : "bg-slate-100 text-slate-700";
+      : label === "Gated" || label === "Locked"
+        ? "bg-violet-100 text-violet-900"
+        : label === "Not loaded"
+          ? "bg-slate-100 text-slate-700"
+          : row.tone === "partial"
+            ? "bg-amber-100 text-amber-900"
+            : row.tone === "blocked"
+              ? "bg-rose-100 text-rose-900"
+              : row.tone === "context"
+                ? "bg-sky-100 text-sky-900"
+                : "bg-slate-100 text-slate-700";
   return (
     <Badge variant="outline" className={`shrink-0 text-[11px] ${className}`}>
       {label}
@@ -244,7 +249,6 @@ export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">{row.label}</CardTitle>
-                    <p className="mt-1 font-mono text-[10px] text-slate-500">{row.metricId}</p>
                   </div>
                   <div className="flex flex-wrap items-end gap-3">
                     <MethodReadinessLabel method={row.methodReadiness} />
@@ -258,7 +262,10 @@ export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="text-sm text-slate-600">{row.explanation}</CardContent>
+              <CardContent className="space-y-2 text-sm text-slate-600">
+                <p>{row.explanation}</p>
+                <p className="font-mono text-[10px] text-slate-500">{row.metricId}</p>
+              </CardContent>
             </Card>
           ))}
         </div>
