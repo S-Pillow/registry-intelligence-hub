@@ -75,7 +75,7 @@ npm run pipeline -- fetch --all --mode live --root /tmp/source-pipeline-live
 
 ## Offline normalization (2012)
 
-`src/normalization/` is a round-neutral, fixture-only normalization foundation: raw snapshot refs → parsed records → observations → normalized entities, with immutable override replay, deterministic reconciliation states, and content-addressed build artifacts. It does not connect to the browser app or live ICANN HTML scrape.
+`src/normalization/` is a round-neutral, fixture-only normalization foundation: raw snapshot refs → parsed records → observations → normalized entities, with immutable override replay, deterministic reconciliation states, and content-addressed build artifacts. CLI build output is not streamed to the browser; three approved 2012 count metrics are pinned separately in `src/comparison/approved-2012-baseline.ts` for Command Center. No live ICANN HTML scrape.
 
 Design, coverage contract, and quality reporting:
 
@@ -97,5 +97,5 @@ npm run normalize -- cross-round-identity
 ```
 
 - `icann2012-representative-v1` — rehearsal slice (conflicts, overrides, missing refs).
-- `icann2012-reveal-day-v1` — **1,930** Reveal Day applications from preserved CSV + official contention PDF extraction (not wired to UI).
+- `icann2012-reveal-day-v1` — **1,930** Reveal Day applications from preserved CSV + official contention PDF extraction (offline entities; Command Center exposes three approved count metrics via `historical-2012-ui-adapter/1.0.0`, not full Explore corpus).
 - Builds land under `.data/normalization/builds/<buildId>/` (gitignored). `verify` recomputes a fresh offline normalization and checks output hashes plus stored artifact integrity.
