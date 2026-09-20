@@ -11,12 +11,18 @@ import { assertDeterministicReport, buildQualityReport } from "./report";
 import { createNormalizationStore, verifyStoredBuild } from "./store";
 import { traceEntity } from "./trace";
 import { readFile } from "node:fs/promises";
+import {
+  getProjectDocsRootForContractTests,
+  PROJECT_STORE_DOC_TEST_NAME,
+  projectDocPath,
+  shouldSkipProjectStoreDocContractTests,
+} from "@/test/project-store-docs";
 import { PARSER_VERSION } from "./types";
 
 const workspaceRoot = join(import.meta.dirname, "..", "..");
 const bundleId = "icann2012-representative-v1";
 const fullRoundBundleId = "icann2012-reveal-day-v1";
-const projectDocsRoot = "/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs";
+const skipProjectDocs = shouldSkipProjectStoreDocContractTests();
 
 describe("2012 normalization foundation", () => {
   it("loads bundle with stable input content hash", async () => {
@@ -115,14 +121,15 @@ describe("2012 normalization foundation", () => {
     assertDeterministicReport(r1, r2);
   });
 
-  it("project docs describe lineage, coverage contract, and round reports", async () => {
-    const domain = await readFile(join(projectDocsRoot, "domain-model-and-normalization.md"), "utf8");
-    const quality = await readFile(join(projectDocsRoot, "normalization-quality-report.md"), "utf8");
-    const contract = await readFile(join(projectDocsRoot, "normalization-coverage-contract.md"), "utf8");
-    const fullReport = await readFile(join(projectDocsRoot, "2012-full-round-quality-report.md"), "utf8");
-    const baseline = await readFile(join(projectDocsRoot, "2012-comparison-baseline-contract.md"), "utf8");
-    const orgPromotion = await readFile(join(projectDocsRoot, "2012-organization-promotion.md"), "utf8");
-    const org2026 = await readFile(join(projectDocsRoot, "2026-organization-resolution-contract.md"), "utf8");
+  it.skipIf(skipProjectDocs)(`${PROJECT_STORE_DOC_TEST_NAME} project docs describe lineage, coverage contract, and round reports`, async () => {
+    const projectDocsRoot = getProjectDocsRootForContractTests();
+    const domain = await readFile(projectDocPath(projectDocsRoot, "domain-model-and-normalization.md"), "utf8");
+    const quality = await readFile(projectDocPath(projectDocsRoot, "normalization-quality-report.md"), "utf8");
+    const contract = await readFile(projectDocPath(projectDocsRoot, "normalization-coverage-contract.md"), "utf8");
+    const fullReport = await readFile(projectDocPath(projectDocsRoot, "2012-full-round-quality-report.md"), "utf8");
+    const baseline = await readFile(projectDocPath(projectDocsRoot, "2012-comparison-baseline-contract.md"), "utf8");
+    const orgPromotion = await readFile(projectDocPath(projectDocsRoot, "2012-organization-promotion.md"), "utf8");
+    const org2026 = await readFile(projectDocPath(projectDocsRoot, "2026-organization-resolution-contract.md"), "utf8");
     expect(domain).toContain("raw snapshot");
     expect(baseline).toContain("cross-round-identity/1.0.0");
     expect(org2026).toContain("organization-resolution-2026/1.0.0");

@@ -22,8 +22,14 @@ import { evaluateHumanApprovals } from "./human-approval";
 import { PUBLICATION_SCHEMA_VERSION_V11 } from "./types";
 import { recordActualityPromotion, readPromotionHistory } from "./promotion-history";
 import { runSanityChecks } from "./sanity-checks";
+import {
+  getProjectDocsRootForContractTests,
+  PROJECT_STORE_DOC_TEST_NAME,
+  projectDocPath,
+  shouldSkipProjectStoreDocContractTests,
+} from "@/test/project-store-docs";
 
-const projectDocsRoot = "/cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs";
+const skipProjectDocs = shouldSkipProjectStoreDocContractTests();
 const rehearsalSnapshotPath = join(
   process.cwd(),
   "src/reveal-day-2026/fixtures/rehearsal-2026-pipeline-v1/publication.snapshot.json",
@@ -192,16 +198,18 @@ describe("2026 reveal-day ingestion", () => {
     expect(report.strictRule).toMatch(/organization intelligence/i);
   });
 
-  it("documents reveal-day ingestion in project docs", async () => {
-    const doc = await readFile(join(projectDocsRoot, "2026-reveal-day-ingestion.md"), "utf8");
+  it.skipIf(skipProjectDocs)(`${PROJECT_STORE_DOC_TEST_NAME} documents reveal-day ingestion in project docs`, async () => {
+    const projectDocsRoot = getProjectDocsRootForContractTests();
+    const doc = await readFile(projectDocPath(projectDocsRoot, "2026-reveal-day-ingestion.md"), "utf8");
     expect(doc).toContain("reveal-2026");
     expect(doc).toContain("rehearsal-for-pipeline-only");
     expect(doc).toContain("promote-actuality");
     expect(doc).toMatch(/NOT_PUBLISHED.*REAL_SOURCE_READY/);
   });
 
-  it("documents reveal-day operations drill with pass/fail criteria", async () => {
-    const drill = await readFile(join(projectDocsRoot, "reveal-day-operations-drill.md"), "utf8");
+  it.skipIf(skipProjectDocs)(`${PROJECT_STORE_DOC_TEST_NAME} documents reveal-day operations drill with pass/fail criteria`, async () => {
+    const projectDocsRoot = getProjectDocsRootForContractTests();
+    const drill = await readFile(projectDocPath(projectDocsRoot, "reveal-day-operations-drill.md"), "utf8");
     expect(drill).toContain("intake-derive");
     expect(drill).toContain("promotion-history.jsonl");
     expect(drill).toContain("steward-approval");

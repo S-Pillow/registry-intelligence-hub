@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -16,6 +16,7 @@
     "normalize": "tsx src/normalization/cli.ts",
     "reveal-2026": "tsx src/reveal-day-2026/cli.ts",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "verify:project-docs": "tsx scripts/verify-project-docs.ts",
     "smoke": "npm run build && node scripts/production-smoke.mjs",
     "hub:production": "node scripts/start-hub-production.mjs",
     "staging:path-bc-drill": "node scripts/staging-path-bc-drill.mjs"

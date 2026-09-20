@@ -6,7 +6,7 @@ The fixture is explicitly synthetic rehearsal data. It must not be treated as th
 
 ## Run locally
 
-Requires Node.js **>=20.9.0** (see `package.json` `engines`; Next 16 lockfile minimum). Node **22+** is recommended for **CI parity** only — production hosts on **20.x** (e.g. srv766238 at 20.19.0) are supported.
+Requires Node.js **>=22.0.0** for install, `npm run verify`, and deploy (see `package.json` `engines`). Next.js accepts **>=20.9.0**, but devDependencies on this repo (e.g. Vitest 5, Playwright) emit **EBADENGINE** warnings on Node 20.x — **srv766238** should use **NVM Node 22** for `npm ci`, verify, build, and PM2 (see `deploy/ecosystem.config.cjs.example`).
 
 ```bash
 npm install
@@ -28,7 +28,9 @@ npm run verify
 npm run smoke
 ```
 
-This runs linting, TypeScript checks, deterministic fixture/hash tests, and a production build. `npm run smoke` also boots a fresh `next start` and verifies Hub routes **and** that every client chunk referenced by Command Center resolves (a stale `next-server` left running across `next build` otherwise 404s chunks and triggers the isolated Hub error boundary).
+This runs linting, TypeScript checks, deterministic fixture/hash tests, and a production build. On hosts **without** the Cursor Project Store, tests whose only purpose is validating Project Store markdown contracts are **skipped** (not failed). To require those docs, set `REGISTRY_HUB_PROJECT_DOCS_ROOT` to the store `docs/` directory and run `npm run verify:project-docs`.
+
+`npm run smoke` also boots a fresh `next start` and verifies Hub routes **and** that every client chunk referenced by Command Center resolves (a stale `next-server` left running across `next build` otherwise 404s chunks and triggers the isolated Hub error boundary).
 
 ## Production preview (Cloud / manual QA)
 
