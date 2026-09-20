@@ -187,6 +187,7 @@ function ProvenanceSheet({
   entityKey,
   historicalFact,
   exploreFullHref,
+  exploreDataset,
   accessibilityLabel,
 }: {
   label: string;
@@ -199,6 +200,7 @@ function ProvenanceSheet({
   entityKey?: string;
   historicalFact?: HistoricalMetricFact;
   exploreFullHref?: string;
+  exploreDataset?: InvestigationItem["exploreDataset"];
   accessibilityLabel?: string;
 }) {
   const { investigate } = useInvestigation();
@@ -212,6 +214,7 @@ function ProvenanceSheet({
     entityKey,
     historicalFact,
     exploreFullHref,
+    exploreDataset,
   };
 
   return (
@@ -243,6 +246,9 @@ const EXPLORE_STRINGS_ACTION_UNAVAILABLE =
 
 const EXPLORE_2012_COMPARE_DEFERRED =
   "Cross-round Compare is deferred for Ticket D1 — historical 2012 Explore is read-only research.";
+
+const EXPLORE_2012_BRIEF_UNAVAILABLE =
+  "Historical briefings not yet available — Brief uses the 2026 rehearsal generator only.";
 
 function ExploreEntityActions({
   investigationItem,
@@ -378,22 +384,28 @@ function IntelligenceDrawer({
   onClose: () => void;
 }) {
   const registryFixture = useHubRegistryDocument();
+  const historical2012 = useHistorical2012Payload();
   const [showFull, setShowFull] = useState(false);
   const { addCompare, toggleWatch, watchedIds, compareItems, savedWork } = useInvestigation();
+  const isHistoricalExplore = item?.exploreDataset === "2012-historical";
+  const historicalProvenanceLoaded = isHistoricalExplore && historical2012.status === "loaded";
+  const provenanceDoc = historicalProvenanceLoaded ? historical2012.document : registryFixture;
   const isDerived = item?.kind === "signal";
   const canAct = item && !["coverage", "dataset"].includes(item.kind);
-  const canCompare = item?.entityType && item.entityKey;
-  const incompatible = canCompare && compareItems.length > 0 && compareItems[0].entityType !== item.entityType;
+  const historicalActionsDisabled = isHistoricalExplore;
+  const canCompareEntity = Boolean(item?.entityType && item.entityKey) && !historicalActionsDisabled;
+  const incompatible = canCompareEntity && compareItems.length > 0 && compareItems[0].entityType !== item!.entityType;
   const isWatching = item ? (item.entityType && item.entityKey ? savedWork.isEntityWatched(item.entityType, item.entityKey) : watchedIds.has(item.id)) : false;
   const onToggleWatch = () => {
-    if (!item) return;
+    if (!item || historicalActionsDisabled) return;
     if (item.entityType && item.entityKey) savedWork.toggleEntityWatch(item.entityType, item.entityKey, item.label, item.records.length);
     else toggleWatch(item);
   };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
   const fullHref = item ? exploreFullHrefForInvestigation(item) : "#";
   const showViewFull = Boolean(
-    item && canAct && !item.historicalFact && (item.records.length > 0 || item.exploreFullHref),
+    item && canAct && !item.historicalFact && (item.records.length > 0 || item.exploreFullHref)
+      && (!historicalActionsDisabled || historicalProvenanceLoaded),
   );
 
   return (
@@ -417,9 +429,9 @@ function IntelligenceDrawer({
               )}
 
               {canAct && (
-                <div className={`grid gap-2 ${canCompare && showViewFull ? "grid-cols-3" : canCompare || showViewFull ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div className={`grid gap-2 ${canCompareEntity && showViewFull ? "grid-cols-3" : canCompareEntity || showViewFull ? "grid-cols-2" : "grid-cols-1"}`}>
                   {showViewFull && <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>}
-                  {canCompare && (
+                  {canCompareEntity ? (
                     <Button
                       variant="outline"
                       disabled={Boolean(incompatible) || compareItems.some((entry) => entry.id === item.id) || compareItems.length >= 4}
@@ -428,8 +440,14 @@ function IntelligenceDrawer({
                     >
                       <GitCompareArrows />+ Compare
                     </Button>
+                  ) : historicalActionsDisabled ? (
+                    <Button variant="outline" disabled title={EXPLORE_2012_COMPARE_DEFERRED}><GitCompareArrows />+ Compare</Button>
+                  ) : null}
+                  {historicalActionsDisabled ? (
+                    <Button variant="outline" disabled title={EXPLORE_2012_COMPARE_DEFERRED}><Star />Watch</Button>
+                  ) : (
+                    <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
                   )}
-                  <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
                 </div>
               )}
 
@@ -437,7 +455,7 @@ function IntelligenceDrawer({
                 <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">Compare, Watch, and View full are not available for dataset health and coverage summaries. Use supporting sections below for provenance.</p>
               )}
 
-              {canCompare && item.entityKey && (
+              {canCompareEntity && item.entityKey && (
                 <BriefThisButton
                   scope={{ kind: "entity", entityType: item.entityType!, entityKey: item.entityKey, label: item.label }}
                   label="Brief this"
@@ -447,7 +465,11 @@ function IntelligenceDrawer({
                 />
               )}
 
-              {canCompare && isWatching && (
+              {historicalActionsDisabled && canAct && item.entityKey && (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{EXPLORE_2012_BRIEF_UNAVAILABLE}</p>
+              )}
+
+              {canCompareEntity && isWatching && (
                 <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href="/saved?tab=watchlists" className="underline">View in Saved</Link></p>
               )}
 
@@ -474,7 +496,9 @@ function IntelligenceDrawer({
                 </div>
                 <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Classification</p>
-                  <p className="mt-2 text-sm font-bold text-slate-900">{isDerived ? "Calculated insight" : "Deterministic source-backed fact"}</p>
+                  <p className="mt-2 text-sm font-bold text-slate-900">
+                    {isHistoricalExplore ? "2012 Reveal Day historical record" : isDerived ? "Calculated insight" : "Deterministic source-backed fact"}
+                  </p>
                   <p className="mt-1 text-xs text-slate-700">{isDerived ? "Confidence: High · versioned rule" : "Confidence: not applicable to deterministic facts"}</p>
                 </div>
               </section>
@@ -482,10 +506,18 @@ function IntelligenceDrawer({
               <section>
                 <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SOURCE & METHOD</h3>
                 <dl className="grid grid-cols-[105px_1fr] gap-y-3 text-sm">
-                  <dt className="text-slate-600">Source</dt><dd><a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={registryFixture.source.url} target="_blank" rel="noreferrer">{registryFixture.source.name}<ExternalLink className="size-3" /></a></dd>
-                  <dt className="text-slate-600">Snapshot</dt><dd className="break-all font-mono text-xs">{registryFixture.snapshotId}</dd>
-                  <dt className="text-slate-600">Retrieved</dt><dd>{new Date(registryFixture.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</dd>
-                  <dt className="text-slate-600">Method</dt><dd className="font-mono text-xs">{registryFixture.methodVersion}</dd>
+                  <dt className="text-slate-600">Round</dt><dd className="font-semibold">{isHistoricalExplore ? "2012 Reveal Day (historical)" : "2026 rehearsal / promoted"}</dd>
+                  <dt className="text-slate-600">Source</dt><dd><a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={provenanceDoc.source.url} target="_blank" rel="noreferrer">{provenanceDoc.source.name}<ExternalLink className="size-3" /></a></dd>
+                  <dt className="text-slate-600">Snapshot</dt><dd className="break-all font-mono text-xs">{provenanceDoc.snapshotId}</dd>
+                  {historicalProvenanceLoaded ? (
+                    <>
+                      <dt className="text-slate-600">Browser payload</dt><dd className="font-mono text-xs">{historical2012.document.payloadVersion}</dd>
+                      <dt className="text-slate-600">Corpus hash</dt><dd className="break-all font-mono text-xs">{historical2012.document.corpusContentHash}</dd>
+                      <dt className="text-slate-600">Source input hash</dt><dd className="break-all font-mono text-xs">{historical2012.document.provenance.inputContentHash}</dd>
+                    </>
+                  ) : null}
+                  <dt className="text-slate-600">Retrieved</dt><dd>{new Date(provenanceDoc.retrievedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC</dd>
+                  <dt className="text-slate-600">Method</dt><dd className="font-mono text-xs">{provenanceDoc.methodVersion}</dd>
                 </dl>
               </section>
 
@@ -512,9 +544,15 @@ function IntelligenceDrawer({
                 </section>
               )}
 
-              <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                <CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{registryFixture.limitations[0]}</p>
-              </div>
+              {isHistoricalExplore ? (
+                <div className="flex gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+                  <Info className="mt-0.5 size-4 shrink-0 text-[#006a56]" /><p>{provenanceDoc.limitations[0]}</p>
+                </div>
+              ) : (
+                <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" /><p>{registryFixture.limitations[0]}</p>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -862,7 +900,8 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             scope={{ kind: "explore-view", params: nonDefaultExploreFilterParams(filters) }}
             label="Brief this view"
             defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
-            disabled={applications.length === 0}
+            disabled={applications.length === 0 || is2012Historical}
+            disabledTitle={is2012Historical ? EXPLORE_2012_BRIEF_UNAVAILABLE : undefined}
             entryPath="current-view"
           />
           <Button variant="outline" onClick={clear}>Clear filters</Button>
@@ -884,7 +923,15 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                 const idn = row.records.filter((item) => item.idn).length;
                 const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
                 const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
-                const investigationItem: InvestigationItem = { id: `explore-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
+                const investigationItem: InvestigationItem = {
+                  id: `explore-${row.id}`,
+                  kind,
+                  label: row.name,
+                  records: row.records,
+                  entityType,
+                  entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
+                  exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
+                };
                 return <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50"><td className="p-3"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="flex items-center gap-1 text-slate-950">{row.name}<ChevronRight className="size-4 text-[#007d65]" /></strong><span className="mt-1 block text-xs text-slate-600">{row.detail}</span></>} /></td><td className="p-3 font-mono font-bold">{row.records.length}</td><td className="p-3 text-slate-700">{[...new Set(row.records.map((item) => item.region))].join(", ")}</td><td className="p-3 text-slate-700">{is2012Historical ? "2012 Reveal Day" : returning ? `${returning} returning` : "New only"}</td><td className="p-3">{contention || "—"}</td><td className="p-3">{idn || "—"}</td><td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{is2012Historical ? "2012 CSV" : "Source-backed"}</Badge></td><td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td></tr>;
               })}</tbody>
             </table>
@@ -892,7 +939,15 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
           <div className="divide-y md:hidden">{rows.map((row) => {
             const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
             const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
-            const investigationItem: InvestigationItem = { id: `explore-mobile-${row.id}`, kind, label: row.name, records: row.records, entityType, entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined };
+            const investigationItem: InvestigationItem = {
+              id: `explore-mobile-${row.id}`,
+              kind,
+              label: row.name,
+              records: row.records,
+              entityType,
+              entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
+              exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
+            };
             return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
           })}</div>
         </section>
@@ -1289,7 +1344,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
   const controls: InvestigationContextValue = {
     investigate: setInvestigation,
-    addCompare: (item) => setCompareItems((current) => current.some((entry) => entry.id === item.id) || current.length >= 4 || !item.entityType || !item.entityKey || (current.length > 0 && current[0].entityType !== item.entityType) ? current : [...current, item]),
+    addCompare: (item) => {
+      if (item.exploreDataset === "2012-historical") return;
+      setCompareItems((current) => current.some((entry) => entry.id === item.id) || current.length >= 4 || !item.entityType || !item.entityKey || (current.length > 0 && current[0].entityType !== item.entityType) ? current : [...current, item]);
+    },
     removeCompare: (id) => setCompareItems((current) => current.filter((item) => item.id !== id)),
     toggleWatch: (item) => setWatchedIds((current) => {
       const next = new Set(current);

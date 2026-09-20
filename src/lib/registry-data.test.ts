@@ -329,5 +329,12 @@ describe("exploreFullHrefForInvestigation", () => {
       records: [],
       exploreFullHref: "/explore?idn=idn",
     })).toBe("/explore?idn=idn");
+
+    expect(exploreFullHrefForInvestigation({
+      entityType: "applications",
+      entityKey: "1-1386-27446",
+      records: [],
+      exploreDataset: "2012-historical",
+    })).toContain("dataset=2012-historical");
   });
 });

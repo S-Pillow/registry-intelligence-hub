@@ -139,12 +139,26 @@ export function exploreDrillDownHref(metricFilter: string) {
   return `${hubPath("/explore")}${qs ? `?${qs}` : ""}`;
 }
 
+export type ExploreDatasetQuery = "2026-rehearsal" | "2012-historical";
+
+function withExploreDataset(href: string, dataset?: ExploreDatasetQuery) {
+  if (dataset !== "2012-historical") return href;
+  const url = new URL(href, "http://local");
+  url.searchParams.set("dataset", "2012-historical");
+  return `${url.pathname}${url.search}`;
+}
+
 /** Supporting-chart and drawer “View full” destinations into Explore. */
-export function exploreEntityResearchHref(entity: "organizations" | "categories" | "applications", key: string) {
+export function exploreEntityResearchHref(
+  entity: "organizations" | "categories" | "applications",
+  key: string,
+  options?: { dataset?: ExploreDatasetQuery },
+) {
   const params = new URLSearchParams();
   params.set("entity", entity);
   if (entity === "applications") params.set("ids", key);
   else params.set("q", key);
+  if (options?.dataset === "2012-historical") params.set("dataset", "2012-historical");
   return `${hubPath("/explore")}?${params}`;
 }
 
@@ -154,14 +168,23 @@ export function exploreFullHrefForInvestigation(item: {
   entityKey?: string;
   records: readonly Application[];
   exploreFullHref?: string;
+  exploreDataset?: ExploreDatasetQuery;
 }) {
-  if (item.exploreFullHref) return item.exploreFullHref;
-  if (item.entityType && item.entityKey) return exploreEntityResearchHref(item.entityType, item.entityKey);
-  if (item.records.length === 1) return exploreEntityResearchHref("applications", item.records[0].id);
-  if (item.records.length > 1) {
-    return `${hubPath("/explore")}?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}`;
+  if (item.exploreFullHref) return withExploreDataset(item.exploreFullHref, item.exploreDataset);
+  if (item.entityType && item.entityKey) {
+    return exploreEntityResearchHref(item.entityType, item.entityKey, { dataset: item.exploreDataset });
   }
-  return hubPath("/explore");
+  if (item.records.length === 1) {
+    return exploreEntityResearchHref("applications", item.records[0].id, { dataset: item.exploreDataset });
+  }
+  if (item.records.length > 1) {
+    const params = new URLSearchParams();
+    params.set("entity", "applications");
+    params.set("ids", item.records.map((record) => record.id).join(","));
+    if (item.exploreDataset === "2012-historical") params.set("dataset", "2012-historical");
+    return `${hubPath("/explore")}?${params}`;
+  }
+  return withExploreDataset(hubPath("/explore"), item.exploreDataset);
 }
 
 export function nonDefaultExploreFilterParams(filters: Record<string, string>) {

@@ -9,6 +9,9 @@ export type CompareEntityType = EntityType;
 
 export type InvestigationKind = "application" | "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
 
+/** Explore dataset context for drawer actions — prevents 2012 historical rows routing into 2026 rehearsal flows. */
+export type InvestigationExploreDataset = "2026-rehearsal" | "2012-historical";
+
 export type InvestigationItem = {
   id: string;
   label: string;
@@ -20,6 +23,8 @@ export type InvestigationItem = {
   historicalFact?: HistoricalMetricFact;
   /** Optional override for drawer “View full” when records are aggregate-only or filtered cohorts. */
   exploreFullHref?: string;
+  /** When set from Explore, drawer provenance and downstream actions stay on this dataset. */
+  exploreDataset?: InvestigationExploreDataset;
 };
 
 export type InvestigationContextValue = {
