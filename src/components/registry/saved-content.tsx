@@ -59,12 +59,12 @@ function buildExploreHrefForEntity(entityType: EntityType, entityKey: string) {
   if (entityType === "applications") params.set("ids", entityKey);
   else if (entityType === "categories") params.set("category", entityKey);
   else params.set("q", entityKey);
-  return `/tools/registry-intelligence-hub/explore?${params.toString()}`;
+  return `/explore?${params.toString()}`;
 }
 
 function buildCompareHref(entityType: EntityType, keys: string[], origin: string) {
   const params = new URLSearchParams({ type: entityType, ids: keys.join(","), origin });
-  return `/tools/registry-intelligence-hub/compare?${params.toString()}`;
+  return `/compare?${params.toString()}`;
 }
 
 function recordedCountForWatchlist(items: WatchlistItem[]) {
@@ -80,7 +80,7 @@ function currentCountForSavedResearch(entry: SavedResearch, applications: Return
 }
 
 function openHrefForSavedResearch(entry: SavedResearch) {
-  const base = entry.kind === "explore-view" ? "/tools/registry-intelligence-hub/explore" : "/tools/registry-intelligence-hub/compare";
+  const base = entry.kind === "explore-view" ? "/explore" : "/compare";
   const search = new URLSearchParams(entry.params).toString();
   return search ? `${base}?${search}` : base;
 }
@@ -406,7 +406,7 @@ function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
           <CardContent>
             <Star className="mx-auto mb-4 size-9 text-slate-500" />
             <h3 className="text-lg font-bold">No watchlists yet</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href="/tools/registry-intelligence-hub/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href="/tools/registry-intelligence-hub/compare" className="font-semibold text-[#006a56] underline">Compare</Link>. That one-click action always creates and adds to a <strong>Quick Watchlist</strong> automatically — create a named list above first if you want to choose a different destination deliberately.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href="/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href="/compare" className="font-semibold text-[#006a56] underline">Compare</Link>. That one-click action always creates and adds to a <strong>Quick Watchlist</strong> automatically — create a named list above first if you want to choose a different destination deliberately.</p>
           </CardContent>
         </Card>
       ) : (
@@ -541,7 +541,7 @@ function SavedResearchTab() {
           <CardContent>
             <Database className="mx-auto mb-4 size-9 text-slate-500" />
             <h3 className="text-lg font-bold">No saved research yet</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Compose filters in <Link href="/tools/registry-intelligence-hub/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or a comparison in <Link href="/tools/registry-intelligence-hub/compare" className="font-semibold text-[#006a56] underline">Compare</Link>, then use “Save this view” or “Save this comparison.”</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Compose filters in <Link href="/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or a comparison in <Link href="/compare" className="font-semibold text-[#006a56] underline">Compare</Link>, then use “Save this view” or “Save this comparison.”</p>
           </CardContent>
         </Card>
       ) : (
@@ -575,7 +575,7 @@ export function SavedContent({ state, initial }: { state: ViewState; initial: Sa
       {state === "loading" ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}</div>
       ) : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Saved is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Locally stored watchlists and saved research were not affected.</p><Link href="/tools/registry-intelligence-hub/saved" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Saved is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Locally stored watchlists and saved research were not affected.</p><Link href="/saved" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : (
         <Tabs value={tab} onValueChange={(value) => setTab(typeof value === "string" ? value : "watchlists")}>
           <TabsList aria-label="Saved sections">

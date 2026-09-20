@@ -1,7 +1,6 @@
 /**
- * Production preview for the Hub: build, stop any stale next-server on the port
- * (stale processes keep an old client manifest while .next/static is replaced),
- * then start `next start` bound to 127.0.0.1.
+ * Production preview for the Hub: build, stop any listener on HUB_PORT only,
+ * then start `next start` bound to 127.0.0.1 (scoped cleanup — never pkill next-server).
  */
 import { spawn } from "node:child_process";
 import { execSync } from "node:child_process";
@@ -15,12 +14,7 @@ function killListenersOnPort(targetPort) {
   try {
     execSync(`fuser -k ${targetPort}/tcp`, { stdio: "ignore" });
   } catch {
-    // Nothing listening.
-  }
-  try {
-    execSync("pkill -f 'next-server' 2>/dev/null || true", { stdio: "ignore", shell: true });
-  } catch {
-    // ignore
+    // Nothing listening on this port.
   }
 }
 
@@ -29,7 +23,7 @@ if (!skipBuild) {
   execSync("npm run build", { stdio: "inherit", cwd: process.cwd() });
 }
 
-console.log(`Stopping any stale next-server on ${host}:${port}…`);
+console.log(`Stopping any process listening on ${host}:${port}…`);
 killListenersOnPort(port);
 await delay(1500);
 

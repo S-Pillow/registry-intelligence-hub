@@ -137,7 +137,7 @@ function ShellHeader() {
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  index < 5 ? <Link key={item} href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
+                  index < 5 ? <Link key={item} href={index === 0 ? "/" : `/${item.toLowerCase()}`} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link> :
                   <div key={item} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm text-slate-400">{item}<Badge variant="secondary">Planned</Badge></div>
                 ))}
               </nav>
@@ -157,7 +157,7 @@ function HubNav({ active = "Command Center" }: { active?: string }) {
           index < 5 ? (
             <Link
               key={item}
-              href={index === 0 ? "/tools/registry-intelligence-hub" : `/tools/registry-intelligence-hub/${item.toLowerCase()}`}
+              href={index === 0 ? "/" : `/${item.toLowerCase()}`}
               className={`shrink-0 border-b-2 px-3 py-3 text-sm font-semibold ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
             >
               {item}
@@ -323,7 +323,7 @@ function SaveResearchButton({
   if (confirmation) {
     return (
       <p role="status" className="flex items-center gap-2 text-xs font-semibold text-[#005c49]">
-        Saved “{confirmation}” to Saved Research. <Link href="/tools/registry-intelligence-hub/saved?tab=research" className="underline">View in Saved</Link>
+        Saved “{confirmation}” to Saved Research. <Link href="/saved?tab=research" className="underline">View in Saved</Link>
         <button type="button" className="text-slate-500 underline" onClick={() => setConfirmation(null)}>Dismiss</button>
       </p>
     );
@@ -438,7 +438,7 @@ function IntelligenceDrawer({
               )}
 
               {canCompare && isWatching && (
-                <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href="/tools/registry-intelligence-hub/saved?tab=watchlists" className="underline">View in Saved</Link></p>
+                <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href="/saved?tab=watchlists" className="underline">View in Saved</Link></p>
               )}
 
               {item.kind === "coverage" && (
@@ -521,7 +521,7 @@ function ComparisonTray() {
 
   const entityType = compareItems[0].entityType;
   const compatible = Boolean(entityType) && compareItems.every((item) => item.entityType === entityType && item.entityKey);
-  const compareHref = compatible ? `/tools/registry-intelligence-hub/compare?type=${entityType}&ids=${encodeURIComponent(compareItems.map((item) => item.entityKey).join(","))}&origin=${encodeURIComponent("Investigation tray selection")}` : "#";
+  const compareHref = compatible ? `/compare?type=${entityType}&ids=${encodeURIComponent(compareItems.map((item) => item.entityKey).join(","))}&origin=${encodeURIComponent("Investigation tray selection")}` : "#";
 
   return (
     <aside aria-label="Comparison selection tray" className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-4xl rounded-2xl border border-slate-700 bg-[#101923] p-3 text-white shadow-2xl">
@@ -666,7 +666,7 @@ function MessageState({ kind }: { kind: "empty" | "error" }) {
         </div>
         <h2 className="text-xl font-semibold">{empty ? "No approved baseline yet" : "Command Center unavailable"}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">{empty ? "The publication gate has not promoted a dataset. Existing tools remain unaffected." : "The rehearsal fixture could not be loaded. Try again or inspect Data Health."}</p>
-        <Button className="mt-6 bg-[#007d65] hover:bg-[#006a56]" onClick={() => router.push("/tools/registry-intelligence-hub")}>{empty ? "View rehearsal fixture" : "Try again"}</Button>
+        <Button className="mt-6 bg-[#007d65] hover:bg-[#006a56]" onClick={() => router.push("/")}>{empty ? "View rehearsal fixture" : "Try again"}</Button>
       </CardContent>
     </Card>
   );
@@ -799,7 +799,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       {state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/tools/registry-intelligence-hub/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : state === "empty" || !rows.length ? (
         <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
       ) : (
@@ -954,7 +954,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     setLastDifferencesSelectionKey(differencesSelectionKey);
     setShowAllDifferences(false);
   }
-  const exploreHref = `/tools/registry-intelligence-hub/explore?entity=${type}`;
+  const exploreHref = `/explore?entity=${type}`;
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">

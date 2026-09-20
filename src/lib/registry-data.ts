@@ -1,4 +1,5 @@
 import fixture from "@/data/fixtures/registry-applications.json";
+import { hubPath } from "@/lib/hub-paths";
 import { buildCommandCenterRoundPulse } from "@/comparison/historical-2012-ui-adapter";
 import {
   DEFAULT_CLAIM_ACTUALITY_STATE,
@@ -93,7 +94,7 @@ export function exploreResearchHref(query: string) {
   const params = new URLSearchParams();
   if (query.trim()) params.set("q", query.trim());
   const suffix = params.size ? `?${params}` : "";
-  return `/tools/registry-intelligence-hub/explore${suffix}`;
+  return `${hubPath("/explore")}${suffix}`;
 }
 
 /** Supporting records shown in Round Pulse provenance — aligned with Explore filter semantics. */
@@ -123,7 +124,7 @@ export function exploreDrillDownHref(metricFilter: string) {
       break;
   }
   const qs = params.toString();
-  return `/tools/registry-intelligence-hub/explore${qs ? `?${qs}` : ""}`;
+  return `${hubPath("/explore")}${qs ? `?${qs}` : ""}`;
 }
 
 /** Supporting-chart and drawer “View full” destinations into Explore. */
@@ -132,7 +133,7 @@ export function exploreEntityResearchHref(entity: "organizations" | "categories"
   params.set("entity", entity);
   if (entity === "applications") params.set("ids", key);
   else params.set("q", key);
-  return `/tools/registry-intelligence-hub/explore?${params}`;
+  return `${hubPath("/explore")}?${params}`;
 }
 
 /** Intelligence drawer “View full” — entity browse, explicit ids, or saved override. */
@@ -146,9 +147,9 @@ export function exploreFullHrefForInvestigation(item: {
   if (item.entityType && item.entityKey) return exploreEntityResearchHref(item.entityType, item.entityKey);
   if (item.records.length === 1) return exploreEntityResearchHref("applications", item.records[0].id);
   if (item.records.length > 1) {
-    return `/tools/registry-intelligence-hub/explore?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}`;
+    return `${hubPath("/explore")}?entity=applications&ids=${encodeURIComponent(item.records.map((record) => record.id).join(","))}`;
   }
-  return "/tools/registry-intelligence-hub/explore";
+  return hubPath("/explore");
 }
 
 export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
@@ -263,7 +264,7 @@ function compareHrefFromSelection(type: EntityType, ids: string[], origin: strin
   for (const [key, value] of Object.entries(extraParams)) {
     if (value && !["type", "ids"].includes(key)) params.set(key, value);
   }
-  return `/tools/registry-intelligence-hub/compare?${params.toString()}`;
+  return `${hubPath("/compare")}?${params.toString()}`;
 }
 
 /** Validates a saved or derived Compare selection (2–4 like entities that resolve in the fixture). */

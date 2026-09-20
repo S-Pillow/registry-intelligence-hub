@@ -6,7 +6,7 @@ The fixture is explicitly synthetic rehearsal data. It must not be treated as th
 
 ## Run locally
 
-Requires Node.js 22+ and npm.
+Requires Node.js **>=20.9.0** (see `package.json` `engines`; Next 16 lockfile minimum). Node **22+** is recommended for parity with CI and future ForgeForward hosts.
 
 ```bash
 npm install
@@ -32,7 +32,7 @@ This runs linting, TypeScript checks, deterministic fixture/hash tests, and a pr
 
 ## Production preview (Cloud / manual QA)
 
-After any `npm run build` or `npm run verify`, restart the preview server so HTML and `/_next/static` stay in sync:
+After any `npm run build` or `npm run verify`, restart the preview server so HTML and `/tools/registry-intelligence-hub/_next/static` stay in sync (`basePath` in `next.config.ts`):
 
 ```bash
 npm run hub:production
@@ -54,7 +54,7 @@ rm -f .data/reveal-2026/claim-actuality-state.json
 npm run smoke
 ```
 
-Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` with `features.registryIntelligenceHubCatalog` enabled only after smoke passes. Templates: `.env.production.rehearsal.example`, `deploy/systemd/registry-intelligence-hub.service.example`. Staging Path B/C drill (`npm run staging:path-bc-drill`) is optional on staging only — not required for production rehearsal.
+Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` with `features.registryIntelligenceHubCatalog` enabled only after smoke passes. Templates: `.env.production.rehearsal.example`, `deploy/systemd/registry-intelligence-hub.service.example`, `deploy/ecosystem.config.cjs.example` (PM2). **PM2/systemd:** run `npm run build` then `npm run start -- -H 127.0.0.1 -p 43123` only — do not use `hub:production` under a process manager (that script builds and frees port 43123). Staging Path B/C drill (`npm run staging:path-bc-drill`) is optional on staging only — not required for production rehearsal.
 
 ## Phase 0 boundaries
 
@@ -63,7 +63,7 @@ Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` with `feat
 - Immutable fixture metadata and hashes live in `src/data/fixtures/manifest.json`.
 - Rehearsal-round intelligence is calculated in `src/lib/registry-data.ts`.
 - Approved **2012 Reveal Day** comparison facts and eligibility gates live in `src/comparison/` (`metric-eligibility-catalog/1.0.0`, `historical-2012-ui-adapter/1.0.0`). Cross-round org identity links use `cross-round-identity/1.0.0` (`npm run normalize -- cross-round-identity`).
-- **2026 claim actuality (browser)** — Hub routes load promoted state once per request in `src/app/tools/registry-intelligence-hub/layout.tsx` via `loadPromotedClaimActualityState()` (`src/lib/claim-actuality-server.ts`). Eligibility for Command Center, Explore, Compare, and Briefings resolves through `resolveHubMetricEligibility()` (`src/lib/hub-metric-eligibility.ts`). Production may supply state either as on-disk JSON (default `.data/reveal-2026/claim-actuality-state.json`, override with `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH`) or inline JSON in `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON` (full `claim-actuality-state/1.0.0` document from `npm run reveal-2026 -- promote-actuality`). Env JSON takes precedence over the file. With no promoted state, 2026 remains `NOT_PUBLISHED` and cross-round comparison stays gated.
+- **2026 claim actuality (browser)** — Hub routes load promoted state once per request in `src/app/layout.tsx` via `loadPromotedClaimActualityState()` (`src/lib/claim-actuality-server.ts`). Eligibility for Command Center, Explore, Compare, and Briefings resolves through `resolveHubMetricEligibility()` (`src/lib/hub-metric-eligibility.ts`). Production may supply state either as on-disk JSON (default `.data/reveal-2026/claim-actuality-state.json`, override with `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH`) or inline JSON in `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON` (full `claim-actuality-state/1.0.0` document from `npm run reveal-2026 -- promote-actuality`). Env JSON takes precedence over the file. With no promoted state, 2026 remains `NOT_PUBLISHED` and cross-round comparison stays gated.
 - **2026 application rows (browser)** — When claim actuality is `REAL_SOURCE_READY` and a configured payload matches `snapshotId` + `snapshotContentHash`, Explore, Compare, Saved, and Briefings use promoted application rows from `registry-browser-applications/1.0.0` (built via `npm run reveal-2026 -- build-browser-payload --snapshot <publication.snapshot.json>`). Configure with `REGISTRY_HUB_APPLICATION_PAYLOAD_PATH` (browser payload JSON or publication snapshot) or `REGISTRY_HUB_APPLICATION_PAYLOAD_JSON` (inline payload document). Env JSON wins over the file. Without a matching promoted payload, the Hub keeps the 12-application rehearsal fixture (`src/data/fixtures/registry-applications.json`). Drill payload fixture: `src/data/fixtures/drill-2026-registry-applications.payload.json`.
 - **Staging Path B/C drill** — After offline Path B/C in `docs/reveal-day-operations-drill.md` (Project store), point the Hub at promoted state + browser payload and run `npm run staging:path-bc-drill` (or `STAGING_DRILL_EXPECT_REHEARSAL=1` after teardown). Vitest coverage: `src/reveal-day-2026/staging-path-bc-drill.test.ts`.
 

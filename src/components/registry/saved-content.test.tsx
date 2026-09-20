@@ -139,7 +139,7 @@ describe("Saved hub — Saved Research", () => {
 
     expect(await screen.findByText(/Saved “/)).toBeInTheDocument();
     const viewInSaved = screen.getByRole("link", { name: "View in Saved" });
-    expect(viewInSaved).toHaveAttribute("href", "/tools/registry-intelligence-hub/saved?tab=research");
+    expect(viewInSaved).toHaveAttribute("href", "/saved?tab=research");
   });
 
   it("manages a saved Compare configuration end-to-end from the Saved hub", async () => {

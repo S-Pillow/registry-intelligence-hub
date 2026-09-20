@@ -157,8 +157,8 @@ describe("Command Center interactions", () => {
     render(<CommandCenter />);
     const search = screen.getByRole("textbox", { name: "Search fixture records" });
     await user.type(search, "Atlas");
-    expect(exploreResearchHref("Atlas")).toBe("/tools/registry-intelligence-hub/explore?q=Atlas");
-    expect(screen.getByRole("link", { name: "Open in Explore" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/explore?q=Atlas");
+    expect(exploreResearchHref("Atlas")).toBe("/explore?q=Atlas");
+    expect(screen.getByRole("link", { name: "Open in Explore" })).toHaveAttribute("href", "/explore?q=Atlas");
   });
 
   it("opens provenance for snapshot lineage from dataset health", async () => {
@@ -616,8 +616,8 @@ describe("Saved navigation and one-click Watch", () => {
   it("enables the Saved and Briefings navigation links while Data Health remains planned", () => {
     render(<CommandCenter />);
 
-    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/saved");
-    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/tools/registry-intelligence-hub/briefings");
+    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved");
+    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/briefings");
     expect(screen.getByText("Data Health").closest("button")).toBeDisabled();
   });
 

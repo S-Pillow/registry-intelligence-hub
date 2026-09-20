@@ -273,28 +273,28 @@ describe("deterministic Compare differencing, grouping, and delta helpers", () =
 
 describe("exploreResearchHref", () => {
   it("builds Explore URLs with optional query text", () => {
-    expect(exploreResearchHref("")).toBe("/tools/registry-intelligence-hub/explore");
-    expect(exploreResearchHref("  Atlas  ")).toBe("/tools/registry-intelligence-hub/explore?q=Atlas");
+    expect(exploreResearchHref("")).toBe("/explore");
+    expect(exploreResearchHref("  Atlas  ")).toBe("/explore?q=Atlas");
   });
 });
 
 describe("exploreDrillDownHref", () => {
   it("maps Round Pulse filters to composable Explore params", () => {
-    expect(exploreDrillDownHref("all")).toBe("/tools/registry-intelligence-hub/explore");
-    expect(exploreDrillDownHref("idn")).toBe("/tools/registry-intelligence-hub/explore?idn=idn");
-    expect(exploreDrillDownHref("contention")).toBe("/tools/registry-intelligence-hub/explore?contention=in");
-    expect(exploreDrillDownHref("strings")).toBe("/tools/registry-intelligence-hub/explore?entity=strings");
-    expect(exploreDrillDownHref("organizations")).toBe("/tools/registry-intelligence-hub/explore?entity=organizations");
+    expect(exploreDrillDownHref("all")).toBe("/explore");
+    expect(exploreDrillDownHref("idn")).toBe("/explore?idn=idn");
+    expect(exploreDrillDownHref("contention")).toBe("/explore?contention=in");
+    expect(exploreDrillDownHref("strings")).toBe("/explore?entity=strings");
+    expect(exploreDrillDownHref("organizations")).toBe("/explore?entity=organizations");
   });
 });
 
 describe("exploreEntityResearchHref", () => {
   it("builds entity-scoped Explore destinations", () => {
     expect(exploreEntityResearchHref("categories", "Technology")).toBe(
-      "/tools/registry-intelligence-hub/explore?entity=categories&q=Technology",
+      "/explore?entity=categories&q=Technology",
     );
     expect(exploreEntityResearchHref("applications", "APP-26001")).toBe(
-      "/tools/registry-intelligence-hub/explore?entity=applications&ids=APP-26001",
+      "/explore?entity=applications&ids=APP-26001",
     );
   });
 });
@@ -305,7 +305,7 @@ describe("exploreFullHrefForInvestigation", () => {
       entityType: "organizations",
       entityKey: "Atlas Digital",
       records: [],
-    })).toBe("/tools/registry-intelligence-hub/explore?entity=organizations&q=Atlas+Digital");
+    })).toBe("/explore?entity=organizations&q=Atlas+Digital");
 
     expect(exploreFullHrefForInvestigation({
       records: fixture.applications.slice(0, 2),
@@ -313,7 +313,7 @@ describe("exploreFullHrefForInvestigation", () => {
 
     expect(exploreFullHrefForInvestigation({
       records: [],
-      exploreFullHref: "/tools/registry-intelligence-hub/explore?idn=idn",
-    })).toBe("/tools/registry-intelligence-hub/explore?idn=idn");
+      exploreFullHref: "/explore?idn=idn",
+    })).toBe("/explore?idn=idn");
   });
 });

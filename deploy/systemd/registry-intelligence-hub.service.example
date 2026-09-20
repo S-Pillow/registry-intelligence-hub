@@ -6,7 +6,8 @@
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now registry-intelligence-hub
 #
-# After every `npm run build`, restart so HTML and /_next/static stay aligned.
+# After every `npm run build`, restart so HTML and basePath-prefixed /_next/static stay aligned.
+# Next.js basePath is /tools/registry-intelligence-hub — nginx must proxy only that prefix (no root /_next/ location).
 
 [Unit]
 Description=Registry Intelligence Hub (Next.js production)

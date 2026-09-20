@@ -1,5 +1,6 @@
 import { spawn, execSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { HUB_BASE_PATH, withBasePath } from "./hub-base-path.mjs";
 
 const port = process.env.SMOKE_PORT ?? "43123";
 const base = `http://127.0.0.1:${port}`;
@@ -10,6 +11,13 @@ function killListenersOnPort(targetPort) {
   } catch {
     // Nothing listening.
   }
+}
+
+function registryHubEnvUnset() {
+  return !process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON?.trim()
+    && !process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_JSON?.trim()
+    && !process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH?.trim()
+    && !process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_PATH?.trim();
 }
 
 /** Client bundles 404 when an old next-server survives across `next build` — Hub hits the route error boundary. */
@@ -25,27 +33,35 @@ async function fetchOk(url, attempts = 8) {
 
 /** Rehearsal deploy default: no REGISTRY_HUB_* pins → 12-app fixture + 2012 approved baseline counts. */
 function assertRehearsalProductionContract(html) {
-  if (process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON?.trim()) return;
-  if (process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_JSON?.trim()) return;
-  if (process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH?.trim()) return;
-  if (process.env.REGISTRY_HUB_APPLICATION_PAYLOAD_PATH?.trim()) return;
+  if (!registryHubEnvUnset()) return;
 
-  if (!html.includes("Rehearsal data only")) {
-    throw new Error("Command Center missing rehearsal banner (unexpected promoted claim/payload?)");
+  const required = [
+    ["Rehearsal data only", "rehearsal banner"],
+    ["snap-rehearsal-2026-09-16", "rehearsal snapshot id"],
+    ["1930", "2012 approved application count"],
+    ["1409", "2012 approved unique string count"],
+    ["116", "2012 approved IDN application count"],
+    ["2026 comparison pending publication", "gated cross-round delta copy"],
+  ];
+  for (const [needle, label] of required) {
+    if (!html.includes(needle)) {
+      throw new Error(`Command Center missing ${label} (${needle})`);
+    }
   }
-  if (!html.includes("snap-rehearsal-2026-09-16")) {
-    throw new Error("Command Center missing rehearsal snapshot id (12-app fixture)");
+  if (html.includes("APP-91000")) {
+    throw new Error("Command Center must not show staging promoted id APP-91000 in rehearsal mode");
   }
-  if (!html.includes("1930")) {
-    throw new Error("Command Center missing 2012 approved baseline application count (1930)");
-  }
-  if (!html.includes("2026 comparison pending publication")) {
-    throw new Error("Command Center missing gated cross-round delta copy for rehearsal 2026");
+  if (!/12(?:<!-- -->)?\/(?:<!-- -->)?12(?:<!-- -->)? records/.test(html)) {
+    throw new Error("Command Center missing 12/12 rehearsal fixture record coverage");
   }
 }
 
 async function assertClientChunksResolvable(html, pagePath) {
-  const scripts = [...new Set([...html.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((match) => match[0]))];
+  const chunkPattern = new RegExp(`${HUB_BASE_PATH.replace(/\//g, "\\/")}/_next/static/chunks/[a-zA-Z0-9_.-]+\\.js`, "g");
+  const scripts = [...new Set([...html.matchAll(chunkPattern)].map((match) => match[0]))];
+  if (!scripts.length) {
+    throw new Error(`${pagePath} HTML missing ${HUB_BASE_PATH}/_next/static/chunks references (basePath asset prefix)`);
+  }
   for (const script of scripts) {
     const response = await fetchOk(`${base}${script}`);
     if (!response.ok) {
@@ -54,15 +70,19 @@ async function assertClientChunksResolvable(html, pagePath) {
           "Restart production preview after build: npm run hub:production",
       );
     }
+    if (!script.startsWith(`${HUB_BASE_PATH}/_next/`)) {
+      throw new Error(`Client chunk must live under ${HUB_BASE_PATH}/_next/, got ${script}`);
+    }
   }
 }
+
 const paths = [
-  "/tools/registry-intelligence-hub",
-  "/tools/registry-intelligence-hub/explore",
-  "/tools/registry-intelligence-hub/explore?entity=organizations&idn=idn",
-  "/tools/registry-intelligence-hub/compare?type=organizations&ids=Atlas+Digital,Northstar+Group",
-  "/tools/registry-intelligence-hub/saved",
-  "/tools/registry-intelligence-hub/briefings",
+  withBasePath("/"),
+  withBasePath("/explore"),
+  withBasePath("/explore?entity=organizations&idn=idn"),
+  withBasePath("/compare?type=organizations&ids=Atlas+Digital,Northstar+Group"),
+  withBasePath("/saved"),
+  withBasePath("/briefings"),
 ];
 
 killListenersOnPort(port);
@@ -89,12 +109,16 @@ try {
   }
   if (!ready) {
     try {
-      const probe = await fetch(`${base}/tools/registry-intelligence-hub/explore`);
+      const probe = await fetch(`${base}${withBasePath("/explore")}`);
       if (!probe.ok) throw new Error(`HTTP ${probe.status}`);
       ready = true;
     } catch {
       throw new Error("Production server did not become ready in time");
     }
+  }
+
+  if (!registryHubEnvUnset()) {
+    throw new Error("production-smoke requires all four REGISTRY_HUB_* variables to be unset");
   }
 
   for (const path of paths) {
@@ -106,13 +130,13 @@ try {
     if (!html.includes("Registry Intelligence Hub") && !html.includes("Explore registry intelligence")) {
       throw new Error(`${path} missing expected hub markup`);
     }
-    if (path === "/tools/registry-intelligence-hub") {
+    if (path === withBasePath("/")) {
       await assertClientChunksResolvable(html, path);
       assertRehearsalProductionContract(html);
     }
   }
 
-  console.log(`production smoke OK (${paths.length} routes on ${base}, client chunks verified)`);
+  console.log(`production smoke OK (${paths.length} routes on ${base}, ${HUB_BASE_PATH}/_next chunks verified)`);
 } finally {
   server.kill("SIGTERM");
   await delay(300);

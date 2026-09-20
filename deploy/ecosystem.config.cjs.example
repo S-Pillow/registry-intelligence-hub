@@ -1,0 +1,30 @@
+/**
+ * PM2 example — Registry Intelligence Hub (srv766238 / shared VPS pattern)
+ *
+ * Matches url-activity-scanner: build separately, then `npm run start` with loopback bind.
+ * Do NOT use `npm run hub:production` under PM2 (that script builds and kills port 43123).
+ *
+ *   cd /root/registry_hub   # or your deploy path
+ *   npm ci && npm run build
+ *   pm2 start deploy/ecosystem.config.cjs.example --only registry-intelligence-hub
+ *   pm2 save
+ */
+module.exports = {
+  apps: [
+    {
+      name: "registry-intelligence-hub",
+      cwd: "/root/registry_hub",
+      script: "npm",
+      args: "run start -- -H 127.0.0.1 -p 43123",
+      env: {
+        NODE_ENV: "production",
+        HUB_HOST: "127.0.0.1",
+        HUB_PORT: "43123",
+      },
+      env_file: "/etc/registry-intelligence-hub/env",
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 5000,
+    },
+  ],
+};

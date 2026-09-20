@@ -11,17 +11,18 @@
  */
 import { spawn, execSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { withBasePath } from "./hub-base-path.mjs";
 
 const port = process.env.HUB_PORT ?? "43123";
 const base = `http://127.0.0.1:${port}`;
 const expectPromoted = process.env.STAGING_DRILL_EXPECT_REHEARSAL !== "1";
 
 const routes = [
-  "/tools/registry-intelligence-hub",
-  "/tools/registry-intelligence-hub/explore",
-  "/tools/registry-intelligence-hub/compare?type=applications&ids=APP-91000,APP-91001",
-  "/tools/registry-intelligence-hub/saved",
-  "/tools/registry-intelligence-hub/briefings",
+  withBasePath("/"),
+  withBasePath("/explore"),
+  withBasePath("/compare?type=applications&ids=APP-91000,APP-91001"),
+  withBasePath("/saved"),
+  withBasePath("/briefings"),
 ];
 
 function killListenersOnPort(targetPort) {
@@ -57,7 +58,7 @@ try {
     await delay(500);
   }
   if (!ready) {
-    const probe = await fetch(`${base}/tools/registry-intelligence-hub`);
+    const probe = await fetch(`${base}${withBasePath("/")}`);
     if (!probe.ok) throw new Error("Hub did not become ready");
   }
 
@@ -75,8 +76,8 @@ try {
     }
   }
 
-  const homeHtml = await (await fetch(`${base}/tools/registry-intelligence-hub`)).text();
-  const exploreHtml = await (await fetch(`${base}/tools/registry-intelligence-hub/explore`)).text();
+  const homeHtml = await (await fetch(`${base}${withBasePath("/")}`)).text();
+  const exploreHtml = await (await fetch(`${base}${withBasePath("/explore")}`)).text();
   if (expectPromoted) {
     if (!homeHtml.includes(promotedMarker)) {
       throw new Error("Command Center missing promoted application rows in SSR output");

@@ -357,7 +357,7 @@ function BriefingWorkspace({ id }: { id: string }) {
           <CardContent>
             <FileClock className="mx-auto mb-4 size-9 text-slate-500" />
             <h2 className="text-lg font-bold">Briefing deleted</h2>
-            <Link href="/tools/registry-intelligence-hub/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
+            <Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
           </CardContent>
         </Card>
       </main>
@@ -372,7 +372,7 @@ function BriefingWorkspace({ id }: { id: string }) {
             <CircleAlert className="mx-auto mb-4 size-9 text-slate-500" />
             <h2 className="text-lg font-bold">Briefing not found</h2>
             <p className="mt-2 text-sm text-slate-700">It may have been deleted, or the link is out of date.</p>
-            <Link href="/tools/registry-intelligence-hub/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
+            <Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
           </CardContent>
         </Card>
       </main>
@@ -384,7 +384,7 @@ function BriefingWorkspace({ id }: { id: string }) {
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
-      <Link href="/tools/registry-intelligence-hub/briefings" className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#006a56] hover:underline"><ArrowLeft className="size-3.5" />Back to Briefings</Link>
+      <Link href="/briefings" className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#006a56] hover:underline"><ArrowLeft className="size-3.5" />Back to Briefings</Link>
 
       <Card className="mb-5 border-slate-300">
         <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
@@ -409,7 +409,7 @@ function BriefingWorkspace({ id }: { id: string }) {
           {edition.status === "superseded" && edition.supersededByEditionId && (
             <p className="text-xs font-semibold text-slate-600">
               Superseded by a newer edition — this is a read-only historical record.{" "}
-              <Link href={`/tools/registry-intelligence-hub/briefings/${definition.id}`} className="underline">Open the current edition</Link>.
+              <Link href={`/briefings/${definition.id}`} className="underline">Open the current edition</Link>.
             </p>
           )}
         </CardContent>
@@ -823,7 +823,7 @@ function BriefingCard({ definition }: { definition: BriefingDefinition }) {
           <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(definition.lastOpenedAt)} · Generated {formatDateTime(edition.generatedAt)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Link href={`/tools/registry-intelligence-hub/briefings/${definition.id}`} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]"><FileClock className="size-3.5" />Open</Link>
+          <Link href={`/briefings/${definition.id}`} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]"><FileClock className="size-3.5" />Open</Link>
           <Button size="sm" variant="ghost" onClick={() => savedWork.duplicateBriefing(definition.id)}><Copy />Duplicate</Button>
           <RenameControl name={definition.name} entityLabel={definition.id} onRename={(next) => savedWork.renameBriefing(definition.id, next)} />
           <DeleteControl name={definition.name} onConfirm={() => savedWork.deleteBriefing(definition.id)} />
@@ -921,7 +921,7 @@ export function BriefingsContent({ state, briefingId }: { state: ViewState; brie
       {state === "loading" ? (
         <div className="space-y-3">{Array.from({ length: 2 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}</div>
       ) : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Briefings is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Your Watchlist, Saved Research, and other Briefings are unaffected.</p><Link href="/tools/registry-intelligence-hub/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Briefings is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Your Watchlist, Saved Research, and other Briefings are unaffected.</p><Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : briefingId ? (
         <BriefingWorkspace id={briefingId} />
       ) : (
@@ -977,7 +977,7 @@ export function BriefThisButton({
   if (createdId) {
     return (
       <p role="status" className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#005c49]">
-        Briefing generated. <Link href={`/tools/registry-intelligence-hub/briefings/${createdId}`} className="underline">Open Briefing</Link>
+        Briefing generated. <Link href={`/briefings/${createdId}`} className="underline">Open Briefing</Link>
         <button type="button" className="text-slate-500 underline" onClick={() => setCreatedId(null)}>Dismiss</button>
       </p>
     );
