@@ -24,6 +24,7 @@ await page.waitForSelector('[data-testid="above-fold-lens-surface"]');
 for (const { file, button } of views) {
   await page.getByRole("button", { name: button, exact: true }).click();
   await page.waitForSelector('[data-testid="lens-round-pulse-eyebrow"]');
+  await page.evaluate(() => window.scrollTo(0, 0));
   const target = path.join(outDir, file);
   await page.screenshot({ path: target, fullPage: false });
   console.log(`wrote ${target}`);

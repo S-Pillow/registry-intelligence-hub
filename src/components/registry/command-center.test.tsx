@@ -41,9 +41,12 @@ describe("Command Center interactions", () => {
     expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
     expect(pulseSubtitle()).toBe("The rehearsal round at a glance");
     expect(focusMarkers()).toHaveLength(0);
+    const rehearsalBanner = () => screen.getByText(/Rehearsal data only\./);
+    const roundPulseSection = () => screen.getByTestId("round-pulse-section");
     expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
-    expect(documentBefore(screen.getByLabelText("Dataset health"), screen.getByTestId("round-pulse-section"))).toBe(true);
-    expect(screen.getByText(/Rehearsal data only\./)).toBeInTheDocument();
+    expect(documentBefore(screen.getByLabelText("Dataset health"), roundPulseSection())).toBe(true);
+    expect(documentBefore(rehearsalBanner(), roundPulseSection())).toBe(true);
+    expect(rehearsalBanner()).toBeInTheDocument();
     const baselineFacts = factValues();
     expect(baselineFacts).toContain("1930");
     expect(baselineFacts).toContain("1409");
@@ -91,6 +94,8 @@ describe("Command Center interactions", () => {
       expect.arrayContaining(["View focus · Cross-region narrative", "View focus · Geographic reach signal"]),
     );
     expect(factValues()).toEqual(baselineFacts);
+    expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
+    expect(documentBefore(rehearsalBanner(), roundPulseSection())).toBe(true);
   });
 
   it("keeps downstream lens-dependent content when Views change", async () => {
