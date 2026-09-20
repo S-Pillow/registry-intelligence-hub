@@ -1,17 +1,13 @@
-import { spawn, execSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { HUB_BASE_PATH, withBasePath } from "./hub-base-path.mjs";
+import {
+  killListenersOnPort,
+  teardownSpawnedServer,
+} from "./smoke-process-utils.mjs";
 
 const port = process.env.SMOKE_PORT ?? "43123";
 const base = `http://127.0.0.1:${port}`;
-
-function killListenersOnPort(targetPort) {
-  try {
-    execSync(`fuser -k ${targetPort}/tcp`, { stdio: "ignore" });
-  } catch {
-    // Nothing listening.
-  }
-}
 
 function registryHubEnvUnset() {
   return !process.env.REGISTRY_HUB_CLAIM_ACTUALITY_STATE_JSON?.trim()
@@ -92,6 +88,7 @@ const server = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", port], {
   cwd: process.cwd(),
   stdio: ["ignore", "pipe", "pipe"],
   env: { ...process.env, NODE_ENV: "production" },
+  detached: true,
 });
 
 let ready = false;
@@ -102,6 +99,8 @@ server.stdout.on("data", (chunk) => {
 server.stderr.on("data", (chunk) => {
   if (chunk.toString().includes("Ready")) ready = true;
 });
+
+let smokeError = null;
 
 try {
   for (let attempt = 0; attempt < 60 && !ready; attempt += 1) {
@@ -137,7 +136,17 @@ try {
   }
 
   console.log(`production smoke OK (${paths.length} routes on ${base}, ${HUB_BASE_PATH}/_next chunks verified)`);
+} catch (error) {
+  smokeError = error instanceof Error ? error : new Error(String(error));
 } finally {
-  server.kill("SIGTERM");
-  await delay(300);
+  const teardown = await teardownSpawnedServer(server, port);
+  if (!teardown.ok) {
+    console.error(`production-smoke teardown failed: ${teardown.message}`);
+    process.exit(1);
+  }
+}
+
+if (smokeError) {
+  console.error(smokeError.message);
+  process.exit(1);
 }
