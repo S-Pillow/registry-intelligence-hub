@@ -1112,7 +1112,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length} strings result${rows.length === 1 ? "" : "s"} · ${underlyingStringApplicationCount} underlying application${underlyingStringApplicationCount === 1 ? "" : "s"}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton

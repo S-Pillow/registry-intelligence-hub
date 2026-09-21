@@ -74,13 +74,13 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     const table = screen.getByRole("table");
     expect(within(table).getAllByText(".APP")).toHaveLength(1);
     expect(within(table).getByText("13")).toBeInTheDocument();
-    expect(screen.getByText(/1 strings result · 13 underlying applications/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 string result · 13 underlying applications/i)).toBeInTheDocument();
   });
 
   it("normalizes q=.APP to the same single-string aggregate view", () => {
     renderHistoricalStringsExplore({ q: ".APP" });
 
-    expect(screen.getByText(/1 strings result · 13 underlying applications/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 string result · 13 underlying applications/i)).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
   });
 
@@ -90,6 +90,7 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     const table = screen.getByRole("table");
     expect(within(table).getAllByText(".AAA")).toHaveLength(1);
     expect(within(table).getByText("1")).toBeInTheDocument();
+    expect(screen.getByText(/1 string result · 1 underlying application/i)).toBeInTheDocument();
   });
 
   it("opens string drawer with member records and disabled Compare/Watch/Brief", async () => {
