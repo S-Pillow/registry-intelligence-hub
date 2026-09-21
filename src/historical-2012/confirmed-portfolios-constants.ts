@@ -25,3 +25,11 @@ export const HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE =
 
 export const HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE =
   "Steward confirmed · organization-promotion/1.0.0";
+
+/** Intelligence drawer classification for steward-confirmed portfolio rows (D2.4B). */
+export const HISTORICAL_2012_CONFIRMED_PORTFOLIO_DRAWER_CLASSIFICATION =
+  "Steward-confirmed historical portfolio";
+
+/** Drawer copy — CSV/browser payload provenance is for member applications only. */
+export const HISTORICAL_2012_CONFIRMED_PORTFOLIO_MEMBER_APPLICATION_PROVENANCE_NOTE =
+  "Reveal Day CSV browser payload — member application string, applicant, region, and application ID. Does not establish steward-confirmed portfolio identity.";
