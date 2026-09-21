@@ -39,7 +39,10 @@ async function capture(file, url, width, height, after) {
 const stringsExplore = `${baseUrl}/explore?dataset=2012-historical&entity=strings`;
 
 await capture("d2-1-explore-strings-historical-desktop.png", stringsExplore, 1440, 900);
-await capture("d2-1-explore-strings-historical-mobile.png", stringsExplore, 390, 844);
+await capture("d2-1-explore-strings-historical-mobile.png", stringsExplore, 390, 844, async (page) => {
+  await page.evaluate(() => window.scrollBy(0, 520));
+  await page.waitForTimeout(300);
+});
 
 await capture(
   "d2-1-command-center-strings-handoff-desktop.png",

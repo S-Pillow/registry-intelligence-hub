@@ -40,22 +40,65 @@ export function isHistorical2012StringBrowse(
   return datasetIs2012Historical && browseEntity === "strings";
 }
 
-/** 2012 payload exposes `contentionSet` only — no post-Reveal lifecycle fields. */
+/** Trust badge copy for CSV-backed application row fields (not contention membership). */
+export const HISTORICAL_2012_TRUST_REVEAL_DAY_CSV = "2012 CSV" as const;
+
+/** Trust badge when the browse grain is derived unique strings from the same payload. */
+export const HISTORICAL_2012_TRUST_STRING_DERIVED = "2012 CSV · string derived" as const;
+
+/** Contention membership is joined from the official PDF pipeline — never the Reveal Day CSV. */
+export const HISTORICAL_2012_CONTENTION_FIELD_PROVENANCE =
+  "Official string-similarity contention publication (26 Feb 2013 PDF), offline extraction — not Reveal Day CSV." as const;
+
+export const HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE =
+  "Internal deterministic Hub set id (evidence metadata only — not an ICANN-published set identifier).";
+
+/** User-facing contention label — never raw `ICS-2012-*` ids in table cells. */
 export function historical2012ContentionMembershipLabel(
   contentionSet: Application["contentionSet"],
 ): string {
-  return contentionSet ?? "Not in contention";
+  return contentionSet ? "Application contention membership" : "Not in contention";
+}
+
+/** Internal set id for drawer / evidence metadata when membership is present. */
+export function historical2012ContentionMembershipEvidenceId(
+  contentionSet: Application["contentionSet"],
+): string | null {
+  return contentionSet ?? null;
 }
 
 /**
- * String-level contention summary from member applications' official contention set ids.
- * Does not surface blocked aggregate set counts (232/234).
+ * String-level contention summary from member applications' contention memberships.
+ * Does not surface blocked aggregate set counts (232/234) or internal set ids.
  */
 export function historical2012StringContentionSummary(records: readonly Application[]): string {
-  const sets = [...new Set(records.map((record) => record.contentionSet).filter(Boolean))] as string[];
-  if (sets.length === 0) return "Not in contention";
-  if (sets.length === 1) return sets[0]!;
-  return `${sets.length} distinct contention memberships`;
+  const inContention = records.filter((record) => record.contentionSet).length;
+  if (inContention === 0) return "Not in contention";
+  const setCount = new Set(records.map((record) => record.contentionSet).filter(Boolean)).size;
+  if (setCount === 1 && inContention === records.length) return "Application contention membership";
+  if (setCount === 1) return `Mixed membership (${inContention}/${records.length} in contention)`;
+  return `${setCount} distinct contention memberships`;
+}
+
+export function historical2012ExploreSearchPlaceholder(browseEntity: string, is2012Historical: boolean): string {
+  if (is2012Historical && browseEntity === "strings") {
+    return "Search applied strings, application IDs, applicants, regions…";
+  }
+  if (is2012Historical) {
+    return "Search applied strings, application IDs, applicants, regions…";
+  }
+  return "Search applications, organizations, strings, categories, regions…";
+}
+
+export function historical2012ExploreDatasetBadge(
+  browseEntity: string,
+  applicationCount: number,
+  uniqueStringCount: number = HISTORICAL_2012_UNIQUE_STRING_COUNT,
+): string {
+  if (browseEntity === "strings") {
+    return `2012 Reveal Day historical · ${uniqueStringCount} strings`;
+  }
+  return `2012 Reveal Day historical · ${applicationCount} applications`;
 }
 
 /** IDN label for a string row — all members IDN, none, or mixed. */

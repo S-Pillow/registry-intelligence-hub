@@ -7,7 +7,7 @@ import type { SavedWork } from "@/lib/use-saved-work";
 
 export type CompareEntityType = EntityType;
 
-export type InvestigationKind = "application" | "applicant" | "category" | "signal" | "metric" | "coverage" | "dataset";
+export type InvestigationKind = "application" | "applicant" | "category" | "string" | "signal" | "metric" | "coverage" | "dataset";
 
 /** Explore dataset context for drawer actions — prevents 2012 historical rows routing into 2026 rehearsal flows. */
 export type InvestigationExploreDataset = "2026-rehearsal" | "2012-historical";

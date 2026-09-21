@@ -37,8 +37,16 @@ import {
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
   HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS,
   HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED,
+  HISTORICAL_2012_CONTENTION_FIELD_PROVENANCE,
+  HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE,
+  HISTORICAL_2012_TRUST_REVEAL_DAY_CSV,
+  HISTORICAL_2012_TRUST_STRING_DERIVED,
+  HISTORICAL_2012_UNIQUE_STRING_COUNT,
+  historical2012ContentionMembershipEvidenceId,
   historical2012ContentionMembershipLabel,
   historical2012DistinctRegionsLabel,
+  historical2012ExploreDatasetBadge,
+  historical2012ExploreSearchPlaceholder,
   historical2012IdnLabel,
   historical2012StringContentionSummary,
   historical2012StringIdnSummary,
@@ -423,6 +431,10 @@ function IntelligenceDrawer({
     else toggleWatch(item);
   };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
+  const historicalContentionEvidenceIds = item
+    ? [...new Set(item.records.map((record) => historical2012ContentionMembershipEvidenceId(record.contentionSet)).filter(Boolean))]
+    : [];
+  const showsHistoricalContentionProvenance = Boolean(isHistoricalExplore && historicalContentionEvidenceIds.length > 0);
   const historicalApplicationCorpusHref =
     item?.historicalFact?.metricId === "application-count" && historical2012.status === "loaded"
       ? exploreHistorical2012ApplicationsHref({ entityApplications: true })
@@ -571,6 +583,19 @@ function IntelligenceDrawer({
                 </dl>
               </section>
 
+              {showsHistoricalContentionProvenance ? (
+                <section>
+                  <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">FIELD PROVENANCE · CONTENTION</h3>
+                  <p className="text-sm leading-6 text-slate-700">{HISTORICAL_2012_CONTENTION_FIELD_PROVENANCE}</p>
+                  <p className="mt-2 text-xs text-slate-600">{HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE}</p>
+                  <ul className="mt-3 space-y-1 font-mono text-[11px] text-slate-700">
+                    {historicalContentionEvidenceIds.map((setId) => (
+                      <li key={setId} className="break-all rounded border border-slate-200 bg-slate-50 px-2 py-1">{setId}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               {item.kind !== "coverage" && !(item.historicalFact && item.records.length === 0) && (
                 <section>
                   <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SUPPORTING RECORDS · {item.records.length}</h3>
@@ -585,9 +610,16 @@ function IntelligenceDrawer({
                           <div key={record.id} className="rounded-lg border border-slate-300 p-3 text-sm">
                             <div className="flex items-center justify-between"><span className="font-mono font-bold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
                             {isHistoricalExplore ? (
-                              <p className="mt-1 text-slate-700">
-                                {record.id} · {record.applicant} · {record.region} · {historical2012ContentionMembershipLabel(record.contentionSet)}
-                              </p>
+                              <>
+                                <p className="mt-1 text-slate-700">
+                                  {record.id} · {record.applicant} · {record.region} · {historical2012ContentionMembershipLabel(record.contentionSet)}
+                                </p>
+                                {historical2012ContentionMembershipEvidenceId(record.contentionSet) ? (
+                                  <p className="mt-1 font-mono text-[10px] text-slate-500" title={HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE}>
+                                    Set evidence: {historical2012ContentionMembershipEvidenceId(record.contentionSet)}
+                                  </p>
+                                ) : null}
+                              </>
                             ) : (
                               <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
                             )}
@@ -925,11 +957,16 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure(claimActualityState);
   const datasetBadge = is2012Historical
     ? historical2012Loaded
-      ? `2012 Reveal Day historical · ${historical2012.document.applications.length} applications`
+      ? historical2012ExploreDatasetBadge(
+          filters.entity,
+          historical2012.document.applications.length,
+          HISTORICAL_2012_UNIQUE_STRING_COUNT,
+        )
       : "2012 historical — payload not loaded"
     : registryPayloadMode === "promoted-2026"
       ? "Promoted 2026 application snapshot"
       : "2026 rehearsal fixture (12 applications)";
+  const exploreSearchPlaceholder = historical2012ExploreSearchPlaceholder(filters.entity, is2012Historical);
 
   const explore2012Href = `${hubPath("/explore")}?dataset=2012-historical`;
   const explore2026Href = hubPath("/explore");
@@ -941,7 +978,15 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     row: { id: string; name: string; records: Application[]; stringKey?: string },
     idPrefix: string,
   ): InvestigationItem => {
-    const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
+    const kind = filters.entity === "categories"
+      ? "category"
+      : filters.entity === "organizations"
+        ? "applicant"
+        : filters.entity === "applications"
+          ? "application"
+          : filters.entity === "strings"
+            ? "string"
+            : "metric";
     const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
     const stringKey = row.stringKey ?? row.records[0]?.string;
     return {
@@ -962,14 +1007,14 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{is2012Historical ? "Browse the full 2012 Reveal Day application corpus — separate from the 2026 rehearsal cohort." : "Search and compose evidence-backed filters across the active 2026 browser dataset (rehearsal or promoted snapshot)."}</p></div>
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{datasetBadge}</div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{is2012Historical ? (historicalStringBrowse ? "Browse unique applied strings derived deterministically from the validated 1,930-application Reveal Day payload — separate from the 2026 rehearsal cohort." : "Browse the full 2012 Reveal Day application corpus — separate from the 2026 rehearsal cohort.") : "Search and compose evidence-backed filters across the active 2026 browser dataset (rehearsal or promoted snapshot)."}</p>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <p className="mt-1 max-w-2xl text-xs font-medium text-slate-600">String rows aggregate the same {historical2012.document.applications.length}-application browser payload; contention membership is joined from the official contention publication, not the CSV.</p> : null}</div>
+        <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 sm:items-end"><span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" />{datasetBadge}</span>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <span className="font-medium text-amber-900/90">Derived from validated {historical2012.document.applications.length}-application payload</span> : null}</div>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
         <span className="text-slate-600">Dataset:</span>
         <Link href={explore2026Href} className={`rounded-lg px-3 py-1.5 ${!is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2026 rehearsal / promoted</Link>
-        <Link href={explore2012Href} className={`rounded-lg px-3 py-1.5 ${is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2012 historical applications</Link>
+        <Link href={explore2012Href} className={`rounded-lg px-3 py-1.5 ${is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2012 historical corpus</Link>
       </div>
 
       {!is2012Historical ? (
@@ -991,7 +1036,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       <div className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
         <label className="relative block">
           <Search className="absolute left-3 top-3 size-4 text-slate-600" />
-          <input ref={searchRef} value={filters.q} onChange={(event) => update("q", event.target.value)} aria-label="Search all registry records" aria-keyshortcuts="/ Control+K Meta+K" placeholder="Search applications, organizations, strings, categories, regions…" className="h-10 w-full rounded-lg border border-slate-400 pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65]" />
+          <input ref={searchRef} value={filters.q} onChange={(event) => update("q", event.target.value)} aria-label="Search all registry records" aria-keyshortcuts="/ Control+K Meta+K" placeholder={exploreSearchPlaceholder} className="h-10 w-full rounded-lg border border-slate-400 pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65]" />
           <kbd className="pointer-events-none absolute right-2 top-2.5 rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
         </label>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
@@ -1043,7 +1088,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{rows.length} {filters.entity} result{rows.length === 1 ? "" : "s"} · {applications.length} application{applications.length === 1 ? "" : "s"}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length} strings result${rows.length === 1 ? "" : "s"}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"}`} · {applications.length} application{applications.length === 1 ? "" : "s"}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton
@@ -1108,9 +1153,9 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         <td className="p-3 font-mono text-xs text-slate-800">{application.id}</td>
                         <td className="p-3 text-slate-800">{application.applicant}</td>
                         <td className="p-3 text-slate-700">{application.region}</td>
-                        <td className="p-3 font-mono text-xs text-slate-700">{historical2012ContentionMembershipLabel(application.contentionSet)}</td>
+                        <td className="p-3 text-xs text-slate-700">{historical2012ContentionMembershipLabel(application.contentionSet)}</td>
                         <td className="p-3 text-slate-700">{historical2012IdnLabel(application.idn)}</td>
-                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge></td>
+                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_REVEAL_DAY_CSV}</Badge></td>
                         <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
                       </tr>
                     );
@@ -1145,9 +1190,9 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         </td>
                         <td className="p-3 font-mono font-bold text-slate-900">{row.records.length}</td>
                         <td className="p-3 text-slate-700">{historical2012DistinctRegionsLabel(row.records)}</td>
-                        <td className="p-3 font-mono text-xs text-slate-700">{historical2012StringContentionSummary(row.records)}</td>
+                        <td className="p-3 text-xs text-slate-700">{historical2012StringContentionSummary(row.records)}</td>
                         <td className="p-3 text-slate-700">{historical2012StringIdnSummary(row.records)}</td>
-                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge></td>
+                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_STRING_DERIVED}</Badge></td>
                         <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
                       </tr>
                     );
@@ -1184,7 +1229,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
                           <Badge variant="outline">{historical2012ContentionMembershipLabel(application.contentionSet)}</Badge>
                           <Badge variant="secondary">{historical2012IdnLabel(application.idn)}</Badge>
-                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge>
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_REVEAL_DAY_CSV}</Badge>
                         </span>
                       </>
                     )}
@@ -1206,7 +1251,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
                           <Badge variant="outline">{historical2012StringContentionSummary(row.records)}</Badge>
                           <Badge variant="secondary">{historical2012StringIdnSummary(row.records)}</Badge>
-                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge>
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_STRING_DERIVED}</Badge>
                         </span>
                       </>
                     )}

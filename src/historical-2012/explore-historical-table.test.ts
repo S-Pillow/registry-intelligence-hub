@@ -46,7 +46,7 @@ describe("2012 historical Explore application table model", () => {
 
   it("formats contention and IDN from payload fields only", () => {
     expect(historical2012ContentionMembershipLabel("ICS-2012-exact-pair-199")).toBe(
-      "ICS-2012-exact-pair-199",
+      "Application contention membership",
     );
     expect(historical2012ContentionMembershipLabel(null)).toBe("Not in contention");
     expect(historical2012IdnLabel(true)).toBe("IDN");

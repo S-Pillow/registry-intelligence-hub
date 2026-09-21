@@ -90,6 +90,7 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     );
 
     const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(/INTELLIGENCE DRAWER · STRING/)).toBeInTheDocument();
     expect(within(drawer).getByText(/SUPPORTING RECORDS · 1/)).toBeInTheDocument();
     expect(within(drawer).getByText("1-1386-27446")).toBeInTheDocument();
     expect(within(drawer).getByText(/American Automobile Association, Inc\./)).toBeInTheDocument();

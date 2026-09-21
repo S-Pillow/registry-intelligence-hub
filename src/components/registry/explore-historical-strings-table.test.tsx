@@ -93,7 +93,9 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     );
 
     const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(/INTELLIGENCE DRAWER · STRING/)).toBeInTheDocument();
     expect(within(drawer).getByText("2012 Reveal Day (historical)")).toBeInTheDocument();
+    expect(within(drawer).getByText(/FIELD PROVENANCE · CONTENTION/)).toBeInTheDocument();
     expect(within(drawer).getByText("historical-2012-browser/1.0.0")).toBeInTheDocument();
     expect(within(drawer).queryByText(/snap-rehearsal-2026/)).not.toBeInTheDocument();
     expect(within(drawer).getByText(/SUPPORTING RECORDS · 13/)).toBeInTheDocument();
