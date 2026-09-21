@@ -22,7 +22,9 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012StringsHref,
   exploreResearchHref,
+  exploreSavedResearchParams,
   roundPulseHistoricalCardExploreHref,
   roundPulseSupportingRecords,
   numericCellDelta,
@@ -313,16 +315,38 @@ describe("exploreHistorical2012ApplicationsHref (D2.0)", () => {
   });
 });
 
-describe("roundPulseHistoricalCardExploreHref (D2.0)", () => {
+describe("exploreHistorical2012StringsHref (D2.1)", () => {
+  it("opens historical string browse mode", () => {
+    expect(exploreHistorical2012StringsHref()).toBe("/explore?dataset=2012-historical&entity=strings");
+  });
+});
+
+describe("roundPulseHistoricalCardExploreHref (D2.0 / D2.1)", () => {
   it("returns application corpus href only when payload is loaded", () => {
     expect(roundPulseHistoricalCardExploreHref("application-count", false)).toBeNull();
     expect(roundPulseHistoricalCardExploreHref("application-count", true)).toContain("dataset=2012-historical");
     expect(roundPulseHistoricalCardExploreHref("application-count", true)).toContain("entity=applications");
   });
 
-  it("keeps unique strings and IDN aggregate-only without application-corpus drill-down", () => {
-    expect(roundPulseHistoricalCardExploreHref("unique-applied-strings", true)).toBeNull();
+  it("returns string corpus href for unique-applied-strings when loaded", () => {
+    expect(roundPulseHistoricalCardExploreHref("unique-applied-strings", true)).toBe(
+      "/explore?dataset=2012-historical&entity=strings",
+    );
+  });
+
+  it("keeps IDN aggregate-only without application-corpus drill-down", () => {
     expect(roundPulseHistoricalCardExploreHref("idn-applications", true)).toBeNull();
+  });
+});
+
+describe("exploreSavedResearchParams (D2.1)", () => {
+  it("preserves dataset and strings browse mode in saved params", () => {
+    expect(
+      exploreSavedResearchParams(
+        { entity: "strings", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", q: "", ids: "" },
+        { dataset: "2012-historical" },
+      ),
+    ).toEqual({ entity: "strings", dataset: "2012-historical" });
   });
 });
 
@@ -360,5 +384,15 @@ describe("exploreFullHrefForInvestigation", () => {
       records: [],
       exploreDataset: "2012-historical",
     })).toContain("dataset=2012-historical");
+
+    const template = fixture.applications[0];
+    const appRecords = [
+      { ...template, string: "APP", id: "1-test-a" },
+      { ...template, string: "APP", id: "1-test-b" },
+    ];
+    expect(exploreFullHrefForInvestigation({
+      records: appRecords,
+      exploreDataset: "2012-historical",
+    })).toBe("/explore?dataset=2012-historical&entity=strings&q=APP");
   });
 });

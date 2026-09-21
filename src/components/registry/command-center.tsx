@@ -35,11 +35,17 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
+  HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS,
+  HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED,
   historical2012ContentionMembershipLabel,
+  historical2012DistinctRegionsLabel,
   historical2012IdnLabel,
+  historical2012StringContentionSummary,
+  historical2012StringIdnSummary,
   exploreFiltersFor2012Historical,
   HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
+  isHistorical2012StringBrowse,
 } from "@/historical-2012/explore-historical-table";
 import {
   applicantsInvestigationQueueForLens,
@@ -54,7 +60,6 @@ import {
   filterApplicationsByExplore,
   groupCompareRowsBySection,
   listEntityOptions,
-  nonDefaultExploreFilterParams,
   numericCellDelta,
   rowHasDifference,
   buildRoundPulse,
@@ -79,8 +84,12 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012StringResearchHref,
+  exploreHistorical2012StringsHref,
   exploreResearchHref,
+  exploreSavedResearchParams,
   ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+  roundPulseHistoricalCardExploreFooterLabel,
   roundPulseHistoricalCardExploreHref,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
@@ -418,20 +427,25 @@ function IntelligenceDrawer({
     item?.historicalFact?.metricId === "application-count" && historical2012.status === "loaded"
       ? exploreHistorical2012ApplicationsHref({ entityApplications: true })
       : undefined;
+  const historicalStringCorpusHref =
+    item?.historicalFact?.metricId === "unique-applied-strings" && historical2012.status === "loaded"
+      ? exploreHistorical2012StringsHref()
+      : undefined;
+  const historicalCorpusHref = historicalApplicationCorpusHref ?? historicalStringCorpusHref;
   const fullHref = item
     ? exploreFullHrefForInvestigation({
         ...item,
-        exploreFullHref: item.exploreFullHref ?? historicalApplicationCorpusHref ?? undefined,
-        exploreDataset: item.exploreDataset ?? (historicalApplicationCorpusHref ? "2012-historical" : undefined),
+        exploreFullHref: item.exploreFullHref ?? historicalCorpusHref ?? undefined,
+        exploreDataset: item.exploreDataset ?? (historicalCorpusHref ? "2012-historical" : undefined),
       })
     : "#";
   const showViewFull = Boolean(
     item && canAct
       && (
         (!item.historicalFact && (item.records.length > 0 || item.exploreFullHref))
-        || Boolean(historicalApplicationCorpusHref || (item.historicalFact && item.exploreFullHref))
+        || Boolean(historicalCorpusHref || (item.historicalFact && item.exploreFullHref))
       )
-      && (!historicalActionsDisabled || historicalProvenanceLoaded || historicalApplicationCorpusHref),
+      && (!historicalActionsDisabled || historicalProvenanceLoaded || historicalCorpusHref),
   );
 
   return (
@@ -453,6 +467,10 @@ function IntelligenceDrawer({
                   {historicalApplicationCorpusHref ? (
                     <p className="mt-2 text-xs text-slate-700">
                       Aggregate value above is the approved baseline — not recomputed from Explore rows. Application corpus browse uses the loaded 2012 historical payload (one row per application).
+                    </p>
+                  ) : historicalStringCorpusHref ? (
+                    <p className="mt-2 text-xs text-slate-700">
+                      Aggregate value above is the approved baseline — not recomputed from Explore rows. String corpus browse derives {item.historicalFact?.value} unique strings deterministically from the same 1,930-application payload (one row per applied string).
                     </p>
                   ) : (
                     <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
@@ -566,7 +584,13 @@ function IntelligenceDrawer({
                         {displayedRecords?.map((record) => (
                           <div key={record.id} className="rounded-lg border border-slate-300 p-3 text-sm">
                             <div className="flex items-center justify-between"><span className="font-mono font-bold">.{record.string}</span><Badge variant="secondary">{record.id}</Badge></div>
-                            <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
+                            {isHistoricalExplore ? (
+                              <p className="mt-1 text-slate-700">
+                                {record.id} · {record.applicant} · {record.region} · {historical2012ContentionMembershipLabel(record.contentionSet)}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-slate-700">{record.organization} · {record.category}</p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -689,6 +713,9 @@ function MetricCards({
         const historicalCardExploreHref = metric.metricId
           ? roundPulseHistoricalCardExploreHref(metric.metricId, historical2012Loaded)
           : null;
+        const historicalCardExploreLabel = metric.metricId
+          ? roundPulseHistoricalCardExploreFooterLabel(metric.metricId)
+          : null;
         return (
         <div
           key={metric.id}
@@ -734,12 +761,12 @@ function MetricCards({
             }
           />
           {isHistoricalAggregate ? (
-            historicalCardExploreHref ? (
+            historicalCardExploreHref && historicalCardExploreLabel ? (
               <Link
                 href={historicalCardExploreHref}
                 className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
               >
-                Open 2012 application corpus<ArrowRight className="size-3.5" />
+                {historicalCardExploreLabel}<ArrowRight className="size-3.5" />
               </Link>
             ) : (
               <p
@@ -859,7 +886,9 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     return () => document.removeEventListener("keydown", focusSearch, true);
   }, []);
 
-  const exploreFilters = is2012Historical ? exploreFiltersFor2012Historical(filters) : filters;
+  const exploreFilters = is2012Historical
+    ? exploreFiltersFor2012Historical(filters, { browseEntity: filters.entity })
+    : filters;
 
   const applications = useMemo(
     () => filterApplicationsByExplore(activeDocument.applications, exploreFilters),
@@ -875,7 +904,13 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       const keyFor = (item: Application) => filters.entity === "organizations" ? item.organization : filters.entity === "strings" ? item.string : item.category;
       const grouped = new Map<string, Application[]>();
       applications.forEach((item) => grouped.set(keyFor(item), [...(grouped.get(keyFor(item)) ?? []), item]));
-      built = [...grouped.entries()].map(([name, records]) => ({ id: `${filters.entity}-${name}`, name: filters.entity === "strings" ? `.${name}` : name, detail: `${records.length} supporting application${records.length === 1 ? "" : "s"}`, records }));
+      built = [...grouped.entries()].map(([name, records]) => ({
+        id: `${filters.entity}-${name}`,
+        name: filters.entity === "strings" ? `.${name}` : name,
+        stringKey: filters.entity === "strings" ? name : undefined,
+        detail: `${records.length} supporting application${records.length === 1 ? "" : "s"}`,
+        records,
+      }));
     }
     return built.sort((a, b) => {
       if (filters.sort === "name-asc") return a.name.localeCompare(b.name);
@@ -899,13 +934,16 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const explore2012Href = `${hubPath("/explore")}?dataset=2012-historical`;
   const explore2026Href = hubPath("/explore");
   const historicalApplicationBrowse = isHistorical2012ApplicationBrowse(is2012Historical, filters.entity);
+  const historicalStringBrowse = isHistorical2012StringBrowse(is2012Historical, filters.entity);
+  const historicalCategoryFilterDisabled = is2012Historical && filters.entity === "strings";
 
   const buildExploreInvestigationItem = (
-    row: { id: string; name: string; records: Application[] },
+    row: { id: string; name: string; records: Application[]; stringKey?: string },
     idPrefix: string,
   ): InvestigationItem => {
     const kind = filters.entity === "categories" ? "category" : filters.entity === "organizations" ? "applicant" : filters.entity === "applications" ? "application" : "metric";
     const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
+    const stringKey = row.stringKey ?? row.records[0]?.string;
     return {
       id: `${idPrefix}-${row.id}`,
       kind,
@@ -913,6 +951,10 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       records: row.records,
       entityType,
       entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
+      exploreFullHref:
+        is2012Historical && filters.entity === "strings" && stringKey
+          ? exploreHistorical2012StringResearchHref(stringKey)
+          : undefined,
       exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
     };
   };
@@ -954,7 +996,22 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </label>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
           <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></select></label>
-          <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+          {historicalCategoryFilterDisabled ? (
+            <label className="text-xs font-bold text-slate-700">
+              Category
+              <select
+                aria-label="Filter by category"
+                value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}
+                disabled
+                title="2012 browser payload does not include steward taxonomy — category filters are unavailable for string browse."
+                className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <option value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}>Not in 2012 browser payload</option>
+              </select>
+            </label>
+          ) : (
+            <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
+          )}
           <label className="text-xs font-bold text-slate-700">Region<select aria-label="Filter by region" value={filters.region} onChange={(event) => update("region", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
           {is2012Historical ? (
             <label className="text-xs font-bold text-slate-700">
@@ -993,12 +1050,17 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             kind="explore-view"
             defaultName={`Explore: ${describeExploreFilters(filters)}`.slice(0, 80)}
             summary={describeExploreFilters(filters)}
-            recordCount={applications.length}
+            recordCount={historicalStringBrowse ? rows.length : applications.length}
             disabled={applications.length === 0}
-            buildParams={() => nonDefaultExploreFilterParams(filters)}
+            buildParams={() =>
+              exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined)
+            }
           />
           <BriefThisButton
-            scope={{ kind: "explore-view", params: nonDefaultExploreFilterParams(filters) }}
+            scope={{
+              kind: "explore-view",
+              params: exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined),
+            }}
             label="Brief this view"
             defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
             disabled={applications.length === 0 || is2012Historical}
@@ -1055,6 +1117,43 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                   })}
                 </tbody>
               </table>
+            ) : historicalStringBrowse ? (
+              <table className="w-full min-w-[1000px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700">
+                    {HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS.map((header) => (
+                      <th key={header} className="p-3">{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const investigationItem = buildExploreInvestigationItem(row, "explore");
+                    return (
+                      <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50">
+                        <td className="p-3">
+                          <ProvenanceSheet
+                            {...investigationItem}
+                            triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                            trigger={(
+                              <strong className="flex items-center gap-1 text-slate-950">
+                                {row.name}
+                                <ChevronRight className="size-4 text-[#007d65]" />
+                              </strong>
+                            )}
+                          />
+                        </td>
+                        <td className="p-3 font-mono font-bold text-slate-900">{row.records.length}</td>
+                        <td className="p-3 text-slate-700">{historical2012DistinctRegionsLabel(row.records)}</td>
+                        <td className="p-3 font-mono text-xs text-slate-700">{historical2012StringContentionSummary(row.records)}</td>
+                        <td className="p-3 text-slate-700">{historical2012StringIdnSummary(row.records)}</td>
+                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge></td>
+                        <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             ) : (
               <table className="w-full min-w-[900px] text-sm">
                 <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th><th className="p-3">Actions</th></tr></thead>
@@ -1085,6 +1184,28 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
                           <Badge variant="outline">{historical2012ContentionMembershipLabel(application.contentionSet)}</Badge>
                           <Badge variant="secondary">{historical2012IdnLabel(application.idn)}</Badge>
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge>
+                        </span>
+                      </>
+                    )}
+                  />
+                  <ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" />
+                </div>
+              );
+            }
+            if (historicalStringBrowse) {
+              return (
+                <div key={row.id} className="p-4">
+                  <ProvenanceSheet
+                    {...investigationItem}
+                    triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                    trigger={(
+                      <>
+                        <span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span>
+                        <span className="mt-1 block text-xs text-slate-600">{row.records.length} application{row.records.length === 1 ? "" : "s"}</span>
+                        <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+                          <Badge variant="outline">{historical2012StringContentionSummary(row.records)}</Badge>
+                          <Badge variant="secondary">{historical2012StringIdnSummary(row.records)}</Badge>
                           <Badge variant="outline" className="border-emerald-300 text-[#005c49]">2012 CSV</Badge>
                         </span>
                       </>

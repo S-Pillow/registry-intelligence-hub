@@ -35,6 +35,15 @@ describe("2012 historical Explore application table model", () => {
     ).toEqual({ status: "all", entity: "applications" });
   });
 
+  it("strips category filters for historical string browse", () => {
+    expect(
+      exploreFiltersFor2012Historical(
+        { status: "all", category: "Technology", entity: "strings" },
+        { browseEntity: "strings" },
+      ),
+    ).toEqual({ status: "all", category: "all", entity: "strings" });
+  });
+
   it("formats contention and IDN from payload fields only", () => {
     expect(historical2012ContentionMembershipLabel("ICS-2012-exact-pair-199")).toBe(
       "ICS-2012-exact-pair-199",

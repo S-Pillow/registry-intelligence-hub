@@ -149,9 +149,32 @@ export function exploreHistorical2012ApplicationsHref(options?: { entityApplicat
   return `${hubPath("/explore")}?${params}`;
 }
 
+/** Command Center / drawer handoff for the derived 2012 string corpus (D2.1). */
+export function exploreHistorical2012StringsHref() {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "strings");
+  return `${hubPath("/explore")}?${params}`;
+}
+
+/** Explore deep link preserving historical string browse context for one applied string. */
+export function exploreHistorical2012StringResearchHref(stringKey: string) {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "strings");
+  params.set("q", stringKey);
+  return `${hubPath("/explore")}?${params}`;
+}
+
+export function roundPulseHistoricalCardExploreFooterLabel(metricId: string): string | null {
+  if (metricId === "application-count") return "Open 2012 application corpus";
+  if (metricId === "unique-applied-strings") return "Open 2012 string corpus";
+  return null;
+}
+
 /**
  * Round Pulse per-card Explore handoff for approved 2012 metrics when payload is loaded.
- * Unique strings and IDN stay aggregate-only — no href implying application-row evidence.
+ * IDN stays aggregate-only — no href implying application-row evidence.
  */
 export function roundPulseHistoricalCardExploreHref(
   metricId: string,
@@ -160,6 +183,9 @@ export function roundPulseHistoricalCardExploreHref(
   if (!historicalPayloadLoaded) return null;
   if (metricId === "applications" || metricId === "application-count") {
     return exploreHistorical2012ApplicationsHref({ entityApplications: true });
+  }
+  if (metricId === "unique-applied-strings") {
+    return exploreHistorical2012StringsHref();
   }
   return null;
 }
@@ -201,6 +227,9 @@ export function exploreFullHrefForInvestigation(item: {
     return exploreEntityResearchHref("applications", item.records[0].id, { dataset: item.exploreDataset });
   }
   if (item.records.length > 1) {
+    if (item.exploreDataset === "2012-historical" && item.records.every((record) => record.string === item.records[0]?.string)) {
+      return exploreHistorical2012StringResearchHref(item.records[0]!.string);
+    }
     const params = new URLSearchParams();
     params.set("entity", "applications");
     params.set("ids", item.records.map((record) => record.id).join(","));
@@ -218,6 +247,16 @@ export function nonDefaultExploreFilterParams(filters: Record<string, string>) {
       return exploreFilterDefaults[key] !== undefined && value !== exploreFilterDefaults[key];
     })
   );
+}
+
+/** Saved Research params — preserves historical dataset selection for faithful reopen (D2.1). */
+export function exploreSavedResearchParams(
+  filters: Record<string, string>,
+  options?: { dataset?: ExploreDatasetQuery },
+) {
+  const params = nonDefaultExploreFilterParams(filters);
+  if (options?.dataset === "2012-historical") params.dataset = "2012-historical";
+  return params;
 }
 
 /**

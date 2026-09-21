@@ -3,7 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { CommandCenter } from "@/components/registry/command-center";
@@ -13,7 +13,12 @@ import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data
 import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
 import { parse2012ApplicationPayloadJson } from "@/historical-2012/payload-server";
 import { resolveHistorical2012BrowserPayload } from "@/historical-2012/payload-shared";
-import { exploreHistorical2012ApplicationsHref, roundPulseSupportingRecords, buildRoundPulse } from "@/lib/registry-data";
+import {
+  exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012StringsHref,
+  roundPulseSupportingRecords,
+  buildRoundPulse,
+} from "@/lib/registry-data";
 import { resolveActiveRegistryApplicationsDocument } from "@/lib/registry-application-payload";
 import { DEFAULT_CLAIM_ACTUALITY_STATE } from "@/reveal-day-2026/claim-actuality";
 import fixture from "@/data/fixtures/registry-applications.json";
@@ -73,15 +78,16 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     }
   });
 
-  it("keeps unique strings and IDN cards aggregate-only without application-row drill-down", () => {
+  it("links Unique strings card to historical Strings browse and keeps IDN aggregate-only", () => {
     renderCommandCenter(historical2012Loaded);
 
-    expect(screen.getByTestId("historical-aggregate-only-strings")).toBeInTheDocument();
     expect(screen.getByTestId("historical-aggregate-only-idn")).toBeInTheDocument();
+    expect(screen.queryByTestId("historical-aggregate-only-strings")).not.toBeInTheDocument();
 
-    const stringsCard = screen.getByTestId("historical-aggregate-only-strings").closest("[data-historical-aggregate]");
-    expect(stringsCard).toBeTruthy();
-    expect(within(stringsCard as HTMLElement).queryByRole("link", { name: /Open 2012 application corpus/i })).not.toBeInTheDocument();
+    const stringsLink = screen.getByRole("link", { name: /Open 2012 string corpus/i });
+    expect(stringsLink.getAttribute("href")).toBe(exploreHistorical2012StringsHref());
+    expect(stringsLink.getAttribute("href")).toContain("entity=strings");
+    expect(stringsLink.getAttribute("href")).not.toContain("entity=applications");
   });
 
   it("opens Applications drawer View full to historical Explore without rehearsal fallback", async () => {

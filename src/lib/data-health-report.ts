@@ -269,7 +269,7 @@ function buildPublicationChecklist(
       label: "Entity-level 2012 browser payload (Ticket D1)",
       status: historical2012Loaded ? "complete" : "pending",
       detail: historical2012Loaded
-        ? `${historical2012.document.applications.length} rows · Explore ?dataset=2012-historical · hash ${historical2012.document.corpusContentHash.slice(0, 16)}…`
+        ? `${historical2012.document.applications.length} application rows · ${APPROVED_2012_BASELINE.uniqueStrings} derived strings · Explore ?dataset=2012-historical · hash ${historical2012.document.corpusContentHash.slice(0, 16)}…`
         : historical2012.status === "not-loaded"
           ? historical2012.errorMessage
           : "Configure REGISTRY_HUB_2012_APPLICATION_PAYLOAD_* — no fallback to rehearsal.",
@@ -476,7 +476,7 @@ export function buildDataHealthSnapshot(
       },
       entityLevel2012InBrowser: historical2012Loaded,
       entityLevel2012Message: historical2012Loaded
-        ? `Historical 2012 entity browser loaded (${historical2012.document.applications.length} applications) — use Explore ?dataset=2012-historical; 2026 rehearsal remains the default dataset.`
+        ? `Historical 2012 entity browser loaded (${historical2012.document.applications.length} applications + ${APPROVED_2012_BASELINE.uniqueStrings} strings derived from the same payload) — Explore ?dataset=2012-historical; 2026 rehearsal remains the default dataset.`
         : ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
       historical2012PayloadStatus: historical2012Loaded ? "loaded" : "not-loaded",
       ...(historical2012Loaded

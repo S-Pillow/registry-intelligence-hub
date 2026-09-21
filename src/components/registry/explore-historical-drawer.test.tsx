@@ -77,6 +77,27 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
   });
 
+  it("opens .AAA string drawer with single supporting record and historical provenance", async () => {
+    const user = userEvent.setup();
+    renderExploreHistorical({
+      dataset: "2012-historical",
+      entity: "strings",
+      q: "AAA",
+    });
+
+    await user.click(
+      screen.getAllByRole("button", { name: "View intelligence for .AAA" }).find((button) => button.textContent === "Investigate")!,
+    );
+
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText(/SUPPORTING RECORDS · 1/)).toBeInTheDocument();
+    expect(within(drawer).getByText("1-1386-27446")).toBeInTheDocument();
+    expect(within(drawer).getByText(/American Automobile Association, Inc\./)).toBeInTheDocument();
+    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
+    expect(viewFull.getAttribute("href")).toContain("entity=strings");
+    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
+  });
+
   it("preserves dataset=2012-historical in View full href helper", () => {
     expect(
       exploreFullHrefForInvestigation({

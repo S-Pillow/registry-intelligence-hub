@@ -1,0 +1,112 @@
+// @vitest-environment happy-dom
+
+import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import { CommandCenter } from "@/components/registry/command-center";
+import { HubClaimActualityProvider } from "@/components/registry/hub-claim-actuality-provider";
+import { HubHistorical2012Provider } from "@/components/registry/hub-historical-2012-provider";
+import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
+import {
+  HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS,
+  HISTORICAL_2012_UNIQUE_STRING_COUNT,
+} from "@/historical-2012/explore-historical-table";
+import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
+import { parse2012ApplicationPayloadJson } from "@/historical-2012/payload-server";
+import { resolveHistorical2012BrowserPayload } from "@/historical-2012/payload-shared";
+import { exploreHistorical2012StringsHref } from "@/lib/registry-data";
+import { resolveActiveRegistryApplicationsDocument } from "@/lib/registry-application-payload";
+import { DEFAULT_CLAIM_ACTUALITY_STATE } from "@/reveal-day-2026/claim-actuality";
+
+const historical2012 = resolveHistorical2012BrowserPayload(
+  parse2012ApplicationPayloadJson(
+    readFileSync(join(process.cwd(), "src/data/fixtures/registry-2012-applications.payload.json"), "utf8"),
+  ),
+  APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH,
+);
+
+const registryResolution = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
+
+function renderHistoricalStringsExplore(exploreParams: Record<string, string> = {}) {
+  return render(
+    <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
+      <HubRegistryDataProvider resolution={registryResolution}>
+        <HubHistorical2012Provider resolution={historical2012}>
+          <CommandCenter
+            view="explore"
+            exploreParams={{ dataset: "2012-historical", entity: "strings", ...exploreParams }}
+          />
+        </HubHistorical2012Provider>
+      </HubRegistryDataProvider>
+    </HubClaimActualityProvider>,
+  );
+}
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("Explore 2012 historical — Strings browse (D2.1)", () => {
+  it("shows 1409 string rows with dedicated columns and no Participation header", { timeout: 20_000 }, () => {
+    renderHistoricalStringsExplore();
+
+    const resultsLine = screen.getByText(new RegExp(`${HISTORICAL_2012_UNIQUE_STRING_COUNT} strings results`, "i"));
+    expect(resultsLine).toHaveTextContent(/1930 applications/i);
+
+    const category = screen.getByLabelText("Filter by category");
+    expect(category).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Not in 2012 browser payload" })).toBeInTheDocument();
+
+    const table = screen.getByRole("table");
+    HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS.forEach((header) => {
+      expect(within(table).getByRole("columnheader", { name: header })).toBeInTheDocument();
+    });
+    expect(within(table).queryByRole("columnheader", { name: "Participation" })).not.toBeInTheDocument();
+    expect(within(table).queryByText("2012 Reveal Day")).not.toBeInTheDocument();
+  });
+
+  it("collapses .APP to one row with application count greater than one", () => {
+    renderHistoricalStringsExplore({ q: "APP" });
+
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByText(".APP")).toHaveLength(1);
+    expect(within(table).getByText("13")).toBeInTheDocument();
+  });
+
+  it("shows .AAA as a single-application string row", () => {
+    renderHistoricalStringsExplore({ q: "AAA" });
+
+    const table = screen.getByRole("table");
+    expect(within(table).getAllByText(".AAA")).toHaveLength(1);
+    expect(within(table).getByText("1")).toBeInTheDocument();
+  });
+
+  it("opens string drawer with member records and disabled Compare/Watch/Brief", async () => {
+    const user = userEvent.setup();
+    renderHistoricalStringsExplore({ q: "APP" });
+
+    await user.click(
+      screen.getAllByRole("button", { name: "View intelligence for .APP" }).find((button) => button.textContent === "Investigate")!,
+    );
+
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByText("2012 Reveal Day (historical)")).toBeInTheDocument();
+    expect(within(drawer).getByText("historical-2012-browser/1.0.0")).toBeInTheDocument();
+    expect(within(drawer).queryByText(/snap-rehearsal-2026/)).not.toBeInTheDocument();
+    expect(within(drawer).getByText(/SUPPORTING RECORDS · 13/)).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "+ Compare" })).toBeDisabled();
+    expect(within(drawer).getByRole("button", { name: "Watch" })).toBeDisabled();
+
+    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
+    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
+    expect(viewFull.getAttribute("href")).toContain("entity=strings");
+    expect(viewFull.getAttribute("href")).toContain("q=APP");
+  });
+
+  it("matches Command Center strings handoff href", () => {
+    expect(exploreHistorical2012StringsHref()).toBe("/explore?dataset=2012-historical&entity=strings");
+  });
+});
