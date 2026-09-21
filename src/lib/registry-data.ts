@@ -107,6 +107,19 @@ export function recordsForRoundPulseFilter(filter: string, applications: Applica
 export const ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE =
   "Entity-level historical records not yet loaded — this card is an approved 2012 aggregate fact only.";
 
+/** Provenance band on Round Pulse historical aggregate cards (uppercase via UI). */
+export const ROUND_PULSE_HISTORICAL_AGGREGATE_BAND = "Historical aggregate · 2012 Reveal Day";
+
+/** Contention membership uses official publication — not Reveal Day CSV aggregate semantics. */
+export const ROUND_PULSE_CONTENTION_MEMBERSHIP_BAND = "Historical membership · 2012 round";
+
+export function roundPulseHistoricalAggregateBand(metricId: string | undefined): string {
+  if (metricId === "contention-membership-exposure") {
+    return ROUND_PULSE_CONTENTION_MEMBERSHIP_BAND;
+  }
+  return ROUND_PULSE_HISTORICAL_AGGREGATE_BAND;
+}
+
 /** Round Pulse supporting records: empty for historical aggregate facts; rehearsal fixture otherwise. */
 export function roundPulseSupportingRecords(
   metric: { filter: string; historicalFact?: unknown },

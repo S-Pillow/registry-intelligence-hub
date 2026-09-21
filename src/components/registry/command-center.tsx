@@ -105,6 +105,7 @@ import {
   ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
   roundPulseHistoricalCardExploreFooterLabel,
   roundPulseHistoricalCardExploreHref,
+  roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
@@ -794,8 +795,11 @@ function MetricCards({
             </p>
           ) : null}
           {isHistoricalAggregate ? (
-            <p className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]">
-              Historical aggregate · 2012 Reveal Day
+            <p
+              className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]"
+              data-testid={metric.metricId === "contention-membership-exposure" ? "round-pulse-contention-provenance-band" : undefined}
+            >
+              {roundPulseHistoricalAggregateBand(metric.metricId)}
             </p>
           ) : null}
           <ProvenanceSheet

@@ -28,6 +28,7 @@ import {
   exploreResearchHref,
   exploreSavedResearchParams,
   roundPulseHistoricalCardExploreHref,
+  roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
   numericCellDelta,
   recordsForEntity,
@@ -336,6 +337,16 @@ describe("exploreHistorical2012ContentionApplicationsHref (D2.3)", () => {
     expect(exploreHistorical2012ContentionApplicationsHref()).toBe(
       "/explore?dataset=2012-historical&entity=applications&contention=in",
     );
+  });
+});
+
+describe("roundPulseHistoricalAggregateBand (D2.3 closeout)", () => {
+  it("uses membership round label for contention — not Reveal Day aggregate band", () => {
+    expect(roundPulseHistoricalAggregateBand("contention-membership-exposure")).toBe(
+      "Historical membership · 2012 round",
+    );
+    expect(roundPulseHistoricalAggregateBand("application-count")).toBe("Historical aggregate · 2012 Reveal Day");
+    expect(roundPulseHistoricalAggregateBand("idn-applications")).toBe("Historical aggregate · 2012 Reveal Day");
   });
 });
 

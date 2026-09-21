@@ -116,6 +116,16 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(screen.getByRole("button", { name: "Watch" })).toBeDisabled();
   });
 
+  it("shows membership round provenance band on contention card only (D2.3 closeout)", () => {
+    renderCommandCenter(historical2012Loaded);
+
+    expect(screen.getByTestId("round-pulse-contention-provenance-band")).toHaveTextContent(
+      "Historical membership · 2012 round",
+    );
+    const aggregateBands = screen.getAllByText("Historical aggregate · 2012 Reveal Day");
+    expect(aggregateBands).toHaveLength(3);
+  });
+
   it("opens contention aggregate drawer View full to historical Explore with contention filter (D2.3)", async () => {
     const user = userEvent.setup();
     renderCommandCenter(historical2012Loaded);
