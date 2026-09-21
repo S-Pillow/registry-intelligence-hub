@@ -57,7 +57,12 @@ async function openStringDrawer(stringQuery, outfile) {
     waitUntil: "networkidle",
   });
   await assertStylesLoad(page, outfile);
-  const investigate = page.getByRole("button", { name: /^Investigate$/i }).first();
+  const label = stringQuery === "APP" ? ".APP" : `.${stringQuery}`;
+  const investigate = page
+    .getByRole("button", { name: `View intelligence for ${label}` })
+    .filter({ hasText: "Investigate" })
+    .first();
+  await investigate.scrollIntoViewIfNeeded();
   await investigate.click();
   await page.waitForTimeout(800);
   await page.screenshot({ path: path.join(outDir, outfile), fullPage: false });
