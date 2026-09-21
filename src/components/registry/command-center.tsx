@@ -62,6 +62,8 @@ import {
   investigationQueueLensNote,
   lensIntelligenceSubtitles,
   lensRoundPulseFraming,
+  rehearsalExploreFooterLabel,
+  roundPulseDatasetSplitLine,
   lensViewPanelLine,
   lensWhyMattersCondensed,
   lensWhyMattersCondensedLabel,
@@ -751,10 +753,10 @@ function MetricCards({
           ) : (
             <Link
               href={exploreDrillDownHref(metric.filter)}
-              aria-label={`Open ${metric.label} in Explore`}
+              aria-label={`Open ${metric.label} in 2026 rehearsal Explore`}
               className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
             >
-              Open in Explore<ArrowRight className="size-3.5" />
+              {rehearsalExploreFooterLabel}<ArrowRight className="size-3.5" />
             </Link>
           )}
         </div>
@@ -1617,6 +1619,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               <div>
                 <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-[#004c3d] sm:text-2xl" data-testid="lens-round-pulse-subtitle">{lensRoundPulseFraming[activeLens].subtitle}</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600" data-testid="round-pulse-dataset-split">{roundPulseDatasetSplitLine}</p>
                 {historical2012Loaded ? (
                   <Link
                     href={exploreHistorical2012ApplicationsHref()}
@@ -1809,7 +1812,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       return (
                         <div key={item.organization} className="rounded-lg hover:bg-emerald-50/60">
                           <ProvenanceSheet id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />
-                          <Link href={exploreHref} aria-label={`Open ${item.organization} in Explore`} className="mx-2 mb-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">Open in Explore<ArrowRight className="size-3" /></Link>
+                          <Link href={exploreHref} aria-label={`Open ${item.organization} in 2026 rehearsal Explore`} className="mx-2 mb-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
                         </div>
                       );
                     })}
@@ -1824,7 +1827,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       return (
                         <div key={item.category} className="rounded-lg hover:bg-emerald-50/60">
                           <ProvenanceSheet id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
-                          <Link href={exploreHref} aria-label={`Open ${item.category} category in Explore`} className="mx-2 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">Open in Explore<ArrowRight className="size-3" /></Link>
+                          <Link href={exploreHref} aria-label={`Open ${item.category} category in 2026 rehearsal Explore`} className="mx-2 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
                         </div>
                       );
                     })}

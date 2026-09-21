@@ -105,7 +105,7 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
   it("leaves rehearsal Round Pulse drill-down on default 2026 Explore", () => {
     renderCommandCenter(historical2012Loaded);
 
-    const orgLink = screen.getByRole("link", { name: "Open Organizations in Explore" });
+    const orgLink = screen.getByRole("link", { name: "Open Organizations in 2026 rehearsal Explore" });
     expect(orgLink.getAttribute("href")).toBe("/explore?entity=organizations");
     expect(orgLink.getAttribute("href")).not.toContain("dataset=2012-historical");
   });

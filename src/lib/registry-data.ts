@@ -245,7 +245,7 @@ export const lensViewPanelLine: Record<Lens, string> = {
 export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: string }> = {
   all: {
     eyebrow: "ROUND PULSE · ALL INTELLIGENCE",
-    subtitle: "The rehearsal round at a glance",
+    subtitle: "Round intelligence at a glance",
   },
   commercial: {
     eyebrow: "ROUND PULSE · COMMERCIAL VIEW",
@@ -260,6 +260,13 @@ export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: st
     subtitle: "Geographic reach and IDN signals at a glance",
   },
 };
+
+/** Round Pulse section — explicit split between 2026 rehearsal drill-down and approved 2012 aggregates. */
+export const roundPulseDatasetSplitLine =
+  "2026 rehearsal signals with approved 2012 historical baselines.";
+
+/** Visible footer on Round Pulse / entity cards whose Explore handoff targets the default 2026 rehearsal dataset. */
+export const rehearsalExploreFooterLabel = "Open 2026 rehearsal Explore";
 
 /** One-sentence Why this matters above Round Pulse (full `lensInterpretations` stays downstream). */
 export const lensWhyMattersCondensed: Record<Lens, string> = {

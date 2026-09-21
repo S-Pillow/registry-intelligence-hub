@@ -39,7 +39,10 @@ describe("Command Center interactions", () => {
     expect(panelLine()).toMatch(/All Intelligence:/);
     expect(condensedWhy()).toMatch(/Why this matters for All Intelligence:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
-    expect(pulseSubtitle()).toBe("The rehearsal round at a glance");
+    expect(pulseSubtitle()).toBe("Round intelligence at a glance");
+    expect(screen.getByTestId("round-pulse-dataset-split")).toHaveTextContent(
+      "2026 rehearsal signals with approved 2012 historical baselines.",
+    );
     expect(focusMarkers()).toHaveLength(0);
     const rehearsalBanner = () => screen.getByText(/Rehearsal data only\./);
     const roundPulseSection = () => screen.getByTestId("round-pulse-section");
@@ -290,19 +293,19 @@ describe("Command Center → Explore drill-down", () => {
     expect(screen.queryByRole("link", { name: "Open IDN applications in Explore" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Applications in Explore" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Unique strings in Explore" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Organizations in Explore" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Organizations in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
       exploreDrillDownHref("organizations"),
     );
-    expect(screen.getByRole("link", { name: "Open Initial contention sets in Explore" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Initial contention sets in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
       exploreDrillDownHref("contention"),
     );
-    expect(screen.getByRole("link", { name: "Open Atlas Digital in Explore" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Atlas Digital in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
       exploreEntityResearchHref("organizations", "Atlas Digital"),
     );
-    expect(screen.getByRole("link", { name: "Open Technology category in Explore" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Technology category in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
       exploreEntityResearchHref("categories", "Technology"),
     );
