@@ -1,0 +1,11 @@
+{
+  "mappingVersion": "icann2012-rsp-pilot-gtldresult-mapping/1.0.0",
+  "entries": [
+    {
+      "applicationId": "1-1945-29108",
+      "gtldresultAcId": 170,
+      "mappingSource": "d2-5a-probe-verified",
+      "notes": "BOSCH details/download sample — internal/d2-5a-rsp-acquisition-plan-results.md"
+    }
+  ]
+}
