@@ -3,16 +3,19 @@ import { parseArgs } from "node:util";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { buildRegistry2012BrowserPayload } from "@/historical-2012/build-browser-payload";
+import { buildRegistry2012ConfirmedPortfoliosDocument } from "@/historical-2012/build-confirmed-organization-portfolios";
 
 function usage(): string {
   return `Registry Intelligence Hub — 2012 historical browser payload (offline)
 
 Usage:
   npm run historical-2012 -- build-browser-payload [--workspace <dir>] [--out <path>]
+  npm run historical-2012 -- build-confirmed-portfolios-sidecar [--workspace <dir>] [--out <path>]
 
 Defaults:
   --workspace  process.cwd()
-  --out        src/data/fixtures/registry-2012-applications.payload.json
+  --out (applications)  src/data/fixtures/registry-2012-applications.payload.json
+  --out (portfolios)    src/data/fixtures/registry-2012-confirmed-organizations.payload.json
 `;
 }
 
@@ -49,6 +52,28 @@ async function main(): Promise<void> {
             idnApplications: idn,
             contentionMembershipApplications: inContention,
             inputContentHash: payload.provenance.inputContentHash,
+          },
+          null,
+          2,
+        ),
+      );
+      break;
+    }
+    case "build-confirmed-portfolios-sidecar": {
+      const document = await buildRegistry2012ConfirmedPortfoliosDocument(workspaceRoot);
+      const outPath =
+        values.out
+        ?? join(workspaceRoot, "src/data/fixtures/registry-2012-confirmed-organizations.payload.json");
+      await writeFile(outPath, `${JSON.stringify(document, null, 2)}\n`);
+      console.log(
+        JSON.stringify(
+          {
+            outPath,
+            payloadVersion: document.payloadVersion,
+            confirmedPortfolioCount: document.confirmedPortfolioCount,
+            confirmedMappedApplicationCount: document.confirmedMappedApplicationCount,
+            baseApplicationPayloadCorpusContentHash: document.baseApplicationPayloadCorpusContentHash,
+            sourcePromotionRegistryContentHash: document.sourcePromotionRegistryContentHash,
           },
           null,
           2,

@@ -1,29 +1,54 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import type { ConfirmedPortfoliosSidecarResolution } from "@/historical-2012/confirmed-portfolios-sidecar-shared";
 import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
 
-const defaultResolution: Historical2012PayloadResolution = {
+const defaultApplicationResolution: Historical2012PayloadResolution = {
   status: "not-loaded",
   reason: "not-configured",
   errorMessage:
     "2012 historical application payload is not configured. Set REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH or REGISTRY_HUB_2012_APPLICATION_PAYLOAD_JSON.",
 };
 
-const HubHistorical2012Context = createContext<Historical2012PayloadResolution>(defaultResolution);
+const defaultConfirmedPortfoliosResolution: ConfirmedPortfoliosSidecarResolution = {
+  status: "not-loaded",
+  reason: "not-configured",
+  errorMessage:
+    "2012 confirmed portfolio sidecar is not configured. Set REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_PATH or REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_JSON.",
+};
+
+export type HubHistorical2012ContextValue = {
+  applicationPayload: Historical2012PayloadResolution;
+  confirmedPortfolios: ConfirmedPortfoliosSidecarResolution;
+};
+
+const HubHistorical2012Context = createContext<HubHistorical2012ContextValue>({
+  applicationPayload: defaultApplicationResolution,
+  confirmedPortfolios: defaultConfirmedPortfoliosResolution,
+});
 
 export function HubHistorical2012Provider({
-  resolution,
+  applicationPayload,
+  confirmedPortfolios,
   children,
 }: {
-  resolution: Historical2012PayloadResolution;
+  applicationPayload: Historical2012PayloadResolution;
+  confirmedPortfolios: ConfirmedPortfoliosSidecarResolution;
   children: ReactNode;
 }) {
   return (
-    <HubHistorical2012Context.Provider value={resolution}>{children}</HubHistorical2012Context.Provider>
+    <HubHistorical2012Context.Provider value={{ applicationPayload, confirmedPortfolios }}>
+      {children}
+    </HubHistorical2012Context.Provider>
   );
 }
 
+/** Back-compat: 2012 application browser payload resolution (D1/D2). */
 export function useHistorical2012Payload(): Historical2012PayloadResolution {
-  return useContext(HubHistorical2012Context);
+  return useContext(HubHistorical2012Context).applicationPayload;
+}
+
+export function useHistorical2012ConfirmedPortfolios(): ConfirmedPortfoliosSidecarResolution {
+  return useContext(HubHistorical2012Context).confirmedPortfolios;
 }

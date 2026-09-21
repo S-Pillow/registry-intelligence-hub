@@ -36,7 +36,7 @@ function renderExploreHistorical(
   return render(
     <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
       <HubRegistryDataProvider resolution={registryResolution}>
-        <HubHistorical2012Provider resolution={historical2012}>
+        <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
           <CommandCenter view="explore" exploreParams={exploreParams} />
         </HubHistorical2012Provider>
       </HubRegistryDataProvider>
@@ -115,7 +115,7 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     render(
       <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
         <HubRegistryDataProvider resolution={registryResolution}>
-          <HubHistorical2012Provider resolution={historical2012}>
+          <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
             <CommandCenter view="explore" exploreParams={{ q: "secure" }} />
           </HubHistorical2012Provider>
         </HubRegistryDataProvider>

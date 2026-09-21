@@ -34,7 +34,7 @@ function renderDataHealth(
   return render(
     <HubClaimActualityProvider claimActualityState={claimActuality}>
       <HubRegistryDataProvider resolution={resolution}>
-        <HubHistorical2012Provider resolution={historical2012}>
+        <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
           <DataHealthContent />
         </HubHistorical2012Provider>
       </HubRegistryDataProvider>

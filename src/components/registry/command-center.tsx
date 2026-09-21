@@ -60,6 +60,22 @@ import {
   underlyingApplicationsInHistorical2012StringAggregates,
 } from "@/historical-2012/explore-historical-table";
 import {
+  HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_RESULTS_SUMMARY,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE,
+} from "@/historical-2012/confirmed-portfolios-constants";
+import {
+  filterHistorical2012ConfirmedPortfolioRows,
+  HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_COLUMN_HEADERS,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY,
+  historical2012LegalApplicantsSummary,
+  historical2012PortfolioIdnSummary,
+  isHistorical2012ApplicantLegalNameBrowse,
+  isHistorical2012ConfirmedPortfolioBrowse,
+} from "@/historical-2012/explore-historical-organizations";
+import {
   applicantsInvestigationQueueForLens,
   buildBiggestChanges,
   buildCategoryMix,
@@ -96,6 +112,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref,
   exploreHistorical2012ContentionApplicationsHref,
   exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringResearchHref,
@@ -119,7 +136,10 @@ import { SavedContent, type SavedParams } from "@/components/registry/saved-cont
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 import { DataHealthContent } from "@/components/registry/data-health-content";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
-import { useHistorical2012Payload } from "@/components/registry/hub-historical-2012-provider";
+import {
+  useHistorical2012ConfirmedPortfolios,
+  useHistorical2012Payload,
+} from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { hubPath } from "@/lib/hub-paths";
 
@@ -286,6 +306,11 @@ const EXPLORE_2012_COMPARE_DEFERRED =
 const EXPLORE_2012_BRIEF_UNAVAILABLE =
   "Historical briefings not yet available — Brief uses the 2026 rehearsal generator only.";
 
+function investigationDrawerKindLabel(kind: InvestigationKind): string {
+  if (kind === "confirmed-portfolio") return "CONFIRMED PORTFOLIO";
+  return kind.toUpperCase();
+}
+
 function ExploreEntityActions({
   investigationItem,
   className = "",
@@ -421,6 +446,7 @@ function IntelligenceDrawer({
 }) {
   const registryFixture = useHubRegistryDocument();
   const historical2012 = useHistorical2012Payload();
+  const confirmedPortfoliosSidecar = useHistorical2012ConfirmedPortfolios();
   const [showFull, setShowFull] = useState(false);
   const { addCompare, toggleWatch, watchedIds, compareItems, savedWork } = useInvestigation();
   const isHistoricalExplore = item?.exploreDataset === "2012-historical";
@@ -463,11 +489,15 @@ function IntelligenceDrawer({
     ?? historicalStringCorpusHref
     ?? historicalIdnCorpusHref
     ?? historicalContentionCorpusHref;
+  const confirmedPortfolioFullHref =
+    item?.kind === "confirmed-portfolio" && item.records.length > 0
+      ? exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(item.records.map((record) => record.id))
+      : undefined;
   const fullHref = item
     ? exploreFullHrefForInvestigation({
         ...item,
-        exploreFullHref: item.exploreFullHref ?? historicalCorpusHref ?? undefined,
-        exploreDataset: item.exploreDataset ?? (historicalCorpusHref ? "2012-historical" : undefined),
+        exploreFullHref: item.exploreFullHref ?? confirmedPortfolioFullHref ?? historicalCorpusHref ?? undefined,
+        exploreDataset: item.exploreDataset ?? (historicalCorpusHref || confirmedPortfolioFullHref ? "2012-historical" : undefined),
       })
     : "#";
   const showViewFull = Boolean(
@@ -485,11 +515,34 @@ function IntelligenceDrawer({
         {item && (
           <>
             <SheetHeader className="border-b border-slate-200 px-6 py-5">
-              <Badge variant="outline" className="mb-2 border-emerald-300 text-[#005c49]">INTELLIGENCE DRAWER · {item.kind.toUpperCase()}</Badge>
+              <Badge variant="outline" className="mb-2 border-emerald-300 text-[#005c49]">INTELLIGENCE DRAWER · {investigationDrawerKindLabel(item.kind)}</Badge>
               <SheetTitle className="pr-8 text-xl">{item.label}</SheetTitle>
               <SheetDescription className="text-slate-600">Investigate evidence without leaving your current hub view or losing context.</SheetDescription>
             </SheetHeader>
             <div className="space-y-6 px-6 pb-8">
+              {item.confirmedPortfolio && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Steward-confirmed organization portfolio</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">{item.confirmedPortfolio.canonicalOrganizationName}</p>
+                  <p className="mt-1 font-mono text-xs text-slate-700">{item.confirmedPortfolio.organizationKey}</p>
+                  <p className="mt-3 text-xs font-semibold text-slate-800">
+                    Promotion state: CONFIRMED · {item.confirmedPortfolio.reviewState} · method {item.confirmedPortfolio.methodVersion}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-700">Confidence: {item.confirmedPortfolio.confidence}</p>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-slate-700">
+                    {item.confirmedPortfolio.evidence.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 font-mono text-[10px] text-slate-600">Ops: {item.confirmedPortfolio.promotionOpIds.join(", ")}</p>
+                  {confirmedPortfoliosSidecar.status === "loaded" ? (
+                    <p className="mt-2 font-mono text-[10px] text-slate-600">
+                      Sidecar {confirmedPortfoliosSidecar.document.payloadVersion} · registry hash {confirmedPortfoliosSidecar.document.sourcePromotionRegistryContentHash.slice(0, 16)}…
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
               {item.historicalFact && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Approved 2012 historical aggregate</p>
@@ -914,14 +967,20 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
   const historical2012 = useHistorical2012Payload();
+  const confirmedPortfoliosSidecar = useHistorical2012ConfirmedPortfolios();
   const datasetMode = exploreDatasetFromParam(initial.dataset);
   const is2012Historical = datasetMode === "2012-historical";
   const historical2012Loaded = historical2012.status === "loaded";
+  const confirmedPortfoliosLoaded = confirmedPortfoliosSidecar.status === "loaded";
+  const resolvedInitialEntity =
+    is2012Historical && initial.entity === "organizations"
+      ? HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
+      : initial.entity ?? "applications";
   const activeDocument =
     is2012Historical && historical2012Loaded ? historical2012.document : registryFixture;
   const [filters, setFilters] = useState({
     q: initial.q ?? "",
-    entity: initial.entity ?? "applications",
+    entity: resolvedInitialEntity,
     category: initial.category ?? "all",
     region: initial.region ?? "all",
     status: initial.status ?? "all",
@@ -961,6 +1020,28 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
 
   const historicalStringBrowseActive =
     isHistorical2012StringBrowse(is2012Historical, filters.entity) && historical2012Loaded;
+  const historicalConfirmedPortfolioBrowseActive =
+    isHistorical2012ConfirmedPortfolioBrowse(is2012Historical, filters.entity);
+  const historicalApplicantLegalNameBrowseActive =
+    isHistorical2012ApplicantLegalNameBrowse(is2012Historical, filters.entity);
+
+  const historicalConfirmedPortfolioRows = useMemo(() => {
+    if (!historicalConfirmedPortfolioBrowseActive || !historical2012Loaded || !confirmedPortfoliosLoaded) {
+      return null;
+    }
+    return filterHistorical2012ConfirmedPortfolioRows(
+      confirmedPortfoliosSidecar.document.portfolios,
+      activeDocument.applications,
+      exploreFilters,
+    );
+  }, [
+    historicalConfirmedPortfolioBrowseActive,
+    historical2012Loaded,
+    confirmedPortfoliosLoaded,
+    confirmedPortfoliosSidecar,
+    activeDocument.applications,
+    exploreFilters,
+  ]);
 
   const historicalStringAggregateRows = useMemo(() => {
     if (!historicalStringBrowseActive) return null;
@@ -968,11 +1049,14 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   }, [historicalStringBrowseActive, activeDocument.applications, exploreFilters]);
 
   const applications = useMemo(() => {
+    if (historicalConfirmedPortfolioRows) {
+      return historicalConfirmedPortfolioRows.flatMap((row) => row.records);
+    }
     if (historicalStringAggregateRows) {
       return historicalStringAggregateRows.flatMap((row) => row.records);
     }
     return filterApplicationsByExplore(activeDocument.applications, exploreFilters);
-  }, [historicalStringAggregateRows, exploreFilters, activeDocument.applications]);
+  }, [historicalConfirmedPortfolioRows, historicalStringAggregateRows, exploreFilters, activeDocument.applications]);
 
   const underlyingStringApplicationCount = historicalStringAggregateRows
     ? underlyingApplicationsInHistorical2012StringAggregates(historicalStringAggregateRows)
@@ -983,6 +1067,15 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     let built: ExploreRow[];
     if (filters.entity === "applications") {
       built = applications.map((item) => ({ id: item.id, name: `.${item.string}`, detail: `${item.id} · ${item.applicant}`, records: [item] }));
+    } else if (historicalConfirmedPortfolioRows) {
+      built = historicalConfirmedPortfolioRows.map((row) => ({
+        id: `confirmed-portfolio-${row.organizationKey}`,
+        name: row.canonicalOrganizationName,
+        detail: `${row.records.length} confirmed application${row.records.length === 1 ? "" : "s"}`,
+        records: row.records,
+        organizationKey: row.organizationKey,
+        confirmedPortfolio: row.portfolio,
+      }));
     } else if (historicalStringAggregateRows) {
       built = historicalStringAggregateRows.map((row) => ({
         id: `strings-${row.stringKey}`,
@@ -992,7 +1085,12 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         records: row.records,
       }));
     } else {
-      const keyFor = (item: Application) => filters.entity === "organizations" ? item.organization : filters.entity === "strings" ? item.string : item.category;
+      const keyFor = (item: Application) =>
+        filters.entity === "organizations" || filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
+          ? item.organization
+          : filters.entity === "strings"
+            ? item.string
+            : item.category;
       const grouped = new Map<string, Application[]>();
       applications.forEach((item) => grouped.set(keyFor(item), [...(grouped.get(keyFor(item)) ?? []), item]));
       built = [...grouped.entries()].map(([name, records]) => ({
@@ -1008,7 +1106,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       if (filters.sort === "contention-desc") return b.records.filter((item) => item.contentionSet).length - a.records.filter((item) => item.contentionSet).length || a.name.localeCompare(b.name);
       return b.records.length - a.records.length || a.name.localeCompare(b.name);
     });
-  }, [applications, filters.entity, filters.sort, historicalStringAggregateRows]);
+  }, [applications, filters.entity, filters.sort, historicalStringAggregateRows, historicalConfirmedPortfolioRows]);
 
   const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
   const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
@@ -1031,22 +1129,68 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
   const explore2026Href = hubPath("/explore");
   const historicalApplicationBrowse = isHistorical2012ApplicationBrowse(is2012Historical, filters.entity);
   const historicalStringBrowse = isHistorical2012StringBrowse(is2012Historical, filters.entity);
-  const historicalCategoryFilterDisabled = is2012Historical && filters.entity === "strings";
+  const historicalConfirmedPortfolioBrowse =
+    historicalConfirmedPortfolioBrowseActive && historical2012Loaded && confirmedPortfoliosLoaded;
+  const historicalApplicantLegalNameBrowse = historicalApplicantLegalNameBrowseActive && historical2012Loaded;
+  const historicalCategoryFilterDisabled =
+    is2012Historical
+    && (filters.entity === "strings" || filters.entity === HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY);
+  const exploreSaveResearchEnabled =
+    !is2012Historical
+    || (historicalConfirmedPortfolioBrowseActive
+      ? historical2012Loaded && confirmedPortfoliosLoaded
+      : historical2012Loaded);
 
   const buildExploreInvestigationItem = (
-    row: { id: string; name: string; records: Application[]; stringKey?: string },
+    row: {
+      id: string;
+      name: string;
+      records: Application[];
+      stringKey?: string;
+      organizationKey?: string;
+      confirmedPortfolio?: import("@/historical-2012/confirmed-portfolios-sidecar-types").ConfirmedPortfolioSidecarEntry;
+    },
     idPrefix: string,
   ): InvestigationItem => {
+    if (historicalConfirmedPortfolioBrowse && row.confirmedPortfolio && row.organizationKey) {
+      const portfolio = row.confirmedPortfolio;
+      return {
+        id: `${idPrefix}-${row.id}`,
+        kind: "confirmed-portfolio",
+        label: row.name,
+        records: row.records,
+        entityKey: row.organizationKey,
+        exploreFullHref: exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(
+          portfolio.memberApplicationIds,
+        ),
+        exploreDataset: "2012-historical",
+        confirmedPortfolio: {
+          organizationKey: portfolio.organizationKey,
+          canonicalOrganizationName: portfolio.canonicalOrganizationName,
+          promotionState: "CONFIRMED",
+          confidence: portfolio.confidence,
+          reviewState: portfolio.reviewState,
+          methodVersion: portfolio.methodVersion,
+          evidence: portfolio.evidence,
+          promotionOpIds: portfolio.promotionOpIds,
+        },
+      };
+    }
     const kind = filters.entity === "categories"
       ? "category"
-      : filters.entity === "organizations"
+      : filters.entity === "organizations" || filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
         ? "applicant"
         : filters.entity === "applications"
           ? "application"
           : filters.entity === "strings"
             ? "string"
             : "metric";
-    const entityType = filters.entity === "strings" ? undefined : filters.entity as CompareEntityType;
+    const entityType =
+      filters.entity === "strings" || filters.entity === HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY
+        ? undefined
+        : filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
+          ? "organizations"
+          : filters.entity as CompareEntityType;
     const stringKey = row.stringKey ?? row.records[0]?.string;
     return {
       id: `${idPrefix}-${row.id}`,
@@ -1092,6 +1236,32 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </Card>
       ) : null}
 
+      {is2012Historical && historicalConfirmedPortfolioBrowseActive && historical2012Loaded && !confirmedPortfoliosLoaded ? (
+        <Card className="mb-5 border-amber-200 bg-amber-50">
+          <CardContent className="py-6 text-sm text-amber-950">
+            <p className="font-bold">2012 confirmed portfolio sidecar not loaded</p>
+            <p className="mt-2">
+              {confirmedPortfoliosSidecar.status === "not-loaded"
+                ? confirmedPortfoliosSidecar.errorMessage
+                : "Unknown sidecar load state."}
+            </p>
+            <p className="mt-2 text-xs">Confirmed portfolios require a validated sidecar pinned to the same application payload corpus hash.</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {historicalConfirmedPortfolioBrowse ? (
+        <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-950">
+          {HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER}
+        </div>
+      ) : null}
+
+      {historicalApplicantLegalNameBrowse ? (
+        <div className="mb-5 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">
+          {HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE}
+        </div>
+      ) : null}
+
       <div className="mb-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
         <label className="relative block">
           <Search className="absolute left-3 top-3 size-4 text-slate-600" />
@@ -1099,7 +1269,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
           <kbd className="pointer-events-none absolute right-2 top-2.5 rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
         </label>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-          <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></select></label>
+          <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}>{is2012Historical ? <><option value="applications">Applications</option><option value="strings">Strings</option><option value={HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY}>Confirmed portfolios</option><option value={HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY}>Applicant legal names</option></> : <><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></>}</select></label>
           {historicalCategoryFilterDisabled ? (
             <label className="text-xs font-bold text-slate-700">
               Category
@@ -1147,7 +1317,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? (filters.contention === "in" ? formatHistorical2012StringAggregateResultsSummary(rows.length, underlyingStringApplicationCount) : `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}`) : historicalApplicationBrowse ? formatHistorical2012ApplicationResultsSummary(rows.length) : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalConfirmedPortfolioBrowse ? HISTORICAL_2012_CONFIRMED_PORTFOLIO_RESULTS_SUMMARY : historicalStringBrowse ? (filters.contention === "in" ? formatHistorical2012StringAggregateResultsSummary(rows.length, underlyingStringApplicationCount) : `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}`) : historicalApplicationBrowse ? formatHistorical2012ApplicationResultsSummary(rows.length) : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton
@@ -1155,7 +1325,10 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             defaultName={`Explore: ${describeExploreFilters(filters)}`.slice(0, 80)}
             summary={describeExploreFilters(filters)}
             recordCount={historicalStringBrowse ? rows.length : applications.length}
-            disabled={historicalStringBrowse ? rows.length === 0 : applications.length === 0}
+            disabled={
+              !exploreSaveResearchEnabled
+              || (historicalConfirmedPortfolioBrowse ? rows.length === 0 : historicalStringBrowse ? rows.length === 0 : applications.length === 0)
+            }
             buildParams={() =>
               exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined)
             }
@@ -1175,7 +1348,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </div>
       </div>
 
-      {is2012Historical && !historical2012Loaded ? null : state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
+      {is2012Historical && (!historical2012Loaded || (historicalConfirmedPortfolioBrowseActive && !confirmedPortfoliosLoaded)) ? null : state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
         <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : state === "empty" || !rows.length ? (
         <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
@@ -1215,6 +1388,44 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                         <td className="p-3 text-xs text-slate-700">{historical2012ContentionMembershipLabel(application.contentionSet)}</td>
                         <td className="p-3 text-slate-700">{historical2012IdnLabel(application.idn)}</td>
                         <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_REVEAL_DAY_CSV}</Badge></td>
+                        <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : historicalConfirmedPortfolioBrowse ? (
+              <table className="w-full min-w-[1100px] text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700">
+                    {HISTORICAL_2012_CONFIRMED_PORTFOLIO_COLUMN_HEADERS.map((header) => (
+                      <th key={header} className="p-3">{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const investigationItem = buildExploreInvestigationItem(row, "explore");
+                    return (
+                      <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50">
+                        <td className="p-3">
+                          <ProvenanceSheet
+                            {...investigationItem}
+                            triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                            trigger={(
+                              <strong className="flex items-center gap-1 text-slate-950">
+                                {row.name}
+                                <ChevronRight className="size-4 text-[#007d65]" />
+                              </strong>
+                            )}
+                          />
+                        </td>
+                        <td className="p-3 font-mono font-bold text-slate-900">{row.records.length}</td>
+                        <td className="p-3 text-xs text-slate-700">{historical2012LegalApplicantsSummary(row.records)}</td>
+                        <td className="p-3 text-slate-700">{historical2012DistinctRegionsLabel(row.records)}</td>
+                        <td className="p-3 text-xs text-slate-700">{historical2012StringContentionSummary(row.records)}</td>
+                        <td className="p-3 text-xs text-slate-700">{historical2012PortfolioIdnSummary(row.records)}</td>
+                        <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE}</Badge></td>
                         <td className="p-3"><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} /></td>
                       </tr>
                     );
@@ -1289,6 +1500,28 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
                           <Badge variant="outline">{historical2012ContentionMembershipLabel(application.contentionSet)}</Badge>
                           <Badge variant="secondary">{historical2012IdnLabel(application.idn)}</Badge>
                           <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_REVEAL_DAY_CSV}</Badge>
+                        </span>
+                      </>
+                    )}
+                  />
+                  <ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" />
+                </div>
+              );
+            }
+            if (historicalConfirmedPortfolioBrowse) {
+              return (
+                <div key={row.id} className="p-4">
+                  <ProvenanceSheet
+                    {...investigationItem}
+                    triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                    trigger={(
+                      <>
+                        <span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span>
+                        <span className="mt-1 block text-xs text-slate-600">{row.records.length} confirmed applications</span>
+                        <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
+                          <Badge variant="outline">{historical2012StringContentionSummary(row.records)}</Badge>
+                          <Badge variant="secondary">{historical2012PortfolioIdnSummary(row.records)}</Badge>
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE}</Badge>
                         </span>
                       </>
                     )}

@@ -38,7 +38,7 @@ function renderCommandCenter(historicalResolution: typeof historical2012Loaded) 
   return render(
     <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
       <HubRegistryDataProvider resolution={registryResolution}>
-        <HubHistorical2012Provider resolution={historicalResolution}>
+        <HubHistorical2012Provider applicationPayload={historicalResolution} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
           <CommandCenter />
         </HubHistorical2012Provider>
       </HubRegistryDataProvider>

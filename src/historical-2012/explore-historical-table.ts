@@ -102,6 +102,9 @@ export function historical2012StringContentionSummary(records: readonly Applicat
 }
 
 export function historical2012ExploreSearchPlaceholder(browseEntity: string, is2012Historical: boolean): string {
+  if (is2012Historical && browseEntity === "confirmed-portfolios") {
+    return "Search confirmed portfolios, organization keys, application IDs, applicants…";
+  }
   if (is2012Historical && browseEntity === "strings") {
     return "Search applied strings, application IDs, applicants, regions…";
   }
@@ -118,6 +121,9 @@ export function historical2012ExploreDatasetBadge(
 ): string {
   if (browseEntity === "strings") {
     return `2012 Reveal Day historical · ${uniqueStringCount} strings`;
+  }
+  if (browseEntity === "confirmed-portfolios") {
+    return "2012 Reveal Day historical · 16 confirmed portfolios";
   }
   return `2012 Reveal Day historical · ${applicationCount} applications`;
 }
@@ -192,7 +198,9 @@ export function exploreFiltersFor2012Historical<T extends { status: string; cate
   options?: { browseEntity?: string },
 ): T {
   const category =
-    options?.browseEntity === "strings" ? "all" : filters.category;
+    options?.browseEntity === "strings" || options?.browseEntity === "confirmed-portfolios"
+      ? "all"
+      : filters.category;
   return { ...filters, status: "all", category };
 }
 

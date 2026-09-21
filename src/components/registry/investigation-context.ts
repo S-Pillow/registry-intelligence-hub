@@ -7,7 +7,27 @@ import type { SavedWork } from "@/lib/use-saved-work";
 
 export type CompareEntityType = EntityType;
 
-export type InvestigationKind = "application" | "applicant" | "category" | "string" | "signal" | "metric" | "coverage" | "dataset";
+export type InvestigationKind =
+  | "application"
+  | "applicant"
+  | "category"
+  | "string"
+  | "confirmed-portfolio"
+  | "signal"
+  | "metric"
+  | "coverage"
+  | "dataset";
+
+export type ConfirmedPortfolioInvestigationMeta = {
+  organizationKey: string;
+  canonicalOrganizationName: string;
+  promotionState: "CONFIRMED";
+  confidence: "high" | "medium";
+  reviewState: "steward-approved";
+  methodVersion: "organization-promotion/1.0.0";
+  evidence: string[];
+  promotionOpIds: string[];
+};
 
 /** Explore dataset context for drawer actions — prevents 2012 historical rows routing into 2026 rehearsal flows. */
 export type InvestigationExploreDataset = "2026-rehearsal" | "2012-historical";
@@ -25,6 +45,8 @@ export type InvestigationItem = {
   exploreFullHref?: string;
   /** When set from Explore, drawer provenance and downstream actions stay on this dataset. */
   exploreDataset?: InvestigationExploreDataset;
+  /** Steward-confirmed portfolio promotion metadata (D2.4). */
+  confirmedPortfolio?: ConfirmedPortfolioInvestigationMeta;
 };
 
 export type InvestigationContextValue = {

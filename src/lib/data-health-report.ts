@@ -6,6 +6,15 @@ import {
 import type { ClaimReadiness } from "@/comparison/claim-readiness";
 import type { MetricReadiness } from "@/comparison/readiness";
 import { resolveHubMetricEligibility } from "@/lib/hub-metric-eligibility";
+import {
+  CONFIRMED_2012_MAPPED_APPLICATION_COUNT,
+  CONFIRMED_2012_PORTFOLIO_COUNT,
+  OFFLINE_2012_ORG_AMBIGUOUS_APPLICATIONS,
+  OFFLINE_2012_ORG_AMBIGUOUS_ORGANIZATIONS,
+  OFFLINE_2012_ORG_CANDIDATE_APPLICATIONS,
+  OFFLINE_2012_ORG_CANDIDATE_ORGANIZATIONS,
+} from "@/historical-2012/confirmed-portfolios-constants";
+import type { ConfirmedPortfoliosSidecarResolution } from "@/historical-2012/confirmed-portfolios-sidecar-shared";
 import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
 import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
 import { ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE } from "@/lib/registry-data";
@@ -318,10 +327,16 @@ export function buildSourceHealthRows(
     reason: "not-configured",
     errorMessage: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
   },
+  confirmedPortfolios: ConfirmedPortfoliosSidecarResolution = {
+    status: "not-loaded",
+    reason: "not-configured",
+    errorMessage: "2012 confirmed portfolio sidecar not configured.",
+  },
 ): SourceHealthRow[] {
   const baseline = APPROVED_2012_BASELINE;
   const doc = resolution.document;
   const historical2012Loaded = historical2012.status === "loaded";
+  const confirmedPortfoliosLoaded = confirmedPortfolios.status === "loaded";
 
   return [
     {
@@ -366,9 +381,13 @@ export function buildSourceHealthRows(
       name: "2012 organization promotion / resolution",
       classification: "Historical",
       snapshotOrVersion: ORGANIZATION_RESOLUTION_METHOD,
-      coverage: `${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} promoted · ${OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS} unresolved`,
+      coverage: confirmedPortfoliosLoaded
+        ? `${CONFIRMED_2012_MAPPED_APPLICATION_COUNT} confirmed / ${CONFIRMED_2012_PORTFOLIO_COUNT} orgs · ${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} total promoted · ${OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS} unresolved`
+        : `${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} promoted · ${OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS} unresolved`,
       readiness: "Partial",
-      limitation: "Round-wide organization counts and portfolio concentration remain blocked.",
+      limitation: confirmedPortfoliosLoaded
+        ? `Explore confirmed portfolios when sidecar loaded; ${OFFLINE_2012_ORG_CANDIDATE_APPLICATIONS} candidate / ${OFFLINE_2012_ORG_AMBIGUOUS_APPLICATIONS} ambiguous apps excluded from browse. Round-wide org counts and concentration remain blocked.`
+        : "Round-wide organization counts and portfolio concentration remain blocked.",
     },
     {
       id: "2012-taxonomy",
@@ -440,8 +459,14 @@ export function buildDataHealthSnapshot(
     reason: "not-configured",
     errorMessage: ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
   },
+  confirmedPortfolios: ConfirmedPortfoliosSidecarResolution = {
+    status: "not-loaded",
+    reason: "not-configured",
+    errorMessage: "2012 confirmed portfolio sidecar not configured.",
+  },
 ): DataHealthSnapshot {
   const historical2012Loaded = historical2012.status === "loaded";
+  const confirmedPortfoliosLoaded = confirmedPortfolios.status === "loaded";
   const unlock = buildComparisonUnlockReport(claimActuality);
   const comparableTotal = unlock.metrics.filter((m) => m.methodReadiness === "COMPARABLE").length;
   const comparableUnlocked = unlock.metrics.filter((m) => m.comparisonAllowed).length;
@@ -468,7 +493,7 @@ export function buildDataHealthSnapshot(
       comparableUnlocked,
       comparableTotal,
     ),
-    sourceHealth: buildSourceHealthRows(resolution, claimActuality, historical2012),
+    sourceHealth: buildSourceHealthRows(resolution, claimActuality, historical2012, confirmedPortfolios),
     intelligenceReadiness: buildIntelligenceReadinessRows(claimActuality),
     browserDataState: {
       approved2012Aggregates: {
@@ -488,7 +513,7 @@ export function buildDataHealthSnapshot(
           }
         : {}),
       offlineNormalizedCorpus: historical2012Loaded
-        ? `Offline normalization (${APPROVED_2012_BASELINE_BUNDLE}) materialized as browser payload ${historical2012.document.corpusContentHash.slice(0, 16)}…`
+        ? `Offline normalization (${APPROVED_2012_BASELINE_BUNDLE}) materialized as browser payload ${historical2012.document.corpusContentHash.slice(0, 16)}…${confirmedPortfoliosLoaded ? ` · confirmed portfolio sidecar ${confirmedPortfolios.document.payloadVersion}` : " · org promotion offline unless confirmed portfolio sidecar loaded."}`
         : `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
       browserEntityDataset: `${resolution.document.applications.length}-record ${resolution.mode === "rehearsal" ? "2026 rehearsal" : "promoted 2026"} fixture (${resolution.document.fixtureId ?? resolution.document.snapshotId})`,
       real2026Publication:
@@ -504,7 +529,9 @@ export function buildDataHealthSnapshot(
         : `${APPROVED_2012_BASELINE.applications} applications in approved 2012 baseline (aggregate-only in browser).`,
       `Taxonomy ${OFFLINE_2012_TAXONOMY_CLASSIFIED}/${APPROVED_2012_BASELINE.applications} classified — category-mix remains BLOCKED_COVERAGE.`,
       `${APPROVED_2012_BASELINE.contentionMembershipApplications} contention PDF memberships; set count blocked (${APPROVED_2012_BASELINE.extractedContentionSetEntities} vs ${APPROVED_2012_BASELINE.icannCitedContentionSetEntities}).`,
-      `Organization resolution partial — ${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} promoted applications (~${Math.round((OFFLINE_2012_ORG_PROMOTED_APPLICATIONS / APPROVED_2012_BASELINE.applications) * 100)}%); no round-wide org rankings.`,
+      confirmedPortfoliosLoaded
+        ? `Confirmed portfolios: ${CONFIRMED_2012_PORTFOLIO_COUNT} steward-confirmed orgs · ${CONFIRMED_2012_MAPPED_APPLICATION_COUNT} mapped apps; ${OFFLINE_2012_ORG_CANDIDATE_ORGANIZATIONS} candidate / ${OFFLINE_2012_ORG_AMBIGUOUS_ORGANIZATIONS} ambiguous org entities; ${OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS} unresolved applications.`
+        : `Organization resolution partial — ${OFFLINE_2012_ORG_PROMOTED_APPLICATIONS} promoted applications (~${Math.round((OFFLINE_2012_ORG_PROMOTED_APPLICATIONS / APPROVED_2012_BASELINE.applications) * 100)}%); no round-wide org rankings.`,
       "Portfolio concentration and round-wide organization metrics stay gated per eligibility catalog.",
     ],
     publicationReadiness: {

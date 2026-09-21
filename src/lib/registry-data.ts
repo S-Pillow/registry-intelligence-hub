@@ -69,8 +69,17 @@ const exploreFilterDefaults: Record<string, string> = {
   sort: "applications-desc",
 };
 
+const exploreEntityLabels: Record<string, string> = {
+  applications: "Applications",
+  strings: "Strings",
+  organizations: "organizations",
+  categories: "Categories",
+  "confirmed-portfolios": "Confirmed portfolios",
+  "applicant-legal-names": "Applicant legal names",
+};
+
 const exploreFilterLabels: Record<string, (value: string) => string> = {
-  entity: (value) => `Browse by ${value}`,
+  entity: (value) => `Browse by ${exploreEntityLabels[value] ?? value}`,
   category: (value) => `${value} category`,
   region: (value) => `${value} region`,
   status: (value) => value === "returning" ? "Returning only" : "New only",
@@ -194,6 +203,25 @@ export function exploreHistorical2012StringResearchHref(stringKey: string) {
   params.set("dataset", "2012-historical");
   params.set("entity", "strings");
   params.set("q", stringKey);
+  return `${hubPath("/explore")}?${params}`;
+}
+
+/** Explore handoff for steward-confirmed organization portfolios (D2.4). */
+export function exploreHistorical2012ConfirmedPortfoliosHref() {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "confirmed-portfolios");
+  return `${hubPath("/explore")}?${params}`;
+}
+
+/** View full — exact confirmed member application ids (no fuzzy applicant query). */
+export function exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(
+  applicationIds: readonly string[],
+) {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "applications");
+  params.set("ids", applicationIds.join(","));
   return `${hubPath("/explore")}?${params}`;
 }
 

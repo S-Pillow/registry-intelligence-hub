@@ -34,7 +34,7 @@ function renderHistoricalStringsExplore(exploreParams: Record<string, string> = 
   return render(
     <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
       <HubRegistryDataProvider resolution={registryResolution}>
-        <HubHistorical2012Provider resolution={historical2012}>
+        <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
           <CommandCenter
             view="explore"
             exploreParams={{ dataset: "2012-historical", entity: "strings", ...exploreParams }}
