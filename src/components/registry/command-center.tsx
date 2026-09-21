@@ -76,8 +76,10 @@ import {
   exploreDrillDownHref,
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
+  exploreHistorical2012ApplicationsHref,
   exploreResearchHref,
   ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
+  roundPulseHistoricalCardExploreHref,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
 import { buildRevealDayGlanceMetrics, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
@@ -410,10 +412,24 @@ function IntelligenceDrawer({
     else toggleWatch(item);
   };
   const displayedRecords = showFull ? item?.records : item?.records.slice(0, 4);
-  const fullHref = item ? exploreFullHrefForInvestigation(item) : "#";
+  const historicalApplicationCorpusHref =
+    item?.historicalFact?.metricId === "application-count" && historical2012.status === "loaded"
+      ? exploreHistorical2012ApplicationsHref({ entityApplications: true })
+      : undefined;
+  const fullHref = item
+    ? exploreFullHrefForInvestigation({
+        ...item,
+        exploreFullHref: item.exploreFullHref ?? historicalApplicationCorpusHref ?? undefined,
+        exploreDataset: item.exploreDataset ?? (historicalApplicationCorpusHref ? "2012-historical" : undefined),
+      })
+    : "#";
   const showViewFull = Boolean(
-    item && canAct && !item.historicalFact && (item.records.length > 0 || item.exploreFullHref)
-      && (!historicalActionsDisabled || historicalProvenanceLoaded),
+    item && canAct
+      && (
+        (!item.historicalFact && (item.records.length > 0 || item.exploreFullHref))
+        || Boolean(historicalApplicationCorpusHref || (item.historicalFact && item.exploreFullHref))
+      )
+      && (!historicalActionsDisabled || historicalProvenanceLoaded || historicalApplicationCorpusHref),
   );
 
   return (
@@ -432,7 +448,13 @@ function IntelligenceDrawer({
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Approved 2012 historical aggregate</p>
                   <p className="mt-2 text-2xl font-bold text-slate-950">{item.historicalFact.value}</p>
                   <HistoricalFactCaption fact={item.historicalFact} />
-                  <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
+                  {historicalApplicationCorpusHref ? (
+                    <p className="mt-2 text-xs text-slate-700">
+                      Aggregate value above is the approved baseline — not recomputed from Explore rows. Application corpus browse uses the loaded 2012 historical payload (one row per application).
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
+                  )}
                 </div>
               )}
 
@@ -645,7 +667,15 @@ function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) 
   );
 }
 
-function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof buildRoundPulse> }) {
+function MetricCards({
+  lens,
+  metrics,
+  historical2012Loaded,
+}: {
+  lens: Lens;
+  metrics: ReturnType<typeof buildRoundPulse>;
+  historical2012Loaded: boolean;
+}) {
   const emphasized = new Set(roundPulseEmphasisByLens[lens]);
 
   return (
@@ -654,6 +684,9 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
         const isFocused = emphasized.has(metric.filter);
         const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
         const isHistoricalAggregate = Boolean(metric.historicalFact);
+        const historicalCardExploreHref = metric.metricId
+          ? roundPulseHistoricalCardExploreHref(metric.metricId, historical2012Loaded)
+          : null;
         return (
         <div
           key={metric.id}
@@ -677,7 +710,12 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
             label={`${metric.label}: ${metric.historicalFact ? metric.historicalFact.value : metric.value}`}
             records={roundPulseSupportingRecords(metric)}
             historicalFact={metric.historicalFact}
-            exploreFullHref={isHistoricalAggregate ? undefined : exploreDrillDownHref(metric.filter)}
+            exploreFullHref={
+              isHistoricalAggregate
+                ? historicalCardExploreHref ?? undefined
+                : exploreDrillDownHref(metric.filter)
+            }
+            exploreDataset={historicalCardExploreHref ? "2012-historical" : undefined}
             triggerClassName="group flex flex-1 flex-col p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
             trigger={
               <>
@@ -694,12 +732,22 @@ function MetricCards({ lens, metrics }: { lens: Lens; metrics: ReturnType<typeof
             }
           />
           {isHistoricalAggregate ? (
-            <p
-              className="flex items-center border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"
-              title={ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}
-            >
-              Entity browse deferred
-            </p>
+            historicalCardExploreHref ? (
+              <Link
+                href={historicalCardExploreHref}
+                className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
+              >
+                Open 2012 application corpus<ArrowRight className="size-3.5" />
+              </Link>
+            ) : (
+              <p
+                className="flex items-center border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                title={ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}
+                data-testid={`historical-aggregate-only-${metric.id}`}
+              >
+                Aggregate only · entity browse unavailable
+              </p>
+            )
           ) : (
             <Link
               href={exploreDrillDownHref(metric.filter)}
@@ -1384,6 +1432,8 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
 export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
+  const historical2012 = useHistorical2012Payload();
+  const historical2012Loaded = historical2012.status === "loaded";
   const registryFixture = useHubRegistryDocument();
   const snapshotPinSubtitle =
     registryPayloadMode === "promoted-2026"
@@ -1563,14 +1613,23 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
         {state === "loading" ? <LoadingState /> : state === "empty" || state === "error" ? <MessageState kind={state} /> : (
           <section className="mb-2" data-testid="round-pulse-section" aria-labelledby="round-pulse-heading">
-            <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-[#004c3d] sm:text-2xl" data-testid="lens-round-pulse-subtitle">{lensRoundPulseFraming[activeLens].subtitle}</h2>
+                {historical2012Loaded ? (
+                  <Link
+                    href={exploreHistorical2012ApplicationsHref()}
+                    data-testid="round-pulse-explore-2012-historical"
+                    className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#006a56] hover:text-[#004c3d] hover:underline"
+                  >
+                    Explore 2012 historical applications<ArrowRight className="size-4" />
+                  </Link>
+                ) : null}
               </div>
               <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
             </div>
-            <MetricCards lens={activeLens} metrics={roundPulseMetrics} />
+            <MetricCards lens={activeLens} metrics={roundPulseMetrics} historical2012Loaded={historical2012Loaded} />
           </section>
         )}
 

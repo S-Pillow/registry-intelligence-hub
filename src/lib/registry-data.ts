@@ -141,6 +141,29 @@ export function exploreDrillDownHref(metricFilter: string) {
 
 export type ExploreDatasetQuery = "2026-rehearsal" | "2012-historical";
 
+/** General Command Center → Explore handoff for the 2012 application corpus (D2.0). */
+export function exploreHistorical2012ApplicationsHref(options?: { entityApplications?: boolean }) {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  if (options?.entityApplications) params.set("entity", "applications");
+  return `${hubPath("/explore")}?${params}`;
+}
+
+/**
+ * Round Pulse per-card Explore handoff for approved 2012 metrics when payload is loaded.
+ * Unique strings and IDN stay aggregate-only — no href implying application-row evidence.
+ */
+export function roundPulseHistoricalCardExploreHref(
+  metricId: string,
+  historicalPayloadLoaded: boolean,
+): string | null {
+  if (!historicalPayloadLoaded) return null;
+  if (metricId === "applications" || metricId === "application-count") {
+    return exploreHistorical2012ApplicationsHref({ entityApplications: true });
+  }
+  return null;
+}
+
 function withExploreDataset(href: string, dataset?: ExploreDatasetQuery) {
   if (dataset !== "2012-historical") return href;
   const url = new URL(href, "http://local");

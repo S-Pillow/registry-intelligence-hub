@@ -21,7 +21,9 @@ import {
   exploreDrillDownHref,
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
+  exploreHistorical2012ApplicationsHref,
   exploreResearchHref,
+  roundPulseHistoricalCardExploreHref,
   roundPulseSupportingRecords,
   numericCellDelta,
   recordsForEntity,
@@ -299,6 +301,28 @@ describe("exploreDrillDownHref", () => {
     expect(exploreDrillDownHref("contention")).toBe("/explore?contention=in");
     expect(exploreDrillDownHref("strings")).toBe("/explore?entity=strings");
     expect(exploreDrillDownHref("organizations")).toBe("/explore?entity=organizations");
+  });
+});
+
+describe("exploreHistorical2012ApplicationsHref (D2.0)", () => {
+  it("preserves dataset=2012-historical for general and application-corpus handoffs", () => {
+    expect(exploreHistorical2012ApplicationsHref()).toBe("/explore?dataset=2012-historical");
+    expect(exploreHistorical2012ApplicationsHref({ entityApplications: true })).toBe(
+      "/explore?dataset=2012-historical&entity=applications",
+    );
+  });
+});
+
+describe("roundPulseHistoricalCardExploreHref (D2.0)", () => {
+  it("returns application corpus href only when payload is loaded", () => {
+    expect(roundPulseHistoricalCardExploreHref("application-count", false)).toBeNull();
+    expect(roundPulseHistoricalCardExploreHref("application-count", true)).toContain("dataset=2012-historical");
+    expect(roundPulseHistoricalCardExploreHref("application-count", true)).toContain("entity=applications");
+  });
+
+  it("keeps unique strings and IDN aggregate-only without application-corpus drill-down", () => {
+    expect(roundPulseHistoricalCardExploreHref("unique-applied-strings", true)).toBeNull();
+    expect(roundPulseHistoricalCardExploreHref("idn-applications", true)).toBeNull();
   });
 });
 
