@@ -15,6 +15,7 @@ import { parse2012ApplicationPayloadJson } from "@/historical-2012/payload-serve
 import { resolveHistorical2012BrowserPayload } from "@/historical-2012/payload-shared";
 import {
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012ContentionApplicationsHref,
   exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringsHref,
   roundPulseSupportingRecords,
@@ -61,6 +62,7 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(screen.getByTestId("historical-aggregate-only-applications")).toBeInTheDocument();
     expect(screen.getByTestId("historical-aggregate-only-strings")).toBeInTheDocument();
     expect(screen.getByTestId("historical-aggregate-only-idn")).toBeInTheDocument();
+    expect(screen.getByTestId("historical-aggregate-only-contention")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Open 2012 application corpus/i })).not.toBeInTheDocument();
   });
 
@@ -84,6 +86,7 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
 
     expect(screen.queryByTestId("historical-aggregate-only-idn")).not.toBeInTheDocument();
     expect(screen.queryByTestId("historical-aggregate-only-strings")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("historical-aggregate-only-contention")).not.toBeInTheDocument();
 
     const stringsLink = screen.getByRole("link", { name: /Open 2012 string corpus/i });
     expect(stringsLink.getAttribute("href")).toBe(exploreHistorical2012StringsHref());
@@ -94,6 +97,11 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(idnLink.getAttribute("href")).toBe(exploreHistorical2012IdnApplicationsHref());
     expect(idnLink.getAttribute("href")).toContain("entity=applications");
     expect(idnLink.getAttribute("href")).toContain("idn=idn");
+
+    const contentionLink = screen.getByRole("link", { name: /Open 2012 contention applications/i });
+    expect(contentionLink.getAttribute("href")).toBe(exploreHistorical2012ContentionApplicationsHref());
+    expect(contentionLink.getAttribute("href")).toContain("entity=applications");
+    expect(contentionLink.getAttribute("href")).toContain("contention=in");
   });
 
   it("opens IDN aggregate drawer View full to historical Explore with IDN filter", async () => {
@@ -103,6 +111,20 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     await user.click(screen.getByRole("button", { name: "View intelligence for IDN applications: 116" }));
     const viewFull = await screen.findByRole("link", { name: "View full" });
     expect(viewFull.getAttribute("href")).toBe(exploreHistorical2012IdnApplicationsHref());
+    expect(viewFull.getAttribute("href")).not.toContain("snap-rehearsal");
+    expect(screen.getByRole("button", { name: "+ Compare" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Watch" })).toBeDisabled();
+  });
+
+  it("opens contention aggregate drawer View full to historical Explore with contention filter (D2.3)", async () => {
+    const user = userEvent.setup();
+    renderCommandCenter(historical2012Loaded);
+
+    await user.click(
+      screen.getByRole("button", { name: "View intelligence for Applications in initial contention: 754" }),
+    );
+    const viewFull = await screen.findByRole("link", { name: "View full" });
+    expect(viewFull.getAttribute("href")).toBe(exploreHistorical2012ContentionApplicationsHref());
     expect(viewFull.getAttribute("href")).not.toContain("snap-rehearsal");
     expect(screen.getByRole("button", { name: "+ Compare" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Watch" })).toBeDisabled();

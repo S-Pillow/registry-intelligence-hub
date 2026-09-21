@@ -166,6 +166,15 @@ export function exploreHistorical2012IdnApplicationsHref() {
   return `${hubPath("/explore")}?${params}`;
 }
 
+/** Command Center handoff for contention membership at application grain (D2.3). */
+export function exploreHistorical2012ContentionApplicationsHref() {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "applications");
+  params.set("contention", "in");
+  return `${hubPath("/explore")}?${params}`;
+}
+
 /** Explore deep link preserving historical string browse context for one applied string. */
 export function exploreHistorical2012StringResearchHref(stringKey: string) {
   const params = new URLSearchParams();
@@ -179,6 +188,7 @@ export function roundPulseHistoricalCardExploreFooterLabel(metricId: string): st
   if (metricId === "application-count") return "Open 2012 application corpus";
   if (metricId === "unique-applied-strings") return "Open 2012 string corpus";
   if (metricId === "idn-applications") return "Open 2012 IDN applications";
+  if (metricId === "contention-membership-exposure") return "Open 2012 contention applications";
   return null;
 }
 
@@ -198,6 +208,9 @@ export function roundPulseHistoricalCardExploreHref(
   }
   if (metricId === "idn-applications") {
     return exploreHistorical2012IdnApplicationsHref();
+  }
+  if (metricId === "contention-membership-exposure") {
+    return exploreHistorical2012ContentionApplicationsHref();
   }
   return null;
 }

@@ -53,10 +53,14 @@ describe("historical-2012-ui-adapter", () => {
     expect(orgs?.deltaLabel).toMatch(/not approved/i);
   });
 
-  it("blocks contention set headline comparison", () => {
+  it("exposes contention membership as PARTIAL historical aggregate (754) — not set-entity headline", () => {
     const pulse = buildCommandCenterRoundPulse(fixture.applications);
-    const contention = pulse.find((m) => m.metricId === "contention-set-count");
-    expect(contention?.methodReadiness).toBe("BLOCKED_METHOD");
+    const contention = pulse.find((m) => m.metricId === "contention-membership-exposure");
+    expect(contention?.label).toBe("Applications in initial contention");
+    expect(contention?.value).toBe(754);
+    expect(contention?.historicalFact?.value).toBe(754);
+    expect(contention?.methodReadiness).toBe("PARTIAL");
+    expect(contention?.historicalFact?.sourceSnapshotId).toBe("snap-2012-contention-pdf-v1");
   });
 
   it("flags gated metrics for UI", () => {

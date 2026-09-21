@@ -99,6 +99,30 @@ export function buildApproved2012HistoricalFacts(
   return APPROVED_UI_SWAP_METRIC_IDS.map((metricId) => buildApproved2012HistoricalFact(metricId, claimActualityState));
 }
 
+/** Approved 2012 contention membership aggregate — PDF pipeline, not Reveal Day CSV. */
+export function buildApproved2012ContentionMembershipHistoricalFact(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): HistoricalMetricFact {
+  const entry = requireHubMetricEligibility("contention-membership-exposure", claimActualityState);
+  return {
+    metricId: "contention-membership-exposure",
+    value: APPROVED_2012_BASELINE.contentionMembershipApplications,
+    roundId: APPROVED_2012_HISTORICAL_ROUND_ID,
+    effectiveDate: APPROVED_2012_BASELINE.baselineAt,
+    sourceClassification: "ICANN_PRIMARY_ARCHIVED_COPY",
+    sourceSnapshotId: "snap-2012-contention-pdf-v1",
+    methodVersion: "icann2012-contention-pdf/1.0.0",
+    methodReadiness: entry.methodReadiness,
+    claimReadiness: entry.claimReadiness.round2012,
+    comparisonAllowed: entry.comparisonAllowed,
+    limitations: [
+      ...HISTORICAL_LIMITATIONS,
+      "Round-wide contention set entity count remains BLOCKED_METHOD (232 vs 234).",
+    ],
+    label: "Applications in initial contention",
+  };
+}
+
 function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
@@ -140,11 +164,12 @@ export function buildCommandCenterRoundPulse(
   const orgEntry = requireHubMetricEligibility("organization-round-count", claimActualityState);
   const regionsEntry = requireHubMetricEligibility("distinct-regions", claimActualityState);
   const idnEntry = requireHubMetricEligibility("idn-applications", claimActualityState);
-  const contentionEntry = requireHubMetricEligibility("contention-set-count", claimActualityState);
+  const contentionMembershipEntry = requireHubMetricEligibility("contention-membership-exposure", claimActualityState);
 
   const appFact = buildApproved2012HistoricalFact("application-count", claimActualityState);
   const stringsFact = buildApproved2012HistoricalFact("unique-applied-strings", claimActualityState);
   const idnFact = buildApproved2012HistoricalFact("idn-applications", claimActualityState);
+  const contentionFact = buildApproved2012ContentionMembershipHistoricalFact(claimActualityState);
 
   return [
     {
@@ -202,12 +227,13 @@ export function buildCommandCenterRoundPulse(
     },
     {
       id: "contention",
-      metricId: "contention-set-count",
-      label: "Initial contention sets",
-      value: uniqueCount(applications.flatMap((item) => (item.contentionSet ? [item.contentionSet] : []))),
-      baseline2012: null,
-      deltaLabel: "Set-entity count blocked — membership exposure only",
-      ...pulseMeta(contentionEntry),
+      metricId: "contention-membership-exposure",
+      label: "Applications in initial contention",
+      value: contentionFact.value,
+      historicalFact: contentionFact,
+      baseline2012: baseline.contentionMembershipApplications,
+      deltaLabel: historicalStatusLine(contentionMembershipEntry),
+      ...pulseMeta(contentionMembershipEntry),
       filter: "contention",
     },
   ];

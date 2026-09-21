@@ -54,6 +54,7 @@ describe("Command Center interactions", () => {
     expect(baselineFacts).toContain("1930");
     expect(baselineFacts).toContain("1409");
     expect(baselineFacts).toContain("116");
+    expect(baselineFacts).toContain("754");
 
     const allAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Commercial" }));
@@ -297,10 +298,8 @@ describe("Command Center → Explore drill-down", () => {
       "href",
       exploreDrillDownHref("organizations"),
     );
-    expect(screen.getByRole("link", { name: "Open Initial contention sets in 2026 rehearsal Explore" })).toHaveAttribute(
-      "href",
-      exploreDrillDownHref("contention"),
-    );
+    expect(screen.queryByRole("link", { name: /Open Initial contention sets in 2026 rehearsal Explore/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("historical-aggregate-only-contention")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Atlas Digital in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
       exploreEntityResearchHref("organizations", "Atlas Digital"),

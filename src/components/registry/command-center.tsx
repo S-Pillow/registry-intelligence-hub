@@ -53,6 +53,7 @@ import {
   exploreFiltersFor2012Historical,
   filterHistorical2012StringAggregates,
   formatHistorical2012ApplicationResultsSummary,
+  formatHistorical2012StringAggregateResultsSummary,
   HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
   isHistorical2012StringBrowse,
@@ -95,6 +96,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012ContentionApplicationsHref,
   exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringResearchHref,
   exploreHistorical2012StringsHref,
@@ -451,8 +453,15 @@ function IntelligenceDrawer({
     item?.historicalFact?.metricId === "idn-applications" && historical2012.status === "loaded"
       ? exploreHistorical2012IdnApplicationsHref()
       : undefined;
+  const historicalContentionCorpusHref =
+    item?.historicalFact?.metricId === "contention-membership-exposure" && historical2012.status === "loaded"
+      ? exploreHistorical2012ContentionApplicationsHref()
+      : undefined;
   const historicalCorpusHref =
-    historicalApplicationCorpusHref ?? historicalStringCorpusHref ?? historicalIdnCorpusHref;
+    historicalApplicationCorpusHref
+    ?? historicalStringCorpusHref
+    ?? historicalIdnCorpusHref
+    ?? historicalContentionCorpusHref;
   const fullHref = item
     ? exploreFullHrefForInvestigation({
         ...item,
@@ -496,6 +505,10 @@ function IntelligenceDrawer({
                   ) : historicalIdnCorpusHref ? (
                     <p className="mt-2 text-xs text-slate-700">
                       Aggregate value above is the approved baseline — not recomputed from Explore rows. Application browse with the IDN filter shows the qualifying IDN application rows from the loaded 1,930-application payload (application grain, not string count).
+                    </p>
+                  ) : historicalContentionCorpusHref ? (
+                    <p className="mt-2 text-xs text-slate-700">
+                      Aggregate value above is the approved baseline — not recomputed from Explore rows. Application browse with the initial-contention filter shows membership joined from the official contention publication (754 applications), not Reveal Day CSV columns.
                     </p>
                   ) : (
                     <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
@@ -730,7 +743,14 @@ function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string;
   );
 }
 
-function HistoricalFactCaption({ fact: _fact }: { fact: HistoricalMetricFact }) {
+function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
+  if (fact.metricId === "contention-membership-exposure") {
+    return (
+      <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+        2012 round historical · official contention publication. Application membership from the official string-similarity publication (26 Feb 2013 PDF); round-wide contention-set count remains method-blocked. 2026 comparison pending publication.
+      </span>
+    );
+  }
   return (
     <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
       Historical aggregate fact — 2012 Reveal Day (ICANN source, archived-copy preservation). Not entity-level browse. 2026 comparison pending publication.
@@ -1123,7 +1143,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}` : historicalApplicationBrowse ? formatHistorical2012ApplicationResultsSummary(rows.length) : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? (filters.contention === "in" ? formatHistorical2012StringAggregateResultsSummary(rows.length, underlyingStringApplicationCount) : `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}`) : historicalApplicationBrowse ? formatHistorical2012ApplicationResultsSummary(rows.length) : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton

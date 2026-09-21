@@ -22,6 +22,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012ContentionApplicationsHref,
   exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringsHref,
   exploreResearchHref,
@@ -49,7 +50,7 @@ describe("Round Pulse supporting records", () => {
   it("returns no rehearsal rows for approved 2012 historical aggregate cards", () => {
     const pulse = buildRoundPulse(fixture.applications);
     const historical = pulse.filter((metric) => metric.historicalFact);
-    expect(historical.map((m) => m.id).sort()).toEqual(["applications", "idn", "strings"]);
+    expect(historical.map((m) => m.id).sort()).toEqual(["applications", "contention", "idn", "strings"]);
     for (const metric of historical) {
       expect(roundPulseSupportingRecords(metric)).toEqual([]);
     }
@@ -68,7 +69,7 @@ describe("deterministic intelligence calculations", () => {
       organizations: 8,
       regions: 6,
       idn: 116,
-      contention: 2,
+      contention: 754,
     });
     expect(fixture.applications.filter((item) => item.replacement === null)).toHaveLength(10);
   });
@@ -330,6 +331,14 @@ describe("exploreHistorical2012IdnApplicationsHref (D2.2)", () => {
   });
 });
 
+describe("exploreHistorical2012ContentionApplicationsHref (D2.3)", () => {
+  it("opens historical application browse with canonical contention filter", () => {
+    expect(exploreHistorical2012ContentionApplicationsHref()).toBe(
+      "/explore?dataset=2012-historical&entity=applications&contention=in",
+    );
+  });
+});
+
 describe("roundPulseHistoricalCardExploreHref (D2.0 / D2.1)", () => {
   it("returns application corpus href only when payload is loaded", () => {
     expect(roundPulseHistoricalCardExploreHref("application-count", false)).toBeNull();
@@ -347,6 +356,13 @@ describe("roundPulseHistoricalCardExploreHref (D2.0 / D2.1)", () => {
     expect(roundPulseHistoricalCardExploreHref("idn-applications", false)).toBeNull();
     expect(roundPulseHistoricalCardExploreHref("idn-applications", true)).toBe(
       exploreHistorical2012IdnApplicationsHref(),
+    );
+  });
+
+  it("returns contention application browse href when payload is loaded (D2.3)", () => {
+    expect(roundPulseHistoricalCardExploreHref("contention-membership-exposure", false)).toBeNull();
+    expect(roundPulseHistoricalCardExploreHref("contention-membership-exposure", true)).toBe(
+      exploreHistorical2012ContentionApplicationsHref(),
     );
   });
 });

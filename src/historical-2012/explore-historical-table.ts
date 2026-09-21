@@ -47,6 +47,20 @@ export function formatHistorical2012ApplicationResultsSummary(applicationCount: 
     : `${applicationCount} application results`;
 }
 
+/** String aggregate summary when filters match string rows (not application-grain contention counts). */
+export function formatHistorical2012StringAggregateResultsSummary(
+  stringRowCount: number,
+  totalApplicationsInMatchedStrings: number,
+): string {
+  const stringsPart =
+    stringRowCount === 1 ? "1 string result" : `${stringRowCount} strings results`;
+  const appsPart =
+    totalApplicationsInMatchedStrings === 1
+      ? "1 total application in matched strings"
+      : `${totalApplicationsInMatchedStrings} total applications in matched strings`;
+  return `${stringsPart} · ${appsPart}`;
+}
+
 /** Trust badge copy for CSV-backed application row fields (not contention membership). */
 export const HISTORICAL_2012_TRUST_REVEAL_DAY_CSV = "2012 CSV" as const;
 

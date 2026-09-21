@@ -186,7 +186,7 @@ function buildCurrentStateSummary(
       title: "2012 aggregate readiness",
       primary: `Ready — ${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline wired in UI)`,
       secondary: historical2012Loaded
-        ? "Entity browser loaded separately — aggregates unchanged; supports deterministic IDN application filtering"
+        ? "Entity browser loaded separately — aggregates unchanged; supports IDN and initial-contention application filtering"
         : "Entity-level 2012 rows not loaded in browser",
       tone: "ready",
       badgeLabel: "Ready",
@@ -342,7 +342,9 @@ export function buildSourceHealthRows(
       snapshotOrVersion: "icann2012-contention-pdf/1.0.0",
       coverage: `${baseline.contentionMembershipApplications} applications in PDF membership`,
       readiness: "Partial",
-      limitation: `Set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`,
+      limitation: historical2012Loaded
+        ? `Round Pulse handoff to Explore initial-contention filter when payload loaded; set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`
+        : `Set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`,
     },
     {
       id: "2012-normalized-corpus",
