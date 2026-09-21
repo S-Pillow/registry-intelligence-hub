@@ -1,4 +1,4 @@
-import type { Application } from "@/lib/registry-data";
+import type { Application, ExploreFilterState } from "@/lib/registry-data";
 
 /** Desktop column headers for Explore ?dataset=2012-historical with Browse by Applications. */
 export const HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS = [
@@ -173,4 +173,89 @@ export function exploreFiltersFor2012Historical<T extends { status: string; cate
   const category =
     options?.browseEntity === "strings" ? "all" : filters.category;
   return { ...filters, status: "all", category };
+}
+
+/** Normalize applied-string search tokens (`.APP`, `APP`, case) for aggregate predicates. */
+export function normalizeHistorical2012ExploreStringQuery(query: string): string {
+  return query.trim().toLowerCase().replace(/^\.+/, "");
+}
+
+/** Whether one application row matches Explore search (including normalized applied string). */
+export function historical2012ApplicationMatchesExploreQuery(
+  item: Application,
+  query: string,
+): boolean {
+  const needle = query.toLowerCase();
+  const normalizedNeedle = normalizeHistorical2012ExploreStringQuery(query);
+  if (normalizedNeedle && normalizeHistorical2012ExploreStringQuery(item.string) === normalizedNeedle) {
+    return true;
+  }
+  return [item.id, item.applicant, item.organization, item.category, item.region, item.country].some(
+    (value) => value.toLowerCase().includes(needle),
+  );
+}
+
+/**
+ * Aggregate-match predicate for historical string browse: filters decide which strings qualify;
+ * qualifying rows always retain the full member set from the complete payload grouping.
+ */
+export function historical2012StringAggregateMatchesExploreFilters(
+  records: readonly Application[],
+  stringKey: string,
+  filters: ExploreFilterState,
+  options?: { knownStringKeys?: ReadonlySet<string> },
+): boolean {
+  const selectedIds = new Set(filters.ids.split(",").filter(Boolean));
+  if (selectedIds.size && !records.some((item) => selectedIds.has(item.id))) return false;
+  if (filters.category !== "all" && !records.some((item) => item.category === filters.category)) {
+    return false;
+  }
+  if (filters.region !== "all" && !records.some((item) => item.region === filters.region)) {
+    return false;
+  }
+  if (filters.status !== "all") {
+    const wantReturning = filters.status === "returning";
+    if (!records.some((item) => (wantReturning ? item.returning : !item.returning))) return false;
+  }
+  if (filters.contention !== "all") {
+    const wantInContention = filters.contention === "in";
+    if (!records.some((item) => (wantInContention ? Boolean(item.contentionSet) : !item.contentionSet))) {
+      return false;
+    }
+  }
+  if (filters.idn !== "all") {
+    const wantIdn = filters.idn === "idn";
+    if (!records.some((item) => (wantIdn ? item.idn : !item.idn))) return false;
+  }
+  if (filters.q.trim()) {
+    const normalizedQuery = normalizeHistorical2012ExploreStringQuery(filters.q);
+    const knownStringKeys = options?.knownStringKeys;
+    if (normalizedQuery && knownStringKeys?.has(normalizedQuery)) {
+      return stringKey.toLowerCase() === normalizedQuery;
+    }
+    if (normalizedQuery && stringKey.toLowerCase() === normalizedQuery) return true;
+    return records.some((item) => historical2012ApplicationMatchesExploreQuery(item, filters.q));
+  }
+  return true;
+}
+
+/** Build complete string aggregates from the full corpus, then apply aggregate-match filters. */
+export function filterHistorical2012StringAggregates(
+  applications: readonly Application[],
+  filters: ExploreFilterState,
+): Historical2012StringRow[] {
+  const knownStringKeys = new Set(
+    applications.map((application) => application.string.toLowerCase()),
+  );
+  return groupHistorical2012ApplicationsByString(applications).filter((row) =>
+    historical2012StringAggregateMatchesExploreFilters(row.records, row.stringKey, filters, {
+      knownStringKeys,
+    }),
+  );
+}
+
+export function underlyingApplicationsInHistorical2012StringAggregates(
+  rows: readonly Historical2012StringRow[],
+): number {
+  return rows.reduce((sum, row) => sum + row.records.length, 0);
 }

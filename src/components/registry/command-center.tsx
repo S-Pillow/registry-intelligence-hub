@@ -51,9 +51,11 @@ import {
   historical2012StringContentionSummary,
   historical2012StringIdnSummary,
   exploreFiltersFor2012Historical,
+  filterHistorical2012StringAggregates,
   HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
   isHistorical2012StringBrowse,
+  underlyingApplicationsInHistorical2012StringAggregates,
 } from "@/historical-2012/explore-historical-table";
 import {
   applicantsInvestigationQueueForLens,
@@ -922,16 +924,38 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
     ? exploreFiltersFor2012Historical(filters, { browseEntity: filters.entity })
     : filters;
 
-  const applications = useMemo(
-    () => filterApplicationsByExplore(activeDocument.applications, exploreFilters),
-    [exploreFilters, activeDocument.applications],
-  );
+  const historicalStringBrowseActive =
+    isHistorical2012StringBrowse(is2012Historical, filters.entity) && historical2012Loaded;
+
+  const historicalStringAggregateRows = useMemo(() => {
+    if (!historicalStringBrowseActive) return null;
+    return filterHistorical2012StringAggregates(activeDocument.applications, exploreFilters);
+  }, [historicalStringBrowseActive, activeDocument.applications, exploreFilters]);
+
+  const applications = useMemo(() => {
+    if (historicalStringAggregateRows) {
+      return historicalStringAggregateRows.flatMap((row) => row.records);
+    }
+    return filterApplicationsByExplore(activeDocument.applications, exploreFilters);
+  }, [historicalStringAggregateRows, exploreFilters, activeDocument.applications]);
+
+  const underlyingStringApplicationCount = historicalStringAggregateRows
+    ? underlyingApplicationsInHistorical2012StringAggregates(historicalStringAggregateRows)
+    : applications.length;
 
   const rows = useMemo(() => {
-    type ExploreRow = { id: string; name: string; detail: string; records: Application[] };
+    type ExploreRow = { id: string; name: string; detail: string; records: Application[]; stringKey?: string };
     let built: ExploreRow[];
     if (filters.entity === "applications") {
       built = applications.map((item) => ({ id: item.id, name: `.${item.string}`, detail: `${item.id} · ${item.applicant}`, records: [item] }));
+    } else if (historicalStringAggregateRows) {
+      built = historicalStringAggregateRows.map((row) => ({
+        id: `strings-${row.stringKey}`,
+        name: row.label,
+        stringKey: row.stringKey,
+        detail: `${row.records.length} supporting application${row.records.length === 1 ? "" : "s"}`,
+        records: row.records,
+      }));
     } else {
       const keyFor = (item: Application) => filters.entity === "organizations" ? item.organization : filters.entity === "strings" ? item.string : item.category;
       const grouped = new Map<string, Application[]>();
@@ -949,7 +973,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       if (filters.sort === "contention-desc") return b.records.filter((item) => item.contentionSet).length - a.records.filter((item) => item.contentionSet).length || a.name.localeCompare(b.name);
       return b.records.length - a.records.length || a.name.localeCompare(b.name);
     });
-  }, [applications, filters.entity, filters.sort]);
+  }, [applications, filters.entity, filters.sort, historicalStringAggregateRows]);
 
   const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
   const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
@@ -1088,7 +1112,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length} strings result${rows.length === 1 ? "" : "s"}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"}`} · {applications.length} application{applications.length === 1 ? "" : "s"}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length} strings result${rows.length === 1 ? "" : "s"} · ${underlyingStringApplicationCount} underlying application${underlyingStringApplicationCount === 1 ? "" : "s"}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton
@@ -1096,7 +1120,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             defaultName={`Explore: ${describeExploreFilters(filters)}`.slice(0, 80)}
             summary={describeExploreFilters(filters)}
             recordCount={historicalStringBrowse ? rows.length : applications.length}
-            disabled={applications.length === 0}
+            disabled={historicalStringBrowse ? rows.length === 0 : applications.length === 0}
             buildParams={() =>
               exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined)
             }
@@ -1108,7 +1132,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
             }}
             label="Brief this view"
             defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
-            disabled={applications.length === 0 || is2012Historical}
+            disabled={(historicalStringBrowse ? rows.length === 0 : applications.length === 0) || is2012Historical}
             disabledTitle={is2012Historical ? EXPLORE_2012_BRIEF_UNAVAILABLE : undefined}
             entryPath="current-view"
           />

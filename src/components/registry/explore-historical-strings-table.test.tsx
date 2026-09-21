@@ -54,7 +54,7 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     renderHistoricalStringsExplore();
 
     const resultsLine = screen.getByText(new RegExp(`${HISTORICAL_2012_UNIQUE_STRING_COUNT} strings results`, "i"));
-    expect(resultsLine).toHaveTextContent(/1930 applications/i);
+    expect(resultsLine).toHaveTextContent(/1930 underlying applications/i);
 
     const category = screen.getByLabelText("Filter by category");
     expect(category).toBeDisabled();
@@ -74,6 +74,14 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     const table = screen.getByRole("table");
     expect(within(table).getAllByText(".APP")).toHaveLength(1);
     expect(within(table).getByText("13")).toBeInTheDocument();
+    expect(screen.getByText(/1 strings result · 13 underlying applications/i)).toBeInTheDocument();
+  });
+
+  it("normalizes q=.APP to the same single-string aggregate view", () => {
+    renderHistoricalStringsExplore({ q: ".APP" });
+
+    expect(screen.getByText(/1 strings result · 13 underlying applications/i)).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2);
   });
 
   it("shows .AAA as a single-application string row", () => {
