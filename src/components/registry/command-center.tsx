@@ -62,6 +62,8 @@ import {
 import {
   HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE,
   HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_DRAWER_CLASSIFICATION,
+  HISTORICAL_2012_CONFIRMED_PORTFOLIO_MEMBER_APPLICATION_PROVENANCE_NOTE,
   HISTORICAL_2012_CONFIRMED_PORTFOLIO_RESULTS_SUMMARY,
   HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE,
 } from "@/historical-2012/confirmed-portfolios-constants";
@@ -244,6 +246,7 @@ function ProvenanceSheet({
   historicalFact,
   exploreFullHref,
   exploreDataset,
+  confirmedPortfolio,
   accessibilityLabel,
 }: {
   label: string;
@@ -257,6 +260,7 @@ function ProvenanceSheet({
   historicalFact?: HistoricalMetricFact;
   exploreFullHref?: string;
   exploreDataset?: InvestigationItem["exploreDataset"];
+  confirmedPortfolio?: InvestigationItem["confirmedPortfolio"];
   accessibilityLabel?: string;
 }) {
   const { investigate } = useInvestigation();
@@ -271,6 +275,7 @@ function ProvenanceSheet({
     historicalFact,
     exploreFullHref,
     exploreDataset,
+    confirmedPortfolio,
   };
 
   return (
@@ -508,6 +513,24 @@ function IntelligenceDrawer({
       )
       && (!historicalActionsDisabled || historicalProvenanceLoaded || historicalCorpusHref),
   );
+  const isConfirmedPortfolioDrawer = item?.kind === "confirmed-portfolio";
+  const confirmedPortfolioSidecarDocument =
+    confirmedPortfoliosSidecar.status === "loaded" ? confirmedPortfoliosSidecar.document : null;
+  const drawerClassificationLabel = isConfirmedPortfolioDrawer
+    ? HISTORICAL_2012_CONFIRMED_PORTFOLIO_DRAWER_CLASSIFICATION
+    : isHistoricalExplore
+      ? "2012 Reveal Day historical record"
+      : isDerived
+        ? "Calculated insight"
+        : "Deterministic source-backed fact";
+  const drawerClassificationDetail = isConfirmedPortfolioDrawer && item?.confirmedPortfolio
+    ? `Confidence: ${item.confirmedPortfolio.confidence} · steward promotion registry`
+    : isDerived
+      ? "Confidence: High · versioned rule"
+      : "Confidence: not applicable to deterministic facts";
+  const sourceMethodSectionTitle = isConfirmedPortfolioDrawer
+    ? "MEMBER APPLICATION SOURCE & METHOD"
+    : "SOURCE & METHOD";
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
@@ -521,26 +544,47 @@ function IntelligenceDrawer({
             </SheetHeader>
             <div className="space-y-6 px-6 pb-8">
               {item.confirmedPortfolio && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Steward-confirmed organization portfolio</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{item.confirmedPortfolio.canonicalOrganizationName}</p>
-                  <p className="mt-1 font-mono text-xs text-slate-700">{item.confirmedPortfolio.organizationKey}</p>
-                  <p className="mt-3 text-xs font-semibold text-slate-800">
-                    Promotion state: CONFIRMED · {item.confirmedPortfolio.reviewState} · method {item.confirmedPortfolio.methodVersion}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-700">Confidence: {item.confirmedPortfolio.confidence}</p>
-                  <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-slate-700">
-                    {item.confirmedPortfolio.evidence.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-2 font-mono text-[10px] text-slate-600">Ops: {item.confirmedPortfolio.promotionOpIds.join(", ")}</p>
-                  {confirmedPortfoliosSidecar.status === "loaded" ? (
-                    <p className="mt-2 font-mono text-[10px] text-slate-600">
-                      Sidecar {confirmedPortfoliosSidecar.document.payloadVersion} · registry hash {confirmedPortfoliosSidecar.document.sourcePromotionRegistryContentHash.slice(0, 16)}…
-                    </p>
-                  ) : null}
-                </div>
+                <section>
+                  <h3 className="mb-3 text-xs font-bold tracking-wider text-[#006a56]">PORTFOLIO PROVENANCE</h3>
+                  <dl className="grid grid-cols-[130px_1fr] gap-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                    <dt className="text-slate-600">Organization</dt>
+                    <dd className="font-semibold text-slate-900">{item.confirmedPortfolio.canonicalOrganizationName}</dd>
+                    <dt className="text-slate-600">Organization key</dt>
+                    <dd className="font-mono text-xs text-slate-800">{item.confirmedPortfolio.organizationKey}</dd>
+                    <dt className="text-slate-600">Promotion state</dt>
+                    <dd className="font-semibold">{item.confirmedPortfolio.promotionState}</dd>
+                    <dt className="text-slate-600">Review state</dt>
+                    <dd>{item.confirmedPortfolio.reviewState}</dd>
+                    <dt className="text-slate-600">Confidence</dt>
+                    <dd className="capitalize">{item.confirmedPortfolio.confidence}</dd>
+                    <dt className="text-slate-600">Promotion registry</dt>
+                    <dd className="font-mono text-xs">
+                      {confirmedPortfolioSidecarDocument?.organizationPromotionRegistryVersion ?? "organization-promotion-registry/1.0.0"}
+                    </dd>
+                    <dt className="text-slate-600">Promotion method</dt>
+                    <dd className="font-mono text-xs">{item.confirmedPortfolio.methodVersion}</dd>
+                    {confirmedPortfolioSidecarDocument ? (
+                      <>
+                        <dt className="text-slate-600">Portfolio sidecar</dt>
+                        <dd className="font-mono text-xs">{confirmedPortfolioSidecarDocument.payloadVersion}</dd>
+                        <dt className="text-slate-600">Registry content hash</dt>
+                        <dd className="break-all font-mono text-[11px]">{confirmedPortfolioSidecarDocument.sourcePromotionRegistryContentHash}</dd>
+                        <dt className="text-slate-600">Base corpus pin</dt>
+                        <dd className="break-all font-mono text-[11px]">{confirmedPortfolioSidecarDocument.baseApplicationPayloadCorpusContentHash}</dd>
+                      </>
+                    ) : null}
+                    <dt className="text-slate-600">Promotion ops</dt>
+                    <dd className="font-mono text-[11px]">{item.confirmedPortfolio.promotionOpIds.join(", ")}</dd>
+                    <dt className="text-slate-600">Evidence</dt>
+                    <dd>
+                      <ul className="list-disc space-y-1 pl-4 text-xs text-slate-700">
+                        {item.confirmedPortfolio.evidence.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </dl>
+                </section>
               )}
 
               {item.historicalFact && (
@@ -638,15 +682,18 @@ function IntelligenceDrawer({
                 </div>
                 <div className="rounded-xl border border-slate-300 bg-slate-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Classification</p>
-                  <p className="mt-2 text-sm font-bold text-slate-900">
-                    {isHistoricalExplore ? "2012 Reveal Day historical record" : isDerived ? "Calculated insight" : "Deterministic source-backed fact"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-700">{isDerived ? "Confidence: High · versioned rule" : "Confidence: not applicable to deterministic facts"}</p>
+                  <p className="mt-2 text-sm font-bold text-slate-900">{drawerClassificationLabel}</p>
+                  <p className="mt-1 text-xs text-slate-700">{drawerClassificationDetail}</p>
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">SOURCE & METHOD</h3>
+                <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">{sourceMethodSectionTitle}</h3>
+                {isConfirmedPortfolioDrawer ? (
+                  <p className="mb-3 text-xs leading-5 text-slate-700">
+                    {HISTORICAL_2012_CONFIRMED_PORTFOLIO_MEMBER_APPLICATION_PROVENANCE_NOTE}
+                  </p>
+                ) : null}
                 <dl className="grid grid-cols-[105px_1fr] gap-y-3 text-sm">
                   <dt className="text-slate-600">Round</dt><dd className="font-semibold">{isHistoricalExplore ? "2012 Reveal Day (historical)" : "2026 rehearsal / promoted"}</dd>
                   <dt className="text-slate-600">Source</dt><dd><a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={provenanceDoc.source.url} target="_blank" rel="noreferrer">{provenanceDoc.source.name}<ExternalLink className="size-3" /></a></dd>
