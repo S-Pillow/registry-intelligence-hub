@@ -40,6 +40,13 @@ export function isHistorical2012StringBrowse(
   return datasetIs2012Historical && browseEntity === "strings";
 }
 
+/** Results summary for Explore ?dataset=2012-historical with Browse by Applications (one row per application). */
+export function formatHistorical2012ApplicationResultsSummary(applicationCount: number): string {
+  return applicationCount === 1
+    ? "1 application result"
+    : `${applicationCount} application results`;
+}
+
 /** Trust badge copy for CSV-backed application row fields (not contention membership). */
 export const HISTORICAL_2012_TRUST_REVEAL_DAY_CSV = "2012 CSV" as const;
 

@@ -52,6 +52,7 @@ import {
   historical2012StringIdnSummary,
   exploreFiltersFor2012Historical,
   filterHistorical2012StringAggregates,
+  formatHistorical2012ApplicationResultsSummary,
   HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
   isHistorical2012StringBrowse,
@@ -1122,7 +1123,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}` : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
+        <p aria-live="polite" className="text-sm font-bold text-slate-900">{historicalStringBrowse ? `${rows.length === 1 ? `${rows.length} string result` : `${rows.length} strings results`} · ${underlyingStringApplicationCount === 1 ? `${underlyingStringApplicationCount} underlying application` : `${underlyingStringApplicationCount} underlying applications`}` : historicalApplicationBrowse ? formatHistorical2012ApplicationResultsSummary(rows.length) : `${rows.length} ${filters.entity} result${rows.length === 1 ? "" : "s"} · ${applications.length} application${applications.length === 1 ? "" : "s"}`}</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold text-slate-600">URL state updates automatically</span>
           <SaveResearchButton

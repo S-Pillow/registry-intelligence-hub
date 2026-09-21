@@ -64,7 +64,7 @@ describe("Explore 2012 historical — application table columns (D1)", () => {
       ids: "1-1386-27446",
     });
 
-    expect(screen.getByText(/1 applications result/i)).toBeInTheDocument();
+    expect(screen.getByText(/^1 application result$/i)).toBeInTheDocument();
   });
 
   it("renders per-application columns without Applications or Participation headers", () => {
@@ -104,7 +104,7 @@ describe("Explore 2012 historical — application table columns (D1)", () => {
       ids: "1-1013-7451,1-1138-33325",
     });
 
-    expect(screen.getByText(/2 applications results/i)).toBeInTheDocument();
+    expect(screen.getByText(/^2 application results$/i)).toBeInTheDocument();
     const table = screen.getByRole("table");
     expect(within(table).getAllByText(".APP")).toHaveLength(2);
     expect(within(table).getByText("1-1013-7451")).toBeInTheDocument();

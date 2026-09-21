@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   exploreFiltersFor2012Historical,
+  formatHistorical2012ApplicationResultsSummary,
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
   historical2012ContentionMembershipLabel,
   historical2012IdnLabel,
@@ -42,6 +43,12 @@ describe("2012 historical Explore application table model", () => {
         { browseEntity: "strings" },
       ),
     ).toEqual({ status: "all", category: "all", entity: "strings" });
+  });
+
+  it("formats historical application browse results summary with singular/plural only", () => {
+    expect(formatHistorical2012ApplicationResultsSummary(1)).toBe("1 application result");
+    expect(formatHistorical2012ApplicationResultsSummary(2)).toBe("2 application results");
+    expect(formatHistorical2012ApplicationResultsSummary(116)).toBe("116 application results");
   });
 
   it("formats contention and IDN from payload fields only", () => {

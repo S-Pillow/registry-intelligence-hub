@@ -53,7 +53,7 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     const user = userEvent.setup();
     renderExploreHistorical();
 
-    expect(screen.getByText(/1 applications result/i)).toBeInTheDocument();
+    expect(screen.getByText(/^1 application result$/i)).toBeInTheDocument();
     await user.click(
       screen.getAllByRole("button", { name: "View intelligence for .AAA" }).find((button) => button.textContent === "Investigate")!,
     );
