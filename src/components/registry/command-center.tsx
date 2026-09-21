@@ -94,6 +94,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringResearchHref,
   exploreHistorical2012StringsHref,
   exploreResearchHref,
@@ -445,7 +446,12 @@ function IntelligenceDrawer({
     item?.historicalFact?.metricId === "unique-applied-strings" && historical2012.status === "loaded"
       ? exploreHistorical2012StringsHref()
       : undefined;
-  const historicalCorpusHref = historicalApplicationCorpusHref ?? historicalStringCorpusHref;
+  const historicalIdnCorpusHref =
+    item?.historicalFact?.metricId === "idn-applications" && historical2012.status === "loaded"
+      ? exploreHistorical2012IdnApplicationsHref()
+      : undefined;
+  const historicalCorpusHref =
+    historicalApplicationCorpusHref ?? historicalStringCorpusHref ?? historicalIdnCorpusHref;
   const fullHref = item
     ? exploreFullHrefForInvestigation({
         ...item,
@@ -485,6 +491,10 @@ function IntelligenceDrawer({
                   ) : historicalStringCorpusHref ? (
                     <p className="mt-2 text-xs text-slate-700">
                       Aggregate value above is the approved baseline — not recomputed from Explore rows. String corpus browse derives {item.historicalFact?.value} unique strings deterministically from the same 1,930-application payload (one row per applied string).
+                    </p>
+                  ) : historicalIdnCorpusHref ? (
+                    <p className="mt-2 text-xs text-slate-700">
+                      Aggregate value above is the approved baseline — not recomputed from Explore rows. Application browse with the IDN filter shows the qualifying IDN application rows from the loaded 1,930-application payload (application grain, not string count).
                     </p>
                   ) : (
                     <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>

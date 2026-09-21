@@ -186,7 +186,7 @@ function buildCurrentStateSummary(
       title: "2012 aggregate readiness",
       primary: `Ready — ${agg.applications} apps · ${agg.uniqueStrings} strings · ${agg.idnApplications} IDN (approved baseline wired in UI)`,
       secondary: historical2012Loaded
-        ? "Entity browser loaded separately — aggregates unchanged"
+        ? "Entity browser loaded separately — aggregates unchanged; supports deterministic IDN application filtering"
         : "Entity-level 2012 rows not loaded in browser",
       tone: "ready",
       badgeLabel: "Ready",

@@ -22,6 +22,7 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
+  exploreHistorical2012IdnApplicationsHref,
   exploreHistorical2012StringsHref,
   exploreResearchHref,
   exploreSavedResearchParams,
@@ -321,6 +322,14 @@ describe("exploreHistorical2012StringsHref (D2.1)", () => {
   });
 });
 
+describe("exploreHistorical2012IdnApplicationsHref (D2.2)", () => {
+  it("opens historical application browse with canonical IDN filter", () => {
+    expect(exploreHistorical2012IdnApplicationsHref()).toBe(
+      "/explore?dataset=2012-historical&entity=applications&idn=idn",
+    );
+  });
+});
+
 describe("roundPulseHistoricalCardExploreHref (D2.0 / D2.1)", () => {
   it("returns application corpus href only when payload is loaded", () => {
     expect(roundPulseHistoricalCardExploreHref("application-count", false)).toBeNull();
@@ -334,8 +343,11 @@ describe("roundPulseHistoricalCardExploreHref (D2.0 / D2.1)", () => {
     );
   });
 
-  it("keeps IDN aggregate-only without application-corpus drill-down", () => {
-    expect(roundPulseHistoricalCardExploreHref("idn-applications", true)).toBeNull();
+  it("returns IDN application browse href when payload is loaded (D2.2)", () => {
+    expect(roundPulseHistoricalCardExploreHref("idn-applications", false)).toBeNull();
+    expect(roundPulseHistoricalCardExploreHref("idn-applications", true)).toBe(
+      exploreHistorical2012IdnApplicationsHref(),
+    );
   });
 });
 

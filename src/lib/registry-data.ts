@@ -157,6 +157,15 @@ export function exploreHistorical2012StringsHref() {
   return `${hubPath("/explore")}?${params}`;
 }
 
+/** Command Center handoff for IDN applications at application grain (D2.2). */
+export function exploreHistorical2012IdnApplicationsHref() {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "applications");
+  params.set("idn", "idn");
+  return `${hubPath("/explore")}?${params}`;
+}
+
 /** Explore deep link preserving historical string browse context for one applied string. */
 export function exploreHistorical2012StringResearchHref(stringKey: string) {
   const params = new URLSearchParams();
@@ -169,12 +178,12 @@ export function exploreHistorical2012StringResearchHref(stringKey: string) {
 export function roundPulseHistoricalCardExploreFooterLabel(metricId: string): string | null {
   if (metricId === "application-count") return "Open 2012 application corpus";
   if (metricId === "unique-applied-strings") return "Open 2012 string corpus";
+  if (metricId === "idn-applications") return "Open 2012 IDN applications";
   return null;
 }
 
 /**
  * Round Pulse per-card Explore handoff for approved 2012 metrics when payload is loaded.
- * IDN stays aggregate-only — no href implying application-row evidence.
  */
 export function roundPulseHistoricalCardExploreHref(
   metricId: string,
@@ -186,6 +195,9 @@ export function roundPulseHistoricalCardExploreHref(
   }
   if (metricId === "unique-applied-strings") {
     return exploreHistorical2012StringsHref();
+  }
+  if (metricId === "idn-applications") {
+    return exploreHistorical2012IdnApplicationsHref();
   }
   return null;
 }
