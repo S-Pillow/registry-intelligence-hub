@@ -29,6 +29,7 @@ import {
   FORCE_NEW_RUN_PLAN_SEMANTICS,
 } from "./mapping-live-force-new-run";
 import { SENSITIVE_ARTIFACT_FAILURE_POLICY } from "./sensitive-artifact-guard";
+import { MAPPING_LIVE_LIVE_RUN_EXPECTATIONS } from "./mapping-live-live-run-expectations";
 
 export const MAPPING_LIVE_OPERATOR_PLAN_VERSION =
   "registry-hub-rsp-mapping-live-operator-plan/1.0.0" as const;
@@ -61,7 +62,13 @@ export interface MappingLiveOperatorPlan {
     mappingLivePageSafetyCap: number;
     maxRequestsPerMinute: number;
   };
-  networkRequestsIfLiveRun: number;
+  planNetworkRequests: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.planNetworkRequests;
+  liveRunNetworkRequired: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunNetworkRequired;
+  liveRunBootstrapRequestsExpected: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunBootstrapRequestsExpected;
+  liveRunUniquePageRequestsExpected: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunUniquePageRequestsExpected;
+  liveRunObservedHistoricalShape: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunObservedHistoricalShape;
+  liveRunPageSafetyCap: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunPageSafetyCap;
+  liveRunRetryPolicy: typeof MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunRetryPolicy;
   preRunChecklist: string[];
   operatorBlockingBeforeLive: string[];
   oneRunRule: string;
@@ -138,12 +145,6 @@ export async function buildMappingLiveOperatorPlan(
     );
   }
 
-  const networkRequestsIfLiveRun =
-    operatorBlockingBeforeLive.length === 0 ||
-    operatorBlockingBeforeLive.every((r) => r.includes(RSP_MAPPING_LIVE_AUTH_ENV))
-      ? 1 + RSP_ACQUISITION_LIMITS.maxIndexGridPages
-      : 0;
-
   const commitSha = await resolveOperatorCommitSha(input.workspaceRoot);
 
   const failureBranchSummary: Record<string, string> = {
@@ -205,7 +206,7 @@ export async function buildMappingLiveOperatorPlan(
       mappingLivePageSafetyCap: RSP_ACQUISITION_LIMITS.mappingLivePageSafetyCap,
       maxRequestsPerMinute: RSP_ACQUISITION_LIMITS.maxRequestsPerMinute,
     },
-    networkRequestsIfLiveRun,
+    ...MAPPING_LIVE_LIVE_RUN_EXPECTATIONS,
     preRunChecklist: [
       "Verify exact git commit SHA matches steward-approved acquisition revision",
       "Verify canonical 2012 corpus hash and 1930 Application ID count",
@@ -270,7 +271,13 @@ export function formatMappingLiveOperatorPlan(plan: MappingLiveOperatorPlan): st
     `legacyAcquisitionEnv (${RSP_ACQUISITION_AUTH_ENV}): ${plan.authState.legacyAcquisitionEnv}`,
     `pilotLiveAuthorized (${RSP_PILOT_LIVE_AUTH_ENV}): ${plan.authState.pilotLiveAuthorized}`,
     `mappingLiveAuthorized (${RSP_MAPPING_LIVE_AUTH_ENV}): ${plan.authState.mappingLiveAuthorized}`,
-    `networkRequestsIfLiveRun: ${plan.networkRequestsIfLiveRun} (this command performs 0 HTTP)`,
+    `planNetworkRequests: ${plan.planNetworkRequests} (this command performs 0 HTTP)`,
+    `liveRunNetworkRequired: ${plan.liveRunNetworkRequired}`,
+    `liveRunBootstrapRequestsExpected: ${plan.liveRunBootstrapRequestsExpected}`,
+    `liveRunUniquePageRequestsExpected: ${plan.liveRunUniquePageRequestsExpected}`,
+    `liveRunObservedHistoricalShape: ${plan.liveRunObservedHistoricalShape}`,
+    `liveRunPageSafetyCap: ${plan.liveRunPageSafetyCap}`,
+    `liveRunRetryPolicy: ${plan.liveRunRetryPolicy}`,
     `pacing.minDelayMs: ${plan.pacing.minDelayMsBetweenRequests}`,
     `pacing.pageSafetyCap: ${plan.pacing.mappingLivePageSafetyCap}`,
     "",

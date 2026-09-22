@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
@@ -10,8 +10,12 @@ import { completeMappingLiveOperatorFlow } from "./mapping-live-operator-flow";
 import {
   buildMappingLiveOperatorPlan,
   formatMappingLiveOperatorPlan,
+  formatMappingLiveOperatorPlanJson,
   MAPPING_LIVE_OPERATOR_PLAN_VERSION,
 } from "./mapping-live-plan";
+import { MAPPING_LIVE_LIVE_RUN_EXPECTATIONS } from "./mapping-live-live-run-expectations";
+import { stagingIndexPageHtmlPath } from "./bundle-paths";
+import { writeMappingLiveCheckpoint, createEmptyMappingLiveCheckpoint } from "./mapping-checkpoint";
 import { runMappingLive } from "./mapping-live";
 import { runMappingReview } from "./mapping-review";
 import { MappingLiveOperatorCancellation } from "./mapping-live-operator-cancellation";
@@ -64,6 +68,56 @@ describe("D2.5A-P0.3A mapping-live operator rehearsal (zero real HTTP)", () => {
       expect(formatted).toContain("sensitiveArtifactFailurePolicy:");
       expect(formatted).toContain("forceNewRunSemantics:");
       expect(formatted).toContain("this command performs 0 HTTP");
+      expect(formatted).toContain("planNetworkRequests: 0");
+      expect(formatted).toContain("liveRunNetworkRequired: true");
+      expect(formatted).not.toContain("networkRequestsIfLiveRun");
+      expect(plan.planNetworkRequests).toBe(0);
+      expect(plan.liveRunNetworkRequired).toBe(true);
+      expect(plan.liveRunBootstrapRequestsExpected).toBe(
+        MAPPING_LIVE_LIVE_RUN_EXPECTATIONS.liveRunBootstrapRequestsExpected,
+      );
+      expect(plan.liveRunPageSafetyCap).toBe(60);
+      const json = formatMappingLiveOperatorPlanJson(plan);
+      const parsed = JSON.parse(json) as Record<string, unknown>;
+      expect(parsed.networkRequestsIfLiveRun).toBeUndefined();
+      expect(parsed.planNetworkRequests).toBe(0);
+    } finally {
+      process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed first run when checkpoint or run-id evidence already exists", async () => {
+    const ids = ["1-1945-29108"];
+    const corpus = buildSyntheticReplayCorpus({ applicationIds: ids, rowsPerPage: 1 });
+    const staging = await persistentStagingDir();
+    const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
+    process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
+    const runId = "collision-run";
+
+    try {
+      const ck = createEmptyMappingLiveCheckpoint(runId, APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH);
+      ck.state = "running";
+      await writeMappingLiveCheckpoint(mappingLiveCheckpointPath(staging), ck);
+
+      await expect(
+        runMappingLive(
+          { workspaceRoot, stagingRoot: staging, runId, sleep: noSleep },
+          createSyntheticReplayFetcher(corpus),
+        ),
+      ).rejects.toThrow(/active checkpoint/i);
+
+      await rm(mappingLiveCheckpointPath(staging), { force: true });
+      const htmlPath = stagingIndexPageHtmlPath(staging, runId, 1);
+      await mkdir(htmlPath.replace(/page-0001\.html$/, ""), { recursive: true });
+      await writeFile(htmlPath, "<html>orphan</html>");
+
+      await expect(
+        runMappingLive(
+          { workspaceRoot, stagingRoot: staging, runId, sleep: noSleep },
+          createSyntheticReplayFetcher(corpus),
+        ),
+      ).rejects.toThrow(/page snapshots|evidence directory/i);
     } finally {
       process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
       await rm(staging, { recursive: true, force: true });

@@ -52,6 +52,7 @@ import {
   archiveCheckpointForForceNewRun,
   validateForceNewRunFlags,
 } from "./mapping-live-force-new-run";
+import { assertNormalFirstRunNoCollision } from "./mapping-live-first-run-guard";
 import type { ForceNewRunDisposition } from "./types";
 
 export { MappingLiveOperatorCancellation };
@@ -172,6 +173,13 @@ export async function runMappingLive(
   });
 
   const runId = options.runId ?? `mapping-${new Date().toISOString().slice(0, 10)}-${hostname()}`;
+
+  await assertNormalFirstRunNoCollision({
+    stagingRoot,
+    runId,
+    resume: options.resume === true,
+    forceNewRun: options.forceNewRun === true,
+  });
   const ckPath = mappingLiveCheckpointPath(stagingRoot);
   const corpusHash = APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH;
   const expectedIds = await loadRevealDayApplicationIds(options.workspaceRoot);
@@ -202,13 +210,6 @@ export async function runMappingLive(
         const htmlPath = stagingIndexPageHtmlPath(stagingRoot, checkpoint.runId, page.pageOrdinal);
         await assertResumePageIntegrity(htmlPath, page.contentSha256);
       }
-    }
-  } else if (!options.resume) {
-    const existing = await readMappingLiveCheckpoint(ckPath);
-    if (existing && !options.forceNewRun) {
-      throw new Error(
-        "Refusing to start mapping-live: checkpoint exists (pass resume or forceNewRun)",
-      );
     }
   }
 

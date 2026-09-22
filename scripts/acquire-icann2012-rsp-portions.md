@@ -69,7 +69,7 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
 
 ## Mapping live operator plan (zero HTTP — D2.5A-P0.3A)
 
-**Always run before the first authorized live crawl.** Produces the full VPS operator checklist, pacing, corpus pin, staging/disk checks, failure-branch summary, and one-run rule. **Performs zero HTTP** even when `REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1` is set.
+**Always run before the first authorized live crawl.** Produces the full VPS operator checklist, pacing, corpus pin, staging/disk checks, failure-branch summary, one-run rule, and truthful live-run expectation fields (`planNetworkRequests: 0`, `liveRunNetworkRequired: true`, page safety cap — **not** a provable pre-contact HTTP total). **Performs zero HTTP** even when `REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1` is set.
 
 ```bash
 npm run acquire-rsp-portions -- mapping-live-plan \
@@ -85,19 +85,23 @@ Evidence-bundle manifest schema: `registry-hub-rsp-mapping-evidence-bundle/1.0.0
 
 **Implemented (D2.5A-P0.2)** — deterministic viewstatus grid crawl with session bootstrap, server-provided pager hrefs (never manufactured `_csrf` URLs), immutable index snapshots, canonical 1,930 reconciliation, and checkpoint/resume.
 
-**Authorization (separate from pilot-live):**
+**Authorization (separate from pilot-live). First authorized run — new staging root + fresh `--run-id` only (no `--force-new-run`):**
 
 ```bash
 REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1 \
   npm run acquire-rsp-portions -- mapping-live \
-  --staging /var/tmp/icann2012-rsp-staging \
-  --run-id mapping-2026-09-22-steward
+  --workspace /path/to/isolated-clone \
+  --staging /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22 \
+  --run-id mapping-2026-09-22-vps-01
+unset REGISTRY_HUB_RSP_MAPPING_AUTHORIZED
 ```
+
+**Do not use `--force-new-run` on the first authorized run.** Before HTTP #1, a normal first run fail-closed if an active checkpoint, run-id evidence directory, mapping artifact, or page snapshots already exist — use fresh run-id/staging or explicit `--resume` / `--force-new-run` recovery.
 
 | Flag | Purpose |
 | --- | --- |
 | `--resume` | Continue from `mapping-live-checkpoint.json` (validates page SHA-256 + corpus pin). **Mutually exclusive with `--force-new-run`.** |
-| `--force-new-run` | Steward-intentional fresh crawl: **renames** (archives) the active `mapping-live-checkpoint.json` to `mapping-live-checkpoint.json.archived-<timestamp>-<priorRunId>.json`, starts an empty checkpoint for `--run-id`, **preserves** prior `sources/index/<runId>/`, mapping artifacts, and review bundles on disk. Emits operator warnings; **does not bypass the one-run rule** (each live HTTP attempt still needs steward review). **Zero HTTP** in `mapping-live-plan` — semantics appear in plan output only. |
+| `--force-new-run` | **Recovery / subsequent steward run only** — archives the active `mapping-live-checkpoint.json`, starts a fresh checkpoint for `--run-id`, **preserves** prior run directories on disk. **Not for first authorized run.** Mutually exclusive with `--resume`. Does not bypass the one-run rule. |
 
 **Sensitive artifacts:** evidence-bundle manifest, mapping-review report, and provenance summary **fail closed** if cookies, CSRF/session header material, or RSP auth env names/values would be persisted. Scrub staging before re-running offline post-steps.
 
