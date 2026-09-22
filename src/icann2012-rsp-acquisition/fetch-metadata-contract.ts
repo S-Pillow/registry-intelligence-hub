@@ -1,3 +1,8 @@
+import {
+  sanitizeUrlForPersistence,
+  type PersistedUrlTier,
+} from "./persisted-url-tier";
+
 const FORBIDDEN_METADATA_KEYS = new Set([
   "cookie",
   "cookies",
@@ -41,7 +46,10 @@ export function redactForbiddenFetchMetadataKeys(
 
 export interface IndexPageFetchMetadataRecord {
   pageOrdinal: number;
+  /** RESTRICTED_RAW_SOURCE — may include live session query parameters. */
   resolvedUrl: string;
+  /** SAFE_DERIVED operator-facing URL with `_csrf=REDACTED`. */
+  resolvedUrlSafe?: string;
   finalUrl?: string;
   redirectChain?: string[];
   httpStatus: number;
@@ -56,6 +64,9 @@ export interface IndexPageFetchMetadataRecord {
   parsedRowCount: number;
   quarantinedBlockCount: number;
   nextPageHref?: string | null;
+  nextPageHrefSafe?: string | null;
+  persistedUrlTierResolved?: PersistedUrlTier;
+  persistedUrlTierNextPage?: PersistedUrlTier;
 }
 
 export function buildIndexPageFetchMetadata(input: {
@@ -76,7 +87,17 @@ export function buildIndexPageFetchMetadata(input: {
   quarantinedBlockCount: number;
   nextPageHref?: string | null;
 }): IndexPageFetchMetadataRecord {
-  return { ...input };
+  const nextPageHrefSafe =
+    input.nextPageHref == null
+      ? null
+      : sanitizeUrlForPersistence(input.nextPageHref, "SAFE_DERIVED");
+  return {
+    ...input,
+    resolvedUrlSafe: sanitizeUrlForPersistence(input.resolvedUrl, "SAFE_DERIVED"),
+    nextPageHrefSafe,
+    persistedUrlTierResolved: "RESTRICTED_RAW_SOURCE",
+    persistedUrlTierNextPage: "SAFE_DERIVED",
+  };
 }
 
 export function buildPortionFetchMetadata(input: {

@@ -65,16 +65,69 @@ function collectDataAttributeAcIds(block: string): number[] {
   return ids;
 }
 
-function extractHtmlBlocks(html: string): string[] {
+function extractTrBlocks(html: string): string[] {
   const blocks: string[] = [];
-  for (const pattern of [TR_BLOCK_PATTERN, EXPANDED_DIV_PATTERN]) {
-    pattern.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(html)) !== null) {
-      blocks.push(match[0]);
-    }
+  TR_BLOCK_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TR_BLOCK_PATTERN.exec(html)) !== null) {
+    blocks.push(match[0]);
   }
   return blocks;
+}
+
+function extractExpandedDivBlocks(html: string): string[] {
+  const blocks: string[] = [];
+  EXPANDED_DIV_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = EXPANDED_DIV_PATTERN.exec(html)) !== null) {
+    blocks.push(match[0]);
+  }
+  return blocks;
+}
+
+function isSummaryTrBlock(block: string): boolean {
+  if (collectApplicationIds(block).length > 0) return false;
+  return collectDetailLinkAcIds(block).length > 0;
+}
+
+function isDetailTrBlock(block: string): boolean {
+  const appIds = collectApplicationIds(block);
+  const acIds = uniqueNumbers([
+    ...collectDetailLinkAcIds(block),
+    ...collectDataAttributeAcIds(block),
+  ]);
+  return appIds.length === 1 && acIds.length === 0;
+}
+
+/**
+ * Live status grid uses summary `<tr>` rows paired with following detail `<tr>` rows
+ * (Application ID appears only on the expandable detail row).
+ */
+function pairSummaryDetailTrBlocks(trBlocks: string[]): string[] {
+  const units: string[] = [];
+  let index = 0;
+  while (index < trBlocks.length) {
+    const summary = trBlocks[index]!;
+    if (
+      isSummaryTrBlock(summary) &&
+      index + 1 < trBlocks.length &&
+      isDetailTrBlock(trBlocks[index + 1]!)
+    ) {
+      units.push(`${summary}${trBlocks[index + 1]!}`);
+      index += 2;
+      continue;
+    }
+
+    units.push(summary);
+    index += 1;
+  }
+  return units;
+}
+
+function extractHtmlBlocks(html: string): string[] {
+  const trUnits = pairSummaryDetailTrBlocks(extractTrBlocks(html));
+  const expanded = extractExpandedDivBlocks(html);
+  return [...trUnits, ...expanded];
 }
 
 function parseBoundedBlock(block: string, blockIndex: number): {
@@ -128,8 +181,6 @@ function parseBoundedBlock(block: string, blockIndex: number): {
   const tasApplicationId = applicationIds[0];
   const gtldresultAcId = acCandidates[0];
 
-  // Never treat numeric segments of Application ID as AC id — only explicit block fields above.
-
   return {
     row: { gtldresultAcId, tasApplicationId },
   };
@@ -137,7 +188,7 @@ function parseBoundedBlock(block: string, blockIndex: number): {
 
 /**
  * Parse Apache Tapestry viewstatus grid HTML for Application ID ↔ gtldresultAcId pairs.
- * Each `<tr>` or expanded detail block is a bounded unit; document-order pairing is forbidden.
+ * Summary + detail `<tr>` pairs and expanded detail blocks are bounded units.
  */
 export function parseViewstatusGridHtml(html: string): ViewstatusGridParseResult {
   const blocks = extractHtmlBlocks(html);

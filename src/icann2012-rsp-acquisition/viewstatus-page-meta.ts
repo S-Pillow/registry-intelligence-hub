@@ -3,9 +3,19 @@ import type { ViewstatusPageDiagnostics } from "./types";
 const DISPLAY_RANGE_PATTERN =
   /Displaying\s+(\d+)\s*-\s*(\d+)\s+of\s+(\d+)/i;
 
-/** Tapestry pager / next links — follow server hrefs only (may include _csrf query). */
-const NEXT_PAGE_HREF_PATTERN =
-  /<a\b[^>]*\bhref="([^"]*(?:viewstatus\.statusgrid\.pager|viewstatus\/)[^"]*)"[^>]*>/gi;
+const PAGER_HREF_PATTERN =
+  /href="([^"]*viewstatus\.statusgrid\.pager\/(\d+)[^"]*)"/gi;
+
+const ACTIVE_PAGER_PATTERN =
+  /<[^>]+class="[^"]*\b(?:active|current|selected)\b[^"]*"[^>]*href="([^"]*viewstatus\.statusgrid\.pager\/(\d+)[^"]*)"[^>]*>/gi;
+
+const PAGER_CONTROL_REGION_PATTERN =
+  /<(nav|div|ul)\b[^>]*class="[^"]*\b(?:pager|pagination)[^"]*"[\s\S]*?<\/\1>/gi;
+
+export interface ViewstatusPaginationExtraction {
+  nextPageHref: string | null;
+  paginationControlDrift: boolean;
+}
 
 export function parseViewstatusDisplayRange(html: string): {
   displayStart: number | null;
@@ -23,18 +33,74 @@ export function parseViewstatusDisplayRange(html: string): {
   };
 }
 
-export function extractViewstatusNextPageHref(html: string): string | null {
-  NEXT_PAGE_HREF_PATTERN.lastIndex = 0;
-  let candidate: string | null = null;
+function extractActivePagerPage(html: string): number | null {
+  ACTIVE_PAGER_PATTERN.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = NEXT_PAGE_HREF_PATTERN.exec(html)) !== null) {
-    const href = match[1]?.trim();
-    if (!href || href === "#") continue;
-    if (/pager\/(\d+)/i.test(href) || /viewstatus\/?$/i.test(href)) {
-      candidate = href;
+  let active: number | null = null;
+  while ((match = ACTIVE_PAGER_PATTERN.exec(html)) !== null) {
+    active = Number(match[2]);
+  }
+  return active;
+}
+
+function hrefForPagerPage(html: string, pageNumber: number): string | null {
+  PAGER_HREF_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = PAGER_HREF_PATTERN.exec(html)) !== null) {
+    if (Number(match[2]) === pageNumber) {
+      return match[1]?.trim() ?? null;
     }
   }
-  return candidate;
+  return null;
+}
+
+function nextHrefWithinControlRegion(regionHtml: string, activePage: number): string | null {
+  const target = activePage + 1;
+  PAGER_HREF_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = PAGER_HREF_PATTERN.exec(regionHtml)) !== null) {
+    if (Number(match[2]) === target) {
+      return match[1]?.trim() ?? null;
+    }
+  }
+  return null;
+}
+
+export function extractViewstatusPagination(html: string): ViewstatusPaginationExtraction {
+  const activePage = extractActivePagerPage(html);
+  if (activePage != null) {
+    const nextByActive = hrefForPagerPage(html, activePage + 1);
+    const controlNextHrefs: string[] = [];
+    PAGER_CONTROL_REGION_PATTERN.lastIndex = 0;
+    let regionMatch: RegExpExecArray | null;
+    while ((regionMatch = PAGER_CONTROL_REGION_PATTERN.exec(html)) !== null) {
+      const nextInRegion = nextHrefWithinControlRegion(regionMatch[0], activePage);
+      if (nextInRegion) controlNextHrefs.push(nextInRegion);
+    }
+    const uniqueControls = [...new Set(controlNextHrefs)];
+    const paginationControlDrift =
+      uniqueControls.length > 1 && uniqueControls.some((href) => href !== uniqueControls[0]);
+    const nextPageHref = uniqueControls[0] ?? nextByActive;
+    return { nextPageHref, paginationControlDrift };
+  }
+
+  // Fallback: prefer explicit page-2 href over the terminal page link (e.g. pager/56).
+  let pageTwoHref: string | null = null;
+  let lastPagerHref: string | null = null;
+  PAGER_HREF_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = PAGER_HREF_PATTERN.exec(html)) !== null) {
+    const page = Number(match[2]);
+    const href = match[1]?.trim() ?? null;
+    lastPagerHref = href;
+    if (page === 2) pageTwoHref = href;
+  }
+  return { nextPageHref: pageTwoHref ?? lastPagerHref, paginationControlDrift: false };
+}
+
+/** @deprecated Prefer extractViewstatusPagination — kept for narrow call sites. */
+export function extractViewstatusNextPageHref(html: string): string | null {
+  return extractViewstatusPagination(html).nextPageHref;
 }
 
 export function buildViewstatusPageDiagnostics(
@@ -43,11 +109,13 @@ export function buildViewstatusPageDiagnostics(
   quarantinedBlockCount: number,
 ): ViewstatusPageDiagnostics {
   const range = parseViewstatusDisplayRange(html);
+  const pagination = extractViewstatusPagination(html);
   return {
     ...range,
     parsedRowCount,
     quarantinedBlockCount,
-    nextPageHref: extractViewstatusNextPageHref(html),
+    nextPageHref: pagination.nextPageHref,
+    paginationControlDrift: pagination.paginationControlDrift,
   };
 }
 
@@ -82,6 +150,9 @@ export function assertPaginationAdvance(
 ): void {
   if (pageOrdinal > pageCap) {
     throw new PaginationSafetyError(`Pagination safety cap exceeded (${pageCap} pages)`);
+  }
+  if (diagnostics.paginationControlDrift) {
+    throw new PaginationSafetyError("Pagination control drift: duplicate pager regions disagree");
   }
   if (state.visitedUrls.has(resolvedUrl)) {
     throw new PaginationSafetyError(`Pagination loop: repeated URL ${resolvedUrl}`);

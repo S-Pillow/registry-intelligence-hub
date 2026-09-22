@@ -173,7 +173,11 @@ async function main(): Promise<void> {
     }
     const report = await runMappingReview({ workspaceRoot, runDir });
     console.log(formatMappingReviewReport(report));
-    process.exit(report.mappingReviewPass && report.roundWideExact ? 0 : 1);
+    const exitCode = report.roundWideExact && report.mappingReviewPass ? 0 : 1;
+    console.error(
+      `mapping-review exit trace: exitCode=${exitCode} roundWideExact=${report.roundWideExact} mappingReviewPass=${report.mappingReviewPass} failureClassification=${report.failureClassification} pilotResolvedCount=${report.pilotResolvedCount}/${report.pilotExpectedCount}`,
+    );
+    process.exit(exitCode);
   }
 
   if (command === "preflight-report") {

@@ -158,6 +158,8 @@ export interface ViewstatusPageDiagnostics {
   parsedRowCount: number;
   quarantinedBlockCount: number;
   nextPageHref: string | null;
+  paginationControlDrift?: boolean;
+  pageKind?: "STATUS_GRID" | "ICANN_ERROR_PAGE" | "UNKNOWN_NON_GRID";
 }
 
 export interface MappingLivePageRecord {

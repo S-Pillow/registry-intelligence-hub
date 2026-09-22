@@ -8,6 +8,15 @@ import { join } from "node:path";
 const workspaceRoot = join(process.cwd());
 
 describe("viewstatus grid parser (bounded blocks)", () => {
+  it("pairs summary tr with following detail tr (live grid shape)", () => {
+    const html = `
+      <tr><a href="/applicationstatus/viewstatus:viewapplicationdetails/1001">Details</a></tr>
+      <tr>Application ID: <span>1-1311-58570</span></tr>
+    `;
+    const map = mergeGridRowsIntoMapping(parseViewstatusGridHtml(html).rows);
+    expect(map.get("1-1311-58570")).toBe(1001);
+  });
+
   it("pairs Application ID and detail link within the same tr block", () => {
     const html = `
       <tr data-gtldresult-ac-id="170" data-tas-application-id="1-1945-29108">

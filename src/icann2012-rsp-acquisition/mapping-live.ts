@@ -30,7 +30,12 @@ import {
   readMappingLiveCheckpoint,
   writeMappingLiveCheckpoint,
 } from "./mapping-checkpoint";
+import { resolveGtldresultTapestryUrl } from "./gtldresult-url-resolver";
 import { absoluteGtldresultUrl } from "./urls";
+import {
+  classifyViewstatusPageHtml,
+  isRejectableNonGridPage,
+} from "./viewstatus-page-classification";
 import { mergeGridRowsIntoMapping, parseViewstatusGridHtml } from "./viewstatus-parser";
 import {
   assertPaginationAdvance,
@@ -74,9 +79,9 @@ function snapshotIdForPage(runId: string, pageOrdinal: number, contentSha256: st
   return `snap-index-${runId}-p${String(pageOrdinal).padStart(4, "0")}-${contentSha256.slice(0, 12)}`;
 }
 
-function resolveNextPageUrl(nextHref: string | null): string | null {
+function resolveNextPageUrl(contextUrl: string, nextHref: string | null): string | null {
   if (!nextHref) return null;
-  return absoluteGtldresultUrl(nextHref);
+  return resolveGtldresultTapestryUrl(contextUrl, nextHref);
 }
 
 export function buildMappingArtifactFromCheckpoint(
@@ -242,7 +247,10 @@ export async function runMappingLive(
     const lastPage = checkpoint.pages.find(
       (p) => p.pageOrdinal === checkpoint!.lastCompletedPageOrdinal,
     );
-    currentUrl = resolveNextPageUrl(lastPage?.diagnostics.nextPageHref ?? null);
+    currentUrl = resolveNextPageUrl(
+      lastPage?.resolvedUrl ?? absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid),
+      lastPage?.diagnostics.nextPageHref ?? null,
+    );
   }
 
   if (checkpoint.lastCompletedPageOrdinal > 0 && currentUrl == null) {
@@ -274,12 +282,23 @@ export async function runMappingLive(
 
       const contentSha256 = sha256Hex(response.body);
       const html = Buffer.from(response.body).toString("utf8");
+      const pageKind = classifyViewstatusPageHtml(html);
+      if (isRejectableNonGridPage(pageKind)) {
+        throw new PaginationSafetyError(
+          pageKind === "ICANN_ERROR_PAGE"
+            ? "ICANN Error page — reject as grid"
+            : "Non-grid page encountered during mapping-live crawl",
+        );
+      }
       const parsed = parseViewstatusGridHtml(html);
-      const diagnostics = buildViewstatusPageDiagnostics(
-        html,
-        parsed.rows.length,
-        parsed.quarantinedBlocks.length,
-      );
+      const diagnostics = {
+        ...buildViewstatusPageDiagnostics(
+          html,
+          parsed.rows.length,
+          parsed.quarantinedBlocks.length,
+        ),
+        pageKind,
+      };
 
       assertPaginationAdvance(
         paginationState,
@@ -339,7 +358,7 @@ export async function runMappingLive(
         break;
       }
 
-      currentUrl = resolveNextPageUrl(diagnostics.nextPageHref);
+      currentUrl = resolveNextPageUrl(currentUrl, diagnostics.nextPageHref);
       if (currentUrl == null) {
         stoppedEarly = true;
         stopReason = "pagination ended before exact reconciliation";

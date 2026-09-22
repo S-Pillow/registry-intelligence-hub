@@ -22,8 +22,15 @@ import { loadPilotManifest, loadRspMappingArtifact } from "./load-manifest";
 import { REGRESSION_MAPPING_LEADS } from "./synthetic-replay-corpus";
 import {
   classifyMappingReviewFailure,
+  collectMappingReviewSecondaryFailureFlags,
   type MappingReviewFailureClassification,
+  type MappingReviewSecondaryFailureFlag,
 } from "./mapping-review-failure-classification";
+import { sanitizeUrlForPersistence } from "./persisted-url-tier";
+import {
+  classifyViewstatusPageHtml,
+  isRejectableNonGridPage,
+} from "./viewstatus-page-classification";
 import type { IndexPageFetchMetadataRecord } from "./fetch-metadata-contract";
 import type { MappingLiveCheckpoint, Registry2012RspMappingArtifact } from "./types";
 
@@ -79,6 +86,9 @@ export interface MappingReviewReport {
   validationLeadChecks: ValidationLeadCheck[];
   pilotOnlyExactCandidate: boolean;
   failureClassification: MappingReviewFailureClassification;
+  secondaryFailureFlags: MappingReviewSecondaryFailureFlag[];
+  pilotValidationHintsPresent: boolean;
+  nonGridPageOrdinals: number[];
   integrityFailures: string[];
   mappingReviewPass: boolean;
   reviewHold: boolean;
@@ -148,31 +158,32 @@ async function validatePageSnapshots(input: {
   integrityFailures: string[];
   failedPageOrdinals: number[];
   quarantinedPageOrdinals: number[];
+  nonGridPageOrdinals: number[];
   paginationDiagnosticsConsistent: boolean;
   htmlStructureDrift: boolean;
   paginationDrift: boolean;
+  icannErrorPagePresent: boolean;
 }> {
   const integrityFailures: string[] = [];
   const failedPageOrdinals: number[] = [];
   const quarantinedPageOrdinals: number[] = [];
+  const nonGridPageOrdinals: number[] = [];
   let paginationDiagnosticsConsistent = true;
   let htmlStructureDrift = false;
   let paginationDrift = false;
+  let icannErrorPagePresent = false;
 
   const pageBySnapshot = new Map(input.checkpoint.pages.map((p) => [p.snapshotId, p]));
-
+  const artifactEntriesBySnapshot = new Map<string, typeof input.artifact.entries>();
   for (const entry of artifactEntriesWithAcId(input.artifact)) {
     const snapId = entry.evidenceSnapshotId?.trim();
-    if (!snapId) {
-      integrityFailures.push(`${entry.applicationId}: missing evidenceSnapshotId`);
-      continue;
-    }
-    const page = pageBySnapshot.get(snapId);
-    if (!page) {
-      integrityFailures.push(`${entry.applicationId}: unknown evidenceSnapshotId ${snapId}`);
-      continue;
-    }
+    if (!snapId) continue;
+    const list = artifactEntriesBySnapshot.get(snapId) ?? [];
+    list.push(entry);
+    artifactEntriesBySnapshot.set(snapId, list);
+  }
 
+  for (const page of [...input.checkpoint.pages].sort((a, b) => a.pageOrdinal - b.pageOrdinal)) {
     const htmlPath = stagingIndexPageHtmlPath(input.stagingRoot, input.runId, page.pageOrdinal);
     const metaPath = stagingIndexPageFetchMetadataPath(
       input.stagingRoot,
@@ -189,17 +200,20 @@ async function validatePageSnapshots(input: {
       continue;
     }
 
+    const htmlText = htmlBytes.toString("utf8");
+    const pageKind = classifyViewstatusPageHtml(htmlText);
+    if (isRejectableNonGridPage(pageKind)) {
+      nonGridPageOrdinals.push(page.pageOrdinal);
+      if (pageKind === "ICANN_ERROR_PAGE") icannErrorPagePresent = true;
+      htmlStructureDrift = true;
+    }
+
     const htmlSha = sha256Hex(htmlBytes);
     if (htmlSha !== page.contentSha256) {
       integrityFailures.push(
         `Page ${page.pageOrdinal} HTML SHA mismatch (checkpoint vs bytes)`,
       );
       failedPageOrdinals.push(page.pageOrdinal);
-    }
-    if (entry.evidenceContentSha256 && entry.evidenceContentSha256 !== page.contentSha256) {
-      integrityFailures.push(
-        `${entry.applicationId}: artifact evidenceContentSha256 mismatch`,
-      );
     }
 
     let metaText: string;
@@ -221,6 +235,19 @@ async function validatePageSnapshots(input: {
       paginationDrift = true;
     }
 
+    const safeNext =
+      meta.nextPageHref == null
+        ? null
+        : sanitizeUrlForPersistence(meta.nextPageHref, "SAFE_DERIVED");
+    const checkpointSafeNext =
+      page.diagnostics.nextPageHref == null
+        ? null
+        : sanitizeUrlForPersistence(page.diagnostics.nextPageHref, "SAFE_DERIVED");
+    if (safeNext !== checkpointSafeNext) {
+      paginationDiagnosticsConsistent = false;
+      paginationDrift = true;
+    }
+
     if (meta.parsedRowCount !== page.diagnostics.parsedRowCount) {
       paginationDiagnosticsConsistent = false;
       paginationDrift = true;
@@ -237,7 +264,8 @@ async function validatePageSnapshots(input: {
       paginationDiagnosticsConsistent = false;
       paginationDrift = true;
     }
-    if ((meta.nextPageHref ?? null) !== (page.diagnostics.nextPageHref ?? null)) {
+
+    if (page.diagnostics.paginationControlDrift) {
       paginationDiagnosticsConsistent = false;
       paginationDrift = true;
     }
@@ -245,6 +273,25 @@ async function validatePageSnapshots(input: {
     if (page.diagnostics.quarantinedBlockCount > 0) {
       quarantinedPageOrdinals.push(page.pageOrdinal);
       htmlStructureDrift = true;
+    }
+
+    for (const entry of artifactEntriesBySnapshot.get(page.snapshotId) ?? []) {
+      if (entry.evidenceContentSha256 && entry.evidenceContentSha256 !== page.contentSha256) {
+        integrityFailures.push(
+          `${entry.applicationId}: artifact evidenceContentSha256 mismatch`,
+        );
+      }
+    }
+  }
+
+  for (const entry of artifactEntriesWithAcId(input.artifact)) {
+    const snapId = entry.evidenceSnapshotId?.trim();
+    if (!snapId) {
+      integrityFailures.push(`${entry.applicationId}: missing evidenceSnapshotId`);
+      continue;
+    }
+    if (!pageBySnapshot.has(snapId)) {
+      integrityFailures.push(`${entry.applicationId}: unknown evidenceSnapshotId ${snapId}`);
     }
   }
 
@@ -269,9 +316,11 @@ async function validatePageSnapshots(input: {
     integrityFailures,
     failedPageOrdinals: [...new Set(failedPageOrdinals)].sort((a, b) => a - b),
     quarantinedPageOrdinals: [...new Set(quarantinedPageOrdinals)].sort((a, b) => a - b),
+    nonGridPageOrdinals: [...new Set(nonGridPageOrdinals)].sort((a, b) => a - b),
     paginationDiagnosticsConsistent,
     htmlStructureDrift,
     paginationDrift,
+    icannErrorPagePresent,
   };
 }
 
@@ -359,9 +408,7 @@ export async function runMappingReview(options: MappingReviewOptions): Promise<M
   const pilotExpectedCount = manifest.entries.length;
   const pilotRows: PilotReviewRow[] = manifest.entries.map((entry) => {
     const fromArtifact = artifact.entries.find((e) => e.applicationId === entry.applicationId);
-    const acId =
-      fromArtifact?.gtldresultAcId ??
-      (entry.gtldresultAcId != null ? entry.gtldresultAcId : null);
+    const acId = fromArtifact?.gtldresultAcId ?? null;
     return {
       applicationId: entry.applicationId,
       gtldresultAcId: acId,
@@ -370,6 +417,9 @@ export async function runMappingReview(options: MappingReviewOptions): Promise<M
     };
   });
   const pilotResolvedCount = pilotRows.filter((r) => r.resolved).length;
+  const pilotValidationHintsPresent = manifest.entries.some(
+    (entry) => entry.validationLeadProviderLabel != null && entry.validationLeadProviderLabel.length > 0,
+  );
 
   const leadMapping = new Map<string, number | null>(
     artifact.entries.map((e) => [e.applicationId, e.gtldresultAcId]),
@@ -397,8 +447,21 @@ export async function runMappingReview(options: MappingReviewOptions): Promise<M
     integrityFailure: integrityFailures.length > 0 || !checkpointConsistentWithArtifact,
     paginationDrift: snapshotValidation.paginationDrift,
     htmlStructureDrift: snapshotValidation.htmlStructureDrift,
+    icannErrorPagePresent: snapshotValidation.icannErrorPagePresent,
     stopReason: layout.checkpoint.stopReason,
     checkpointState: layout.checkpoint.state,
+  });
+
+  const secondaryFailureFlags = collectMappingReviewSecondaryFailureFlags({
+    reconciliationExact: reconciliation.exact,
+    pilotResolvedCount,
+    pilotExpectedCount,
+    checkpointConsistentWithArtifact,
+    paginationDiagnosticsConsistent: snapshotValidation.paginationDiagnosticsConsistent,
+    quarantinedPageOrdinals: snapshotValidation.quarantinedPageOrdinals,
+    nonGridPageOrdinals: snapshotValidation.nonGridPageOrdinals,
+    validationLeadsMatched,
+    corpusPinValid,
   });
 
   const mappingReviewPass =
@@ -438,6 +501,9 @@ export async function runMappingReview(options: MappingReviewOptions): Promise<M
     validationLeadChecks,
     pilotOnlyExactCandidate,
     failureClassification,
+    secondaryFailureFlags,
+    pilotValidationHintsPresent,
+    nonGridPageOrdinals: snapshotValidation.nonGridPageOrdinals,
     integrityFailures,
     mappingReviewPass,
     reviewHold,

@@ -22,6 +22,9 @@ export interface EvidenceBundleFileEntry {
   relativePath: string;
   byteLength: number;
   sha256: string;
+  /** Present for HTML/text evidence — RESTRICTED_RAW_SOURCE bytes on disk. */
+  rawSourceSha256?: string;
+  persistedTier?: "RESTRICTED_RAW_SOURCE" | "SAFE_DERIVED";
 }
 
 export interface EvidenceBundleManifest {
@@ -78,10 +81,13 @@ export async function buildEvidenceBundleManifest(input: {
       }
     }
     const st = await stat(absolute);
+    const sha256 = sha256Hex(bytes);
     files.push({
       relativePath: rel,
       byteLength: st.size,
-      sha256: sha256Hex(bytes),
+      sha256,
+      rawSourceSha256: rel.endsWith(".html") ? sha256 : undefined,
+      persistedTier: rel.endsWith(".html") ? "RESTRICTED_RAW_SOURCE" : "SAFE_DERIVED",
     });
   }
 

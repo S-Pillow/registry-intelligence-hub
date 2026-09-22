@@ -19,14 +19,17 @@ export const RSP_ACQUISITION_LIMITS = {
 
 export const GTLDRESULT_ORIGIN = "https://gtldresult.icann.org";
 
+const GTLDRESULT_STATUS_ROOT = "/application-result/applicationstatus";
+
 export const GTLDRESULT_PATHS = {
-  statusHub: "/application-result/applicationstatus",
-  viewStatusGrid: "/application-result/applicationstatus/viewstatus/",
+  statusHub: GTLDRESULT_STATUS_ROOT,
+  viewStatusGrid: `${GTLDRESULT_STATUS_ROOT}/viewstatus/`,
   applicationDetails: (gtldresultAcId: number | string) =>
-    `/applicationstatus/applicationdetails/${gtldresultAcId}`,
+    `${GTLDRESULT_STATUS_ROOT}/applicationdetails/${gtldresultAcId}`,
   downloadPublicPortion: (gtldresultAcId: number | string) =>
-    `/applicationstatus/applicationdetails:downloadapplication/${gtldresultAcId}?t:ac=${gtldresultAcId}`,
-  gridPager: (page: number) => `/applicationstatus/viewstatus.statusgrid.pager/${page}`,
+    `${GTLDRESULT_STATUS_ROOT}/applicationdetails:downloadapplication/${gtldresultAcId}?t:ac=${gtldresultAcId}`,
+  gridPager: (page: number) =>
+    `${GTLDRESULT_STATUS_ROOT}/viewstatus.statusgrid.pager/${page}`,
 } as const;
 
 export const RSP_BUNDLE_ID = "icann2012-rsp-public-portions-v1";
