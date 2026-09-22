@@ -29,6 +29,9 @@ export const GTLDRESULT_PATHS = {
 
 export const RSP_BUNDLE_ID = "icann2012-rsp-public-portions-v1";
 
+/** @deprecated Does not grant live permission — operation-specific gates only. */
 export const RSP_ACQUISITION_AUTH_ENV = "REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED";
+
+export const RSP_PILOT_LIVE_AUTH_ENV = "REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED";
 
 export const RETRY_BACKOFF_MS = [4000, 8000, 16000, 32000, 60000] as const;

@@ -2,11 +2,6 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { hostname } from "node:os";
 import {
-  checkpointPath,
-  rspFixtureRoot,
-} from "./bundle-paths";
-import {
-  RSP_ACQUISITION_AUTH_ENV,
   RSP_ACQUISITION_LIMITS,
   RETRY_BACKOFF_MS,
 } from "./constants";
@@ -21,23 +16,30 @@ import {
   buildMappingByApplicationId,
   loadPilotManifest,
   loadPilotMapping,
+  loadRspMappingArtifact,
   resolveGtldresultAcId,
 } from "./load-manifest";
 import { validatePortionHtml, writeQuarantineRecord } from "./quarantine";
 import { sha256Hex } from "@/normalization/hashes";
 import { buildDetailsUrl, buildPortionUrl, buildPortionUrlPlaceholder } from "./urls";
 import type { DryRunFetchPlan, DryRunReport } from "./types";
-
-export function isAcquisitionAuthorized(): boolean {
-  return process.env[RSP_ACQUISITION_AUTH_ENV] === "1";
-}
+import { assertAllowedGtldresultRequestUrl } from "./network-target-policy";
+import {
+  assertLivePreflightEligible,
+  evaluateMappingArtifactEligibility,
+  loadEvidenceSnapshotIndex,
+} from "./artifact-eligibility";
+import { buildPreflightReport, isPilotLiveAuthorized } from "./preflight-report";
+import { assertLiveStagingOutsideWorkspace, defaultLiveStagingRoot } from "./staging-containment";
+import { pilotMappingPath } from "./bundle-paths";
 
 export interface AcquirePilotOptions {
   workspaceRoot: string;
-  /** Staging root for downloads (defaults to bundle fixture root). */
+  /** Staging root for downloads (live default is outside the repo). */
   stagingRoot?: string;
   batchId?: string;
   forceRefetch?: boolean;
+  mappingArtifactPath?: string;
 }
 
 function stagingPortionPath(stagingRoot: string, applicationId: string): string {
@@ -49,7 +51,7 @@ function stagingMetadataPath(stagingRoot: string, applicationId: string): string
 }
 
 export async function buildDryRunReport(options: AcquirePilotOptions): Promise<DryRunReport> {
-  const stagingRoot = options.stagingRoot ?? rspFixtureRoot(options.workspaceRoot);
+  const stagingRoot = options.stagingRoot ?? defaultLiveStagingRoot();
   const manifest = await loadPilotManifest(options.workspaceRoot);
   const mapping = await loadPilotMapping(options.workspaceRoot);
   const mappingByApp = buildMappingByApplicationId(mapping);
@@ -108,6 +110,7 @@ export function formatDryRunReport(report: DryRunReport): string {
 export type HttpFetcher = (url: string) => Promise<{ status: number; body: Uint8Array }>;
 
 async function defaultFetcher(url: string): Promise<{ status: number; body: Uint8Array }> {
+  assertAllowedGtldresultRequestUrl(url);
   const response = await fetch(url, {
     headers: { Accept: "text/html,*/*" },
   });
@@ -122,21 +125,55 @@ export interface LiveAcquireResult {
   quarantined: string[];
 }
 
+async function loadMappingForOperation(options: AcquirePilotOptions) {
+  if (options.mappingArtifactPath) {
+    return loadRspMappingArtifact(options.mappingArtifactPath);
+  }
+  return loadPilotMapping(options.workspaceRoot);
+}
+
+async function assertPilotLivePreflight(options: AcquirePilotOptions): Promise<void> {
+  const artifactPath = options.mappingArtifactPath ?? pilotMappingPath(options.workspaceRoot);
+  const mapping = await loadMappingForOperation(options);
+  const snapshots = await loadEvidenceSnapshotIndex(options.workspaceRoot);
+  const evaluation = evaluateMappingArtifactEligibility(mapping, snapshots);
+  assertLivePreflightEligible(mapping, evaluation);
+
+  const report = await buildPreflightReport({
+    workspaceRoot: options.workspaceRoot,
+    operation: "pilot-live",
+    stagingRoot: options.stagingRoot,
+    mappingArtifactPath: artifactPath,
+  });
+  if (report.blockingReasons.length > 0) {
+    throw new Error(`Pilot-live preflight blocked: ${report.blockingReasons.join("; ")}`);
+  }
+}
+
 export async function acquirePilotPortions(
   options: AcquirePilotOptions,
+): Promise<DryRunReport> {
+  return buildDryRunReport(options);
+}
+
+export async function acquirePilotLivePortions(
+  options: AcquirePilotOptions,
   fetcher: HttpFetcher = defaultFetcher,
-): Promise<DryRunReport | LiveAcquireResult> {
-  if (!isAcquisitionAuthorized()) {
-    return buildDryRunReport(options);
+): Promise<LiveAcquireResult> {
+  if (!isPilotLiveAuthorized()) {
+    throw new Error("Pilot-live requires REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1");
   }
 
-  const stagingRoot = options.stagingRoot ?? rspFixtureRoot(options.workspaceRoot);
+  const stagingRoot = options.stagingRoot ?? defaultLiveStagingRoot();
+  await assertLiveStagingOutsideWorkspace(stagingRoot, options.workspaceRoot);
+  await assertPilotLivePreflight({ ...options, stagingRoot });
+
   const batchId = options.batchId ?? `pilot-${new Date().toISOString().slice(0, 10)}`;
   const manifest = await loadPilotManifest(options.workspaceRoot);
-  const mapping = await loadPilotMapping(options.workspaceRoot);
+  const mapping = await loadMappingForOperation(options);
   const mappingByApp = buildMappingByApplicationId(mapping);
 
-  const ckPath = checkpointPath(stagingRoot);
+  const ckPath = join(stagingRoot, "acquisition-checkpoint.json");
   let checkpoint = (await readCheckpoint(ckPath)) ?? createEmptyCheckpoint(batchId);
   checkpoint = { ...checkpoint, batchId, runHost: hostname() };
 
@@ -160,6 +197,7 @@ export async function acquirePilotPortions(
     }
 
     const portionUrl = buildPortionUrl(acId);
+    assertAllowedGtldresultRequestUrl(portionUrl);
     const destPath = stagingPortionPath(stagingRoot, entry.applicationId);
     const metaPath = stagingMetadataPath(stagingRoot, entry.applicationId);
 

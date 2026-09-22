@@ -1,0 +1,21 @@
+{
+  "_fixtureKind": "SYNTHETIC_RSP_MAPPING_ROUND_WIDE_EXACT",
+  "_syntheticRowCount": 1930,
+  "_productionEligible": false,
+  "mappingVersion": "registry-2012-rsp-mapping/1.0.0",
+  "artifactPurpose": "TEST_ONLY",
+  "approvalState": "DRAFT",
+  "bundleId": "icann2012-rsp-public-portions-v1",
+  "scope": "round-wide-synthetic-exact",
+  "entries": [
+    {
+      "applicationId": "SYNTHETIC-EXAMPLE-1",
+      "gtldresultAcId": 900000,
+      "mappingSourceClass": "SYNTHETIC_TEST",
+      "evidenceSnapshotId": "snap-synthetic-not-real",
+      "sourceUrl": "https://example.invalid/synthetic-rsp-mapping-fixture",
+      "evidenceContentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "notes": "Template row only — full 1930 rows generated in unit tests"
+    }
+  ]
+}

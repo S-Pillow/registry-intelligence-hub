@@ -9,7 +9,8 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 | Path | Purpose |
 | --- | --- |
 | `pilot-manifest-25.json` | Steward-review pilot batch (25 Application IDs + selection reasons) |
-| `pilot-gtldresult-mapping.json` | Static Application ID → `gtldresultAcId` rows (probe-approved only) |
+| `pilot-gtldresult-mapping.json` | **`TEST_ONLY` / `DRAFT`** mapping artifact (`registry-2012-rsp-mapping/1.0.0`) — probe row only |
+| `fixtures/synthetic/rsp-mapping-round-wide-exact.fixture.json` | Unmistakable synthetic round-wide template (full 1930 rows generated in tests) |
 | `gtldresult-application-index.json` | Full-round index (`applicationId` → URLs) after bounded index pass |
 | `raw-snapshots.json` | Per-URL snapshot metadata + SHA-256 (same spirit as reveal-day bundle) |
 | `acquisition-checkpoint.json` | Resume / idempotency state |
@@ -26,10 +27,12 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 - `entries[]`: `{ applicationId, selectionReason, validationLeadProviderLabel?, gtldresultAcId? }`
 - `validationLeadProviderLabel` is a **QA/reconciliation label only**, not an asserted 2012 RSP fact.
 
-## Mapping file schema
+## Mapping file schema (`registry-2012-rsp-mapping/1.0.0`)
 
-- `mappingVersion`: `icann2012-rsp-pilot-gtldresult-mapping/1.0.0`
-- `entries[]`: `{ applicationId, gtldresultAcId, mappingSource, notes? }`
+- `artifactPurpose`: `TEST_ONLY` | `EVIDENCE` (pilot-live requires `EVIDENCE`)
+- `approvalState`: `DRAFT` | `APPROVED` (pilot-live requires `APPROVED`)
+- `entries[]`: `{ applicationId, gtldresultAcId, mappingSourceClass, evidenceSnapshotId?, sourceUrl?, evidenceContentSha256?, notes? }`
+- Production-eligible rows must reference a committed `raw-snapshots.json` id and non-placeholder evidence hashes.
 
 ## Checksum fields
 

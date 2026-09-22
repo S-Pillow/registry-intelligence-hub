@@ -1,8 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type {
-  GtldresultPilotMappingFile,
-  RspPilotManifest,
-} from "./types";
+import type { Registry2012RspMappingArtifact, RspPilotManifest } from "./types";
 import { pilotManifestPath, pilotMappingPath } from "./bundle-paths";
 
 export async function loadPilotManifest(workspaceRoot: string): Promise<RspPilotManifest> {
@@ -14,13 +11,35 @@ export async function loadPilotManifest(workspaceRoot: string): Promise<RspPilot
   return manifest;
 }
 
-export async function loadPilotMapping(workspaceRoot: string): Promise<GtldresultPilotMappingFile> {
-  const text = await readFile(pilotMappingPath(workspaceRoot), "utf8");
-  const mapping = JSON.parse(text) as GtldresultPilotMappingFile;
-  if (mapping.mappingVersion !== "icann2012-rsp-pilot-gtldresult-mapping/1.0.0") {
-    throw new Error(`Unexpected pilot mapping version: ${mapping.mappingVersion}`);
+function assertRegistryMappingArtifact(doc: Registry2012RspMappingArtifact): Registry2012RspMappingArtifact {
+  if (doc.mappingVersion !== "registry-2012-rsp-mapping/1.0.0") {
+    throw new Error(`Unexpected mapping version: ${doc.mappingVersion}`);
   }
-  return mapping;
+  if (doc.artifactPurpose !== "TEST_ONLY" && doc.artifactPurpose !== "EVIDENCE") {
+    throw new Error(`Invalid artifactPurpose: ${doc.artifactPurpose}`);
+  }
+  if (doc.approvalState !== "DRAFT" && doc.approvalState !== "APPROVED") {
+    throw new Error(`Invalid approvalState: ${doc.approvalState}`);
+  }
+  return doc;
+}
+
+export async function loadRspMappingArtifact(path: string): Promise<Registry2012RspMappingArtifact> {
+  const text = await readFile(path, "utf8");
+  const doc = JSON.parse(text) as { mappingVersion?: string };
+  if (doc.mappingVersion === "registry-2012-rsp-mapping/1.0.0") {
+    return assertRegistryMappingArtifact(doc as Registry2012RspMappingArtifact);
+  }
+  if (doc.mappingVersion === "icann2012-rsp-pilot-gtldresult-mapping/1.0.0") {
+    throw new Error(
+      "Legacy icann2012-rsp-pilot-gtldresult-mapping/1.0.0 is not supported — migrate to registry-2012-rsp-mapping/1.0.0",
+    );
+  }
+  throw new Error(`Unexpected mapping version: ${(doc as { mappingVersion?: string }).mappingVersion}`);
+}
+
+export async function loadPilotMapping(workspaceRoot: string): Promise<Registry2012RspMappingArtifact> {
+  return loadRspMappingArtifact(pilotMappingPath(workspaceRoot));
 }
 
 export function resolveGtldresultAcId(
@@ -34,7 +53,7 @@ export function resolveGtldresultAcId(
 }
 
 export function buildMappingByApplicationId(
-  mapping: GtldresultPilotMappingFile,
+  mapping: Registry2012RspMappingArtifact,
 ): Map<string, number | null> {
   return new Map(mapping.entries.map((e) => [e.applicationId, e.gtldresultAcId]));
 }

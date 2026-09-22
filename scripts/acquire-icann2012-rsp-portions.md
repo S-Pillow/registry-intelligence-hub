@@ -20,19 +20,34 @@ Pilot list: `pilot-manifest-25.json` (includes **`1-863-45071`** NeuStar applica
 ```bash
 npm run acquire-rsp-portions -- pilot
 npm run acquire-rsp-portions -- mapping-dry-run
+npm run acquire-rsp-portions -- preflight-report --operation pilot-live
 ```
 
-Dry-run prints exact URLs that **would** be fetched, staging paths, limits, and join ids.
+Dry-run prints exact URLs that **would** be fetched, staging paths, limits, and join ids. Preflight reports artifact SHA-256, purpose/approval, corpus hash, mapping counts, auth state, and expected HTTP volume **without network I/O**.
+
+## Mapping artifact eligibility (`registry-2012-rsp-mapping/1.0.0`)
+
+| Field | Values | Live rule |
+| --- | --- | --- |
+| `artifactPurpose` | `TEST_ONLY`, `EVIDENCE` | Pilot-live requires `EVIDENCE` |
+| `approvalState` | `DRAFT`, `APPROVED` | Pilot-live requires `APPROVED` |
+
+Committed `pilot-gtldresult-mapping.json` is **`TEST_ONLY` / `DRAFT`** (probe row only). Synthetic round-wide rows belong in `fixtures/synthetic/` or test generators — never as approved evidence.
 
 ## Live pilot (after written approval only)
 
-**Do not run in CI or during implementation.** Single documented command:
+**Do not run in CI or during implementation.** Requires steward **`EVIDENCE` + `APPROVED`** mapping with referential snapshot rows. Legacy `REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED` **does not** authorize HTTP.
 
 ```bash
-REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED=1 \
-  npm run acquire-rsp-portions -- pilot \
-  --staging /var/tmp/icann2012-rsp-staging
+REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
+  npm run acquire-rsp-portions -- pilot-live \
+  --staging /var/tmp/icann2012-rsp-staging \
+  --approved-mapping /path/to/steward-approved-mapping.json
 ```
+
+## Mapping live
+
+**Not implemented.** `mapping-live` exits with `MAPPING_LIVE_NOT_IMPLEMENTED` (zero HTTP). Do not treat it as a network command until the grid crawl exists.
 
 Caps (defaults): pilot batch **25**, **250** applications/calendar day, **≥1s** between gtldresult requests, **2 MiB** max portion size. See Project plan §4.
 

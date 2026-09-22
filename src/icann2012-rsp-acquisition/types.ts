@@ -14,14 +14,47 @@ export interface RspPilotManifest {
   entries: RspPilotManifestEntry[];
 }
 
+export type ArtifactPurpose = "TEST_ONLY" | "EVIDENCE";
+export type ApprovalState = "DRAFT" | "APPROVED";
+
+export type MappingSourceClass =
+  | "GRID_SNAPSHOT_EXTRACT"
+  | "DETAILS_PAGE_PROBE"
+  | "STEWARD_APPROVED_MANUAL"
+  | "PROBE_VERIFIED"
+  | "SYNTHETIC_TEST"
+  | "PLACEHOLDER"
+  | "TEST_FIXTURE"
+  | "SYNTHETIC";
+
+export interface RspMappingEntry {
+  applicationId: string;
+  gtldresultAcId: number | null;
+  mappingSourceClass: MappingSourceClass;
+  evidenceSnapshotId?: string | null;
+  sourceUrl?: string;
+  evidenceContentSha256?: string;
+  notes?: string;
+}
+
+export interface Registry2012RspMappingArtifact {
+  mappingVersion: "registry-2012-rsp-mapping/1.0.0";
+  artifactPurpose: ArtifactPurpose;
+  approvalState: ApprovalState;
+  bundleId: string;
+  scope: string;
+  entries: RspMappingEntry[];
+}
+
+/** @deprecated Use Registry2012RspMappingArtifact — kept for migration tests only. */
 export interface GtldresultPilotMappingEntry {
   applicationId: string;
   gtldresultAcId: number | null;
-  /** e.g. probe-verified, pending-index-pass */
   mappingSource: string;
   notes?: string;
 }
 
+/** @deprecated Use registry-2012-rsp-mapping/1.0.0 */
 export interface GtldresultPilotMappingFile {
   mappingVersion: "icann2012-rsp-pilot-gtldresult-mapping/1.0.0";
   entries: GtldresultPilotMappingEntry[];

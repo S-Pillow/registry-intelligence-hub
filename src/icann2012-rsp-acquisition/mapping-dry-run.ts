@@ -49,13 +49,10 @@ async function loadOptionalMappingCsv(path: string): Promise<Map<string, number>
 }
 
 async function loadApprovedMappingJson(path: string): Promise<Map<string, number>> {
-  const text = await readFile(path, "utf8");
-  const doc = JSON.parse(text) as {
-    mappingVersion?: string;
-    entries?: Array<{ applicationId: string; gtldresultAcId: number | null }>;
-  };
+  const { loadRspMappingArtifact } = await import("./load-manifest");
+  const doc = await loadRspMappingArtifact(path);
   const map = new Map<string, number>();
-  for (const entry of doc.entries ?? []) {
+  for (const entry of doc.entries) {
     if (entry.gtldresultAcId != null) {
       map.set(entry.applicationId, entry.gtldresultAcId);
     }
