@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
@@ -18,6 +18,13 @@ import {
   defaultSanitizedLiveMappingRunDir,
   sanitizedLivePageHtmlPath,
 } from "./grid-evidence-paths";
+import { SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256 } from "./sanitized-live-fixture-constants";
+import {
+  enforceSanitizedLiveFixtureGate,
+  loadSanitizedLiveProvenanceManifest,
+  pathExists,
+  requireSanitizedLiveFixturesFromEnv,
+} from "./sanitized-live-fixture-gate";
 import { mergeGridRowsIntoMapping, parseViewstatusGridHtml } from "./viewstatus-parser";
 import {
   buildViewstatusPageDiagnostics,
@@ -298,37 +305,35 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
 
   it("classifies sanitized-live page-0002 as ICANN error when present", async () => {
     const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 2);
-    try {
-      await access(fixturePath);
-    } catch {
+    if (!(await pathExists(fixturePath))) {
       const offline = `<html><head><title>ICANN Error</title></head><body><h1>ICANN Error</h1></body></html>`;
       expect(classifyViewstatusPageHtml(offline)).toBe("ICANN_ERROR_PAGE");
       return;
     }
+    const manifest = await loadSanitizedLiveProvenanceManifest(workspaceRoot);
+    const pin = manifest.pages.find((p) => p.pageOrdinal === 2);
     const html = await readFile(fixturePath, "utf8");
+    if (pin) {
+      expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(pin.contentSha256);
+    }
     expect(classifyViewstatusPageHtml(html)).toBe("ICANN_ERROR_PAGE");
   });
 
   it("parses committed sanitized-live page-0001 (primary regression)", async () => {
-    const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 1);
-    let fixturePresent = true;
+    const requireFixtures = requireSanitizedLiveFixturesFromEnv();
+    let gateResult: Awaited<ReturnType<typeof enforceSanitizedLiveFixtureGate>> = null;
     try {
-      await access(fixturePath);
-    } catch {
-      fixturePresent = false;
-    }
-    if (!fixturePresent) {
-      if (process.env.REGISTRY_HUB_RSP_REQUIRE_SANITIZED_FIXTURE === "1") {
-        expect.fail(
-          "Missing P0.3D fixture page-0001.html — merge checkpoint/d2-5a-p0-3d2-sanitized-live-fixtures @ b18124c2159118d85ccc6daa8d12ef11100b7daf",
-        );
-      }
+      gateResult = await enforceSanitizedLiveFixtureGate(workspaceRoot, { requireFixtures });
+    } catch (error) {
+      if (requireFixtures) throw error;
       return;
     }
+    if (!gateResult) {
+      return;
+    }
+    const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 1);
     const html = await readFile(fixturePath, "utf8");
-    expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(
-      "80df0195b283c5265ff8004720bfbbdf15822dd30134545ae2f5ba6c869f863e",
-    );
+    expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256);
     const { rows, quarantinedBlocks } = parseViewstatusGridHtml(html);
     expect(quarantinedBlocks).toHaveLength(0);
     expect(rows).toHaveLength(35);
