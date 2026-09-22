@@ -29,7 +29,9 @@ import {
   evaluateMappingArtifactEligibility,
   loadEvidenceSnapshotIndex,
 } from "./artifact-eligibility";
-import { buildPreflightReport, isPilotLiveAuthorized } from "./preflight-report";
+import { assertPilotLiveAuthGate } from "./auth-gates";
+import { buildPortionFetchMetadata } from "./fetch-metadata-contract";
+import { buildPreflightReport } from "./preflight-report";
 import { assertLiveStagingOutsideWorkspace, defaultLiveStagingRoot } from "./staging-containment";
 import { pilotMappingPath } from "./bundle-paths";
 
@@ -160,9 +162,7 @@ export async function acquirePilotLivePortions(
   options: AcquirePilotOptions,
   fetcher: HttpFetcher = defaultFetcher,
 ): Promise<LiveAcquireResult> {
-  if (!isPilotLiveAuthorized()) {
-    throw new Error("Pilot-live requires REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1");
-  }
+  assertPilotLiveAuthGate();
 
   const stagingRoot = options.stagingRoot ?? defaultLiveStagingRoot();
   await assertLiveStagingOutsideWorkspace(stagingRoot, options.workspaceRoot);
@@ -276,14 +276,16 @@ export async function acquirePilotLivePortions(
     await writeFile(destPath, body);
     await writeFile(join(stagingRoot, "sources/portions", entry.applicationId, "public-portion.sha256"), `${hash}\n`);
 
-    const metadata = {
+    const metadata = buildPortionFetchMetadata({
       applicationId: entry.applicationId,
       gtldresultAcId: acId,
       resolvedUrl: portionUrl,
+      httpStatus: lastStatus,
       contentLength: body.byteLength,
       contentSha256: hash,
       retrievedAt: new Date().toISOString(),
-    };
+      runId: batchId,
+    });
     await writeFile(metaPath, `${JSON.stringify(metadata, null, 2)}\n`);
 
     if (!qCheck.ok) {

@@ -48,11 +48,24 @@ export interface ArtifactEligibilityResult {
   artifactPurpose: ArtifactPurpose;
   approvalState: ApprovalState;
   productionEligible: boolean;
-  mappedCount: number;
-  unresolvedCount: number;
+  artifactMappedCount: number;
+  artifactUnresolvedRowCount: number;
   snapshotCount: number;
   rowIssues: MappingRowEligibilityIssue[];
   artifactIssues: string[];
+}
+
+export function countArtifactMappedRows(artifact: Registry2012RspMappingArtifact): {
+  artifactMappedCount: number;
+  artifactUnresolvedRowCount: number;
+} {
+  let artifactMappedCount = 0;
+  let artifactUnresolvedRowCount = 0;
+  for (const entry of artifact.entries) {
+    if (entry.gtldresultAcId != null) artifactMappedCount += 1;
+    else artifactUnresolvedRowCount += 1;
+  }
+  return { artifactMappedCount, artifactUnresolvedRowCount };
 }
 
 function isPlaceholderHash(hash: string | undefined): boolean {
@@ -147,12 +160,12 @@ export function evaluateMappingArtifactEligibility(
   const seenApp = new Map<string, number>();
   const rowIssues: MappingRowEligibilityIssue[] = [];
 
-  let mappedCount = 0;
-  let unresolvedCount = 0;
+  let artifactMappedCount = 0;
+  let artifactUnresolvedRowCount = 0;
 
   for (const entry of artifact.entries) {
     if (entry.gtldresultAcId != null) {
-      mappedCount += 1;
+      artifactMappedCount += 1;
       const prevApp = seenAc.get(entry.gtldresultAcId);
       if (prevApp && prevApp !== entry.applicationId) {
         rowIssues.push({
@@ -163,7 +176,7 @@ export function evaluateMappingArtifactEligibility(
       }
       seenAc.set(entry.gtldresultAcId, entry.applicationId);
     } else {
-      unresolvedCount += 1;
+      artifactUnresolvedRowCount += 1;
     }
 
     const prevAc = seenApp.get(entry.applicationId);
@@ -185,8 +198,8 @@ export function evaluateMappingArtifactEligibility(
     artifactPurpose: artifact.artifactPurpose,
     approvalState: artifact.approvalState,
     productionEligible,
-    mappedCount,
-    unresolvedCount,
+    artifactMappedCount,
+    artifactUnresolvedRowCount,
     snapshotCount: snapshots.byId.size,
     rowIssues,
     artifactIssues,

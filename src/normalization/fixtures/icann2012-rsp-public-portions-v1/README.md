@@ -18,7 +18,7 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 | `sources/index/viewstatus-page-{nn}.html` | **Real** immutable grid snapshots for mapping dry-run (`--grid-html`) |
 | `sources/portions/{applicationId}/public-portion.html` | Raw ICANN download bytes (staging; not auto-committed) |
 | `sources/portions/{applicationId}/public-portion.sha256` | Sidecar checksum |
-| `sources/portions/{applicationId}/fetch-metadata.json` | Fetch provenance (no paraphrase of Q23 text) |
+| `sources/portions/{applicationId}/fetch-metadata.json` | Fetch provenance (`httpStatus`, URL, SHA-256, optional cache headers; **no** cookies/auth) |
 | `quarantine/{applicationId}/quarantine.json` | Ambiguous or failed captures |
 
 ## Manifest schema (pilot)

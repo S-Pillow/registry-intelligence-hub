@@ -34,4 +34,9 @@ export const RSP_ACQUISITION_AUTH_ENV = "REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED
 
 export const RSP_PILOT_LIVE_AUTH_ENV = "REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED";
 
+/** Required for mapping-live HTTP when implemented — separate from pilot-live. */
+export const RSP_MAPPING_LIVE_AUTH_ENV = "REGISTRY_HUB_RSP_MAPPING_AUTHORIZED";
+
+export const PILOT_MANIFEST_EXPECTED_COUNT = 25 as const;
+
 export const RETRY_BACKOFF_MS = [4000, 8000, 16000, 32000, 60000] as const;

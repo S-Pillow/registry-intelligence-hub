@@ -23,7 +23,7 @@ npm run acquire-rsp-portions -- mapping-dry-run
 npm run acquire-rsp-portions -- preflight-report --operation pilot-live
 ```
 
-Dry-run prints exact URLs that **would** be fetched, staging paths, limits, and join ids. Preflight reports artifact SHA-256, purpose/approval, corpus hash, mapping counts, auth state, and expected HTTP volume **without network I/O**.
+Dry-run prints exact URLs that **would** be fetched, staging paths, limits, and join ids. Preflight reports artifact SHA-256, purpose/approval, corpus hash, **`artifactMappedCount`** (rows in the JSON artifact only), **`pilotExpectedCount` / `pilotResolvedCount` / `pilotUnresolvedCount`** (25-app manifest join coverage), auth state, and expected HTTP volume **without network I/O**.
 
 ## Mapping artifact eligibility (`registry-2012-rsp-mapping/1.0.0`)
 
@@ -47,7 +47,7 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
 
 ## Mapping live
 
-**Not implemented.** `mapping-live` exits with `MAPPING_LIVE_NOT_IMPLEMENTED` (zero HTTP). Do not treat it as a network command until the grid crawl exists.
+**Not implemented.** `mapping-live` exits with `MAPPING_LIVE_NOT_IMPLEMENTED` (zero HTTP). When implemented, it will require **`REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1`** (separate from pilot-live). Do not treat it as a network command until the grid crawl exists.
 
 Caps (defaults): pilot batch **25**, **250** applications/calendar day, **≥1s** between gtldresult requests, **2 MiB** max portion size. See Project plan §4.
 

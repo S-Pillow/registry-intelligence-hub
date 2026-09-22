@@ -17,6 +17,13 @@ export interface RspPilotManifest {
 export type ArtifactPurpose = "TEST_ONLY" | "EVIDENCE";
 export type ApprovalState = "DRAFT" | "APPROVED";
 
+/** Steward-approved mapping scopes (P0.1 audit contract). */
+export type RspMappingScope =
+  | "ROUND_WIDE_EXACT"
+  | "PILOT_ONLY_EXACT"
+  | "pilot-25"
+  | (string & {});
+
 export type MappingSourceClass =
   | "GRID_SNAPSHOT_EXTRACT"
   | "DETAILS_PAGE_PROBE"
@@ -42,7 +49,7 @@ export interface Registry2012RspMappingArtifact {
   artifactPurpose: ArtifactPurpose;
   approvalState: ApprovalState;
   bundleId: string;
-  scope: string;
+  scope: RspMappingScope;
   entries: RspMappingEntry[];
 }
 
