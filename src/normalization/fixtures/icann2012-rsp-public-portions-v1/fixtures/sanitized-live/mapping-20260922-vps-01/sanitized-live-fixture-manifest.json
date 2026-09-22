@@ -1,0 +1,21 @@
+{
+  "manifestVersion": "icann2012-rsp-sanitized-live-fixture-manifest/1.0.0",
+  "runId": "mapping-20260922-vps-01",
+  "fixtureSourceGitCommit": "b18124c2159118d85ccc6daa8d12ef11100b7daf",
+  "manifestDeclaredSha256": "80df0195b283c5265ff8004720bfbbdf15822dd30134545ae2f5ba6c869f863e",
+  "pages": [
+    {
+      "pageOrdinal": 1,
+      "relativePath": "page-0001.html",
+      "contentSha256": "56fca2d9a7e870a5be4f5e0367f523cb066048464c88865c9a7130f1fd5ecc8a",
+      "rawSourceSha256": "22669af9ef0b084a0ab790d0a9df84065e5d1b4f74cdba540d87b41f09081ccf",
+      "pageKind": "VIEWSTATUS_GRID"
+    },
+    {
+      "pageOrdinal": 2,
+      "relativePath": "page-0002.html",
+      "contentSha256": "918be5343f7b7f8f6a44df28cf176f7c06ff9a3396f3a26650c866e248855485",
+      "pageKind": "ICANN_ERROR_PAGE"
+    }
+  ]
+}

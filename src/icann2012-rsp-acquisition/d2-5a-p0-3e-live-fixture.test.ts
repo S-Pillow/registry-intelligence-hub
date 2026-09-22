@@ -21,7 +21,7 @@ import {
 import { SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256 } from "./sanitized-live-fixture-constants";
 import {
   enforceSanitizedLiveFixtureGate,
-  loadSanitizedLiveProvenanceManifest,
+  loadSanitizedLiveFixtureManifest,
   pathExists,
   requireSanitizedLiveFixturesFromEnv,
 } from "./sanitized-live-fixture-gate";
@@ -310,7 +310,7 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
       expect(classifyViewstatusPageHtml(offline)).toBe("ICANN_ERROR_PAGE");
       return;
     }
-    const manifest = await loadSanitizedLiveProvenanceManifest(workspaceRoot);
+    const manifest = await loadSanitizedLiveFixtureManifest(workspaceRoot);
     const pin = manifest.pages.find((p) => p.pageOrdinal === 2);
     const html = await readFile(fixturePath, "utf8");
     if (pin) {
