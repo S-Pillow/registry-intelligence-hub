@@ -148,6 +148,16 @@ async function main(): Promise<void> {
       resume: values.resume as boolean,
       forceNewRun: values["force-new-run"] as boolean,
     });
+    if (result.forceNewRunDisposition) {
+      for (const warning of result.forceNewRunDisposition.operatorWarnings) {
+        console.warn(`Warning: ${warning}`);
+      }
+      if (result.forceNewRunDisposition.archivedCheckpointPath) {
+        console.warn(
+          `Archived prior checkpoint: ${result.forceNewRunDisposition.archivedCheckpointPath}`,
+        );
+      }
+    }
     const flow = await completeMappingLiveOperatorFlow({ workspaceRoot, liveResult: result });
     console.log(flow.provenanceSummaryText);
     console.log(JSON.stringify(result, null, 2));

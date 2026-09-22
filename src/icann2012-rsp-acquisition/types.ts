@@ -192,6 +192,14 @@ export interface MappingLiveCheckpoint {
   applicationPageOrdinal: Record<string, number>;
 }
 
+export interface ForceNewRunDisposition {
+  archivedCheckpointPath?: string;
+  priorRunId?: string;
+  priorCheckpointState?: string;
+  preservedRunDirectories: string[];
+  operatorWarnings: string[];
+}
+
 export interface MappingLiveResult {
   mode: "mapping-live";
   runId: string;
@@ -205,4 +213,5 @@ export interface MappingLiveResult {
   checkpointPath: string;
   stoppedEarly: boolean;
   stopReason?: string;
+  forceNewRunDisposition?: ForceNewRunDisposition;
 }

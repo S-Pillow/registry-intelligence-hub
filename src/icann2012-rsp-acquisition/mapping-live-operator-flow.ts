@@ -14,6 +14,7 @@ import {
   sha256File,
 } from "./mapping-live-provenance-summary";
 import { resolveOperatorCommitSha } from "./operator-git-provenance";
+import { assertNoSensitiveArtifactMaterial } from "./sensitive-artifact-guard";
 
 export interface MappingLiveOperatorFlowResult {
   reviewReportPath: string;
@@ -39,6 +40,7 @@ export async function completeMappingLiveOperatorFlow(input: {
   );
   await mkdir(reviewReportPath.replace(/mapping-review-report\.json$/, ""), { recursive: true });
   const reviewJson = formatMappingReviewReport(reviewReport);
+  assertNoSensitiveArtifactMaterial(reviewJson, "mapping-review-report.json");
   await writeFile(reviewReportPath, `${reviewJson}\n`);
   const mappingReviewReportSha256 = sha256Hex(Buffer.from(reviewJson, "utf8"));
 
@@ -63,6 +65,7 @@ export async function completeMappingLiveOperatorFlow(input: {
       evidenceBundle,
     }),
   );
+  assertNoSensitiveArtifactMaterial(provenanceSummaryText, "mapping-live-provenance-summary");
 
   return {
     reviewReportPath,

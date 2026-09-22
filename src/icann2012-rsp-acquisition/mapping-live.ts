@@ -48,8 +48,14 @@ import {
   isMappingLiveOperatorCancellation,
   MappingLiveOperatorCancellation,
 } from "./mapping-live-operator-cancellation";
+import {
+  archiveCheckpointForForceNewRun,
+  validateForceNewRunFlags,
+} from "./mapping-live-force-new-run";
+import type { ForceNewRunDisposition } from "./types";
 
 export { MappingLiveOperatorCancellation };
+export type { ForceNewRunDisposition } from "./types";
 
 export interface MappingLiveOptions {
   workspaceRoot: string;
@@ -57,6 +63,8 @@ export interface MappingLiveOptions {
   runId?: string;
   resume?: boolean;
   forceNewRun?: boolean;
+  /** Injectable for tests — defaults to ISO timestamp. */
+  forceNewRunArchivedAt?: string;
   /** Injectable for tests — production uses paced gtldresult delays. */
   sleep?: SleepFn;
 }
@@ -110,6 +118,7 @@ async function finalizeMappingLiveRun(input: {
   reconciliation: ReturnType<typeof reconcileCanonicalMapping>;
   stoppedEarly: boolean;
   stopReason?: string;
+  forceNewRunDisposition?: ForceNewRunDisposition;
 }): Promise<MappingLiveResult> {
   const artifact = buildMappingArtifactFromCheckpoint(input.checkpoint);
   const artifactPath = stagingMappingArtifactPath(input.stagingRoot, input.runId);
@@ -136,6 +145,7 @@ async function finalizeMappingLiveRun(input: {
     checkpointPath: input.ckPath,
     stoppedEarly: input.stoppedEarly,
     stopReason: input.stopReason,
+    forceNewRunDisposition: input.forceNewRunDisposition,
   };
 }
 
@@ -156,10 +166,27 @@ export async function runMappingLive(
     throw new Error(`Mapping-live preflight blocked: ${preflight.blockingReasons.join("; ")}`);
   }
 
+  validateForceNewRunFlags({
+    resume: options.resume === true,
+    forceNewRun: options.forceNewRun === true,
+  });
+
   const runId = options.runId ?? `mapping-${new Date().toISOString().slice(0, 10)}-${hostname()}`;
   const ckPath = mappingLiveCheckpointPath(stagingRoot);
   const corpusHash = APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH;
   const expectedIds = await loadRevealDayApplicationIds(options.workspaceRoot);
+
+  let forceNewRunDisposition: ForceNewRunDisposition | undefined;
+  const existingForForceNew = options.forceNewRun
+    ? await readMappingLiveCheckpoint(ckPath)
+    : null;
+  if (options.forceNewRun && existingForForceNew) {
+    forceNewRunDisposition = await archiveCheckpointForForceNewRun({
+      stagingRoot,
+      priorCheckpoint: existingForForceNew,
+      archivedAtIso: options.forceNewRunArchivedAt ?? new Date().toISOString(),
+    });
+  }
 
   let checkpoint: MappingLiveCheckpoint | null = null;
   if (options.resume && !options.forceNewRun) {
@@ -226,6 +253,7 @@ export async function runMappingLive(
       checkpoint,
       reconciliation,
       stoppedEarly: false,
+      forceNewRunDisposition,
     });
   }
 
@@ -333,6 +361,7 @@ export async function runMappingLive(
         reconciliation,
         stoppedEarly: true,
         stopReason: checkpoint.stopReason,
+        forceNewRunDisposition,
       });
     }
     throw err;
@@ -347,6 +376,7 @@ export async function runMappingLive(
     reconciliation,
     stoppedEarly,
     stopReason,
+    forceNewRunDisposition,
   });
 }
 

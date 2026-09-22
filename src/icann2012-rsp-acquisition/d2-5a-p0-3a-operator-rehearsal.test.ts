@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { parseRevealDayCsvText } from "@/normalization/parse-reveal-csv";
+import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
 import { networkPolicyForCommand } from "./command-mode";
 import { EVIDENCE_BUNDLE_MANIFEST_VERSION } from "./evidence-bundle-manifest";
 import { completeMappingLiveOperatorFlow } from "./mapping-live-operator-flow";
@@ -15,6 +16,9 @@ import { runMappingLive } from "./mapping-live";
 import { runMappingReview } from "./mapping-review";
 import { MappingLiveOperatorCancellation } from "./mapping-live-operator-cancellation";
 import { mappingLiveCheckpointPath, readMappingLiveCheckpoint } from "./mapping-checkpoint";
+import { buildEvidenceBundleManifest } from "./evidence-bundle-manifest";
+import { SensitiveArtifactError } from "./sensitive-artifact-guard";
+import { stagingIndexPageFetchMetadataPath } from "./bundle-paths";
 import {
   buildSyntheticReplayCorpus,
   createSyntheticReplayFetcher,
@@ -53,7 +57,137 @@ describe("D2.5A-P0.3A mapping-live operator rehearsal (zero real HTTP)", () => {
       expect(plan.zeroNetwork).toBe(true);
       expect(plan.planVersion).toBe(MAPPING_LIVE_OPERATOR_PLAN_VERSION);
       expect(plan.authState.mappingLiveAuthorized).toBe(true);
-      expect(formatMappingLiveOperatorPlan(plan)).toContain("zero HTTP");
+      const formatted = formatMappingLiveOperatorPlan(plan);
+      expect(formatted).toContain("zero HTTP");
+      expect(formatted).toContain("operatorPhase: pre-authorization-planning");
+      expect(formatted).toContain("outputArtifactPurpose: EVIDENCE");
+      expect(formatted).toContain("sensitiveArtifactFailurePolicy:");
+      expect(formatted).toContain("forceNewRunSemantics:");
+      expect(formatted).toContain("this command performs 0 HTTP");
+    } finally {
+      process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects resume combined with force-new-run", async () => {
+    const staging = await persistentStagingDir();
+    const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
+    process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
+    try {
+      await expect(
+        runMappingLive(
+          {
+            workspaceRoot,
+            stagingRoot: staging,
+            runId: "both-flags",
+            resume: true,
+            forceNewRun: true,
+            sleep: noSleep,
+          },
+          createSyntheticReplayFetcher(
+            buildSyntheticReplayCorpus({ applicationIds: ["1-1945-29108"], rowsPerPage: 1 }),
+          ),
+        ),
+      ).rejects.toThrow(/mutually exclusive/i);
+    } finally {
+      process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
+  it("force-new-run archives checkpoint and preserves prior run directory", async () => {
+    const ids = ["1-1945-29108", "1-1016-75482"];
+    const corpus = buildSyntheticReplayCorpus({ applicationIds: ids, rowsPerPage: 1 });
+    const staging = await persistentStagingDir();
+    const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
+    process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
+    const archivedAt = "2026-09-22T12:00:00.000Z";
+
+    try {
+      await runMappingLive(
+        {
+          workspaceRoot,
+          stagingRoot: staging,
+          runId: "prior-run",
+          forceNewRun: true,
+          sleep: noSleep,
+        },
+        createSyntheticReplayFetcher(corpus, {
+          abortAfterSuccessfulResponses: 2,
+          abortError: new MappingLiveOperatorCancellation(),
+        }),
+      );
+
+      const priorHtml = join(staging, "sources/index/prior-run/page-0001.html");
+      expect(await readFile(priorHtml, "utf8").then(Boolean)).toBe(true);
+
+      const second = await runMappingLive(
+        {
+          workspaceRoot,
+          stagingRoot: staging,
+          runId: "fresh-run",
+          forceNewRun: true,
+          forceNewRunArchivedAt: archivedAt,
+          sleep: noSleep,
+        },
+        createSyntheticReplayFetcher(corpus),
+      );
+
+      expect(second.runId).toBe("fresh-run");
+      expect(second.forceNewRunDisposition?.priorRunId).toBe("prior-run");
+      expect(second.forceNewRunDisposition?.archivedCheckpointPath).toContain(".archived-");
+      expect(await readFile(priorHtml, "utf8").then(Boolean)).toBe(true);
+      const ck = await readMappingLiveCheckpoint(mappingLiveCheckpointPath(staging));
+      expect(ck?.runId).toBe("fresh-run");
+    } finally {
+      process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed evidence bundle when sensitive auth material is on disk", async () => {
+    const csv = await readFile(
+      join(
+        workspaceRoot,
+        "src/normalization/fixtures/icann2012-reveal-day-v1/sources/strings-1200utc-13jun12-en.csv",
+      ),
+      "utf8",
+    );
+    const applicationIds = parseRevealDayCsvText(csv).map((r) => r.applicationId).slice(0, 5);
+    const corpus = buildSyntheticReplayCorpus({ applicationIds });
+    const staging = await persistentStagingDir();
+    const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
+    process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
+
+    try {
+      const live = await runMappingLive(
+        {
+          workspaceRoot,
+          stagingRoot: staging,
+          runId: "sensitive-leak",
+          forceNewRun: true,
+          sleep: noSleep,
+        },
+        createSyntheticReplayFetcher(corpus),
+      );
+
+      const metaPath = stagingIndexPageFetchMetadataPath(staging, "sensitive-leak", 1);
+      const meta = JSON.parse(await readFile(metaPath, "utf8"));
+      meta.operatorMistake = `${RSP_MAPPING_LIVE_AUTH_ENV}=1`;
+      await writeFile(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
+
+      await expect(
+        completeMappingLiveOperatorFlow({ workspaceRoot, liveResult: live }),
+      ).rejects.toBeInstanceOf(SensitiveArtifactError);
+
+      await expect(
+        buildEvidenceBundleManifest({
+          stagingRoot: staging,
+          runId: live.runId,
+          corpusContentHash: APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH,
+        }),
+      ).rejects.toBeInstanceOf(SensitiveArtifactError);
     } finally {
       process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
       await rm(staging, { recursive: true, force: true });

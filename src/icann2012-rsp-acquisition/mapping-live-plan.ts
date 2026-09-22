@@ -24,6 +24,11 @@ import { mappingLiveCheckpointPath, readMappingLiveCheckpoint } from "./mapping-
 import { resolveOperatorCommitSha } from "./operator-git-provenance";
 import { inspectStagingDiskSpace } from "./staging-disk-check";
 import { defaultLiveStagingRoot, isPathContainedIn } from "./staging-containment";
+import {
+  buildForceNewRunOperatorWarnings,
+  FORCE_NEW_RUN_PLAN_SEMANTICS,
+} from "./mapping-live-force-new-run";
+import { SENSITIVE_ARTIFACT_FAILURE_POLICY } from "./sensitive-artifact-guard";
 
 export const MAPPING_LIVE_OPERATOR_PLAN_VERSION =
   "registry-hub-rsp-mapping-live-operator-plan/1.0.0" as const;
@@ -64,6 +69,9 @@ export interface MappingLiveOperatorPlan {
   postRunPartialPilotSequence: string[];
   failureBranchSummary: Record<string, string>;
   scopeNote: string;
+  forceNewRunSemantics: string;
+  sensitiveArtifactFailurePolicy: string;
+  forceNewRunOperatorWarnings: string[];
 }
 
 export interface MappingLivePlanInput {
@@ -164,6 +172,11 @@ export async function buildMappingLiveOperatorPlan(
   failureBranchSummary.UNEXPECTED_CROSS_HOST_REDIRECT =
     "Cross-host redirect rejected — preserve safe metadata, stop, no follow";
 
+  const forceNewRunOperatorWarnings = buildForceNewRunOperatorWarnings({
+    priorCheckpoint: checkpoint,
+    forceNewRun: true,
+  });
+
   return {
     planVersion: MAPPING_LIVE_OPERATOR_PLAN_VERSION,
     zeroNetwork: true,
@@ -224,6 +237,9 @@ export async function buildMappingLiveOperatorPlan(
     failureBranchSummary,
     scopeNote:
       "Mapping-live is Application ID → ICANN internal ID only — no Applicant→RO, TLD→RO, or Application→RSP facts (RSP begins at Q23–Q25 portion extraction)",
+    forceNewRunSemantics: FORCE_NEW_RUN_PLAN_SEMANTICS,
+    sensitiveArtifactFailurePolicy: SENSITIVE_ARTIFACT_FAILURE_POLICY,
+    forceNewRunOperatorWarnings,
   };
 }
 
@@ -232,6 +248,7 @@ export function formatMappingLiveOperatorPlan(plan: MappingLiveOperatorPlan): st
     "icann2012-rsp mapping-live operator plan (zero HTTP — pre-authorization)",
     `planVersion: ${plan.planVersion}`,
     `zeroNetwork: ${plan.zeroNetwork}`,
+    `operatorPhase: ${plan.operatorPhase}`,
     `commitSha: ${plan.commitSha ?? "(unknown — set REGISTRY_HUB_OPERATOR_COMMIT_SHA on VPS)"}`,
     `corpusContentHash: ${plan.corpusContentHash}`,
     `roundWideExpectedCount: ${plan.roundWideExpectedCount}`,
@@ -244,10 +261,24 @@ export function formatMappingLiveOperatorPlan(plan: MappingLiveOperatorPlan): st
     `stagingDisk.freeBytes: ${plan.stagingDisk.freeBytes ?? "(unknown)"}`,
     `stagingDisk.meetsBudget: ${plan.stagingDisk.meetsBudget ?? "(unknown)"}`,
     `resumeCheckpointPresent: ${plan.resumeCheckpointPresent}`,
+  ];
+  if (plan.resumeRunId) lines.push(`resumeRunId: ${plan.resumeRunId}`);
+  if (plan.resumePagesCompleted != null) {
+    lines.push(`resumePagesCompleted: ${plan.resumePagesCompleted}`);
+  }
+  lines.push(
+    `legacyAcquisitionEnv (${RSP_ACQUISITION_AUTH_ENV}): ${plan.authState.legacyAcquisitionEnv}`,
+    `pilotLiveAuthorized (${RSP_PILOT_LIVE_AUTH_ENV}): ${plan.authState.pilotLiveAuthorized}`,
     `mappingLiveAuthorized (${RSP_MAPPING_LIVE_AUTH_ENV}): ${plan.authState.mappingLiveAuthorized}`,
-    `networkRequestsIfLiveRun: ${plan.networkRequestsIfLiveRun} (plan performs 0)`,
+    `networkRequestsIfLiveRun: ${plan.networkRequestsIfLiveRun} (this command performs 0 HTTP)`,
     `pacing.minDelayMs: ${plan.pacing.minDelayMsBetweenRequests}`,
     `pacing.pageSafetyCap: ${plan.pacing.mappingLivePageSafetyCap}`,
+    "",
+    "sensitiveArtifactFailurePolicy:",
+    `  ${plan.sensitiveArtifactFailurePolicy}`,
+    "",
+    "forceNewRunSemantics:",
+    `  ${plan.forceNewRunSemantics}`,
     "",
     "oneRunRule:",
     `  ${plan.oneRunRule}`,
@@ -257,7 +288,14 @@ export function formatMappingLiveOperatorPlan(plan: MappingLiveOperatorPlan): st
     "",
     "preRunChecklist:",
     ...plan.preRunChecklist.map((item) => `  - ${item}`),
-  ];
+  );
+
+  if (plan.forceNewRunOperatorWarnings.length > 0) {
+    lines.push("", "forceNewRunOperatorWarnings (if using --force-new-run on live CLI):");
+    for (const w of plan.forceNewRunOperatorWarnings) {
+      lines.push(`  - ${w}`);
+    }
+  }
 
   if (plan.operatorBlockingBeforeLive.length > 0) {
     lines.push("", "operatorBlockingBeforeLive (expected during plan — resolve before HTTP):");

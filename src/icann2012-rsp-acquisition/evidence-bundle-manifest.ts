@@ -2,6 +2,10 @@ import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { sha256Hex } from "@/normalization/hashes";
 import { stagingEvidenceBundleManifestPath } from "./bundle-paths";
+import {
+  SensitiveArtifactError,
+  scanTextForSensitiveArtifactMaterial,
+} from "./sensitive-artifact-guard";
 
 export const EVIDENCE_BUNDLE_MANIFEST_VERSION =
   "registry-hub-rsp-mapping-evidence-bundle/1.0.0" as const;
@@ -65,6 +69,14 @@ export async function buildEvidenceBundleManifest(input: {
       throw new Error(`Refusing to include forbidden evidence path in manifest: ${rel}`);
     }
     const bytes = await readFile(absolute);
+    const textLike =
+      rel.endsWith(".json") || rel.endsWith(".txt") || rel.endsWith(".log");
+    if (textLike) {
+      const sensitiveFindings = scanTextForSensitiveArtifactMaterial(bytes.toString("utf8"), rel);
+      if (sensitiveFindings.length > 0) {
+        throw new SensitiveArtifactError(sensitiveFindings);
+      }
+    }
     const st = await stat(absolute);
     files.push({
       relativePath: rel,

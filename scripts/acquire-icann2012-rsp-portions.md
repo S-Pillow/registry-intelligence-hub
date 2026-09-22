@@ -96,8 +96,10 @@ REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1 \
 
 | Flag | Purpose |
 | --- | --- |
-| `--resume` | Continue from `mapping-live-checkpoint.json` (validates page SHA-256 + corpus pin) |
-| `--force-new-run` | Replace checkpoint when steward intentionally starts over |
+| `--resume` | Continue from `mapping-live-checkpoint.json` (validates page SHA-256 + corpus pin). **Mutually exclusive with `--force-new-run`.** |
+| `--force-new-run` | Steward-intentional fresh crawl: **renames** (archives) the active `mapping-live-checkpoint.json` to `mapping-live-checkpoint.json.archived-<timestamp>-<priorRunId>.json`, starts an empty checkpoint for `--run-id`, **preserves** prior `sources/index/<runId>/`, mapping artifacts, and review bundles on disk. Emits operator warnings; **does not bypass the one-run rule** (each live HTTP attempt still needs steward review). **Zero HTTP** in `mapping-live-plan` — semantics appear in plan output only. |
+
+**Sensitive artifacts:** evidence-bundle manifest, mapping-review report, and provenance summary **fail closed** if cookies, CSRF/session header material, or RSP auth env names/values would be persisted. Scrub staging before re-running offline post-steps.
 
 **Staging layout (not committed by default):**
 
