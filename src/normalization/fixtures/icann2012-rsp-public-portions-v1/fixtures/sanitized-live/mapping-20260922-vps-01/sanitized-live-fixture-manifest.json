@@ -1,0 +1,33 @@
+{
+  "bundleVersion": "registry-hub-rsp-sanitized-live-fixture/1.0.0",
+  "extractedAt": "2026-09-22T06:35:18Z",
+  "operatorCommitSha": "c0d8ff58b7a6f8a4f1ee02c0d4a4907af7155b44",
+  "sourceRunId": "mapping-20260922-vps-01",
+  "sourceStagingRoot": "/var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-20260922-vps-01",
+  "sourceEvidenceBundleManifestSha256": "939a0962b333636ee20216ca8b7cf77e92ceaf8a277ce578c650a4cc288ad33b",
+  "redactionPolicy": "Replace _csrf query values with REDACTED; no cookies/auth env; staging originals untouched.",
+  "purpose": "Offline parser/pagination remediation for build agent \u2014 not APPROVED evidence.",
+  "pages": {
+    "page-0001": {
+      "sourceHtmlPath": "/var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-20260922-vps-01/sources/index/mapping-20260922-vps-01/page-0001.html",
+      "sourceHtmlSha256": "22669af9ef0b084a0ab790d0a9df84065e5d1b4f74cdba540d87b41f09081ccf",
+      "sourceFetchSha256": "d788b97d0e009328828feffc23b0bc98272643e479576998a0dfd5910eeb1f77",
+      "sanitizedHtmlSha256": "56fca2d9a7e870a5be4f5e0367f523cb066048464c88865c9a7130f1fd5ecc8a",
+      "sanitizedFetchMetadataSha256": "9102d501befeaab158fa830170667679d52dec73f933dd2d2591e84db2703f4e",
+      "sanitizedHtmlRelativePath": "fixtures/sanitized-live/mapping-20260922-vps-01/page-0001.html",
+      "sanitizedFetchMetadataRelativePath": "fixtures/sanitized-live/mapping-20260922-vps-01/page-0001.fetch-metadata.json"
+    },
+    "page-0002": {
+      "sourceHtmlPath": "/var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-20260922-vps-01/sources/index/mapping-20260922-vps-01/page-0002.html",
+      "sourceHtmlSha256": "918be5343f7b7f8f6a44df28cf176f7c06ff9a3396f3a26650c866e248855485",
+      "sourceFetchSha256": "851af48640a51ec73a6fbe518330b68598ccf107c11e5176d4df76a451c5f662",
+      "sanitizedHtmlSha256": "918be5343f7b7f8f6a44df28cf176f7c06ff9a3396f3a26650c866e248855485",
+      "sanitizedFetchMetadataSha256": "c31baab6913377bd0a63710ef2df9dd649dbd51e93fc95b8fb06fe90c2ae1cbb",
+      "sanitizedHtmlRelativePath": "fixtures/sanitized-live/mapping-20260922-vps-01/page-0002.html",
+      "sanitizedFetchMetadataRelativePath": "fixtures/sanitized-live/mapping-20260922-vps-01/page-0002.fetch-metadata.json"
+    }
+  },
+  "failureClassificationFromReview": "PAGINATION_DRIFT",
+  "gridHtmlDryRunHint": "fixtures/sanitized-live/mapping-20260922-vps-01/page-0001.html",
+  "manifestSha256": "80df0195b283c5265ff8004720bfbbdf15822dd30134545ae2f5ba6c869f863e"
+}

@@ -1,0 +1,17 @@
+{
+  "pageOrdinal": 1,
+  "resolvedUrl": "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/",
+  "finalUrl": "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/",
+  "httpStatus": 200,
+  "contentType": "text/html;charset=UTF-8",
+  "contentLength": 89768,
+  "contentSha256": "22669af9ef0b084a0ab790d0a9df84065e5d1b4f74cdba540d87b41f09081ccf",
+  "retrievedAt": "2026-09-22T06:22:13.377Z",
+  "runId": "mapping-20260922-vps-01",
+  "displayStart": 1,
+  "displayEnd": 35,
+  "displayTotal": 1930,
+  "parsedRowCount": 0,
+  "quarantinedBlockCount": 71,
+  "nextPageHref": "/applicationstatus/viewstatus.statusgrid.pager/56?_csrf=REDACTED"
+}

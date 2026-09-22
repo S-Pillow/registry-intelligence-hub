@@ -1,0 +1,35 @@
+{
+  "runId": "mapping-20260922-vps-01",
+  "state": "failed",
+  "corpusContentHash": "b92c640a43bdd42101f55f15645e44a889b082923c786c005e1ebfe512dc2a27",
+  "stopReason": "pagination ended before exact reconciliation",
+  "lastCompletedPageOrdinal": 2,
+  "pageDiagnostics": [
+    {
+      "pageOrdinal": 1,
+      "contentSha256": "22669af9ef0b084a0ab790d0a9df84065e5d1b4f74cdba540d87b41f09081ccf",
+      "resolvedUrl": "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/",
+      "diagnostics": {
+        "displayStart": 1,
+        "displayEnd": 35,
+        "displayTotal": 1930,
+        "parsedRowCount": 0,
+        "quarantinedBlockCount": 71,
+        "nextPageHref": "/applicationstatus/viewstatus.statusgrid.pager/56?_csrf=REDACTED"
+      }
+    },
+    {
+      "pageOrdinal": 2,
+      "contentSha256": "918be5343f7b7f8f6a44df28cf176f7c06ff9a3396f3a26650c866e248855485",
+      "resolvedUrl": "https://gtldresult.icann.org/applicationstatus/viewstatus.statusgrid.pager/56?_csrf=REDACTED",
+      "diagnostics": {
+        "displayStart": null,
+        "displayEnd": null,
+        "displayTotal": null,
+        "parsedRowCount": 0,
+        "quarantinedBlockCount": 0,
+        "nextPageHref": null
+      }
+    }
+  ]
+}
