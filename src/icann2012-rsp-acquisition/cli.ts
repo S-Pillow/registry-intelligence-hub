@@ -7,6 +7,7 @@ import {
   formatMappingLivePreflightReport,
 } from "./mapping-live-preflight";
 import { formatMappingDryRun, runMappingDryRun } from "./mapping-dry-run";
+import { formatMappingReviewReport, runMappingReview } from "./mapping-review";
 import {
   RSP_ACQUISITION_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
@@ -34,6 +35,7 @@ Usage:
   npm run acquire-rsp-portions -- pilot-live [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <sources/index/...>] [--mapping-csv <path>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run]
+  npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
 
 Environment:
@@ -63,6 +65,7 @@ async function main(): Promise<void> {
       "run-id": { type: "string" },
       resume: { type: "boolean", default: false },
       "force-new-run": { type: "boolean", default: false },
+      "run-dir": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -122,6 +125,18 @@ async function main(): Promise<void> {
     });
     console.log(JSON.stringify(result, null, 2));
     process.exit(result.exact ? 0 : 1);
+  }
+
+  if (command === "mapping-review") {
+    const runDir = values["run-dir"] as string | undefined;
+    if (!runDir) {
+      console.error("--run-dir is required for mapping-review\n");
+      console.log(usage());
+      process.exit(1);
+    }
+    const report = await runMappingReview({ workspaceRoot, runDir });
+    console.log(formatMappingReviewReport(report));
+    process.exit(report.mappingReviewPass && report.roundWideExact ? 0 : 1);
   }
 
   if (command === "preflight-report") {

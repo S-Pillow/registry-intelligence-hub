@@ -53,6 +53,7 @@ describe("D2.5A-P0.1R reconciliation contracts", () => {
     expect(networkPolicyForCommand("pilot-live").requiresPilotLiveAuth).toBe(true);
     expect(networkPolicyForCommand("mapping-live").requiresMappingLiveAuth).toBe(true);
     expect(networkPolicyForCommand("pilot").allowsOutboundHttp).toBe(false);
+    expect(networkPolicyForCommand("mapping-review").allowsOutboundHttp).toBe(false);
     expect(isPilotLiveAuthorized()).toBe(false);
     expect(isMappingLiveAuthorized()).toBe(false);
   });

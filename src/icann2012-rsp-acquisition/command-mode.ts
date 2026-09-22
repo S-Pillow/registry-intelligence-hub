@@ -1,4 +1,9 @@
-export type AcquisitionCommandMode = "pilot" | "pilot-live" | "mapping-dry-run" | "mapping-live";
+export type AcquisitionCommandMode =
+  | "pilot"
+  | "pilot-live"
+  | "mapping-dry-run"
+  | "mapping-live"
+  | "mapping-review";
 
 export interface CommandModeNetworkPolicy {
   mode: AcquisitionCommandMode;
@@ -11,6 +16,7 @@ export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandMo
   switch (mode) {
     case "pilot":
     case "mapping-dry-run":
+    case "mapping-review":
       return {
         mode,
         allowsOutboundHttp: false,
