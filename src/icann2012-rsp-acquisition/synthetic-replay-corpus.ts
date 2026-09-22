@@ -1,4 +1,5 @@
 import { GTLDRESULT_PATHS } from "./constants";
+import { MappingLiveOperatorCancellation } from "./mapping-live-operator-cancellation";
 import { absoluteGtldresultUrl } from "./urls";
 
 export const REGRESSION_MAPPING_LEADS = {
@@ -148,6 +149,11 @@ export function createSyntheticReplayFetcher(
   options?: {
     statusHubSetCookie?: boolean;
     crossHostRedirectFrom?: string;
+    /** Return this HTTP status instead of corpus body (403/429 rehearsal). */
+    httpStatusForUrl?: Record<string, number>;
+    /** After this many successful (2xx) responses, throw (operator abort rehearsal). */
+    abortAfterSuccessfulResponses?: number;
+    abortError?: Error;
   },
 ): (url: string) => Promise<{
   status: number;
@@ -155,6 +161,8 @@ export function createSyntheticReplayFetcher(
   headers: Record<string, string>;
   finalUrl: string;
 }> {
+  let successfulResponses = 0;
+
   return async (url: string) => {
     if (options?.crossHostRedirectFrom && url === options.crossHostRedirectFrom) {
       return {
@@ -165,12 +173,29 @@ export function createSyntheticReplayFetcher(
       };
     }
 
+    const forcedStatus = options?.httpStatusForUrl?.[url];
+    if (forcedStatus != null) {
+      return {
+        status: forcedStatus,
+        body: Buffer.from(`synthetic HTTP ${forcedStatus}`),
+        headers: { "Content-Type": "text/plain" },
+        finalUrl: url,
+      };
+    }
+
     const html = corpus.pagesByUrl.get(url);
     const headers: Record<string, string> = { "Content-Type": "text/html; charset=UTF-8" };
     if (url === corpus.statusHubUrl && options?.statusHubSetCookie !== false) {
       headers["set-cookie"] = "JSESSIONID=synthetic-test-session; Path=/; HttpOnly";
     }
     if (html != null) {
+      successfulResponses += 1;
+      if (
+        options?.abortAfterSuccessfulResponses != null &&
+        successfulResponses > options.abortAfterSuccessfulResponses
+      ) {
+        throw options.abortError ?? new MappingLiveOperatorCancellation();
+      }
       return {
         status: 200,
         body: Buffer.from(html, "utf8"),

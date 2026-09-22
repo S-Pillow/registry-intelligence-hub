@@ -202,17 +202,17 @@ describe("D2.5A-P0.2 mapping-live crawler (mock/replay only)", () => {
     const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
     process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
     try {
-      await expect(
-        runMappingLive(
-          {
-            workspaceRoot,
-            stagingRoot: staging,
-            runId: "loop-test",
-            forceNewRun: true,
-          },
-          createSyntheticReplayFetcher(loopCorpus),
-        ),
-      ).rejects.toThrow(/Pagination loop/);
+      const loopResult = await runMappingLive(
+        {
+          workspaceRoot,
+          stagingRoot: staging,
+          runId: "loop-test",
+          forceNewRun: true,
+        },
+        createSyntheticReplayFetcher(loopCorpus),
+      );
+      expect(loopResult.stoppedEarly).toBe(true);
+      expect(loopResult.stopReason).toMatch(/Pagination loop/);
     } finally {
       process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
       await rm(staging, { recursive: true, force: true });

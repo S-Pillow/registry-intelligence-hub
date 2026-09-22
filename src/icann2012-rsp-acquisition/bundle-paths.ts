@@ -62,3 +62,11 @@ export function stagingIndexPageFetchMetadataPath(
 export function stagingMappingArtifactPath(stagingRoot: string, runId: string): string {
   return join(stagingRoot, "registry-2012-rsp-mapping", runId, "mapping.json");
 }
+
+export function stagingMappingReviewReportPath(stagingRoot: string, runId: string): string {
+  return join(stagingRoot, "registry-hub-rsp-mapping-review-report", runId, "mapping-review-report.json");
+}
+
+export function stagingEvidenceBundleManifestPath(stagingRoot: string, runId: string): string {
+  return join(stagingRoot, "registry-hub-rsp-mapping-evidence-bundle", runId, "manifest.json");
+}

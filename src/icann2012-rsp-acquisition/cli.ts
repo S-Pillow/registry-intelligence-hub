@@ -9,6 +9,12 @@ import {
 import { formatMappingDryRun, runMappingDryRun } from "./mapping-dry-run";
 import { formatMappingReviewReport, runMappingReview } from "./mapping-review";
 import {
+  buildMappingLiveOperatorPlan,
+  formatMappingLiveOperatorPlan,
+  formatMappingLiveOperatorPlanJson,
+} from "./mapping-live-plan";
+import { completeMappingLiveOperatorFlow } from "./mapping-live-operator-flow";
+import {
   RSP_ACQUISITION_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
 } from "./constants";
@@ -34,7 +40,8 @@ Usage:
   npm run acquire-rsp-portions -- pilot [--workspace <dir>] [--staging <dir>]
   npm run acquire-rsp-portions -- pilot-live [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <sources/index/...>] [--mapping-csv <path>] [--approved-mapping <json>]
-  npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run]
+  npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run] [--preflight-only]
+  npm run acquire-rsp-portions -- mapping-live-plan [--workspace <dir>] [--staging <dir>] [--json]
   npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
 
@@ -65,6 +72,8 @@ async function main(): Promise<void> {
       "run-id": { type: "string" },
       resume: { type: "boolean", default: false },
       "force-new-run": { type: "boolean", default: false },
+      "preflight-only": { type: "boolean", default: false },
+      json: { type: "boolean", default: false },
       "run-dir": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
@@ -109,8 +118,24 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "mapping-live-plan") {
+    const plan = await buildMappingLiveOperatorPlan({
+      workspaceRoot,
+      stagingRoot: values.staging as string | undefined,
+    });
+    console.log(
+      values.json ? formatMappingLiveOperatorPlanJson(plan) : formatMappingLiveOperatorPlan(plan),
+    );
+    return;
+  }
+
   if (command === "mapping-live") {
     const stagingRoot = values.staging as string | undefined;
+    if (values["preflight-only"] as boolean) {
+      const plan = await buildMappingLiveOperatorPlan({ workspaceRoot, stagingRoot });
+      console.log(formatMappingLiveOperatorPlan(plan));
+      return;
+    }
     const preflight = await buildMappingLivePreflightReport({ workspaceRoot, stagingRoot });
     console.log(formatMappingLivePreflightReport(preflight));
     if (preflight.blockingReasons.length > 0) {
@@ -123,6 +148,8 @@ async function main(): Promise<void> {
       resume: values.resume as boolean,
       forceNewRun: values["force-new-run"] as boolean,
     });
+    const flow = await completeMappingLiveOperatorFlow({ workspaceRoot, liveResult: result });
+    console.log(flow.provenanceSummaryText);
     console.log(JSON.stringify(result, null, 2));
     process.exit(result.exact ? 0 : 1);
   }

@@ -67,6 +67,20 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
   --approved-mapping /path/to/steward-approved-mapping.json
 ```
 
+## Mapping live operator plan (zero HTTP — D2.5A-P0.3A)
+
+**Always run before the first authorized live crawl.** Produces the full VPS operator checklist, pacing, corpus pin, staging/disk checks, failure-branch summary, and one-run rule. **Performs zero HTTP** even when `REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1` is set.
+
+```bash
+npm run acquire-rsp-portions -- mapping-live-plan \
+  --staging /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22
+npm run acquire-rsp-portions -- mapping-live --preflight-only --staging <same>
+```
+
+Project runbook: `d2-5a-p0-3-mapping-live-vps-operator-runbook.md` (isolated clone/worktree, persistent evidence outside git, production PM2/nginx untouched).
+
+Evidence-bundle manifest schema: `registry-hub-rsp-mapping-evidence-bundle/1.0.0` (deterministic per-file SHA-256; no cookies/tokens).
+
 ## Mapping live (grid index crawl)
 
 **Implemented (D2.5A-P0.2)** — deterministic viewstatus grid crawl with session bootstrap, server-provided pager hrefs (never manufactured `_csrf` URLs), immutable index snapshots, canonical 1,930 reconciliation, and checkpoint/resume.

@@ -44,6 +44,12 @@ import type {
   Registry2012RspMappingArtifact,
 } from "./types";
 import { assertLiveStagingOutsideWorkspace, defaultLiveStagingRoot } from "./staging-containment";
+import {
+  isMappingLiveOperatorCancellation,
+  MappingLiveOperatorCancellation,
+} from "./mapping-live-operator-cancellation";
+
+export { MappingLiveOperatorCancellation };
 
 export interface MappingLiveOptions {
   workspaceRoot: string;
@@ -317,6 +323,18 @@ export async function runMappingLive(
     checkpoint.state = "failed";
     checkpoint.stopReason = err instanceof Error ? err.message : String(err);
     await writeMappingLiveCheckpoint(ckPath, checkpoint);
+    if (isMappingLiveOperatorCancellation(err) || err instanceof PaginationSafetyError) {
+      const reconciliation = reconcileCanonicalMapping(expectedIds, mappings);
+      return finalizeMappingLiveRun({
+        stagingRoot,
+        runId: checkpoint.runId,
+        ckPath,
+        checkpoint,
+        reconciliation,
+        stoppedEarly: true,
+        stopReason: checkpoint.stopReason,
+      });
+    }
     throw err;
   }
 
