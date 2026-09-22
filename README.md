@@ -19,8 +19,6 @@ The current RSP work is building an auditable path from a 2012 Application ID to
 
 The runnable browser experience includes a Command Center, Explore research backbone, deterministic metrics, evidence drill-down, historical 2012 browsing, confirmed portfolio views, and responsive loading, empty, and error states.
 
-The runnable browser experience includes a frozen v1 Command Center, a composable Explore research backbone, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
-
 The fixture is explicitly synthetic rehearsal data. It must not be treated as the official 2026 Reveal Day publication.
 
 ## Run locally
