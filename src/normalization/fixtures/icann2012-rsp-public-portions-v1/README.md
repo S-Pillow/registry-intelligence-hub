@@ -13,8 +13,8 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 | `gtldresult-application-index.json` | Full-round index (`applicationId` → URLs) after bounded index pass |
 | `raw-snapshots.json` | Per-URL snapshot metadata + SHA-256 (same spirit as reveal-day bundle) |
 | `acquisition-checkpoint.json` | Resume / idempotency state |
-| `fixtures/viewstatus-page-1.fixture.html` | Offline grid HTML for parser tests |
-| `sources/index/viewstatus-page-{nn}.html` | Optional immutable grid snapshots (max 56) |
+| `fixtures/synthetic/viewstatus-grid-parser.fixture.html` | **Synthetic** grid HTML for parser/unit tests only (non-evidence) |
+| `sources/index/viewstatus-page-{nn}.html` | **Real** immutable grid snapshots for mapping dry-run (`--grid-html`) |
 | `sources/portions/{applicationId}/public-portion.html` | Raw ICANN download bytes (staging; not auto-committed) |
 | `sources/portions/{applicationId}/public-portion.sha256` | Sidecar checksum |
 | `sources/portions/{applicationId}/fetch-metadata.json` | Fetch provenance (no paraphrase of Q23 text) |

@@ -1,58 +1,172 @@
 import type { ViewstatusGridRow } from "./types";
 
+const DETAIL_LINK_PATTERN =
+  /viewapplicationdetails\/(\d+)|viewstatus:viewapplicationdetails\/(\d+)/gi;
+const LABELED_APPLICATION_ID_PATTERN = /Application ID:[\s\S]{0,160}?(1-\d+-\d+)/gi;
+const DATA_TAS_APPLICATION_ID_PATTERN = /data-tas-application-id="(1-\d+-\d+)"/gi;
+const DATA_AC_ID_PATTERN = /data-gtldresult-ac-id="(\d+)"/gi;
+
+const TR_BLOCK_PATTERN = /<tr\b[\s\S]*?<\/tr>/gi;
+const EXPANDED_DIV_PATTERN =
+  /<div\b[^>]*class="[^"]*\bexpanded\b[^"]*"[\s\S]*?<\/div>/gi;
+
+export interface ViewstatusGridQuarantine {
+  blockIndex: number;
+  blockPreview: string;
+  reason: string;
+}
+
+export interface ViewstatusGridParseResult {
+  rows: ViewstatusGridRow[];
+  quarantinedBlocks: ViewstatusGridQuarantine[];
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function uniqueNumbers(values: number[]): number[] {
+  return [...new Set(values)];
+}
+
+function collectDetailLinkAcIds(block: string): number[] {
+  const ids: number[] = [];
+  DETAIL_LINK_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = DETAIL_LINK_PATTERN.exec(block)) !== null) {
+    const id = Number(match[1] ?? match[2]);
+    if (!Number.isNaN(id)) ids.push(id);
+  }
+  return ids;
+}
+
+function collectApplicationIds(block: string): string[] {
+  const ids: string[] = [];
+  for (const pattern of [
+    DATA_TAS_APPLICATION_ID_PATTERN,
+    LABELED_APPLICATION_ID_PATTERN,
+  ]) {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(block)) !== null) {
+      ids.push(match[1]);
+    }
+  }
+  return uniqueStrings(ids);
+}
+
+function collectDataAttributeAcIds(block: string): number[] {
+  const ids: number[] = [];
+  DATA_AC_ID_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = DATA_AC_ID_PATTERN.exec(block)) !== null) {
+    ids.push(Number(match[1]));
+  }
+  return ids;
+}
+
+function extractHtmlBlocks(html: string): string[] {
+  const blocks: string[] = [];
+  for (const pattern of [TR_BLOCK_PATTERN, EXPANDED_DIV_PATTERN]) {
+    pattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(html)) !== null) {
+      blocks.push(match[0]);
+    }
+  }
+  return blocks;
+}
+
+function parseBoundedBlock(block: string, blockIndex: number): {
+  row?: ViewstatusGridRow;
+  quarantine?: ViewstatusGridQuarantine;
+} {
+  const applicationIds = collectApplicationIds(block);
+  const linkAcIds = collectDetailLinkAcIds(block);
+  const dataAcIds = collectDataAttributeAcIds(block);
+  const acCandidates = uniqueNumbers([...linkAcIds, ...dataAcIds]);
+
+  const preview = block.replace(/\s+/g, " ").trim().slice(0, 120);
+
+  if (applicationIds.length === 0) {
+    return {
+      quarantine: {
+        blockIndex,
+        blockPreview: preview,
+        reason: "missing Application ID in grid block",
+      },
+    };
+  }
+  if (applicationIds.length > 1) {
+    return {
+      quarantine: {
+        blockIndex,
+        blockPreview: preview,
+        reason: `multiple Application IDs in one block: ${applicationIds.join(", ")}`,
+      },
+    };
+  }
+  if (acCandidates.length === 0) {
+    return {
+      quarantine: {
+        blockIndex,
+        blockPreview: preview,
+        reason: "missing viewapplicationdetails link or data-gtldresult-ac-id in grid block",
+      },
+    };
+  }
+  if (acCandidates.length > 1) {
+    return {
+      quarantine: {
+        blockIndex,
+        blockPreview: preview,
+        reason: `conflicting gtldresultAcId values in one block: ${acCandidates.join(", ")}`,
+      },
+    };
+  }
+
+  const tasApplicationId = applicationIds[0];
+  const gtldresultAcId = acCandidates[0];
+
+  // Never treat numeric segments of Application ID as AC id — only explicit block fields above.
+
+  return {
+    row: { gtldresultAcId, tasApplicationId },
+  };
+}
+
 /**
  * Parse Apache Tapestry viewstatus grid HTML for Application ID ↔ gtldresultAcId pairs.
- * Tolerates committed fixture snippets and synthetic test rows.
+ * Each `<tr>` or expanded detail block is a bounded unit; document-order pairing is forbidden.
  */
-export function parseViewstatusGridHtml(html: string): ViewstatusGridRow[] {
+export function parseViewstatusGridHtml(html: string): ViewstatusGridParseResult {
+  const blocks = extractHtmlBlocks(html);
   const rows: ViewstatusGridRow[] = [];
+  const quarantinedBlocks: ViewstatusGridQuarantine[] = [];
   const seenAc = new Set<number>();
   const seenApp = new Set<string>();
 
-  const pushRow = (gtldresultAcId: number, tasApplicationId: string) => {
-    if (seenAc.has(gtldresultAcId) || seenApp.has(tasApplicationId)) return;
-    seenAc.add(gtldresultAcId);
-    seenApp.add(tasApplicationId);
-    rows.push({ gtldresultAcId, tasApplicationId });
-  };
-
-  const detailLinkPattern =
-    /viewapplicationdetails\/(\d+)|viewstatus:viewapplicationdetails\/(\d+)/gi;
-  const acIds: number[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = detailLinkPattern.exec(html)) !== null) {
-    const id = Number(match[1] ?? match[2]);
-    if (!Number.isNaN(id)) acIds.push(id);
-  }
-
-  const appIdPattern = /Application ID:[\s\S]{0,120}?(1-\d+-\d+)/gi;
-  const applicationIds: string[] = [];
-  while ((match = appIdPattern.exec(html)) !== null) {
-    applicationIds.push(match[1]);
-  }
-
-  // Alternate compact fixture format: data attributes on synthetic rows.
-  const syntheticPattern =
-    /data-gtldresult-ac-id="(\d+)"[^>]*data-tas-application-id="(1-\d+-\d+)"/gi;
-  while ((match = syntheticPattern.exec(html)) !== null) {
-    pushRow(Number(match[1]), match[2]);
-  }
-
-  const pairCount = Math.min(acIds.length, applicationIds.length);
-  for (let i = 0; i < pairCount; i++) {
-    pushRow(acIds[i], applicationIds[i]);
-  }
-
-  // If only ac ids with separate blocks, pair by order of first occurrence in document.
-  if (acIds.length > 0 && applicationIds.length === 0) {
-    const blockAppIds = [...html.matchAll(/tasApplicationId[^0-9]*(1-\d+-\d+)/gi)].map((m) => m[1]);
-    const ids = blockAppIds.length > 0 ? blockAppIds : applicationIds;
-    for (let i = 0; i < Math.min(acIds.length, ids.length); i++) {
-      pushRow(acIds[i], ids[i]);
+  blocks.forEach((block, blockIndex) => {
+    const parsed = parseBoundedBlock(block, blockIndex);
+    if (parsed.quarantine) {
+      quarantinedBlocks.push(parsed.quarantine);
+      return;
     }
-  }
+    const row = parsed.row!;
+    if (seenAc.has(row.gtldresultAcId) || seenApp.has(row.tasApplicationId)) {
+      quarantinedBlocks.push({
+        blockIndex,
+        blockPreview: block.replace(/\s+/g, " ").trim().slice(0, 120),
+        reason: `duplicate grid row for Application ID ${row.tasApplicationId} or ac ${row.gtldresultAcId}`,
+      });
+      return;
+    }
+    seenAc.add(row.gtldresultAcId);
+    seenApp.add(row.tasApplicationId);
+    rows.push(row);
+  });
 
-  return rows;
+  return { rows, quarantinedBlocks };
 }
 
 export function mergeGridRowsIntoMapping(

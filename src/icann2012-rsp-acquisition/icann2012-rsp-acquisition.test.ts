@@ -10,7 +10,6 @@ import {
 } from "./acquire";
 import { RSP_ACQUISITION_AUTH_ENV, RSP_ACQUISITION_LIMITS } from "./constants";
 import { formatMappingDryRun, runMappingDryRun } from "./mapping-dry-run";
-import { mergeGridRowsIntoMapping, parseViewstatusGridHtml } from "./viewstatus-parser";
 import { validatePortionHtml } from "./quarantine";
 import { buildPortionUrl } from "./urls";
 
@@ -22,18 +21,6 @@ describe("icann2012-rsp-acquisition", () => {
     delete process.env[RSP_ACQUISITION_AUTH_ENV];
     expect(isAcquisitionAuthorized()).toBe(false);
     process.env[RSP_ACQUISITION_AUTH_ENV] = prev;
-  });
-
-  it("parses viewstatus fixture HTML for Application ID ↔ ac id", () => {
-    const html = `
-      <tr data-gtldresult-ac-id="170" data-tas-application-id="1-1945-29108"></tr>
-      <a href="/applicationstatus/viewapplicationdetails/501">x</a>
-      Application ID: </span> <span>1-1311-58570</span>
-    `;
-    const rows = parseViewstatusGridHtml(html);
-    const map = mergeGridRowsIntoMapping(rows);
-    expect(map.get("1-1945-29108")).toBe(170);
-    expect(map.get("1-1311-58570")).toBe(501);
   });
 
   it("buildDryRunReport lists 25 apps with URLs and staging paths without HTTP", async () => {
@@ -52,12 +39,17 @@ describe("icann2012-rsp-acquisition", () => {
     expect(text).toContain("mapping required");
   });
 
-  it("mapping dry-run merges manifest with grid fixture", async () => {
+  it("mapping dry-run uses manifest only unless real evidence paths are supplied", async () => {
     const result = await runMappingDryRun({ workspaceRoot });
     expect(result.pilotEntries).toBe(25);
+    expect(result.manifestResolved).toBe(1);
+    expect(result.unresolvedApplicationIds).toHaveLength(24);
     expect(result.resolved.find((r) => r.applicationId === "1-1945-29108")?.gtldresultAcId).toBe(170);
+    expect(result.resolved.find((r) => r.applicationId === "1-1945-29108")?.source).toBe("manifest");
     const text = formatMappingDryRun(result);
     expect(text).toContain("mapping dry-run");
+    expect(text).toContain("manifest-resolved: 1");
+    expect(text).not.toContain("source=grid-html");
   });
 
   it("acquirePilotPortions uses mock fetch only when authorized", async () => {
@@ -70,7 +62,6 @@ describe("icann2012-rsp-acquisition", () => {
     const prev = process.env[RSP_ACQUISITION_AUTH_ENV];
     process.env[RSP_ACQUISITION_AUTH_ENV] = "1";
 
-    // Use real manifest paths via workspace; staging only for writes
     const result = await acquirePilotPortions(
       { workspaceRoot, stagingRoot: staging, batchId: "test-batch" },
       fetcher,

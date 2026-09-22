@@ -9,7 +9,7 @@ function usage(): string {
 
 Usage:
   npm run acquire-rsp-portions -- pilot [--workspace <dir>] [--staging <dir>]
-  npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <path>] [--mapping-csv <path>]
+  npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <sources/index/...>] [--mapping-csv <path>] [--approved-mapping <json>]
 
 Environment:
   ${RSP_ACQUISITION_AUTH_ENV}=1  Required for live HTTP (not used in CI/tests). Default is dry-run only.
@@ -28,6 +28,7 @@ async function main(): Promise<void> {
       staging: { type: "string" },
       "grid-html": { type: "string" },
       "mapping-csv": { type: "string" },
+      "approved-mapping": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -62,6 +63,7 @@ async function main(): Promise<void> {
       workspaceRoot,
       gridHtmlPath: values["grid-html"] as string | undefined,
       mappingCsvPath: values["mapping-csv"] as string | undefined,
+      approvedMappingJsonPath: values["approved-mapping"] as string | undefined,
     });
     console.log(formatMappingDryRun(result));
     return;
