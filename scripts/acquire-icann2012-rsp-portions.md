@@ -50,6 +50,8 @@ Checks (non-exhaustive): mapping artifact SHA-256, Reveal Day corpus pin (1,930 
 
 **Immutable JSON report** (`registry-hub-rsp-mapping-review-report/1.0.0`) includes: `runId`, artifact path + SHA, purpose, approval state, corpus hash, reconciliation counts, pilot **25/25** rows, validation-lead assertion checks (BOSCH/HOTELS/ABBOTT/DOCS — mismatch → **review hold**, no auto-fix), `roundWideExact`, optional `pilotOnlyExactCandidate` when round-wide incomplete, and `failureClassification` (`EXACT_COMPLETE`, `PARTIAL_MAPPING`, `PAGINATION_DRIFT`, `INTEGRITY_FAILURE`, …).
 
+**`PARTIAL_MAPPING` + `pilotOnlyExactCandidate: true` is not a dead end.** Round-wide mechanical **APPROVE** stays blocked (`ROUND_WIDE_EXACT` false), but an exact **25-app pilot** may still advance to a **separate steward decision** (pilot-scoped approval — not auto-approve, no silent downgrade of artifact purpose or approval state).
+
 **Human approval packet** schema: `rsp-mapping-review/1.0.0` — fields `mappingArtifactSha256`, `runId`, `reviewer`, `reviewedAt`, `decision` (`APPROVE` | `REJECT` | `HOLD`), `notes`. Mechanical **`DRAFT` → `APPROVED`** on the mapping artifact only when decision is **APPROVE**, SHA + runId match the reviewed run, and mapping-review passed with **ROUND_WIDE_EXACT**. Wrong SHA or runId **rejects APPROVE**. Do **not** commit real steward APPROVE files — tests use synthetic decisions only.
 
 Relationship taxonomy (Applicant vs Registry Operator vs RSP vs DNS): Project doc `registry-operator-vs-rsp-relationship-contract.md`.
