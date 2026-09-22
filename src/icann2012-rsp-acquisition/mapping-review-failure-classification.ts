@@ -19,6 +19,8 @@ export const MAPPING_REVIEW_SECONDARY_FAILURE_FLAGS = [
   "NON_GRID_PAGE_PRESENT",
   "VALIDATION_LEAD_MISMATCH",
   "CORPUS_PIN_MISMATCH",
+  "HTML_STRUCTURE_DRIFT",
+  "PAGINATION_DRIFT",
 ] as const;
 
 export type MappingReviewSecondaryFailureFlag =
@@ -47,6 +49,8 @@ export interface MappingReviewSecondaryFlagInput {
   nonGridPageOrdinals: number[];
   validationLeadsMatched: boolean;
   corpusPinValid: boolean;
+  htmlStructureDrift: boolean;
+  paginationDrift: boolean;
 }
 
 export function collectMappingReviewSecondaryFailureFlags(
@@ -60,9 +64,8 @@ export function collectMappingReviewSecondaryFailureFlags(
   if (input.nonGridPageOrdinals.length > 0) flags.push("NON_GRID_PAGE_PRESENT");
   if (!input.validationLeadsMatched) flags.push("VALIDATION_LEAD_MISMATCH");
   if (!input.corpusPinValid) flags.push("CORPUS_PIN_MISMATCH");
-  if (input.reconciliationExact && flags.length > 0) {
-    return flags;
-  }
+  if (input.htmlStructureDrift) flags.push("HTML_STRUCTURE_DRIFT");
+  if (input.paginationDrift) flags.push("PAGINATION_DRIFT");
   return flags;
 }
 

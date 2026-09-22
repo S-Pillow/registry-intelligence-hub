@@ -1,6 +1,16 @@
-import { access, readFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
+import { buildIndexPageFetchMetadata } from "./fetch-metadata-contract";
+import { mappingLiveCheckpointPath } from "./mapping-checkpoint";
+import {
+  stagingIndexPageFetchMetadataPath,
+  stagingIndexPageHtmlPath,
+  stagingMappingArtifactPath,
+} from "./bundle-paths";
+import { assertNoSensitiveArtifactMaterial } from "./sensitive-artifact-guard";
+import { runMappingDryRun } from "./mapping-dry-run";
 import { parseRevealDayCsvText } from "@/normalization/parse-reveal-csv";
 import { sha256Hex } from "@/normalization/hashes";
 import { resolveGtldresultTapestryUrl } from "./gtldresult-url-resolver";
@@ -162,24 +172,157 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     }
   });
 
-  it("uses artifact-only pilotResolvedCount (P0.3C empty artifact → 0/25)", async () => {
+  it("uses artifact-only pilotResolvedCount for simulated P0.3C empty artifact (0/25)", async () => {
     const staging = await mkdtemp(join(tmpdir(), "rsp-p03c-empty-"));
+    const runId = "mapping-20260922-vps-01";
     try {
-      const report = await runMappingReview({
-        workspaceRoot,
-        runDir: join(staging, "missing-run"),
-      }).catch(() => null);
-      expect(report).toBeNull();
+      const html = renderLiveTwoRowPage({
+        rows: [{ applicationId: "1-1311-58570", gtldresultAcId: 1001 }],
+        displayStart: 1,
+        displayEnd: 1,
+        displayTotal: 1930,
+      });
+      const htmlBytes = Buffer.from(html, "utf8");
+      const contentSha256 = sha256Hex(htmlBytes);
+      await mkdir(stagingIndexPageHtmlPath(staging, runId, 1).replace(/page-0001\.html$/, ""), {
+        recursive: true,
+      });
+      await writeFile(stagingIndexPageHtmlPath(staging, runId, 1), htmlBytes);
+      const metadata = buildIndexPageFetchMetadata({
+        pageOrdinal: 1,
+        resolvedUrl:
+          "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/?_csrf=LIVE",
+        httpStatus: 200,
+        contentLength: htmlBytes.byteLength,
+        contentSha256,
+        retrievedAt: new Date().toISOString(),
+        runId,
+        displayStart: 1,
+        displayEnd: 1,
+        displayTotal: 1930,
+        parsedRowCount: 0,
+        quarantinedBlockCount: 0,
+        nextPageHref:
+          "/application-result/applicationstatus/viewstatus.statusgrid.pager/2?_csrf=LIVE",
+      });
+      await writeFile(
+        stagingIndexPageFetchMetadataPath(staging, runId, 1),
+        `${JSON.stringify(metadata, null, 2)}\n`,
+      );
+      await writeFile(
+        mappingLiveCheckpointPath(staging),
+        `${JSON.stringify(
+          {
+            checkpointVersion: "icann2012-rsp-mapping-live-checkpoint/1.0.0",
+            runId,
+            corpusContentHash: APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH,
+            state: "failed",
+            stopReason: "pagination ended before exact reconciliation",
+            lastCompletedPageOrdinal: 1,
+            pages: [
+              {
+                pageOrdinal: 1,
+                snapshotId: "snap-test-p1",
+                contentSha256,
+                resolvedUrl: metadata.resolvedUrl,
+                diagnostics: {
+                  displayStart: 1,
+                  displayEnd: 1,
+                  displayTotal: 1930,
+                  parsedRowCount: 0,
+                  quarantinedBlockCount: 0,
+                  nextPageHref: metadata.nextPageHref,
+                },
+              },
+            ],
+            mappings: {},
+            applicationPageOrdinal: {},
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      await mkdir(join(staging, "registry-2012-rsp-mapping", runId), { recursive: true });
+      await writeFile(
+        stagingMappingArtifactPath(staging, runId),
+        `${JSON.stringify(
+          {
+            mappingVersion: "registry-2012-rsp-mapping/1.0.0",
+            artifactPurpose: "EVIDENCE",
+            approvalState: "DRAFT",
+            bundleId: "icann2012-rsp-public-portions-v1",
+            scope: "ROUND_WIDE_EXACT",
+            entries: [],
+          },
+          null,
+          2,
+        )}\n`,
+      );
+
+      const report = await runMappingReview({ workspaceRoot, runDir: staging });
+      expect(report.pilotResolvedCount).toBe(0);
+      expect(report.pilotExpectedCount).toBe(25);
+      expect(report.pilotOnlyExactCandidate).toBe(false);
+      expect(report.pilotValidationHintsPresent).toBe(true);
+      expect(report.pageSnapshotCount).toBe(1);
     } finally {
       await rm(staging, { recursive: true, force: true });
     }
   });
 
-  it("parses committed sanitized-live page-0001 when P0.3D fixture is present", async () => {
-    const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 1);
+  it("persists _csrf=REDACTED in SAFE_DERIVED fetch metadata only", () => {
+    const metadata = buildIndexPageFetchMetadata({
+      pageOrdinal: 1,
+      resolvedUrl:
+        "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/?_csrf=SECRET",
+      httpStatus: 200,
+      contentLength: 10,
+      contentSha256: "a".repeat(64),
+      retrievedAt: new Date().toISOString(),
+      runId: "test",
+      parsedRowCount: 0,
+      quarantinedBlockCount: 0,
+      nextPageHref: "/applicationstatus/viewstatus.statusgrid.pager/2?_csrf=SECRET",
+    });
+    expect(metadata.resolvedUrl).toContain("_csrf=SECRET");
+    expect(metadata.resolvedUrlSafe).toContain("_csrf=REDACTED");
+    expect(metadata.nextPageHrefSafe).toContain("_csrf=REDACTED");
+    assertNoSensitiveArtifactMaterial(JSON.stringify(metadata), "page-0001.fetch.json");
+  });
+
+  it("mapping-dry-run performs zero HTTP", async () => {
+    expect(networkPolicyForCommand("mapping-dry-run").allowsOutboundHttp).toBe(false);
+    const result = await runMappingDryRun({ workspaceRoot });
+    expect(result.gridRowsParsed).toBe(0);
+  });
+
+  it("classifies sanitized-live page-0002 as ICANN error when present", async () => {
+    const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 2);
     try {
       await access(fixturePath);
     } catch {
+      const offline = `<html><head><title>ICANN Error</title></head><body><h1>ICANN Error</h1></body></html>`;
+      expect(classifyViewstatusPageHtml(offline)).toBe("ICANN_ERROR_PAGE");
+      return;
+    }
+    const html = await readFile(fixturePath, "utf8");
+    expect(classifyViewstatusPageHtml(html)).toBe("ICANN_ERROR_PAGE");
+  });
+
+  it("parses committed sanitized-live page-0001 (primary regression)", async () => {
+    const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 1);
+    let fixturePresent = true;
+    try {
+      await access(fixturePath);
+    } catch {
+      fixturePresent = false;
+    }
+    if (!fixturePresent) {
+      if (process.env.REGISTRY_HUB_RSP_REQUIRE_SANITIZED_FIXTURE === "1") {
+        expect.fail(
+          "Missing P0.3D fixture page-0001.html — merge checkpoint/d2-5a-p0-3d2-sanitized-live-fixtures @ b18124c2159118d85ccc6daa8d12ef11100b7daf",
+        );
+      }
       return;
     }
     const html = await readFile(fixturePath, "utf8");

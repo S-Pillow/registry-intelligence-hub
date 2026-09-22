@@ -462,6 +462,8 @@ export async function runMappingReview(options: MappingReviewOptions): Promise<M
     nonGridPageOrdinals: snapshotValidation.nonGridPageOrdinals,
     validationLeadsMatched,
     corpusPinValid,
+    htmlStructureDrift: snapshotValidation.htmlStructureDrift,
+    paginationDrift: snapshotValidation.paginationDrift,
   });
 
   const mappingReviewPass =

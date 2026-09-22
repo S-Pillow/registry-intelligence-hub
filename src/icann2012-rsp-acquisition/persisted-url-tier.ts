@@ -13,6 +13,14 @@ export function sanitizeUrlForPersistence(
   return url.replace(CSRF_QUERY_PATTERN, "$1REDACTED");
 }
 
+/** Alias for Tapestry href attributes — same redaction contract as URLs. */
+export function sanitizeHrefForPersistence(
+  href: string,
+  tier: PersistedUrlTier,
+): string {
+  return sanitizeUrlForPersistence(href, tier);
+}
+
 export function tierForPersistedUrlField(field: "resolvedUrl" | "nextPageHref" | "sourceUrl"): PersistedUrlTier {
   return field === "resolvedUrl" ? "RESTRICTED_RAW_SOURCE" : "SAFE_DERIVED";
 }

@@ -53,6 +53,29 @@ function lowerIncludesAny(haystack: string, needles: readonly string[]): string 
   return null;
 }
 
+const LIVE_SESSION_QUERY_PATTERN =
+  /(?:[?&]|&amp;)(?:_csrf|csrf|csrfToken|jsessionid)=([^&"'#\s]+)/gi;
+
+const REDACTED_SESSION_VALUE = /^REDACTED$/i;
+
+/** Scan SAFE_DERIVED persisted strings for live session query values. */
+export function scanSafeDerivedStringsForLiveSessionMaterial(
+  text: string,
+  contextLabel: string,
+): string[] {
+  const findings: string[] = [];
+  LIVE_SESSION_QUERY_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = LIVE_SESSION_QUERY_PATTERN.exec(text)) !== null) {
+    const value = match[1] ?? "";
+    if (value.length > 0 && !REDACTED_SESSION_VALUE.test(value)) {
+      findings.push(`${contextLabel}: live session query value in SAFE_DERIVED text`);
+      break;
+    }
+  }
+  return findings;
+}
+
 export function scanTextForSensitiveArtifactMaterial(
   text: string,
   contextLabel: string,
@@ -62,16 +85,56 @@ export function scanTextForSensitiveArtifactMaterial(
   if (hit) {
     findings.push(`${contextLabel}: forbidden substring "${hit}"`);
   }
-
   if (contextLabel.endsWith(".json")) {
     try {
       const parsed = JSON.parse(text) as unknown;
       findings.push(...scanJsonValueForForbiddenKeys(parsed, contextLabel));
+      findings.push(...scanJsonSafeDerivedStringValues(parsed, contextLabel));
     } catch {
       /* non-JSON text file — substring scan only */
     }
   }
 
+  return findings;
+}
+
+const SAFE_DERIVED_JSON_KEY_MARKERS = ["safe", "safederived"] as const;
+
+function isSafeDerivedJsonKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return SAFE_DERIVED_JSON_KEY_MARKERS.some((marker) => lower.includes(marker));
+}
+
+function scanJsonSafeDerivedStringValues(
+  value: unknown,
+  contextLabel: string,
+  path = "",
+): string[] {
+  const findings: string[] = [];
+  if (value == null) return findings;
+  if (typeof value === "string") {
+    const leafKey = path.split(".").pop() ?? path;
+    if (isSafeDerivedJsonKey(leafKey)) {
+      findings.push(
+        ...scanSafeDerivedStringsForLiveSessionMaterial(
+          value,
+          `${contextLabel}:${path || leafKey}`,
+        ),
+      );
+    }
+    return findings;
+  }
+  if (typeof value !== "object") return findings;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      findings.push(...scanJsonSafeDerivedStringValues(value[i], contextLabel, `${path}[${i}]`));
+    }
+    return findings;
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const childPath = path ? `${path}.${key}` : key;
+    findings.push(...scanJsonSafeDerivedStringValues(child, contextLabel, childPath));
+  }
   return findings;
 }
 
