@@ -1,6 +1,25 @@
 # Registry Intelligence Hub
 
-Phase 0 foundation for a source-backed ICANN application intelligence experience. The runnable browser experience includes a frozen v1 Command Center, a composable Explore research backbone, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
+Registry Intelligence Hub (RIH) is a source-backed research and intelligence application for ICANN gTLD data. It connects historical applications, strings, applicant portfolios, contention, provenance, and future registry-service relationships without collapsing distinct roles such as applicant, Registry Operator, Registry Service Provider, DNS/DNSSEC provider, IANA TLD Manager, or corporate lineage.
+
+## Repository status
+
+- **Main branch:** stable, production-accepted application state plus documentation.
+- **Current production application commit:** `774665486d1cd62a9276caf2e76b6af4c66310bb`.
+- **Production URL prefix:** `/tools/registry-intelligence-hub`.
+- **Production process:** Next.js on loopback port `43123`.
+- **2012 historical baseline:** 1,930 applications, 1,409 unique strings, 116 IDN applications.
+- **Confirmed 2012 portfolios:** 16 steward-confirmed portfolios covering 466 applications.
+- **2026 Reveal Day:** remains gated until an official per-application publication is available and passes the promotion contract.
+- **RSP work:** active on separate checkpoint/feature branches. Live acquisition tooling and sanitized fixtures are intentionally not merged into `main` until the evidence and parser remediation cycle is accepted.
+
+The current RSP work is building an auditable path from a 2012 Application ID to the ICANN application record and, later, to Q23-Q25 Registry Service Provider evidence. A mapping or crawler result never becomes an approved fact automatically; source evidence, integrity checks, and steward review remain separate gates.
+
+## Product overview
+
+The runnable browser experience includes a Command Center, Explore research backbone, deterministic metrics, evidence drill-down, historical 2012 browsing, confirmed portfolio views, and responsive loading, empty, and error states.
+
+The runnable browser experience includes a frozen v1 Command Center, a composable Explore research backbone, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
 
 The fixture is explicitly synthetic rehearsal data. It must not be treated as the official 2026 Reveal Day publication.
 
