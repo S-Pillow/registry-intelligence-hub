@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
 import { acquirePilotLivePortions, acquirePilotPortions, formatDryRunReport } from "./acquire";
+import { runMappingLive } from "./mapping-live";
+import {
+  buildMappingLivePreflightReport,
+  formatMappingLivePreflightReport,
+} from "./mapping-live-preflight";
 import { formatMappingDryRun, runMappingDryRun } from "./mapping-dry-run";
 import {
   RSP_ACQUISITION_AUTH_ENV,
@@ -28,11 +33,12 @@ Usage:
   npm run acquire-rsp-portions -- pilot [--workspace <dir>] [--staging <dir>]
   npm run acquire-rsp-portions -- pilot-live [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <sources/index/...>] [--mapping-csv <path>] [--approved-mapping <json>]
-  npm run acquire-rsp-portions -- mapping-live   (not implemented — zero HTTP)
+  npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
 
 Environment:
   ${RSP_PILOT_LIVE_AUTH_ENV}=1  Required for pilot-live HTTP (with EVIDENCE+APPROVED mapping artifact).
+  REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1  Required for mapping-live grid crawl HTTP.
   ${RSP_ACQUISITION_AUTH_ENV}   Deprecated — does not authorize live requests.
 
 Examples:
@@ -54,6 +60,9 @@ async function main(): Promise<void> {
       "mapping-csv": { type: "string" },
       "approved-mapping": { type: "string" },
       operation: { type: "string" },
+      "run-id": { type: "string" },
+      resume: { type: "boolean", default: false },
+      "force-new-run": { type: "boolean", default: false },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -98,15 +107,21 @@ async function main(): Promise<void> {
   }
 
   if (command === "mapping-live") {
-    const report = await buildPreflightReport({
+    const stagingRoot = values.staging as string | undefined;
+    const preflight = await buildMappingLivePreflightReport({ workspaceRoot, stagingRoot });
+    console.log(formatMappingLivePreflightReport(preflight));
+    if (preflight.blockingReasons.length > 0) {
+      process.exit(1);
+    }
+    const result = await runMappingLive({
       workspaceRoot,
-      operation: "mapping-live",
-      stagingRoot: values.staging as string | undefined,
-      mappingArtifactPath: values["approved-mapping"] as string | undefined,
+      stagingRoot,
+      runId: values["run-id"] as string | undefined,
+      resume: values.resume as boolean,
+      forceNewRun: values["force-new-run"] as boolean,
     });
-    console.log(formatPreflightReport(report));
-    console.error("MAPPING_LIVE_NOT_IMPLEMENTED");
-    process.exit(1);
+    console.log(JSON.stringify(result, null, 2));
+    process.exit(result.exact ? 0 : 1);
   }
 
   if (command === "preflight-report") {

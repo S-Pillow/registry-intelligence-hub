@@ -39,6 +39,46 @@ export function redactForbiddenFetchMetadataKeys(
   return out;
 }
 
+export interface IndexPageFetchMetadataRecord {
+  pageOrdinal: number;
+  resolvedUrl: string;
+  finalUrl?: string;
+  redirectChain?: string[];
+  httpStatus: number;
+  contentType?: string;
+  contentLength: number;
+  contentSha256: string;
+  retrievedAt: string;
+  runId: string;
+  displayStart?: number | null;
+  displayEnd?: number | null;
+  displayTotal?: number | null;
+  parsedRowCount: number;
+  quarantinedBlockCount: number;
+  nextPageHref?: string | null;
+}
+
+export function buildIndexPageFetchMetadata(input: {
+  pageOrdinal: number;
+  resolvedUrl: string;
+  finalUrl?: string;
+  redirectChain?: string[];
+  httpStatus: number;
+  contentType?: string;
+  contentLength: number;
+  contentSha256: string;
+  retrievedAt: string;
+  runId: string;
+  displayStart?: number | null;
+  displayEnd?: number | null;
+  displayTotal?: number | null;
+  parsedRowCount: number;
+  quarantinedBlockCount: number;
+  nextPageHref?: string | null;
+}): IndexPageFetchMetadataRecord {
+  return { ...input };
+}
+
 export function buildPortionFetchMetadata(input: {
   applicationId: string;
   gtldresultAcId: number;

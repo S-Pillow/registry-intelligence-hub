@@ -20,6 +20,7 @@ Pilot list: `pilot-manifest-25.json` (includes **`1-863-45071`** NeuStar applica
 ```bash
 npm run acquire-rsp-portions -- pilot
 npm run acquire-rsp-portions -- mapping-dry-run
+npm run acquire-rsp-portions -- preflight-report --operation mapping-live
 npm run acquire-rsp-portions -- preflight-report --operation pilot-live
 ```
 
@@ -34,6 +35,8 @@ Dry-run prints exact URLs that **would** be fetched, staging paths, limits, and 
 
 Committed `pilot-gtldresult-mapping.json` is **`TEST_ONLY` / `DRAFT`** (probe row only). Synthetic round-wide rows belong in `fixtures/synthetic/` or test generators — never as approved evidence.
 
+**Mapping-live output** is always **`EVIDENCE` + `DRAFT`** with `scope: ROUND_WIDE_EXACT` and `mappingSourceClass: STATUS_GRID` — never self-`APPROVED`.
+
 ## Live pilot (after written approval only)
 
 **Do not run in CI or during implementation.** Requires steward **`EVIDENCE` + `APPROVED`** mapping with referential snapshot rows. Legacy `REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED` **does not** authorize HTTP.
@@ -45,9 +48,36 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
   --approved-mapping /path/to/steward-approved-mapping.json
 ```
 
-## Mapping live
+## Mapping live (grid index crawl)
 
-**Not implemented.** `mapping-live` exits with `MAPPING_LIVE_NOT_IMPLEMENTED` (zero HTTP). When implemented, it will require **`REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1`** (separate from pilot-live). Do not treat it as a network command until the grid crawl exists.
+**Implemented (D2.5A-P0.2)** — deterministic viewstatus grid crawl with session bootstrap, server-provided pager hrefs (never manufactured `_csrf` URLs), immutable index snapshots, canonical 1,930 reconciliation, and checkpoint/resume.
+
+**Authorization (separate from pilot-live):**
+
+```bash
+REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1 \
+  npm run acquire-rsp-portions -- mapping-live \
+  --staging /var/tmp/icann2012-rsp-staging \
+  --run-id mapping-2026-09-22-steward
+```
+
+| Flag | Purpose |
+| --- | --- |
+| `--resume` | Continue from `mapping-live-checkpoint.json` (validates page SHA-256 + corpus pin) |
+| `--force-new-run` | Replace checkpoint when steward intentionally starts over |
+
+**Staging layout (not committed by default):**
+
+| Path | Content |
+| --- | --- |
+| `sources/index/<run-id>/page-NNNN.html` | Immutable grid HTML |
+| `sources/index/<run-id>/page-NNNN.fetch.json` | Safe HTTP metadata + body SHA-256 (no cookies/CSRF) |
+| `registry-2012-rsp-mapping/<run-id>/mapping.json` | Round-wide mapping artifact (`DRAFT`) |
+| `mapping-live-checkpoint.json` | Non-sensitive resume state |
+
+**Hard stops:** HTTPS `gtldresult.icann.org` only, concurrency 1, paced requests, 403/429 halt, cross-host redirect reject, pagination safety cap (~60 pages), loop/overlap/gap detection.
+
+**CI / agent runs:** use `src/icann2012-rsp-acquisition/synthetic-replay-corpus.ts` and inject a mock fetcher — **never** call ICANN from automated tests.
 
 Caps (defaults): pilot batch **25**, **250** applications/calendar day, **≥1s** between gtldresult requests, **2 MiB** max portion size. See Project plan §4.
 

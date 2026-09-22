@@ -26,6 +26,7 @@ export type RspMappingScope =
 
 export type MappingSourceClass =
   | "GRID_SNAPSHOT_EXTRACT"
+  | "STATUS_GRID"
   | "DETAILS_PAGE_PROBE"
   | "STEWARD_APPROVED_MANUAL"
   | "PROBE_VERIFIED"
@@ -148,4 +149,60 @@ export interface DryRunReport {
   limits: typeof import("./constants").RSP_ACQUISITION_LIMITS;
   stagingRoot: string;
   plans: DryRunFetchPlan[];
+}
+
+export interface ViewstatusPageDiagnostics {
+  displayStart: number | null;
+  displayEnd: number | null;
+  displayTotal: number | null;
+  parsedRowCount: number;
+  quarantinedBlockCount: number;
+  nextPageHref: string | null;
+}
+
+export interface MappingLivePageRecord {
+  pageOrdinal: number;
+  snapshotId: string;
+  contentSha256: string;
+  resolvedUrl: string;
+  diagnostics: ViewstatusPageDiagnostics;
+}
+
+export interface CanonicalReconciliationStats {
+  expectedCount: number;
+  mappedCount: number;
+  missingApplicationIds: string[];
+  extraApplicationIds: string[];
+  duplicateApplicationIds: string[];
+  duplicateGtldresultAcIds: Array<{ gtldresultAcId: number; applicationIds: string[] }>;
+  exact: boolean;
+}
+
+export interface MappingLiveCheckpoint {
+  checkpointVersion: "icann2012-rsp-mapping-live-checkpoint/1.0.0";
+  runId: string;
+  corpusContentHash: string;
+  state: "running" | "completed" | "failed";
+  stopReason?: string;
+  lastCompletedPageOrdinal: number;
+  pages: MappingLivePageRecord[];
+  /** applicationId → gtldresultAcId accumulated so far */
+  mappings: Record<string, number>;
+  /** Page ordinal where each applicationId was parsed */
+  applicationPageOrdinal: Record<string, number>;
+}
+
+export interface MappingLiveResult {
+  mode: "mapping-live";
+  runId: string;
+  stagingRoot: string;
+  pagesFetched: number;
+  reconciliation: CanonicalReconciliationStats;
+  exact: boolean;
+  approvalState: "DRAFT";
+  artifactPurpose: "EVIDENCE";
+  mappingArtifactPath: string;
+  checkpointPath: string;
+  stoppedEarly: boolean;
+  stopReason?: string;
 }

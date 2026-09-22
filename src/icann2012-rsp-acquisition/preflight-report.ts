@@ -22,6 +22,7 @@ import {
 } from "./constants";
 import { computePilotPreflightCounts } from "./pilot-preflight";
 import type { Registry2012RspMappingArtifact } from "./types";
+import { buildMappingLivePreflightReport } from "./mapping-live-preflight";
 import { defaultLiveStagingRoot } from "./staging-containment";
 
 export type PreflightOperation = "pilot" | "pilot-live" | "mapping-dry-run" | "mapping-live";
@@ -73,14 +74,18 @@ export async function buildPreflightReport(input: PreflightReportInput): Promise
   const pilotCounts = await computePilotPreflightCounts(input.workspaceRoot, artifact);
 
   const stagingRoot = input.stagingRoot ?? defaultLiveStagingRoot();
-  const blockingReasons: string[] = [...eligibility.artifactIssues];
+  const blockingReasons: string[] =
+    input.operation === "mapping-live" ? [] : [...eligibility.artifactIssues];
+  let networkRequestsExpected = 0;
 
   if (input.operation === "mapping-live") {
-    blockingReasons.push("MAPPING_LIVE_NOT_IMPLEMENTED");
-    if (!isMappingLiveAuthorized()) {
-      blockingReasons.push(
-        `${RSP_MAPPING_LIVE_AUTH_ENV} is not set — mapping-live requires operation-specific authorization`,
-      );
+    const mappingPreflight = await buildMappingLivePreflightReport({
+      workspaceRoot: input.workspaceRoot,
+      stagingRoot: input.stagingRoot,
+    });
+    blockingReasons.push(...mappingPreflight.blockingReasons);
+    if (mappingPreflight.blockingReasons.length === 0) {
+      networkRequestsExpected = mappingPreflight.networkRequestsExpected;
     }
   }
 
@@ -99,8 +104,6 @@ export async function buildPreflightReport(input: PreflightReportInput): Promise
       blockingReasons.push(err instanceof Error ? err.message : String(err));
     }
   }
-
-  let networkRequestsExpected = 0;
 
   if (input.operation === "pilot-live" && blockingReasons.length === 0) {
     networkRequestsExpected = pilotCounts.pilotResolvedCount;

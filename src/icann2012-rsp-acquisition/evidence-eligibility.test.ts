@@ -132,10 +132,11 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
     process.env[RSP_PILOT_LIVE_AUTH_ENV] = prevPilot;
   });
 
-  it("mapping-live preflight reports MAPPING_LIVE_NOT_IMPLEMENTED with zero HTTP", async () => {
+  it("mapping-live preflight reports auth gate with zero HTTP (engine implemented, replay-only in CI)", async () => {
     const report = await buildPreflightReport({ workspaceRoot, operation: "mapping-live" });
     expect(report.networkRequestsExpected).toBe(0);
-    expect(report.blockingReasons).toContain("MAPPING_LIVE_NOT_IMPLEMENTED");
+    expect(report.blockingReasons).not.toContain("MAPPING_LIVE_NOT_IMPLEMENTED");
+    expect(report.blockingReasons.some((r) => r.includes("MAPPING_AUTHORIZED"))).toBe(true);
   });
 
   it("network target policy allows gtldresult HTTPS only", () => {

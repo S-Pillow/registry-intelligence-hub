@@ -7,6 +7,8 @@ export const RSP_ACQUISITION_LIMITS = {
   minDelayMsBetweenGtldresultRequests: 1000,
   maxRequestsPerMinute: 60,
   maxIndexGridPages: 56,
+  /** Hard stop for mapping-live pagination loops (~56 live pages + headroom). */
+  mappingLivePageSafetyCap: 60,
   maxRetriesPerUrl: 5,
   maxPortionBytes: 2 * 1024 * 1024,
   maxAttachmentPdfBytes: 5 * 1024 * 1024,

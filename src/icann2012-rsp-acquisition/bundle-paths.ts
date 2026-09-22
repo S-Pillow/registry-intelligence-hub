@@ -36,3 +36,29 @@ export function pilotMappingPath(workspaceRoot: string): string {
 export function applicationIndexPath(workspaceRoot: string): string {
   return join(rspFixtureRoot(workspaceRoot), "gtldresult-application-index.json");
 }
+
+export function stagingIndexRunDir(stagingRoot: string, runId: string): string {
+  return join(stagingRoot, "sources/index", runId);
+}
+
+export function stagingIndexPageHtmlPath(
+  stagingRoot: string,
+  runId: string,
+  pageOrdinal: number,
+): string {
+  const padded = String(pageOrdinal).padStart(4, "0");
+  return join(stagingIndexRunDir(stagingRoot, runId), `page-${padded}.html`);
+}
+
+export function stagingIndexPageFetchMetadataPath(
+  stagingRoot: string,
+  runId: string,
+  pageOrdinal: number,
+): string {
+  const padded = String(pageOrdinal).padStart(4, "0");
+  return join(stagingIndexRunDir(stagingRoot, runId), `page-${padded}.fetch.json`);
+}
+
+export function stagingMappingArtifactPath(stagingRoot: string, runId: string): string {
+  return join(stagingRoot, "registry-2012-rsp-mapping", runId, "mapping.json");
+}
