@@ -13,18 +13,26 @@ import { assertNoSensitiveArtifactMaterial } from "./sensitive-artifact-guard";
 import { runMappingDryRun } from "./mapping-dry-run";
 import { parseRevealDayCsvText } from "@/normalization/parse-reveal-csv";
 import { sha256Hex } from "@/normalization/hashes";
-import { resolveGtldresultTapestryUrl } from "./gtldresult-url-resolver";
 import {
   defaultSanitizedLiveMappingRunDir,
   sanitizedLivePageHtmlPath,
 } from "./grid-evidence-paths";
-import { SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256 } from "./sanitized-live-fixture-constants";
+import {
+  SANITIZED_LIVE_PAGE_0001_SANITIZED_SHA256,
+} from "./sanitized-live-fixture-constants";
+import { assertSanitizedLiveFixtureHtmlContent } from "./sanitized-live-fixture-content-gate";
 import {
   enforceSanitizedLiveFixtureGate,
   loadSanitizedLiveFixtureManifest,
   pathExists,
   requireSanitizedLiveFixturesFromEnv,
+  sanitizedLivePageHtmlPathForPin,
+  sanitizedLiveV3FixtureBundlePresent,
 } from "./sanitized-live-fixture-gate";
+import { resolveGtldresultTapestryUrl } from "./gtldresult-url-resolver";
+import { absoluteGtldresultUrl } from "./urls";
+import { buildPreflightReport } from "./preflight-report";
+import { GTLDRESULT_PATHS, RSP_MAPPING_LIVE_AUTH_ENV } from "./constants";
 import { mergeGridRowsIntoMapping, parseViewstatusGridHtml } from "./viewstatus-parser";
 import {
   buildViewstatusPageDiagnostics,
@@ -39,7 +47,6 @@ import {
 } from "./synthetic-replay-corpus";
 import { runMappingLive } from "./mapping-live";
 import { runMappingReview } from "./mapping-review";
-import { RSP_MAPPING_LIVE_AUTH_ENV } from "./constants";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { networkPolicyForCommand } from "./command-mode";
@@ -314,7 +321,7 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     const pin = manifest.pages.find((p) => p.pageOrdinal === 2);
     const html = await readFile(fixturePath, "utf8");
     if (pin) {
-      expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(pin.contentSha256);
+      expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(pin.sanitizedHtmlSha256);
     }
     expect(classifyViewstatusPageHtml(html)).toBe("ICANN_ERROR_PAGE");
   });
@@ -333,7 +340,7 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     }
     const fixturePath = sanitizedLivePageHtmlPath(workspaceRoot, 1);
     const html = await readFile(fixturePath, "utf8");
-    expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256);
+    expect(sha256Hex(Buffer.from(html, "utf8"))).toBe(SANITIZED_LIVE_PAGE_0001_SANITIZED_SHA256);
     const { rows, quarantinedBlocks } = parseViewstatusGridHtml(html);
     expect(quarantinedBlocks).toHaveLength(0);
     expect(rows).toHaveLength(35);
@@ -341,10 +348,103 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     expect(diagnostics.displayStart).toBe(1);
     expect(diagnostics.displayEnd).toBe(35);
     expect(diagnostics.displayTotal).toBe(1930);
+    const pagination = extractViewstatusPagination(html);
+    expect(pagination.nextPageHref).toBeTruthy();
+    expect(pagination.nextPageHref).toContain("pager/2");
     const map = mergeGridRowsIntoMapping(rows);
     expect(map.get("1-1311-58570")).toBe(1001);
     expect(map.get("1-1318-83013")).toBe(922);
     expect(map.get("1-1926-49360")).toBe(189);
     expect(defaultSanitizedLiveMappingRunDir(workspaceRoot)).toContain("mapping-20260922-vps-01");
+  });
+
+  it("sanitized-live page-0001 passes canonical sanitization-content gate (v3)", async () => {
+    if (!(await sanitizedLiveV3FixtureBundlePresent(workspaceRoot))) {
+      return;
+    }
+    const html = await readFile(sanitizedLivePageHtmlPath(workspaceRoot, 1), "utf8");
+    const scan = assertSanitizedLiveFixtureHtmlContent(html);
+    expect(scan.csrfQueryCount).toBe(134);
+    expect(scan.csrfInputCount).toBe(1);
+    expect(scan.formdataInputCount).toBe(1);
+  });
+
+  it("sanitized-live page1→page2 replay fails closed (pagination drift / non-grid page 2)", async () => {
+    if (!(await sanitizedLiveV3FixtureBundlePresent(workspaceRoot))) {
+      return;
+    }
+    const manifest = await loadSanitizedLiveFixtureManifest(workspaceRoot);
+    const page1Pin = manifest.pages.find((p) => p.pageOrdinal === 1)!;
+    const page2Pin = manifest.pages.find((p) => p.pageOrdinal === 2)!;
+    const page1Html = await readFile(sanitizedLivePageHtmlPathForPin(workspaceRoot, page1Pin), "utf8");
+    const page2Html = await readFile(sanitizedLivePageHtmlPathForPin(workspaceRoot, page2Pin), "utf8");
+    const pagination = extractViewstatusPagination(page1Html);
+    expect(pagination.nextPageHref).toBeTruthy();
+    const gridContext = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
+    const nextUrl = resolveGtldresultTapestryUrl(gridContext, pagination.nextPageHref!);
+    expect(nextUrl).toBeTruthy();
+
+    const statusHubUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.statusHub);
+    const gridEntryUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
+    const fetcher = async (url: string) => {
+      const body =
+        url === statusHubUrl
+          ? "<html><body>hub</body></html>"
+          : url === gridEntryUrl
+            ? page1Html
+            : url === nextUrl
+              ? page2Html
+              : null;
+      if (body == null) {
+        return {
+          status: 404,
+          body: Buffer.from("missing"),
+          headers: { "Content-Type": "text/plain" },
+          finalUrl: url,
+        };
+      }
+      return {
+        status: 200,
+        body: Buffer.from(body, "utf8"),
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+        finalUrl: url,
+      };
+    };
+
+    const staging = await mkdtemp(join(tmpdir(), "rsp-p03e-live-fixture-"));
+    const prev = process.env[RSP_MAPPING_LIVE_AUTH_ENV];
+    process.env[RSP_MAPPING_LIVE_AUTH_ENV] = "1";
+    try {
+      const live = await runMappingLive(
+        {
+          workspaceRoot,
+          stagingRoot: staging,
+          runId: "mapping-20260922-vps-01",
+          forceNewRun: true,
+          sleep: noSleep,
+        },
+        fetcher,
+      );
+      expect(live.exact).toBe(false);
+      const review = await runMappingReview({ workspaceRoot, runDir: staging });
+      expect(review.roundWideExact).toBe(false);
+      expect(["PAGINATION_DRIFT", "PARTIAL_MAPPING", "ICANN_ERROR_PAGE"]).toContain(
+        review.failureClassification,
+      );
+      expect(review.nonGridPageOrdinals).toContain(2);
+    } finally {
+      process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
+      await rm(staging, { recursive: true, force: true });
+    }
+  });
+
+  it("sanitized-live fixtures are offline remediation only (not production mapping evidence)", async () => {
+    if (!(await sanitizedLiveV3FixtureBundlePresent(workspaceRoot))) {
+      return;
+    }
+    const manifest = await loadSanitizedLiveFixtureManifest(workspaceRoot);
+    expect(manifest.fixturePurpose?.toUpperCase()).not.toBe("EVIDENCE");
+    const report = await buildPreflightReport({ workspaceRoot, operation: "pilot-live" });
+    expect(report.productionEligible).toBe(false);
   });
 });

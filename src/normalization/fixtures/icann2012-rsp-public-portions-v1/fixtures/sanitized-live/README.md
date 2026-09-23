@@ -1,19 +1,20 @@
-# Sanitized live mapping checkpoints (RESTRICTED_RAW_SOURCE)
+# Sanitized live mapping checkpoints (offline remediation / TEST_ONLY)
 
 Immutable HTML captured during the first authorized P0.3C mapping-live run (`mapping-20260922-vps-01`).
 
-- **Fixture source commit (P0.3D HTML):** `b18124c2159118d85ccc6daa8d12ef11100b7daf` when merged from `registry-intelligence-hub`
+- **Canonical v3 transfer:** `transfer/d2-5a-p0-3i3c-sanitized-fixture-v3` @ `354878d64d8faf98a3cb332680e38ca68f16199a`
 - **Do not edit** sanitized HTML to make the parser pass — fix parser/pagination/safety code instead.
-- **SHA pins:** `mapping-20260922-vps-01/sanitized-live-fixture-manifest.json` (must match `sanitized-live-fixture-constants.ts`)
-- **Fail closed:** `REGISTRY_HUB_RSP_REQUIRE_SANITIZED_FIXTURE=1` requires manifest + pinned HTML on disk
+- **Authority:** `sanitized-live-fixture-manifest.json` (`manifest/3.0.0` field names; pins in `sanitized-live-fixture-constants.ts`)
+- **Fail closed:** `REGISTRY_HUB_RSP_REQUIRE_SANITIZED_FIXTURE=1` requires the v3 manifest + both HTML pages on disk
+- **Not** APPROVED mapping evidence or pilot-live eligible.
 
-Expected layout:
+Expected layout (published bundle — fetch-metadata JSON paths in manifest are provenance refs only):
 
 ```
 mapping-20260922-vps-01/
   sanitized-live-fixture-manifest.json
-  page-0001.html   # pin SANITIZED_LIVE_PAGE_0001_CONTENT_SHA256
-  page-0002.html   # ICANN Error page regression (pin in manifest when present)
+  page-0001.html   # sanitizedHtmlSha256 pin (35-row grid)
+  page-0002.html   # ICANN Application Result error page
 ```
 
-P0.3E parser regressions require `page-0001.html` bytes matching the manifest sanitized content pin when present. Raw capture SHA (`rawSourceSha256`) is provenance-only and must never be compared to sanitized bytes.
+Manifest distinguishes **file-body SHA**, **manifestSha256 self-digest**, and per-page **sourceHtmlSha256** (provenance) vs **sanitizedHtmlSha256** (bytes on disk). Page 0002 may have identical source/sanitized hashes.

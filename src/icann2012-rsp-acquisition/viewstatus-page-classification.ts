@@ -8,8 +8,11 @@ export type ViewstatusPageKind = (typeof VIEWSTATUS_PAGE_KINDS)[number];
 
 const ICANN_ERROR_MARKERS = [
   /<title>\s*ICANN Error\s*<\/title>/i,
+  /<title>\s*ICANN'?s Application Result\s*-\s*Error\s*<\/title>/i,
   /<h1[^>]*>\s*ICANN Error\s*<\/h1>/i,
+  /<h1[^>]*>\s*Error\s*<\/h1>/i,
   /\bICANN Error page\b/i,
+  /\bApplication Result Error\b/i,
   /class="[^"]*\berror-page\b/i,
 ] as const;
 
