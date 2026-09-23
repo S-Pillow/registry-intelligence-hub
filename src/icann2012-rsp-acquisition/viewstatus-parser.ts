@@ -99,6 +99,11 @@ function isDetailTrBlock(block: string): boolean {
   return appIds.length === 1 && acIds.length === 0;
 }
 
+/** Tapestry column header row — not a data or summary/detail pair unit. */
+function isGridHeaderTrBlock(block: string): boolean {
+  return /<th\b/i.test(block) && !/<td\b/i.test(block);
+}
+
 /**
  * Live status grid uses summary `<tr>` rows paired with following detail `<tr>` rows
  * (Application ID appears only on the expandable detail row).
@@ -140,6 +145,10 @@ function parseBoundedBlock(block: string, blockIndex: number): {
   const acCandidates = uniqueNumbers([...linkAcIds, ...dataAcIds]);
 
   const preview = block.replace(/\s+/g, " ").trim().slice(0, 120);
+
+  if (isGridHeaderTrBlock(block)) {
+    return {};
+  }
 
   if (applicationIds.length === 0) {
     return {
@@ -203,7 +212,10 @@ export function parseViewstatusGridHtml(html: string): ViewstatusGridParseResult
       quarantinedBlocks.push(parsed.quarantine);
       return;
     }
-    const row = parsed.row!;
+    if (!parsed.row) {
+      return;
+    }
+    const row = parsed.row;
     if (seenAc.has(row.gtldresultAcId) || seenApp.has(row.tasApplicationId)) {
       quarantinedBlocks.push({
         blockIndex,

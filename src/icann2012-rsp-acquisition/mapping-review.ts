@@ -32,9 +32,8 @@ import {
   isRejectableNonGridPage,
 } from "./viewstatus-page-classification";
 import type { IndexPageFetchMetadataRecord } from "./fetch-metadata-contract";
+import { scanTextForSensitiveArtifactMaterial } from "./sensitive-artifact-guard";
 import type { MappingLiveCheckpoint, Registry2012RspMappingArtifact } from "./types";
-
-const FORBIDDEN_PERSISTED_SUBSTRINGS = ["set-cookie", "jsessionid", "csrf", "cookie:"] as const;
 
 export interface MappingRunLayout {
   stagingRoot: string;
@@ -145,8 +144,7 @@ function findDuplicateApplicationIdsInArtifact(
 }
 
 function serializedHasForbiddenSessionMaterial(text: string): boolean {
-  const lower = text.toLowerCase();
-  return FORBIDDEN_PERSISTED_SUBSTRINGS.some((needle) => lower.includes(needle));
+  return scanTextForSensitiveArtifactMaterial(text, "page.fetch.json").length > 0;
 }
 
 async function validatePageSnapshots(input: {

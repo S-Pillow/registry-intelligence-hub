@@ -18,8 +18,8 @@ import {
   manifestRecordWithoutSelfDigest,
   sanitizedLiveFixtureManifestSelfDigest,
 } from "./sanitized-live-fixture-manifest-digest";
+import { normalizeSanitizedLiveFixtureManifest } from "./sanitized-live-fixture-manifest-normalize";
 import {
-  SANITIZED_LIVE_FIXTURE_MANIFEST_VERSION,
   type SanitizedLiveFixtureManifest,
   type SanitizedLiveFixturePagePin,
 } from "./sanitized-live-fixture-types";
@@ -115,13 +115,11 @@ export async function loadSanitizedLiveFixtureManifest(
 ): Promise<SanitizedLiveFixtureManifest> {
   const path = sanitizedLiveFixtureManifestPath(workspaceRoot);
   const text = await readFile(path, "utf8");
-  const parsed = JSON.parse(text) as SanitizedLiveFixtureManifest;
-  if (parsed.manifestVersion !== SANITIZED_LIVE_FIXTURE_MANIFEST_VERSION) {
-    throw new Error(`Unexpected sanitized-live fixture manifest version: ${parsed.manifestVersion}`);
-  }
-  assertManifestDigests(text, parsed);
-  assertManifestPinsMatchConstants(parsed);
-  return parsed;
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  assertManifestDigests(text, parsed as SanitizedLiveFixtureManifest);
+  const manifest = normalizeSanitizedLiveFixtureManifest(parsed);
+  assertManifestPinsMatchConstants(manifest);
+  return manifest;
 }
 
 export function sanitizedLivePageHtmlPathForPin(

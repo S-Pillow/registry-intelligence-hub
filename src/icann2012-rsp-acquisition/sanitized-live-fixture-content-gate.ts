@@ -1,6 +1,23 @@
 const CSRF_QUERY_VALUE = /([?&]_csrf=)([^&"'#\s]+)/gi;
-const CSRF_INPUT = /<input[^>]*\bname=["']_csrf["'][^>]*\bvalue=["']([^"']*)["']/gi;
-const FORMDATA_INPUT = /<input[^>]*\bname=["']t:formdata["'][^>]*\bvalue=["']([^"']*)["']/gi;
+const HIDDEN_INPUT_VALUE = /\bvalue=["']([^"']*)["']/i;
+
+function scanHiddenInputByName(html: string, name: string): {
+  count: number;
+  nonExactRedactedCount: number;
+} {
+  const tagPattern = new RegExp(`<input[^>]*\\bname=["']${name.replace(/:/g, "\\:")}["'][^>]*>`, "gi");
+  let count = 0;
+  let nonExactRedactedCount = 0;
+  for (const match of html.matchAll(tagPattern)) {
+    count += 1;
+    const valueMatch = HIDDEN_INPUT_VALUE.exec(match[0] ?? "");
+    const value = valueMatch?.[1] ?? "";
+    if (value !== "REDACTED") {
+      nonExactRedactedCount += 1;
+    }
+  }
+  return { count, nonExactRedactedCount };
+}
 
 const FORBIDDEN_MARKERS = [
   /\bset-cookie\s*:/i,
@@ -29,33 +46,16 @@ export function scanSanitizedLiveFixtureHtmlContent(html: string): SanitizedLive
     }
   }
 
-  let csrfInputCount = 0;
-  let nonExactRedactedCsrfInputCount = 0;
-  for (const match of html.matchAll(CSRF_INPUT)) {
-    csrfInputCount += 1;
-    const value = match[1] ?? "";
-    if (value !== "REDACTED") {
-      nonExactRedactedCsrfInputCount += 1;
-    }
-  }
-
-  let formdataInputCount = 0;
-  let nonExactRedactedFormdataCount = 0;
-  for (const match of html.matchAll(FORMDATA_INPUT)) {
-    formdataInputCount += 1;
-    const value = match[1] ?? "";
-    if (value !== "REDACTED") {
-      nonExactRedactedFormdataCount += 1;
-    }
-  }
+  const csrfInputScan = scanHiddenInputByName(html, "_csrf");
+  const formdataInputScan = scanHiddenInputByName(html, "t:formdata");
 
   return {
     csrfQueryCount,
     nonExactRedactedCsrfQueryCount,
-    csrfInputCount,
-    nonExactRedactedCsrfInputCount,
-    formdataInputCount,
-    nonExactRedactedFormdataCount,
+    csrfInputCount: csrfInputScan.count,
+    nonExactRedactedCsrfInputCount: csrfInputScan.nonExactRedactedCount,
+    formdataInputCount: formdataInputScan.count,
+    nonExactRedactedFormdataCount: formdataInputScan.nonExactRedactedCount,
   };
 }
 

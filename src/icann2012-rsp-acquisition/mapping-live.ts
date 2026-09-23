@@ -284,6 +284,47 @@ export async function runMappingLive(
       const html = Buffer.from(response.body).toString("utf8");
       const pageKind = classifyViewstatusPageHtml(html);
       if (isRejectableNonGridPage(pageKind)) {
+        const rejectDiagnostics = {
+          ...buildViewstatusPageDiagnostics(html, 0, 0),
+          pageKind,
+        };
+        const rejectSnapshotId = snapshotIdForPage(checkpoint.runId, pageOrdinal, contentSha256);
+        const rejectHtmlPath = stagingIndexPageHtmlPath(stagingRoot, checkpoint.runId, pageOrdinal);
+        const rejectMetaPath = stagingIndexPageFetchMetadataPath(
+          stagingRoot,
+          checkpoint.runId,
+          pageOrdinal,
+        );
+        await writeFile(rejectHtmlPath, response.body);
+        const rejectMetadata = buildIndexPageFetchMetadata({
+          pageOrdinal,
+          resolvedUrl: currentUrl,
+          finalUrl: response.finalUrl,
+          httpStatus: response.status,
+          contentType: response.headers["content-type"],
+          contentLength: response.body.byteLength,
+          contentSha256,
+          retrievedAt: new Date().toISOString(),
+          runId: checkpoint.runId,
+          displayStart: rejectDiagnostics.displayStart,
+          displayEnd: rejectDiagnostics.displayEnd,
+          displayTotal: rejectDiagnostics.displayTotal,
+          parsedRowCount: rejectDiagnostics.parsedRowCount,
+          quarantinedBlockCount: rejectDiagnostics.quarantinedBlockCount,
+          nextPageHref: rejectDiagnostics.nextPageHref,
+        });
+        await writeFile(rejectMetaPath, `${JSON.stringify(rejectMetadata, null, 2)}\n`);
+        checkpoint.pages = [
+          ...checkpoint.pages.filter((p) => p.pageOrdinal !== pageOrdinal),
+          {
+            pageOrdinal,
+            snapshotId: rejectSnapshotId,
+            contentSha256,
+            resolvedUrl: currentUrl,
+            diagnostics: rejectDiagnostics,
+          },
+        ];
+        await writeMappingLiveCheckpoint(ckPath, checkpoint);
         throw new PaginationSafetyError(
           pageKind === "ICANN_ERROR_PAGE"
             ? "ICANN Error page — reject as grid"
