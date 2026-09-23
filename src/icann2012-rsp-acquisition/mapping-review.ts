@@ -202,7 +202,13 @@ async function validatePageSnapshots(input: {
     const pageKind = classifyViewstatusPageHtml(htmlText);
     if (isRejectableNonGridPage(pageKind)) {
       nonGridPageOrdinals.push(page.pageOrdinal);
-      if (pageKind === "ICANN_ERROR_PAGE") icannErrorPagePresent = true;
+      if (pageKind === "ICANN_ERROR_PAGE") {
+        icannErrorPagePresent = true;
+        // Page bytes stay ICANN_ERROR_PAGE. A continuation that lands on the
+        // error page is run-level pagination drift (bad next request), not a
+        // new failure-enum value for the resolver bug.
+        if (page.pageOrdinal > 1) paginationDrift = true;
+      }
       htmlStructureDrift = true;
     }
 

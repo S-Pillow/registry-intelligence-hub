@@ -29,6 +29,25 @@ export type MappingReviewSecondaryFailureFlag =
 export type MappingReviewFailureClassification =
   (typeof MAPPING_REVIEW_FAILURE_CLASSIFICATIONS)[number];
 
+/**
+ * Implementation defects in the offline pagination resolver.
+ * Diagnostic vocabulary only — not a persisted run-failure classification.
+ * Do not add these codes to MAPPING_REVIEW_FAILURE_CLASSIFICATIONS.
+ *
+ * REQUEST_PATH_RESOLUTION_DEFECT: rewriting a server href such as
+ * `/applicationstatus/viewstatus.statusgrid.pager/{n}` into
+ * `/application-result/applicationstatus/...`.
+ * NEXT_PAGE_SELECTION_DEFECT: choosing the last or highest pager anchor
+ * (pager/56 on logical page 1) instead of the adjacent label's href.
+ */
+export const RSP_MAPPING_DIAGNOSTIC_CODE_DEFECTS = [
+  "REQUEST_PATH_RESOLUTION_DEFECT",
+  "NEXT_PAGE_SELECTION_DEFECT",
+] as const;
+
+export type RspMappingDiagnosticCodeDefect =
+  (typeof RSP_MAPPING_DIAGNOSTIC_CODE_DEFECTS)[number];
+
 export interface MappingReviewClassificationInput {
   reconciliationExact: boolean;
   integrityFailure: boolean;
@@ -84,10 +103,11 @@ export function classifyMappingReviewFailure(
   if (/503|502|temporarily unavailable|timeout/i.test(stop)) {
     return "SOURCE_TEMPORARILY_UNAVAILABLE";
   }
+  if (input.paginationDrift) return "PAGINATION_DRIFT";
   if (input.icannErrorPagePresent || /icann error page/i.test(stop)) {
     return "ICANN_ERROR_PAGE";
   }
-  if (input.paginationDrift || /pagination/i.test(stop)) return "PAGINATION_DRIFT";
+  if (/pagination/i.test(stop)) return "PAGINATION_DRIFT";
   if (input.htmlStructureDrift || /quarantine|ambiguous|parse/i.test(stop)) {
     return "HTML_STRUCTURE_DRIFT";
   }

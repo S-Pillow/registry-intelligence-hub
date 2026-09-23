@@ -2,6 +2,9 @@ import { GTLDRESULT_PATHS } from "./constants";
 import { MappingLiveOperatorCancellation } from "./mapping-live-operator-cancellation";
 import { absoluteGtldresultUrl } from "./urls";
 
+/** TEST_ONLY — never production evidence. */
+export const SYNTHETIC_REPLAY_CORPUS_MARKER = "SYNTHETIC_REPLAY_CORPUS_TEST_ONLY" as const;
+
 export const REGRESSION_MAPPING_LEADS = {
   BOSCH: { applicationId: "1-1945-29108", gtldresultAcId: 170 },
   HOTELS: { applicationId: "1-1016-75482", gtldresultAcId: 1589 },
@@ -43,6 +46,8 @@ function renderGridPageHtml(input: {
   displayStart: number;
   displayEnd: number;
   displayTotal: number;
+  currentPage: number;
+  nextLogicalPage: number | null;
   nextHref: string | null;
   extraRowHtml?: string;
 }): string {
@@ -53,13 +58,21 @@ function renderGridPageHtml(input: {
         `<a href="/applicationstatus/viewstatus:viewapplicationdetails/${r.gtldresultAcId}">Details</a></tr>`,
     )
     .join("\n");
-  const nextLink = input.nextHref
-    ? `<a class="pager-next" href="${input.nextHref}">Next</a>`
-    : "";
+  const nextItem =
+    input.nextHref && input.nextLogicalPage != null
+      ? `<li><a title="Go to page ${input.nextLogicalPage}" href="${input.nextHref}">${input.nextLogicalPage}</a></li>`
+      : "";
+  const pager =
+    `<ul class="pagination">` +
+    `<li class="active" aria-current="page"><a aria-disabled="true" href="#">${input.currentPage}</a></li>` +
+    nextItem +
+    `</ul>`;
   return `<!DOCTYPE html><html><body>
+<!-- ${SYNTHETIC_REPLAY_CORPUS_MARKER} -->
 <div class="grid-footer">Displaying ${input.displayStart} - ${input.displayEnd} of ${input.displayTotal}</div>
+${pager}
 <table>${rowHtml}${input.extraRowHtml ?? ""}</table>
-${nextLink}
+${pager}
 </body></html>`;
 }
 
@@ -118,6 +131,8 @@ export function buildSyntheticReplayCorpus(options: SyntheticReplayOptions): Syn
       displayStart: displayStartAdj,
       displayEnd: displayEndAdj,
       displayTotal: ids.length,
+      currentPage: pageNumber,
+      nextLogicalPage: nextHref ? pageNumber + 1 : null,
       nextHref,
       extraRowHtml,
     });
@@ -211,6 +226,3 @@ export function createSyntheticReplayFetcher(
     };
   };
 }
-
-/** TEST_ONLY — never production evidence. */
-export const SYNTHETIC_REPLAY_CORPUS_MARKER = "SYNTHETIC_REPLAY_CORPUS_TEST_ONLY" as const;

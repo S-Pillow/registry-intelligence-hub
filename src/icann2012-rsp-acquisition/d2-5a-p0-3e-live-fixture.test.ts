@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH } from "@/historical-2012/approved-corpus-hash";
 import { buildIndexPageFetchMetadata } from "./fetch-metadata-contract";
-import { mappingLiveCheckpointPath } from "./mapping-checkpoint";
+import { mappingLiveCheckpointPath, readMappingLiveCheckpoint } from "./mapping-checkpoint";
 import {
   stagingIndexPageFetchMetadataPath,
   stagingIndexPageHtmlPath,
@@ -121,7 +121,7 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     expect(pagination.nextPageHref).not.toContain("pager/56");
   });
 
-  it("resolves /applicationstatus paths under /application-result mount", () => {
+  it("keeps root-relative /applicationstatus pager hrefs on that path", () => {
     const context =
       "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus/";
     const resolved = resolveGtldresultTapestryUrl(
@@ -129,8 +129,9 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
       "/applicationstatus/viewstatus.statusgrid.pager/2",
     );
     expect(resolved).toBe(
-      "https://gtldresult.icann.org/application-result/applicationstatus/viewstatus.statusgrid.pager/2",
+      "https://gtldresult.icann.org/applicationstatus/viewstatus.statusgrid.pager/2",
     );
+    expect(resolved).not.toContain("/application-result/");
   });
 
   it("redacts _csrf only in SAFE_DERIVED URLs", () => {
@@ -379,14 +380,22 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
     const page1Html = await readFile(sanitizedLivePageHtmlPathForPin(workspaceRoot, page1Pin), "utf8");
     const page2Html = await readFile(sanitizedLivePageHtmlPathForPin(workspaceRoot, page2Pin), "utf8");
     const pagination = extractViewstatusPagination(page1Html);
-    expect(pagination.nextPageHref).toBeTruthy();
+    expect(pagination.currentPage).toBe(1);
+    expect(pagination.nextLogicalPage).toBe(2);
+    expect(pagination.nextPageHref).toContain("viewstatus.statusgrid.pager/2");
+    expect(pagination.nextPageHref).not.toContain("pager/56");
     const gridContext = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
     const nextUrl = resolveGtldresultTapestryUrl(gridContext, pagination.nextPageHref!);
-    expect(nextUrl).toBeTruthy();
+    expect(nextUrl).toContain("/applicationstatus/viewstatus.statusgrid.pager/2");
+    expect(nextUrl).not.toContain("/application-result/");
 
     const statusHubUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.statusHub);
     const gridEntryUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
     const fetcher = async (url: string) => {
+      const headers: Record<string, string> = { "Content-Type": "text/html; charset=UTF-8" };
+      if (url === statusHubUrl) {
+        headers["set-cookie"] = "SESSION=historical-replay; Path=/; HttpOnly";
+      }
       const body =
         url === statusHubUrl
           ? "<html><body>hub</body></html>"
@@ -406,7 +415,7 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
       return {
         status: 200,
         body: Buffer.from(body, "utf8"),
-        headers: { "Content-Type": "text/html; charset=UTF-8" },
+        headers,
         finalUrl: url,
       };
     };
@@ -428,10 +437,12 @@ describe("D2.5A-P0.3E live-fixture remediation (zero HTTP)", () => {
       expect(live.exact).toBe(false);
       const review = await runMappingReview({ workspaceRoot, runDir: staging });
       expect(review.roundWideExact).toBe(false);
-      expect(["PAGINATION_DRIFT", "PARTIAL_MAPPING", "ICANN_ERROR_PAGE"]).toContain(
-        review.failureClassification,
-      );
+      expect(review.failureClassification).toBe("PAGINATION_DRIFT");
       expect(review.nonGridPageOrdinals).toContain(2);
+      const checkpoint = await readMappingLiveCheckpoint(mappingLiveCheckpointPath(staging));
+      const historicalPage2 = checkpoint?.pages.find((page) => page.pageOrdinal === 2);
+      expect(historicalPage2?.diagnostics.pageKind).toBe("ICANN_ERROR_PAGE");
+      expect(JSON.stringify(checkpoint)).not.toContain("historical-replay");
     } finally {
       process.env[RSP_MAPPING_LIVE_AUTH_ENV] = prev;
       await rm(staging, { recursive: true, force: true });

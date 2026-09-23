@@ -31,7 +31,12 @@ import {
   writeMappingLiveCheckpoint,
 } from "./mapping-checkpoint";
 import { resolveGtldresultTapestryUrl } from "./gtldresult-url-resolver";
+import {
+  isStatusGridPagerUrl,
+  toPersistedPagerTransaction,
+} from "./pager-transaction";
 import { absoluteGtldresultUrl } from "./urls";
+import type { PersistedPagerTransaction, ViewstatusPageDiagnostics } from "./types";
 import {
   classifyViewstatusPageHtml,
   isRejectableNonGridPage,
@@ -82,6 +87,23 @@ function snapshotIdForPage(runId: string, pageOrdinal: number, contentSha256: st
 function resolveNextPageUrl(contextUrl: string, nextHref: string | null): string | null {
   if (!nextHref) return null;
   return resolveGtldresultTapestryUrl(contextUrl, nextHref);
+}
+
+function pagerTransactionForFetch(
+  transport: GtldresultSessionTransport,
+  serverProvidedHref: string | null,
+  diagnostics: Pick<ViewstatusPageDiagnostics, "displayStart" | "displayEnd" | "displayTotal">,
+): PersistedPagerTransaction | null {
+  const exchange = transport.getLastExchange();
+  if (!exchange) return null;
+  if (!isStatusGridPagerUrl(exchange.requestedUrl) && exchange.redirectCount === 0) return null;
+  return toPersistedPagerTransaction({
+    serverProvidedHref,
+    exchange,
+    displayStart: diagnostics.displayStart,
+    displayEnd: diagnostics.displayEnd,
+    displayTotal: diagnostics.displayTotal,
+  });
 }
 
 export function buildMappingArtifactFromCheckpoint(
@@ -241,15 +263,17 @@ export async function runMappingLive(
   };
 
   let currentUrl: string | null = null;
+  let arrivalServerHref: string | null = null;
   if (checkpoint.lastCompletedPageOrdinal === 0) {
     currentUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
   } else {
     const lastPage = checkpoint.pages.find(
       (p) => p.pageOrdinal === checkpoint!.lastCompletedPageOrdinal,
     );
+    arrivalServerHref = lastPage?.diagnostics.nextPageHref ?? null;
     currentUrl = resolveNextPageUrl(
       lastPage?.resolvedUrl ?? absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid),
-      lastPage?.diagnostics.nextPageHref ?? null,
+      arrivalServerHref,
     );
   }
 
@@ -285,9 +309,14 @@ export async function runMappingLive(
       const pageKind = classifyViewstatusPageHtml(html);
       if (isRejectableNonGridPage(pageKind)) {
         const rejectDiagnostics = {
-          ...buildViewstatusPageDiagnostics(html, 0, 0),
+          ...buildViewstatusPageDiagnostics(html, 0, 0, currentUrl),
           pageKind,
         };
+        rejectDiagnostics.pagerTransaction = pagerTransactionForFetch(
+          transport,
+          arrivalServerHref,
+          rejectDiagnostics,
+        );
         const rejectSnapshotId = snapshotIdForPage(checkpoint.runId, pageOrdinal, contentSha256);
         const rejectHtmlPath = stagingIndexPageHtmlPath(stagingRoot, checkpoint.runId, pageOrdinal);
         const rejectMetaPath = stagingIndexPageFetchMetadataPath(
@@ -312,6 +341,9 @@ export async function runMappingLive(
           parsedRowCount: rejectDiagnostics.parsedRowCount,
           quarantinedBlockCount: rejectDiagnostics.quarantinedBlockCount,
           nextPageHref: rejectDiagnostics.nextPageHref,
+          serverProvidedHref: rejectDiagnostics.serverProvidedHref,
+          effectiveRequestUrl: rejectDiagnostics.effectiveRequestUrl,
+          pagerTransaction: rejectDiagnostics.pagerTransaction,
         });
         await writeFile(rejectMetaPath, `${JSON.stringify(rejectMetadata, null, 2)}\n`);
         checkpoint.pages = [
@@ -337,9 +369,15 @@ export async function runMappingLive(
           html,
           parsed.rows.length,
           parsed.quarantinedBlocks.length,
+          currentUrl,
         ),
         pageKind,
       };
+      diagnostics.pagerTransaction = pagerTransactionForFetch(
+        transport,
+        arrivalServerHref,
+        diagnostics,
+      );
 
       assertPaginationAdvance(
         paginationState,
@@ -376,6 +414,9 @@ export async function runMappingLive(
         parsedRowCount: diagnostics.parsedRowCount,
         quarantinedBlockCount: diagnostics.quarantinedBlockCount,
         nextPageHref: diagnostics.nextPageHref,
+        serverProvidedHref: diagnostics.serverProvidedHref,
+        effectiveRequestUrl: diagnostics.effectiveRequestUrl,
+        pagerTransaction: diagnostics.pagerTransaction,
       });
       await writeFile(metaPath, `${JSON.stringify(metadata, null, 2)}\n`);
 
@@ -399,6 +440,7 @@ export async function runMappingLive(
         break;
       }
 
+      arrivalServerHref = diagnostics.nextPageHref;
       currentUrl = resolveNextPageUrl(currentUrl, diagnostics.nextPageHref);
       if (currentUrl == null) {
         stoppedEarly = true;

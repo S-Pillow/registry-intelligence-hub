@@ -151,6 +151,24 @@ export interface DryRunReport {
   plans: DryRunFetchPlan[];
 }
 
+/**
+ * SAFE_DERIVED pager hop record. Booleans only for session observations.
+ * Never store cookie or token values.
+ */
+export interface PersistedPagerTransaction {
+  serverProvidedHref: string | null;
+  pagerRequestedUrl: string | null;
+  pagerStatus: number | null;
+  redirectLocation: string | null;
+  redirectCount: number;
+  finalUrl: string | null;
+  sessionCookieSent: boolean;
+  intermediateSetCookieObserved: boolean;
+  displayStart: number | null;
+  displayEnd: number | null;
+  displayTotal: number | null;
+}
+
 export interface ViewstatusPageDiagnostics {
   displayStart: number | null;
   displayEnd: number | null;
@@ -159,6 +177,24 @@ export interface ViewstatusPageDiagnostics {
   quarantinedBlockCount: number;
   nextPageHref: string | null;
   paginationControlDrift?: boolean;
+  /** Logical pager label of the active control, when established. */
+  currentPage?: number | null;
+  /** Logical adjacent page (current+1) when a server href was selected. */
+  nextLogicalPage?: number | null;
+  /**
+   * SAFE_DERIVED copy of the server-provided next href.
+   * Sensitive query values are redacted. Not a manufactured pager URL.
+   */
+  serverProvidedHref?: string | null;
+  /**
+   * SAFE_DERIVED absolute URL the crawler will request for the next page.
+   * Root-relative `/applicationstatus/...` hrefs are not remounted.
+   * Sensitive query values are redacted.
+   */
+  effectiveRequestUrl?: string | null;
+  /** Present when this page was fetched through a status-grid pager hop. */
+  pagerTransaction?: PersistedPagerTransaction | null;
+  paginationDriftDetail?: string | null;
   pageKind?: "STATUS_GRID" | "ICANN_ERROR_PAGE" | "UNKNOWN_NON_GRID";
 }
 

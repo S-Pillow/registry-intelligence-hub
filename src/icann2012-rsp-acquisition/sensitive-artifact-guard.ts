@@ -98,6 +98,16 @@ export function scanTextForSensitiveArtifactMaterial(
   return findings;
 }
 
+/**
+ * Boolean pager-transaction observations. The key names describe that a
+ * session cookie was sent or that an intermediate Set-Cookie was seen.
+ * Values must stay boolean so cookie material cannot hide in the field.
+ */
+const ALLOWED_BOOLEAN_DIAGNOSTIC_KEYS = new Set([
+  "sessioncookiesent",
+  "intermediatesetcookieobserved",
+]);
+
 const SAFE_DERIVED_JSON_KEY_MARKERS = ["safe", "safederived"] as const;
 
 function isSafeDerivedJsonKey(key: string): boolean {
@@ -151,6 +161,14 @@ function scanJsonValueForForbiddenKeys(value: unknown, contextLabel: string, pat
 
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     const keyLower = key.toLowerCase();
+    if (ALLOWED_BOOLEAN_DIAGNOSTIC_KEYS.has(keyLower)) {
+      if (typeof child !== "boolean") {
+        findings.push(
+          `${contextLabel}: diagnostic key "${path ? `${path}.` : ""}${key}" must be boolean`,
+        );
+      }
+      continue;
+    }
     if (FORBIDDEN_SENSITIVE_JSON_KEYS.some((f) => keyLower.includes(f))) {
       findings.push(`${contextLabel}: forbidden JSON key "${path ? `${path}.` : ""}${key}"`);
     }
