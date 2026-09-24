@@ -3,6 +3,7 @@ import {
   RSP_MAPPING_LIVE_AUTH_ENV,
   RSP_PAGER_DIAGNOSTIC_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
+  RSP_PORTION_DIAGNOSTIC_AUTH_ENV,
 } from "./constants";
 
 export function isLegacyAcquisitionEnvSet(): boolean {
@@ -40,6 +41,24 @@ export function assertPagerDiagnosticAuthGate(): void {
     throw new Error(
       `Pager diagnostic requires ${RSP_PAGER_DIAGNOSTIC_AUTH_ENV}=1. ` +
         `${RSP_MAPPING_LIVE_AUTH_ENV} does not authorize this command.`,
+    );
+  }
+}
+
+export function isPortionDiagnosticAuthorized(): boolean {
+  return process.env[RSP_PORTION_DIAGNOSTIC_AUTH_ENV] === "1";
+}
+
+/**
+ * Only the portion-diagnostic env authorizes this command.
+ * Pilot-live, mapping-live, and pager-diagnostic gates do not.
+ */
+export function assertPortionDiagnosticAuthGate(): void {
+  if (!isPortionDiagnosticAuthorized()) {
+    throw new Error(
+      `Portion diagnostic requires ${RSP_PORTION_DIAGNOSTIC_AUTH_ENV}=1. ` +
+        `${RSP_PILOT_LIVE_AUTH_ENV}, ${RSP_MAPPING_LIVE_AUTH_ENV}, and ` +
+        `${RSP_PAGER_DIAGNOSTIC_AUTH_ENV} do not authorize this command.`,
     );
   }
 }

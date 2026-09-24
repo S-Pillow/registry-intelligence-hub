@@ -12,7 +12,7 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 | `pilot-gtldresult-mapping.json` | **`TEST_ONLY` / `DRAFT`** mapping artifact (`registry-2012-rsp-mapping/1.0.0`) — probe row only |
 | `fixtures/synthetic/rsp-mapping-round-wide-exact.fixture.json` | Unmistakable synthetic round-wide template (full 1930 rows generated in tests) |
 | `gtldresult-application-index.json` | Full-round index (`applicationId` → URLs) after bounded index pass |
-| `raw-snapshots.json` | Per-URL snapshot metadata + SHA-256 (same spirit as reveal-day bundle) |
+| `raw-snapshots.json` | Checkout catalog only. Pilot-live does not read it; pass the mapping-live run directory as `--evidence-index` |
 | `acquisition-checkpoint.json` | Resume / idempotency state |
 | `fixtures/synthetic/viewstatus-grid-parser.fixture.html` | **Synthetic** grid HTML for parser/unit tests only (non-evidence) |
 | `sources/index/viewstatus-page-{nn}.html` | **Real** immutable grid snapshots for mapping dry-run (`--grid-html`) |
@@ -32,7 +32,7 @@ Offline workspace contract for **2012 public application portion** HTML (Guidebo
 - `artifactPurpose`: `TEST_ONLY` | `EVIDENCE` (pilot-live requires `EVIDENCE`)
 - `approvalState`: `DRAFT` | `APPROVED` (pilot-live requires `APPROVED`)
 - `entries[]`: `{ applicationId, gtldresultAcId, mappingSourceClass, evidenceSnapshotId?, sourceUrl?, evidenceContentSha256?, notes? }`
-- Production-eligible rows must reference a committed `raw-snapshots.json` id and non-placeholder evidence hashes.
+- Production-eligible rows must reference a snapshot id verified from the approved mapping-live run (`--evidence-index`), with a content hash that matches the page bytes. The committed `raw-snapshots.json` catalog is not pilot-live evidence.
 
 ## Checksum fields
 

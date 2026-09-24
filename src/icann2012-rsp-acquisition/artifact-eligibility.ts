@@ -23,6 +23,11 @@ export interface EvidenceSnapshotIndex {
   byId: Map<string, RawSnapshotRecord>;
 }
 
+/**
+ * Committed fixture catalog. Pilot-live and portion-live preflight must not
+ * use this file — pass the mapping-live run directory to
+ * `loadApprovedMappingRunEvidenceIndex` instead.
+ */
 export async function loadEvidenceSnapshotIndex(workspaceRoot: string): Promise<EvidenceSnapshotIndex> {
   const path = `${rspFixtureRoot(workspaceRoot)}/raw-snapshots.json`;
   const text = await readFile(path, "utf8");
@@ -102,6 +107,23 @@ function validateProductionRow(
       code: "UNKNOWN_EVIDENCE_SNAPSHOT",
       detail: `evidenceSnapshotId=${snapId}`,
     });
+  } else {
+    const snap = snapshots.byId.get(snapId);
+    const snapHash = snap?.provenance?.contentSha256?.trim() ?? "";
+    const entryHash = entry.evidenceContentSha256?.trim() ?? "";
+    if (!snapHash) {
+      issues.push({
+        applicationId: app,
+        code: "UNVERIFIED_EVIDENCE_BYTES",
+        detail: "evidence snapshot has no verified content hash",
+      });
+    } else if (!isPlaceholderHash(entryHash) && entryHash !== snapHash) {
+      issues.push({
+        applicationId: app,
+        code: "EVIDENCE_HASH_MISMATCH",
+        detail: "evidenceContentSha256 does not match verified mapping-run page bytes",
+      });
+    }
   }
 
   const sourceUrl = entry.sourceUrl?.trim() ?? "";

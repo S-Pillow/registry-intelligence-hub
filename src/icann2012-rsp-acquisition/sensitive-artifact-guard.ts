@@ -4,6 +4,7 @@ import {
   RSP_ACQUISITION_AUTH_ENV,
   RSP_MAPPING_LIVE_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
+  RSP_PORTION_DIAGNOSTIC_AUTH_ENV,
 } from "./constants";
 
 /** Substrings that must never appear in persisted evidence, manifests, or operator logs. */
@@ -15,6 +16,7 @@ export const FORBIDDEN_SENSITIVE_ARTIFACT_SUBSTRINGS = [
   "authorization:",
   RSP_MAPPING_LIVE_AUTH_ENV.toLowerCase(),
   RSP_PILOT_LIVE_AUTH_ENV.toLowerCase(),
+  RSP_PORTION_DIAGNOSTIC_AUTH_ENV.toLowerCase(),
   RSP_ACQUISITION_AUTH_ENV.toLowerCase(),
 ] as const;
 

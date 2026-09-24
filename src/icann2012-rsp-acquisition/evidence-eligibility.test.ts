@@ -1,5 +1,5 @@
 import { copyFile, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 import { parseRevealDayCsvText } from "@/normalization/parse-reveal-csv";
@@ -20,8 +20,15 @@ import {
   defaultLiveStagingRoot,
   isPathContainedIn,
 } from "./staging-containment";
-import { RSP_ACQUISITION_AUTH_ENV, RSP_PILOT_LIVE_AUTH_ENV } from "./constants";
-import { buildPortionUrl } from "./urls";
+import { stagingIndexPageFetchMetadataPath, stagingIndexPageHtmlPath } from "./bundle-paths";
+import { RSP_ACQUISITION_AUTH_ENV, GTLDRESULT_PATHS, RSP_PILOT_LIVE_AUTH_ENV } from "./constants";
+import {
+  createEmptyMappingLiveCheckpoint,
+  mappingLiveCheckpointPath,
+  writeMappingLiveCheckpoint,
+} from "./mapping-checkpoint";
+import { sha256Hex } from "@/normalization/hashes";
+import { absoluteGtldresultUrl, buildPortionUrl } from "./urls";
 import { CONFIRMED_2012_MAPPED_APPLICATION_COUNT, CONFIRMED_2012_PORTFOLIO_COUNT } from "@/historical-2012/confirmed-portfolios-constants";
 
 const workspaceRoot = join(process.cwd());
@@ -187,23 +194,41 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
       join(workspaceRoot, "src/normalization/fixtures/icann2012-rsp-public-portions-v1/pilot-manifest-25.json"),
       join(bundleRoot, "pilot-manifest-25.json"),
     );
-    const snapId = "snap-pilot-live-test";
-    await writeFile(
-      join(bundleRoot, "raw-snapshots.json"),
-      `${JSON.stringify(
-        {
-          snapshots: [
-            {
-              snapshotId: snapId,
-              sourceId: "test",
-              requestedUrl: buildPortionUrl(170),
-              provenance: { contentSha256: "b".repeat(64) },
-            },
-          ],
+    const runRoot = join(staging, "approved-mapping-run");
+    const runId = "eligibility-run";
+    const pageHtml = Buffer.from("<html><body>Displaying 1 - 1 of 1 verified grid</body></html>");
+    const pageHash = sha256Hex(pageHtml);
+    const snapId = `snap-index-${runId}-p0001-${pageHash.slice(0, 12)}`;
+    const resolvedUrl = absoluteGtldresultUrl(GTLDRESULT_PATHS.viewStatusGrid);
+    const checkpoint = createEmptyMappingLiveCheckpoint(runId, "test-corpus");
+    checkpoint.state = "completed";
+    checkpoint.lastCompletedPageOrdinal = 1;
+    checkpoint.mappings = { "1-1945-29108": 170 };
+    checkpoint.applicationPageOrdinal = { "1-1945-29108": 1 };
+    checkpoint.pages = [
+      {
+        pageOrdinal: 1,
+        snapshotId: snapId,
+        contentSha256: pageHash,
+        resolvedUrl,
+        diagnostics: {
+          displayStart: 1,
+          displayEnd: 1,
+          displayTotal: 1,
+          parsedRowCount: 1,
+          quarantinedBlockCount: 0,
+          nextPageHref: null,
         },
-        null,
-        2,
-      )}\n`,
+      },
+    ];
+    await writeMappingLiveCheckpoint(mappingLiveCheckpointPath(runRoot), checkpoint);
+    const htmlPath = stagingIndexPageHtmlPath(runRoot, runId, 1);
+    const metaPath = stagingIndexPageFetchMetadataPath(runRoot, runId, 1);
+    await mkdir(dirname(htmlPath), { recursive: true });
+    await writeFile(htmlPath, pageHtml);
+    await writeFile(
+      metaPath,
+      `${JSON.stringify({ pageOrdinal: 1, contentSha256: pageHash, parsedRowCount: 1 })}\n`,
     );
 
     const mappingPath = join(staging, "approved-pilot-live.json");
@@ -220,10 +245,10 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
             {
               applicationId: "1-1945-29108",
               gtldresultAcId: 170,
-              mappingSourceClass: "DETAILS_PAGE_PROBE",
+              mappingSourceClass: "STATUS_GRID",
               evidenceSnapshotId: snapId,
-              sourceUrl: buildPortionUrl(170),
-              evidenceContentSha256: "c".repeat(64),
+              sourceUrl: resolvedUrl,
+              evidenceContentSha256: pageHash,
             },
           ],
         },
@@ -247,6 +272,7 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
         workspaceRoot: tempWorkspace,
         stagingRoot: staging,
         mappingArtifactPath: mappingPath,
+        evidenceIndexPath: runRoot,
         batchId: "eligibility-test",
       },
       fetcher,

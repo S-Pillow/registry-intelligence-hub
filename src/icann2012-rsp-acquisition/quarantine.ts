@@ -1,5 +1,6 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { validatePublicPortionDocument } from "./public-portion-validation";
 import type { QuarantineRecord, QuarantineReason } from "./types";
 
 export async function writeQuarantineRecord(
@@ -20,9 +21,11 @@ export async function writeQuarantineRecord(
   return record;
 }
 
-export function validatePortionHtml(html: string): { ok: true } | { ok: false; reason: QuarantineReason } {
-  if (!html.includes('div class="response" id="q23"') && !html.includes('id="q23"')) {
-    return { ok: false, reason: "incomplete-portion-q23" };
-  }
+export function validatePortionHtml(
+  html: string,
+  options?: { expectedApplicationId?: string },
+): { ok: true } | { ok: false; reason: QuarantineReason } {
+  const result = validatePublicPortionDocument(html, options);
+  if (!result.ok) return { ok: false, reason: result.reason };
   return { ok: true };
 }

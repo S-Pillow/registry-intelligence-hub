@@ -24,11 +24,6 @@ import { sha256Hex } from "@/normalization/hashes";
 import { buildDetailsUrl, buildPortionUrl, buildPortionUrlPlaceholder } from "./urls";
 import type { DryRunFetchPlan, DryRunReport } from "./types";
 import { assertAllowedGtldresultRequestUrl } from "./network-target-policy";
-import {
-  assertLivePreflightEligible,
-  evaluateMappingArtifactEligibility,
-  loadEvidenceSnapshotIndex,
-} from "./artifact-eligibility";
 import { assertPilotLiveAuthGate } from "./auth-gates";
 import { buildPortionFetchMetadata } from "./fetch-metadata-contract";
 import { buildPreflightReport } from "./preflight-report";
@@ -42,6 +37,8 @@ export interface AcquirePilotOptions {
   batchId?: string;
   forceRefetch?: boolean;
   mappingArtifactPath?: string;
+  /** Mapping-live run directory. Required before pilot-live HTTP on an APPROVED artifact. */
+  evidenceIndexPath?: string;
 }
 
 function stagingPortionPath(stagingRoot: string, applicationId: string): string {
@@ -136,16 +133,12 @@ async function loadMappingForOperation(options: AcquirePilotOptions) {
 
 async function assertPilotLivePreflight(options: AcquirePilotOptions): Promise<void> {
   const artifactPath = options.mappingArtifactPath ?? pilotMappingPath(options.workspaceRoot);
-  const mapping = await loadMappingForOperation(options);
-  const snapshots = await loadEvidenceSnapshotIndex(options.workspaceRoot);
-  const evaluation = evaluateMappingArtifactEligibility(mapping, snapshots);
-  assertLivePreflightEligible(mapping, evaluation);
-
   const report = await buildPreflightReport({
     workspaceRoot: options.workspaceRoot,
     operation: "pilot-live",
     stagingRoot: options.stagingRoot,
     mappingArtifactPath: artifactPath,
+    evidenceIndexPath: options.evidenceIndexPath,
   });
   if (report.blockingReasons.length > 0) {
     throw new Error(`Pilot-live preflight blocked: ${report.blockingReasons.join("; ")}`);

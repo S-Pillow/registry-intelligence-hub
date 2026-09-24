@@ -64,8 +64,11 @@ Relationship taxonomy (Applicant vs Registry Operator vs RSP vs DNS): Project do
 REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
   npm run acquire-rsp-portions -- pilot-live \
   --staging /var/tmp/icann2012-rsp-staging \
-  --approved-mapping /path/to/steward-approved-mapping.json
+  --approved-mapping /path/to/steward-approved-mapping.json \
+  --evidence-index /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22
 ```
+
+`--evidence-index` is the mapping-live run directory (`mapping-live-checkpoint.json` plus `sources/index/<run-id>/page-NNNN.html` and fetch metadata). Pilot-live verifies each approved row's `evidenceSnapshotId` and content hash against those bytes. A checkout `raw-snapshots.json`, including one filled in by hand, is not evidence and is not read for this preflight. Missing pages, hash mismatches, and unknown snapshot ids fail closed.
 
 ## Mapping live operator plan (zero HTTP — D2.5A-P0.3A)
 
@@ -136,6 +139,29 @@ Ceiling: **18** HTTP calls (`3 × (1 + 5)`). No logical page 3. No portion downl
 REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED=1 \
   npm run acquire-rsp-portions -- pager-live-diagnostic
 unset REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED
+```
+
+## Portion live diagnostic (one application — D2.5A-P0.4B)
+
+Not a pilot and not a mapping crawl. Own gate: `REGISTRY_HUB_RSP_PORTION_DIAGNOSTIC_AUTHORIZED=1`. Pilot-live, mapping-live, and pager-diagnostic authorization do not grant it.
+
+Bound to Application ID `1-1945-29108`, gtldresultAcId `170`. BOSCH is the validation row only. The command does not extract or hard-code an RSP provider name.
+
+Allowed HTTP only, then stop:
+
+1. GET `https://gtldresult.icann.org/applicationstatus/applicationdetails/170` (no `/application-result` prefix), plus at most 5 same-origin redirects.
+2. Validate Application ID `1-1945-29108` and the official "download public portion of application" anchor. Use that server href. Do not manufacture a download URL.
+3. GET that href in the same in-memory session, plus at most 5 same-origin redirects.
+4. Validate the returned document: Application ID `1-1945-29108`, Question 23 present, not a status-grid hub, not an ICANN error page.
+
+Ceiling: **12** HTTP calls (`2 × (1 + 5)`). `applicationVersionBasis` is `current_public_portion`. `retrievedAt` is stored separately. An official download is not labeled `original_submission`. Cookie and token values are not persisted.
+
+Status-grid routes stay on `/application-result/applicationstatus`. Details and public-portion routes do not.
+
+```bash
+REGISTRY_HUB_RSP_PORTION_DIAGNOSTIC_AUTHORIZED=1 \
+  npm run acquire-rsp-portions -- portion-live-diagnostic
+unset REGISTRY_HUB_RSP_PORTION_DIAGNOSTIC_AUTHORIZED
 ```
 
 Caps (defaults): pilot batch **25**, **250** applications/calendar day, **≥1s** between gtldresult requests, **2 MiB** max portion size. See Project plan §4.

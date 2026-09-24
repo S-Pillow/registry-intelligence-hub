@@ -19,11 +19,16 @@ import {
   RSP_MAPPING_LIVE_AUTH_ENV,
   RSP_PAGER_DIAGNOSTIC_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
+  RSP_PORTION_DIAGNOSTIC_AUTH_ENV,
 } from "./constants";
 import {
   formatPagerLiveDiagnosticReport,
   runPagerLiveDiagnostic,
 } from "./pager-live-diagnostic";
+import {
+  formatPortionLiveDiagnosticReport,
+  runPortionLiveDiagnostic,
+} from "./portion-live-diagnostic";
 import {
   buildPreflightReport,
   formatPreflightReport,
@@ -44,18 +49,21 @@ function usage(): string {
 
 Usage:
   npm run acquire-rsp-portions -- pilot [--workspace <dir>] [--staging <dir>]
-  npm run acquire-rsp-portions -- pilot-live [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
+  npm run acquire-rsp-portions -- pilot-live [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>] [--evidence-index <mapping-run-dir>]
   npm run acquire-rsp-portions -- mapping-dry-run [--workspace <dir>] [--grid-html <sources/index/...>] [--mapping-csv <path>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run] [--preflight-only]
   npm run acquire-rsp-portions -- mapping-live-plan [--workspace <dir>] [--staging <dir>] [--json]
   npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- pager-live-diagnostic
+  npm run acquire-rsp-portions -- portion-live-diagnostic
 
 Environment:
   ${RSP_PILOT_LIVE_AUTH_ENV}=1  Required for pilot-live HTTP (with EVIDENCE+APPROVED mapping artifact).
   ${RSP_MAPPING_LIVE_AUTH_ENV}=1  Required for mapping-live grid crawl HTTP. Does not authorize pager-live-diagnostic.
   ${RSP_PAGER_DIAGNOSTIC_AUTH_ENV}=1  Required for the bounded pager diagnostic (page 1, logical page 2, stop).
+  ${RSP_PORTION_DIAGNOSTIC_AUTH_ENV}=1  Required for the one-application public-portion diagnostic. Pilot, mapping, and pager gates do not authorize it.
+  --evidence-index <dir>  Mapping-live run directory. Required for pilot-live of an APPROVED mapping. Fixture raw-snapshots.json is not accepted.
   ${RSP_ACQUISITION_AUTH_ENV}   Deprecated — does not authorize live requests.
 
 Examples:
@@ -76,6 +84,7 @@ async function main(): Promise<void> {
       "grid-html": { type: "string" },
       "mapping-csv": { type: "string" },
       "approved-mapping": { type: "string" },
+      "evidence-index": { type: "string" },
       operation: { type: "string" },
       "run-id": { type: "string" },
       resume: { type: "boolean", default: false },
@@ -110,6 +119,7 @@ async function main(): Promise<void> {
       workspaceRoot,
       stagingRoot: values.staging as string | undefined,
       mappingArtifactPath: values["approved-mapping"] as string | undefined,
+      evidenceIndexPath: values["evidence-index"] as string | undefined,
     });
     console.log(JSON.stringify(result, null, 2));
     return;
@@ -194,6 +204,12 @@ async function main(): Promise<void> {
     process.exit(report.classification === "PAGER_PAGE2_OK" ? 0 : 1);
   }
 
+  if (command === "portion-live-diagnostic") {
+    const report = await runPortionLiveDiagnostic();
+    console.log(formatPortionLiveDiagnosticReport(report));
+    process.exit(report.classification === "PORTION_OK" ? 0 : 1);
+  }
+
   if (command === "preflight-report") {
     const operation = values.operation as PreflightOperation | undefined;
     if (
@@ -209,6 +225,7 @@ async function main(): Promise<void> {
       operation: operation as PreflightOperation,
       stagingRoot: values.staging as string | undefined,
       mappingArtifactPath: values["approved-mapping"] as string | undefined,
+      evidenceIndexPath: values["evidence-index"] as string | undefined,
     });
     console.log(formatPreflightReport(report));
     return;
