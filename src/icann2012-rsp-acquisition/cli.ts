@@ -16,8 +16,14 @@ import {
 import { completeMappingLiveOperatorFlow } from "./mapping-live-operator-flow";
 import {
   RSP_ACQUISITION_AUTH_ENV,
+  RSP_MAPPING_LIVE_AUTH_ENV,
+  RSP_PAGER_DIAGNOSTIC_AUTH_ENV,
   RSP_PILOT_LIVE_AUTH_ENV,
 } from "./constants";
+import {
+  formatPagerLiveDiagnosticReport,
+  runPagerLiveDiagnostic,
+} from "./pager-live-diagnostic";
 import {
   buildPreflightReport,
   formatPreflightReport,
@@ -44,10 +50,12 @@ Usage:
   npm run acquire-rsp-portions -- mapping-live-plan [--workspace <dir>] [--staging <dir>] [--json]
   npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
+  npm run acquire-rsp-portions -- pager-live-diagnostic
 
 Environment:
   ${RSP_PILOT_LIVE_AUTH_ENV}=1  Required for pilot-live HTTP (with EVIDENCE+APPROVED mapping artifact).
-  REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1  Required for mapping-live grid crawl HTTP.
+  ${RSP_MAPPING_LIVE_AUTH_ENV}=1  Required for mapping-live grid crawl HTTP. Does not authorize pager-live-diagnostic.
+  ${RSP_PAGER_DIAGNOSTIC_AUTH_ENV}=1  Required for the bounded pager diagnostic (page 1, logical page 2, stop).
   ${RSP_ACQUISITION_AUTH_ENV}   Deprecated — does not authorize live requests.
 
 Examples:
@@ -178,6 +186,12 @@ async function main(): Promise<void> {
       `mapping-review exit trace: exitCode=${exitCode} roundWideExact=${report.roundWideExact} mappingReviewPass=${report.mappingReviewPass} failureClassification=${report.failureClassification} pilotResolvedCount=${report.pilotResolvedCount}/${report.pilotExpectedCount}`,
     );
     process.exit(exitCode);
+  }
+
+  if (command === "pager-live-diagnostic") {
+    const report = await runPagerLiveDiagnostic();
+    console.log(formatPagerLiveDiagnosticReport(report));
+    process.exit(report.classification === "PAGER_PAGE2_OK" ? 0 : 1);
   }
 
   if (command === "preflight-report") {

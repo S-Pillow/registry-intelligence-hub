@@ -106,7 +106,18 @@ export function scanTextForSensitiveArtifactMaterial(
 const ALLOWED_BOOLEAN_DIAGNOSTIC_KEYS = new Set([
   "sessioncookiesent",
   "intermediatesetcookieobserved",
+  "sessionupdatedduringtransaction",
 ]);
+
+/**
+ * Count of Set-Cookie header lines. The key names the header, but the value
+ * must be a small integer so a cookie or token cannot hide in the field.
+ */
+const ALLOWED_NUMERIC_DIAGNOSTIC_KEYS = new Set(["setcookieheadercount"]);
+
+function isSafeDiagnosticCount(value: unknown): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 256;
+}
 
 const SAFE_DERIVED_JSON_KEY_MARKERS = ["safe", "safederived"] as const;
 
@@ -165,6 +176,14 @@ function scanJsonValueForForbiddenKeys(value: unknown, contextLabel: string, pat
       if (typeof child !== "boolean") {
         findings.push(
           `${contextLabel}: diagnostic key "${path ? `${path}.` : ""}${key}" must be boolean`,
+        );
+      }
+      continue;
+    }
+    if (ALLOWED_NUMERIC_DIAGNOSTIC_KEYS.has(keyLower)) {
+      if (!isSafeDiagnosticCount(child)) {
+        findings.push(
+          `${contextLabel}: diagnostic key "${path ? `${path}.` : ""}${key}" must be a non-negative integer count`,
         );
       }
       continue;

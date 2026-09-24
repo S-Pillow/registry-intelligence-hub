@@ -12,6 +12,12 @@ export interface GtldresultHttpResponse {
   body: Uint8Array;
   headers: Record<string, string>;
   finalUrl: string;
+  /**
+   * One entry per Set-Cookie header. Present when the fetcher could see the
+   * raw header list (Node `Headers.getSetCookie()`). A combined `set-cookie`
+   * string is not comma-split: Expires dates contain commas.
+   */
+  setCookieHeaders?: readonly string[];
 }
 
 export type GtldresultFetcher = (
@@ -28,6 +34,10 @@ export interface SafePagerExchange {
   finalUrl: string;
   sessionCookieSent: boolean;
   intermediateSetCookieObserved: boolean;
+  /** How many Set-Cookie header lines this exchange observed. Never a cookie value. */
+  setCookieHeaderCount: number;
+  /** True when a session-named cookie value changed during this exchange. */
+  sessionUpdatedDuringTransaction: boolean;
 }
 
 export class PagerTransactionError extends PaginationSafetyError {
@@ -39,8 +49,42 @@ export class PagerTransactionError extends PaginationSafetyError {
 
 const MAX_REDIRECTS = 5;
 
-export function responseHasSetCookie(headers: Record<string, string>): boolean {
-  return Object.keys(headers).some((key) => key.toLowerCase() === "set-cookie" && Boolean(headers[key]));
+function singleSetCookieHeader(headers: Record<string, string>): string | null {
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === "set-cookie" && value) return value;
+  }
+  return null;
+}
+
+/**
+ * Every Set-Cookie line on a response.
+ * Prefer `setCookieHeaders` (one cookie per header). Otherwise the single
+ * `set-cookie` field is one cookie, including an Expires value that contains
+ * commas. Do not split that string on commas.
+ */
+export function readSetCookieLines(
+  response: Pick<GtldresultHttpResponse, "headers" | "setCookieHeaders">,
+): string[] {
+  if (response.setCookieHeaders) {
+    return response.setCookieHeaders.map((line) => line.trim()).filter((line) => line.length > 0);
+  }
+  const single = singleSetCookieHeader(response.headers);
+  return single ? [single] : [];
+}
+
+export function responseHasSetCookie(
+  response: Pick<GtldresultHttpResponse, "headers" | "setCookieHeaders">,
+): boolean {
+  return readSetCookieLines(response).length > 0;
+}
+
+/** Node/undici list of Set-Cookie headers. Never comma-splits a combined value. */
+export function readFetchSetCookieHeaders(headers: Headers): readonly string[] {
+  if (typeof headers.getSetCookie === "function") {
+    return headers.getSetCookie().filter((value) => value.length > 0);
+  }
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
 }
 
 export interface SleepFn {
@@ -73,12 +117,24 @@ export class GtldresultSessionTransport {
     return redactForbiddenFetchMetadataKeys(headers);
   }
 
+  /** Session-named cookies only (SESSION, JSESSIONID). Unrelated names are ignored. */
+  private sessionFingerprint(): string {
+    return [...this.cookies.entries()]
+      .filter(([name]) => /session/i.test(name))
+      .map(([name, value]) => `${name}=${value}`)
+      .sort()
+      .join("; ");
+  }
+
+  ingestResponseCookies(response: Pick<GtldresultHttpResponse, "headers" | "setCookieHeaders">): number {
+    const lines = readSetCookieLines(response);
+    for (const line of lines) this.applySetCookie(line);
+    return lines.length;
+  }
+
+  /** @deprecated Prefer ingestResponseCookies so multiple Set-Cookie headers survive. */
   ingestSetCookieHeaders(headers: Record<string, string>, responseUrl: string): void {
-    for (const [key, value] of Object.entries(headers)) {
-      if (key.toLowerCase() !== "set-cookie") continue;
-      if (!value) continue;
-      this.applySetCookie(value);
-    }
+    this.ingestResponseCookies({ headers });
     void responseUrl;
   }
 
@@ -126,6 +182,25 @@ export class GtldresultSessionTransport {
     let redirectLocation: string | null = null;
     let sessionCookieSent = false;
     let intermediateSetCookieObserved = false;
+    let setCookieHeaderCount = 0;
+    let sessionUpdatedDuringTransaction = false;
+    const sessionBefore = this.sessionFingerprint();
+
+    const remember = (finalUrl: string): SafePagerExchange => {
+      const exchange: SafePagerExchange = {
+        requestedUrl,
+        pagerStatus,
+        redirectLocation,
+        redirectCount,
+        finalUrl,
+        sessionCookieSent,
+        intermediateSetCookieObserved,
+        setCookieHeaderCount,
+        sessionUpdatedDuringTransaction,
+      };
+      this.lastExchange = exchange;
+      return exchange;
+    };
 
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
       if (visited.has(current)) {
@@ -137,43 +212,35 @@ export class GtldresultSessionTransport {
       const pagerHop = hop === 0 && isPagerRequest(current);
       if (hop === 0) sessionCookieSent = Boolean(cookieHeader);
       if (pagerHop && !cookieHeader) {
-        await this.fetchOnce(current, undefined);
+        const fetched = await this.fetchOnce(current, undefined);
+        pagerStatus = fetched.response.status;
+        setCookieHeaderCount += fetched.setCookieHeaderCount;
+        if (this.sessionFingerprint() !== sessionBefore) sessionUpdatedDuringTransaction = true;
+        remember(current);
         throw new PagerTransactionError("pager request receives no session cookie");
       }
       if (hop > 0 && !cookieHeader) {
+        remember(current);
         throw new PagerTransactionError("redirect loses session state");
       }
 
-      const response = await this.fetchOnce(current, cookieHeader);
+      const fetched = await this.fetchOnce(current, cookieHeader);
+      const response = fetched.response;
+      setCookieHeaderCount += fetched.setCookieHeaderCount;
+      if (this.sessionFingerprint() !== sessionBefore) sessionUpdatedDuringTransaction = true;
       if (hop === 0) pagerStatus = response.status;
-      const setCookie = responseHasSetCookie(response.headers);
+      const setCookie = fetched.setCookieHeaderCount > 0;
       const redirecting = response.status >= 300 && response.status < 400;
       if (redirecting && setCookie) intermediateSetCookieObserved = true;
 
       if (!redirecting) {
-        this.lastExchange = {
-          requestedUrl,
-          pagerStatus,
-          redirectLocation,
-          redirectCount,
-          finalUrl: current,
-          sessionCookieSent,
-          intermediateSetCookieObserved,
-        };
+        remember(current);
         return { ...response, finalUrl: current };
       }
 
       const location = response.headers.location ?? response.headers.Location;
       if (!location) {
-        this.lastExchange = {
-          requestedUrl,
-          pagerStatus,
-          redirectLocation,
-          redirectCount,
-          finalUrl: current,
-          sessionCookieSent,
-          intermediateSetCookieObserved,
-        };
+        remember(current);
         return { ...response, finalUrl: current };
       }
       if (redirectLocation == null) redirectLocation = location;
@@ -181,17 +248,19 @@ export class GtldresultSessionTransport {
       assertAllowedGtldresultRedirect(current, next);
       redirectCount += 1;
       if (redirectCount > MAX_REDIRECTS) {
+        remember(current);
         throw new PagerTransactionError("redirect loop");
       }
       current = next;
     }
+    remember(current);
     throw new PagerTransactionError("redirect loop");
   }
 
   private async fetchOnce(
     url: string,
     cookieHeader: string | undefined,
-  ): Promise<GtldresultHttpResponse> {
+  ): Promise<{ response: GtldresultHttpResponse; setCookieHeaderCount: number }> {
     assertAllowedGtldresultRequestUrl(url);
     const headers: Record<string, string> = { Accept: "text/html,*/*" };
     if (cookieHeader) headers.Cookie = cookieHeader;
@@ -200,7 +269,7 @@ export class GtldresultSessionTransport {
     for (let attempt = 0; attempt < RSP_ACQUISITION_LIMITS.maxRetriesPerUrl; attempt++) {
       const response = await this.fetchImpl(url, { headers });
       lastStatus = response.status;
-      this.ingestSetCookieHeaders(response.headers, response.finalUrl || url);
+      const setCookieHeaderCount = this.ingestResponseCookies(response);
 
       if (response.status === 429 || response.status === 403) {
         throw new Error(`Run halted: HTTP ${response.status} on ${url}`);
@@ -210,7 +279,7 @@ export class GtldresultSessionTransport {
         await this.sleep(delay);
         continue;
       }
-      return response;
+      return { response, setCookieHeaderCount };
     }
     throw new Error(`Transport exhausted for ${url} (last HTTP ${lastStatus})`);
   }
@@ -278,19 +347,16 @@ export function createNodeGtldresultFetcher(): GtldresultFetcher {
     const body = new Uint8Array(await response.arrayBuffer());
     const headers: Record<string, string> = {};
     response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
       headers[key] = value;
     });
-    const setCookies = response.headers.getSetCookie?.() ?? [];
-    if (setCookies.length > 0) {
-      headers["set-cookie"] = setCookies[0] ?? "";
-    } else if (response.headers.get("set-cookie")) {
-      headers["set-cookie"] = response.headers.get("set-cookie") ?? "";
-    }
+    const setCookieHeaders = [...readFetchSetCookieHeaders(response.headers)];
     return {
       status: response.status,
       body,
       headers,
       finalUrl: url,
+      setCookieHeaders,
     };
   };
 }

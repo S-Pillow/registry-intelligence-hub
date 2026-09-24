@@ -118,6 +118,26 @@ unset REGISTRY_HUB_RSP_MAPPING_AUTHORIZED
 
 **CI / agent runs:** use `src/icann2012-rsp-acquisition/synthetic-replay-corpus.ts` and inject a mock fetcher — **never** call ICANN from automated tests.
 
+## Pager live diagnostic (bounded — D2.5A-P0.3G-R1)
+
+Not a mapping crawl. Own gate: `REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED=1`. `REGISTRY_HUB_RSP_MAPPING_AUTHORIZED` does not authorize it.
+
+Allowed HTTP only:
+
+1. GET the status hub (session), plus at most 5 same-origin redirects.
+2. GET viewstatus page 1, plus at most 5 same-origin redirects.
+3. GET the server href for logical page 2 once.
+4. Follow that response's same-origin redirects, at most 5.
+5. Validate the grid and stop.
+
+Ceiling: **18** HTTP calls (`3 × (1 + 5)`). No logical page 3. No portion download. No 1,930-record crawl. Success is Displaying 36–70 of 1930, 35 parsed rows, and not an ICANN error page. A different page size is reported and the command stops. Cookie values, CSRF, and form data are not persisted.
+
+```bash
+REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED=1 \
+  npm run acquire-rsp-portions -- pager-live-diagnostic
+unset REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED
+```
+
 Caps (defaults): pilot batch **25**, **250** applications/calendar day, **≥1s** between gtldresult requests, **2 MiB** max portion size. See Project plan §4.
 
 ## Limits configuration

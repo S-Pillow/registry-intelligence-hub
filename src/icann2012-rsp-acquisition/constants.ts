@@ -42,6 +42,12 @@ export const RSP_PILOT_LIVE_AUTH_ENV = "REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED";
 /** Required for mapping-live HTTP when implemented — separate from pilot-live. */
 export const RSP_MAPPING_LIVE_AUTH_ENV = "REGISTRY_HUB_RSP_MAPPING_AUTHORIZED";
 
+/**
+ * Required for the bounded pager-live diagnostic only.
+ * Mapping-live authorization does not grant this command.
+ */
+export const RSP_PAGER_DIAGNOSTIC_AUTH_ENV = "REGISTRY_HUB_RSP_PAGER_DIAGNOSTIC_AUTHORIZED";
+
 export const PILOT_MANIFEST_EXPECTED_COUNT = 25 as const;
 
 export const RETRY_BACKOFF_MS = [4000, 8000, 16000, 32000, 60000] as const;

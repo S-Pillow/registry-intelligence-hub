@@ -85,13 +85,22 @@ export async function executePagerTransaction(input: {
   contextUrl: string;
   serverProvidedHref: string;
   expectedDisplay?: PagerDisplayExpectation;
+  /**
+   * Default true. The bounded pager diagnostic classifies the final grid
+   * itself and sets this false so an error page or unexpected range is
+   * reported instead of discarded.
+   */
+  rejectIcannErrorPage?: boolean;
 }): Promise<PagerTransactionResult> {
   const requestedUrl = resolveGtldresultTapestryUrl(input.contextUrl, input.serverProvidedHref);
   const response = await input.transport.get(requestedUrl);
   const html = Buffer.from(response.body).toString("utf8");
   if (input.expectedDisplay) {
     assertPagerTransactionGrid(html, input.expectedDisplay);
-  } else if (classifyViewstatusPageHtml(html) === "ICANN_ERROR_PAGE") {
+  } else if (
+    input.rejectIcannErrorPage !== false &&
+    classifyViewstatusPageHtml(html) === "ICANN_ERROR_PAGE"
+  ) {
     throw new PaginationSafetyError("final page is ICANN_ERROR_PAGE");
   }
   const exchange = input.transport.getLastExchange();

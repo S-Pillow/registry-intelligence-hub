@@ -4,13 +4,15 @@ export type AcquisitionCommandMode =
   | "mapping-dry-run"
   | "mapping-live"
   | "mapping-live-plan"
-  | "mapping-review";
+  | "mapping-review"
+  | "pager-live-diagnostic";
 
 export interface CommandModeNetworkPolicy {
   mode: AcquisitionCommandMode;
   allowsOutboundHttp: boolean;
   requiresPilotLiveAuth: boolean;
   requiresMappingLiveAuth: boolean;
+  requiresPagerDiagnosticAuth: boolean;
 }
 
 export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandModeNetworkPolicy {
@@ -24,6 +26,7 @@ export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandMo
         allowsOutboundHttp: false,
         requiresPilotLiveAuth: false,
         requiresMappingLiveAuth: false,
+        requiresPagerDiagnosticAuth: false,
       };
     case "pilot-live":
       return {
@@ -31,6 +34,7 @@ export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandMo
         allowsOutboundHttp: true,
         requiresPilotLiveAuth: true,
         requiresMappingLiveAuth: false,
+        requiresPagerDiagnosticAuth: false,
       };
     case "mapping-live":
       return {
@@ -38,6 +42,15 @@ export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandMo
         allowsOutboundHttp: true,
         requiresPilotLiveAuth: false,
         requiresMappingLiveAuth: true,
+        requiresPagerDiagnosticAuth: false,
+      };
+    case "pager-live-diagnostic":
+      return {
+        mode,
+        allowsOutboundHttp: true,
+        requiresPilotLiveAuth: false,
+        requiresMappingLiveAuth: false,
+        requiresPagerDiagnosticAuth: true,
       };
     default: {
       const _exhaustive: never = mode;
