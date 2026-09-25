@@ -11,6 +11,11 @@ import type { ResolvedMetricEligibility } from "./metric-eligibility";
 import { getMetricEligibility } from "./metric-eligibility";
 import type { MetricDisplayTier, MetricReadiness } from "./readiness";
 import { isReadinessComparable } from "./readiness";
+import {
+  presentPromotedCrossRoundCount,
+  type CrossRoundCountPresentation,
+  type CrossRoundPayloadMode,
+} from "./cross-round-count-comparison";
 
 export const HISTORICAL_2012_UI_ADAPTER_VERSION = "historical-2012-ui-adapter/1.0.0";
 
@@ -30,6 +35,8 @@ export type HistoricalMetricFact = {
   comparisonAllowed: boolean;
   limitations: string[];
   label: string;
+  /** Set only when a promoted cross-round count is presented. Drawer caption reuses this note. */
+  crossRoundNote?: string;
 };
 
 export type PresentedHistoricalMetric = {
@@ -40,6 +47,8 @@ export type PresentedHistoricalMetric = {
   historicalFact?: HistoricalMetricFact;
   baseline2012: number | null;
   deltaLabel: string | null;
+  /** Non-null only when claim actuality allows the metric and the active payload is promoted. */
+  crossRound: CrossRoundCountPresentation | null;
   methodReadiness: MetricReadiness;
   claimReadiness2012: ClaimReadiness;
   claimReadiness2026: ClaimReadiness;
@@ -202,13 +211,51 @@ function pulseMeta(entry: ResolvedMetricEligibility) {
 
 function historicalStatusLine(entry: ResolvedMetricEligibility): string {
   if (entry.comparisonAllowed) {
-    return "Historical aggregate fact — 2012 Reveal Day; cross-round comparison enabled for approved application counts.";
+    return "Historical aggregate fact — 2012 Reveal Day. Numeric cross-round delta withheld until the active payload is the promoted snapshot.";
   }
   return "Historical aggregate fact — 2012 Reveal Day (ICANN source, archived-copy preservation). 2026 comparison pending publication.";
 }
 
-function rehearsalDeltaBlocked(): string {
-  return "Rehearsal fixture shown for UX only — not an approved 2026 comparison.";
+export type RoundPulsePayloadContext = {
+  payloadMode?: CrossRoundPayloadMode;
+  snapshotId?: string | null;
+};
+
+function withCrossRound(
+  metricId: "application-count" | "unique-applied-strings" | "idn-applications",
+  applications: Application[],
+  claimActualityState: ClaimActualityState,
+  payloadContext: RoundPulsePayloadContext,
+  fact: HistoricalMetricFact,
+): { fact: HistoricalMetricFact; value: number; deltaLabel: string; crossRound: CrossRoundCountPresentation | null } {
+  const entry = requireHubMetricEligibility(metricId, claimActualityState);
+  const crossRound = presentPromotedCrossRoundCount(metricId, applications, claimActualityState, payloadContext);
+  if (!crossRound) {
+    return {
+      fact,
+      value: fact.value,
+      deltaLabel: historicalStatusLine(entry),
+      crossRound: null,
+    };
+  }
+  const noted = {
+    ...fact,
+    crossRoundNote: `${crossRound.statement} ${crossRound.provenanceLine}`,
+  };
+  if (crossRound.numericDelta && crossRound.active2026 !== null) {
+    return {
+      fact: noted,
+      value: crossRound.active2026,
+      deltaLabel: crossRound.statement,
+      crossRound,
+    };
+  }
+  return {
+    fact: noted,
+    value: fact.value,
+    deltaLabel: crossRound.statement,
+    crossRound,
+  };
 }
 
 /**
@@ -218,6 +265,7 @@ function rehearsalDeltaBlocked(): string {
 export function buildCommandCenterRoundPulse(
   applications: Application[],
   claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+  payloadContext: RoundPulsePayloadContext = {},
 ): PresentedHistoricalMetric[] {
   const baseline = APPROVED_2012_BASELINE;
   const applicationEntry = requireHubMetricEligibility("application-count", claimActualityState);
@@ -231,16 +279,20 @@ export function buildCommandCenterRoundPulse(
   const stringsFact = buildApproved2012HistoricalFact("unique-applied-strings", claimActualityState);
   const idnFact = buildApproved2012HistoricalFact("idn-applications", claimActualityState);
   const contentionFact = buildApproved2012ContentionMembershipHistoricalFact(claimActualityState);
+  const applicationsPresented = withCrossRound("application-count", applications, claimActualityState, payloadContext, appFact);
+  const stringsPresented = withCrossRound("unique-applied-strings", applications, claimActualityState, payloadContext, stringsFact);
+  const idnPresented = withCrossRound("idn-applications", applications, claimActualityState, payloadContext, idnFact);
 
   return [
     {
       id: "applications",
       metricId: "application-count",
       label: "Applications",
-      value: appFact.value,
-      historicalFact: appFact,
+      value: applicationsPresented.value,
+      historicalFact: applicationsPresented.fact,
       baseline2012: baseline.applications,
-      deltaLabel: historicalStatusLine(applicationEntry),
+      deltaLabel: applicationsPresented.deltaLabel,
+      crossRound: applicationsPresented.crossRound,
       ...pulseMeta(applicationEntry),
       filter: "all",
     },
@@ -248,10 +300,11 @@ export function buildCommandCenterRoundPulse(
       id: "strings",
       metricId: "unique-applied-strings",
       label: "Unique strings",
-      value: stringsFact.value,
-      historicalFact: stringsFact,
+      value: stringsPresented.value,
+      historicalFact: stringsPresented.fact,
       baseline2012: baseline.uniqueStrings,
-      deltaLabel: historicalStatusLine(stringsEntry),
+      deltaLabel: stringsPresented.deltaLabel,
+      crossRound: stringsPresented.crossRound,
       ...pulseMeta(stringsEntry),
       filter: "strings",
     },
@@ -262,6 +315,7 @@ export function buildCommandCenterRoundPulse(
       value: uniqueCount(applications.map((item) => item.organization)),
       baseline2012: null,
       deltaLabel: "Round-wide organization comparison not approved",
+      crossRound: null,
       ...pulseMeta(orgEntry),
       filter: "organizations",
     },
@@ -270,8 +324,9 @@ export function buildCommandCenterRoundPulse(
       metricId: "distinct-regions",
       label: "Regions",
       value: uniqueCount(applications.map((item) => item.region)),
-      baseline2012: baseline.distinctRegions,
-      deltaLabel: `${uniqueCount(applications.map((item) => item.country))} countries · 2012 had ${baseline.distinctCountries} countries · ${rehearsalDeltaBlocked()}`,
+      baseline2012: null,
+      deltaLabel: "Loaded-snapshot region count is not an approved cross-round comparison.",
+      crossRound: null,
       ...pulseMeta(regionsEntry),
       filter: "regions",
     },
@@ -279,10 +334,11 @@ export function buildCommandCenterRoundPulse(
       id: "idn",
       metricId: "idn-applications",
       label: "IDN applications",
-      value: idnFact.value,
-      historicalFact: idnFact,
+      value: idnPresented.value,
+      historicalFact: idnPresented.fact,
       baseline2012: baseline.idnApplications,
-      deltaLabel: historicalStatusLine(idnEntry),
+      deltaLabel: idnPresented.deltaLabel,
+      crossRound: idnPresented.crossRound,
       ...pulseMeta(idnEntry),
       filter: "idn",
     },
@@ -294,6 +350,7 @@ export function buildCommandCenterRoundPulse(
       historicalFact: contentionFact,
       baseline2012: baseline.contentionMembershipApplications,
       deltaLabel: historicalStatusLine(contentionMembershipEntry),
+      crossRound: null,
       ...pulseMeta(contentionMembershipEntry),
       filter: "contention",
     },

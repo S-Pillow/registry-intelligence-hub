@@ -82,7 +82,6 @@ import {
   buildApplicantLegalNameConcentration,
   buildExactAppliedStringCompetition,
   EXACT_APPLIED_STRING_COMPETITION_LIMIT,
-  buildBiggestChanges,
   buildCategoryMix,
   buildPortfolioRanking,
   cellDiffersFromBaseline,
@@ -850,6 +849,13 @@ function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
       </span>
     );
   }
+  if (fact.crossRoundNote) {
+    return (
+      <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+        {fact.crossRoundNote}
+      </span>
+    );
+  }
   return (
     <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
       Historical aggregate fact — 2012 Reveal Day (ICANN source, archived-copy preservation). Not entity-level browse. 2026 comparison pending publication.
@@ -874,6 +880,15 @@ function MetricCards({
         const isFocused = emphasized.has(metric.filter);
         const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
         const isHistoricalAggregate = Boolean(metric.historicalFact);
+        const showCrossRound = Boolean(metric.crossRound);
+        const headlineValue = metric.crossRound?.numericDelta && metric.crossRound.active2026 !== null
+          ? metric.crossRound.active2026
+          : metric.historicalFact
+            ? metric.historicalFact.value
+            : metric.value;
+        const provenanceLabel = metric.crossRound?.numericDelta
+          ? `${metric.label}: ${metric.crossRound.statement}`
+          : `${metric.label}: ${headlineValue}`;
         const historicalCardExploreHref = metric.metricId
           ? roundPulseHistoricalCardExploreHref(metric.metricId, historical2012Loaded)
           : null;
@@ -903,7 +918,7 @@ function MetricCards({
           <ProvenanceSheet
             id={`metric-${metric.id}`}
             kind="metric"
-            label={`${metric.label}: ${metric.historicalFact ? metric.historicalFact.value : metric.value}`}
+            label={provenanceLabel}
             records={roundPulseSupportingRecords(metric)}
             historicalFact={metric.historicalFact}
             exploreFullHref={
@@ -918,8 +933,13 @@ function MetricCards({
                 <span className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-slate-600">
                   {metric.label}<ChevronRight className="size-4 text-[#007d65] transition group-hover:translate-x-0.5" />
                 </span>
-                <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{metric.historicalFact ? metric.historicalFact.value : metric.value}</span>
-                {metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
+                <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{headlineValue}</span>
+                {showCrossRound && metric.crossRound ? (
+                  <>
+                    <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]" data-testid={`cross-round-delta-${metric.id}`}>{metric.crossRound.statement}</span>
+                    <span className="mt-1 block text-[10px] font-medium leading-snug text-slate-600" data-testid={`cross-round-provenance-${metric.id}`}>{metric.crossRound.provenanceLine}</span>
+                  </>
+                ) : metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
                 <MetricReadinessCaption metric={metric} />
                 <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {isHistoricalAggregate ? "View aggregate provenance" : "Investigate records"}
@@ -1947,15 +1967,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const datasetDisclosureBanner = publicationIsPromoted
     ? "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval."
     : "This curated fixture proves the experience and calculation contract; it is not an official 2026 publication.";
-  const orientationCountBasis = publicationIsPromoted
-    ? "Approved application, string, and IDN figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
-    : "Approved application, string, and IDN figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
   const portfolioRanking = useMemo(() => buildPortfolioRanking(registryFixture.applications), [registryFixture.applications]);
   const categoryMix = useMemo(() => buildCategoryMix(registryFixture.applications), [registryFixture.applications]);
-  const biggestChanges = useMemo(
-    () => buildBiggestChanges(registryFixture.applications, registryFixture.historicalContext),
-    [registryFixture.applications, registryFixture.historicalContext],
-  );
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState("all");
   const briefingLens = briefingAudienceForLens(lens);
@@ -1973,13 +1986,22 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     [activeLens, registryFixture.applications],
   );
   const roundPulseMetrics = useMemo(
-    () => buildRoundPulse(registryFixture.applications, claimActualityState),
-    [claimActualityState, registryFixture.applications],
+    () => buildRoundPulse(registryFixture.applications, claimActualityState, {
+      payloadMode: registryPayloadMode,
+      snapshotId: registryFixture.snapshotId,
+    }),
+    [claimActualityState, registryFixture.applications, registryFixture.snapshotId, registryPayloadMode],
   );
   const orientationStripMetrics = useMemo(
     () => roundPulseMetrics.filter((metric) => metric.metricId !== "contention-membership-exposure"),
     [roundPulseMetrics],
   );
+  const comparableCountsShown = roundPulseMetrics.some((metric) => metric.crossRound?.numericDelta);
+  const orientationCountBasis = comparableCountsShown
+    ? "Application, unique-string, and IDN figures on this strip are the loaded snapshot beside the approved 2012 baseline. Difference is loaded snapshot minus 2012 baseline. Other figures stay comparison-gated."
+    : publicationIsPromoted
+      ? "Approved application, string, and IDN figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
+      : "Approved application, string, and IDN figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;
   const applicantConcentration = useMemo(
@@ -2384,31 +2406,15 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 </Card>
               </div>
               <div className="grid gap-5 lg:grid-cols-2">
-                <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`}>
+                <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`} data-testid="category-mix-comparison">
                   <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">Rehearsal fixture only — category mix comparison not yet approved for publication</p></div>
-                    <ProvenanceSheet kind="metric" label="Biggest changes versus 2012" records={registryFixture.applications} />
+                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">CATEGORY MIX</p><CardTitle className="mt-1 text-xl">Category comparison unavailable</CardTitle><p className="mt-1 text-sm text-slate-600">Category mix comparison not yet approved for publication</p></div>
+                    <ProvenanceSheet kind="metric" label="Category mix comparison unavailable" records={[]} />
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {categoryMixGated && (
-                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
-                        <strong>Comparison not yet approved.</strong> Broad category / sector charts are gated until 2012 taxonomy coverage and denominator policy are explicit. Rehearsal rows below are illustrative fixture context only.
-                      </p>
-                    )}
-                    {biggestChanges.slice(0, 4).map((item) => (
-                      <ProvenanceSheet
-                        key={item.category}
-                        id={`category-change-${item.category}`}
-                        kind="category"
-                        entityType="categories"
-                        entityKey={item.category}
-                        label={`${item.category}: ${item.previous} in 2012 to ${item.current} in rehearsal`}
-                        records={registryFixture.applications.filter((record) => record.category === item.category)}
-                        triggerClassName="group grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg border border-transparent px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                        trigger={<><span><strong className="block text-sm">{item.category}</strong><span className="text-xs text-slate-600">{item.previous} → {item.current} applications</span></span><Badge className={item.change > 0 ? "bg-emerald-100 text-[#005c49]" : "bg-rose-100 text-rose-800"}>{item.change > 0 ? "+" : ""}{item.change}</Badge><ChevronRight className="size-4 text-[#007d65]" /></>}
-                      />
-                    ))}
-                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"><strong>Why this stands out:</strong> Identity rose from one to three applications, Technology doubled, and Consumer and Community each declined in this normalized rehearsal cohort. These are fixture comparisons, not official round trends.</p>
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                      <strong>Comparison not yet approved.</strong> 2012 taxonomy coverage does not support a category delta. No 2026 category comparison is shown.
+                    </p>
                   </CardContent>
                 </Card>
 

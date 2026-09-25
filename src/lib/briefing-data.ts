@@ -343,7 +343,10 @@ export function buildBriefingCompareRows(
 }
 
 function headlineMetricsRoundWide(emphasis: Lens, claimActualityState: ClaimActualityState, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
-  const pulse = buildRoundPulse(registry.applications, claimActualityState);
+  const pulse = buildRoundPulse(registry.applications, claimActualityState, {
+    payloadMode: registry.payloadMode === "promoted-2026" ? "promoted-2026" : "rehearsal",
+    snapshotId: registry.snapshotId,
+  });
   const filterRecords: Record<string, Application[]> = {
     all: [...registry.applications],
     strings: [...registry.applications],

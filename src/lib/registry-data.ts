@@ -1,6 +1,6 @@
 import fixture from "@/data/fixtures/registry-applications.json";
 import { hubPath } from "@/lib/hub-paths";
-import { buildCommandCenterRoundPulse } from "@/comparison/historical-2012-ui-adapter";
+import { buildCommandCenterRoundPulse, type RoundPulsePayloadContext } from "@/comparison/historical-2012-ui-adapter";
 import {
   DEFAULT_CLAIM_ACTUALITY_STATE,
   type ClaimActualityState,
@@ -331,9 +331,9 @@ export function exploreSavedResearchParams(
  * can reuse the identical text rather than a parallel copy of it.
  */
 export const lensInterpretations: Record<Lens, string> = {
-  all: "The rehearsal fixture points to concentrated portfolios, increased IDN representation, and two initial contention clusters worth coordinated review.",
+  all: "The rehearsal fixture is the loaded cohort. Numeric cross-round deltas stay withheld until a promoted snapshot is active.",
   commercial: "Portfolio concentration and contention expose where account research may be most efficient; they are investigation priorities, not sales recommendations.",
-  strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
+  strategy: "This view emphasizes composition, IDN participation, and contention on the loaded snapshot. Category mix versus 2012 is not an approved comparison.",
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
 
@@ -719,8 +719,9 @@ export function uniqueCount<T>(values: T[]) {
 export function buildRoundPulse(
   applications: Application[],
   claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+  payloadContext: RoundPulsePayloadContext = {},
 ) {
-  return buildCommandCenterRoundPulse(applications, claimActualityState).map((metric) => ({
+  return buildCommandCenterRoundPulse(applications, claimActualityState, payloadContext).map((metric) => ({
     id: metric.id,
     label: metric.label,
     value: metric.value,
@@ -735,6 +736,7 @@ export function buildRoundPulse(
     method: metric.method,
     metricId: metric.metricId,
     historicalFact: metric.historicalFact,
+    crossRound: metric.crossRound,
   }));
 }
 
@@ -862,6 +864,7 @@ export function buildCategoryMix(applications: Application[]) {
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
 }
 
+/** Fixture-cohort arithmetic only. Not an approved category comparison. Command Center does not render it. */
 export function buildBiggestChanges(applications: Application[], historical: HistoricalContext = fixture.historicalContext) {
   const current = Object.fromEntries(buildCategoryMix(applications).map((item) => [item.category, item.count]));
   return Object.entries(historical.categoryCounts)
