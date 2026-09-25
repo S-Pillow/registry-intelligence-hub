@@ -17,5 +17,12 @@ describe("approved 2012 baseline reconciliation", () => {
     expect(rows).toHaveLength(APPROVED_2012_BASELINE.applications);
     expect(new Set(rows.map((row) => row.stringUlabel)).size).toBe(APPROVED_2012_BASELINE.uniqueStrings);
     expect(rows.filter((row) => row.isIdn).length).toBe(APPROVED_2012_BASELINE.idnApplications);
+    const yes = (value: string | null | undefined) => (value ?? "").trim().toLowerCase() === "yes";
+    expect(rows.filter((row) => yes(row.preservedColumns["Community?"])).length).toBe(
+      APPROVED_2012_BASELINE.communityDesignations,
+    );
+    expect(rows.filter((row) => yes(row.preservedColumns["Geographic?"])).length).toBe(
+      APPROVED_2012_BASELINE.geographicDesignations,
+    );
   });
 });

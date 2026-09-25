@@ -78,6 +78,8 @@ import {
 } from "@/historical-2012/explore-historical-organizations";
 import {
   applicantsInvestigationQueueForLens,
+  APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT,
+  buildApplicantLegalNameConcentration,
   buildBiggestChanges,
   buildCategoryMix,
   buildPortfolioRanking,
@@ -122,7 +124,7 @@ import {
   roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
-import { type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
+import { buildApproved2012DesignationHistoricalFacts, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import {
   participationStatusCellForApplication,
@@ -832,6 +834,13 @@ function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string;
 }
 
 function HistoricalFactCaption({ fact }: { fact: HistoricalMetricFact }) {
+  if (fact.metricId === "community-designation-count" || fact.metricId === "geographic-designation-count") {
+    return (
+      <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+        2012 Reveal Day designation flag. Historical aggregate only — not a 2026 count, category, Brand designation, or IDN count. 2026 comparison is not available.
+      </span>
+    );
+  }
   if (fact.metricId === "contention-membership-exposure") {
     return (
       <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
@@ -1967,6 +1976,15 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   );
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;
+  const applicantConcentration = useMemo(
+    () => buildApplicantLegalNameConcentration(registryFixture.applications),
+    [registryFixture.applications],
+  );
+  const designationFacts = useMemo(
+    () => buildApproved2012DesignationHistoricalFacts(claimActualityState),
+    [claimActualityState],
+  );
+  const visibleApplicantConcentration = applicantConcentration.ranked.slice(0, APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -2135,7 +2153,101 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
         {state === "loading" ? null : state === "empty" || state === "error" ? null : (
           <>
-            <section className="mt-10" data-testid="gated-structure-section" aria-label="Gated category comparison and investigation queue">
+            <section className="mt-10" data-testid="gated-structure-section" aria-label="Structural application intelligence, gated category comparison, and investigation queue">
+              <div className="mb-5 grid gap-5 lg:grid-cols-2" data-testid="structural-application-intelligence">
+                <Card className="border-slate-300 shadow-sm" data-testid="applicant-concentration">
+                  <CardHeader className="flex-row items-start justify-between">
+                    <div>
+                      <p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANT LEGAL NAME</p>
+                      <CardTitle className="mt-1 text-xl">Applicant concentration</CardTitle>
+                      <p className="mt-1 text-sm text-slate-600">Applications grouped by applicant legal name.</p>
+                    </div>
+                    <ProvenanceSheet
+                      kind="metric"
+                      label={`Applicant concentration · ${applicantConcentration.method} · snapshot ${registryFixture.snapshotId}`}
+                      records={registryFixture.applications.filter((record) => record.applicant.trim())}
+                    />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-xs leading-5 text-slate-700" data-testid="applicant-concentration-disclosure">
+                      {publicationIsPromoted
+                        ? "Promoted snapshot. Counts use the loaded application records only."
+                        : "Rehearsal fixture only. These applicant legal names are not a published 2026 result."}
+                      {" "}
+                      {applicantConcentration.distinctApplicantLegalNames} applicant legal names across {applicantConcentration.eligibleApplicationCount} applications with a legal name.
+                      {applicantConcentration.datasetApplicationCount === applicantConcentration.eligibleApplicationCount
+                        ? ""
+                        : ` ${applicantConcentration.datasetApplicationCount - applicantConcentration.eligibleApplicationCount} loaded applications have no applicant legal name and are excluded.`}
+                    </p>
+                    {visibleApplicantConcentration.map((item, index) => {
+                      const records = registryFixture.applications.filter((record) => record.applicant.trim() === item.applicantLegalName);
+                      const shareWidth = item.shareDenominator > 0 ? (item.count / item.shareDenominator) * 100 : 0;
+                      return (
+                        <ProvenanceSheet
+                          key={item.applicantLegalName}
+                          id={`applicant-legal-name-${item.applicantLegalName}`}
+                          kind="metric"
+                          label={`${item.applicantLegalName}: ${item.count} of ${item.shareDenominator} applications`}
+                          records={records}
+                          triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                          trigger={
+                            <>
+                              <span className="font-mono text-xs text-slate-600">0{index + 1}</span>
+                              <span>
+                                <span className="flex items-center justify-between gap-4">
+                                  <strong className="text-sm" data-testid={`applicant-concentration-${index}`}>{item.applicantLegalName}</strong>
+                                  <strong className="text-sm">{item.count} of {item.shareDenominator}</strong>
+                                </span>
+                                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200">
+                                  <span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${shareWidth}%` }} />
+                                </span>
+                              </span>
+                              <ChevronRight className="size-4 text-[#007d65]" />
+                            </>
+                          }
+                        />
+                      );
+                    })}
+                    {applicantConcentration.ranked.length > visibleApplicantConcentration.length ? (
+                      <p className="text-xs text-slate-600">Showing {visibleApplicantConcentration.length} of {applicantConcentration.distinctApplicantLegalNames} applicant legal names, ranked by application count.</p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-300 shadow-sm" data-testid="application-designations">
+                  <CardHeader>
+                    <p className="text-xs font-bold tracking-wider text-[#006a56]">2012 BASELINE</p>
+                    <CardTitle className="mt-1 text-xl">Application designations</CardTitle>
+                    <p className="mt-1 text-sm text-slate-600">Historical 2012 Reveal Day designation flags. Not a 2026 count and not a category mix.</p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {designationFacts.map((fact) => (
+                      <ProvenanceSheet
+                        key={fact.metricId}
+                        id={`designation-${fact.metricId}`}
+                        kind="metric"
+                        label={`${fact.label}: ${fact.value}`}
+                        records={[]}
+                        historicalFact={fact}
+                        triggerClassName="group flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-3 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                        trigger={
+                          <>
+                            <span>
+                              <strong className="block text-sm">{fact.label}</strong>
+                              <span className="text-xs text-slate-600">2012 baseline · {fact.methodVersion}</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <strong className="text-lg">{fact.value}</strong>
+                              <ChevronRight className="size-4 text-[#007d65]" />
+                            </span>
+                          </>
+                        }
+                      />
+                    ))}
+                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700">2026 community and geographic designation counts are not published. No comparison with 2012 is shown.</p>
+                  </CardContent>
+                </Card>
+              </div>
               <div className="grid gap-5 lg:grid-cols-2">
                 <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`}>
                   <CardHeader className="flex-row items-start justify-between">

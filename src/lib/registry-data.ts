@@ -738,6 +738,46 @@ export function buildRoundPulse(
   }));
 }
 
+/** Exact applicant legal-name grouping. Whitespace trim matches reveal-day-2026 normalize; no fuzzy identity match. */
+export const APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD = "applicant-legal-name-count/1.0.0";
+export const APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT = 5;
+
+export type ApplicantLegalNameConcentration = {
+  datasetApplicationCount: number;
+  eligibleApplicationCount: number;
+  distinctApplicantLegalNames: number;
+  method: typeof APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD;
+  ranked: Array<{
+    applicantLegalName: string;
+    count: number;
+    shareDenominator: number;
+  }>;
+};
+
+export function buildApplicantLegalNameConcentration(applications: Application[]): ApplicantLegalNameConcentration {
+  const grouped = new Map<string, number>();
+  for (const item of applications) {
+    const applicantLegalName = item.applicant.trim();
+    if (!applicantLegalName) continue;
+    grouped.set(applicantLegalName, (grouped.get(applicantLegalName) ?? 0) + 1);
+  }
+  const eligibleApplicationCount = [...grouped.values()].reduce((sum, count) => sum + count, 0);
+  const ranked = [...grouped.entries()]
+    .map(([applicantLegalName, count]) => ({
+      applicantLegalName,
+      count,
+      shareDenominator: eligibleApplicationCount,
+    }))
+    .sort((a, b) => b.count - a.count || a.applicantLegalName.localeCompare(b.applicantLegalName));
+  return {
+    datasetApplicationCount: applications.length,
+    eligibleApplicationCount,
+    distinctApplicantLegalNames: ranked.length,
+    method: APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD,
+    ranked,
+  };
+}
+
 export function buildPortfolioRanking(applications: Application[]) {
   const grouped = new Map<string, { count: number; returning: boolean; confidence: number }>();
   for (const item of applications) {

@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
+import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
 import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
@@ -124,12 +125,15 @@ describe("Command Center interactions", () => {
     };
     expectRetiredFindingsAbsent();
     expect(topInvestigation()).toBe("Atlas Digital");
+    expect(screen.getByTestId("applicant-concentration-0")).toHaveTextContent("Atlas Digital Registry LLC");
 
     await user.click(screen.getByRole("button", { name: "Commercial" }));
     expectRetiredFindingsAbsent();
     expect(screen.getByTestId("lens-view-panel-line")).toHaveTextContent(/Commercial/);
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
     expect(topInvestigation()).toBe("Kizuna Registry");
+    expect(screen.getByTestId("applicant-concentration-0")).toHaveTextContent("Atlas Digital Registry LLC");
+    expect(screen.getByTestId("application-designations")).toHaveTextContent(String(APPROVED_2012_BASELINE.communityDesignations));
     expectRetiredFindingsAbsent();
     await user.click(screen.getByRole("button", { name: "Marketing" }));
     expect(screen.getByTestId("lens-view-panel-line")).toHaveTextContent(/Marketing/);
@@ -611,6 +615,21 @@ describe("Command Center information hierarchy", () => {
     expect(within(gated).getByText("Comparison not yet approved.")).toBeInTheDocument();
     expect(within(supporting).getByText(/Round-wide concentration gated/i)).toBeInTheDocument();
     expect(within(supporting).getByText(/Market demand is/i)).toBeInTheDocument();
+    const structural = screen.getByTestId("structural-application-intelligence");
+    expect(within(gated).getByTestId("applicant-concentration")).toBeInTheDocument();
+    expect(within(gated).getByTestId("application-designations")).toBeInTheDocument();
+    expect(documentBefore(structural, screen.getByTestId("investigation-queue-0"))).toBe(true);
+    expect(documentBefore(structural, supportingHeading)).toBe(true);
+    expect(within(screen.getByTestId("applicant-concentration")).getByText("Applications grouped by applicant legal name.")).toBeInTheDocument();
+    expect(within(screen.getByTestId("applicant-concentration")).getByTestId("applicant-concentration-disclosure")).toHaveTextContent(/Rehearsal fixture only/);
+    expect(within(screen.getByTestId("applicant-concentration")).getByText("3 of 12")).toBeInTheDocument();
+    expect(within(screen.getByTestId("applicant-concentration")).queryByText(/organization portfolio|company concentration|organization concentration/i)).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).getByText("Community applications")).toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).getByText(String(APPROVED_2012_BASELINE.communityDesignations))).toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).getByText(String(APPROVED_2012_BASELINE.geographicDesignations))).toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).getByText(/2026 community and geographic designation counts are not published/i)).toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).queryByText(/brand/i)).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("application-designations")).queryByText(/increase|decrease|\+\d/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/registry service provider/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/\bRSP\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("Q176")).not.toBeInTheDocument();
@@ -646,6 +665,41 @@ describe("Command Center information hierarchy", () => {
     expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
     expect(screen.queryByText("Identity and technology each contain an identical-string set")).not.toBeInTheDocument();
     expect(screen.queryByText("WHAT YOU SHOULD KNOW")).not.toBeInTheDocument();
+  });
+
+  it("recomputes promoted applicant concentration from loaded legal names", () => {
+    const base = rehearsalRegistryApplicationsDocument();
+    const applications = base.applications.map((app, index) => ({
+      ...app,
+      applicant: index < 3 ? "Promoted Legal Name Alpha" : "Promoted Legal Name Beta",
+      organization: "Resolved Organization Label",
+    }));
+    const document = {
+      ...base,
+      applications,
+      payloadMode: "promoted-2026" as const,
+      snapshotId: "snap-promoted-applicant-example",
+    };
+    render(
+      <HubRegistryDataProvider resolution={{ document, mode: "promoted-2026", selectionReason: "promoted-active" }}>
+        <CommandCenter />
+      </HubRegistryDataProvider>,
+    );
+
+    const card = screen.getByTestId("applicant-concentration");
+    expect(within(card).getByTestId("applicant-concentration-disclosure")).toHaveTextContent(/Promoted snapshot/);
+    expect(within(card).getByTestId("applicant-concentration-disclosure")).not.toHaveTextContent(/Rehearsal fixture only/);
+    expect(within(card).getByTestId("applicant-concentration-0")).toHaveTextContent("Promoted Legal Name Beta");
+    expect(within(card).getByTestId("applicant-concentration-1")).toHaveTextContent("Promoted Legal Name Alpha");
+    expect(within(card).getByText("9 of 12")).toBeInTheDocument();
+    expect(within(card).getByText("3 of 12")).toBeInTheDocument();
+    expect(within(card).queryByText("Atlas Digital Registry LLC")).not.toBeInTheDocument();
+    expect(within(card).queryByText("Resolved Organization Label")).not.toBeInTheDocument();
+    expect(within(card).queryByText(/organization portfolio|company concentration/i)).not.toBeInTheDocument();
+    const designations = screen.getByTestId("application-designations");
+    expect(within(designations).getByText(String(APPROVED_2012_BASELINE.communityDesignations))).toBeInTheDocument();
+    expect(within(designations).getByText(String(APPROVED_2012_BASELINE.geographicDesignations))).toBeInTheDocument();
+    expect(within(designations).queryByText(/brand/i)).not.toBeInTheDocument();
   });
 });
 
@@ -702,6 +756,10 @@ describe("Investigate — shared intelligence drawer", () => {
   it("keeps dataset health provenance reachable without fixture standout findings", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
+
+    await user.click(screen.getByRole("button", { name: `View intelligence for Community applications: ${APPROVED_2012_BASELINE.communityDesignations}` }));
+    expect(await screen.findByText(/Historical aggregate only — not a 2026 count, category, Brand designation, or IDN count/i)).toBeInTheDocument();
+    await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("button", { name: "View intelligence for IDN interest reaches two regions and two scripts" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "View intelligence for Atlas Digital holds the rehearsal fixture’s largest portfolio" })).not.toBeInTheDocument();

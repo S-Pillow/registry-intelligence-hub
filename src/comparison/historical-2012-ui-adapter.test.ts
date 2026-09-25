@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import fixture from "@/data/fixtures/registry-applications.json";
 import { APPROVED_2012_BASELINE } from "./approved-2012-baseline";
 import {
+  buildApproved2012DesignationHistoricalFacts,
   buildApproved2012HistoricalFacts,
   buildCommandCenterRoundPulse,
   buildRevealDayGlanceMetrics,
@@ -33,6 +34,23 @@ describe("historical-2012-ui-adapter", () => {
     const glance = buildRevealDayGlanceMetrics(fixture.applications);
     expect(glance.every((fact) => typeof fact.value === "number" && fact.metricId && fact.methodVersion)).toBe(true);
     expect(glance.find((m) => m.metricId === "unique-applied-strings")?.value).toBe(1409);
+  });
+
+  it("surfaces approved 2012 designation counts as historical facts without a 2026 comparison", () => {
+    const facts = buildApproved2012DesignationHistoricalFacts();
+    expect(facts.map((fact) => [fact.metricId, fact.label, fact.value])).toEqual([
+      ["community-designation-count", "Community applications", APPROVED_2012_BASELINE.communityDesignations],
+      ["geographic-designation-count", "Geographic applications", APPROVED_2012_BASELINE.geographicDesignations],
+    ]);
+    for (const fact of facts) {
+      expect(fact.roundId).toBe("2012-reveal-day");
+      expect(fact.comparisonAllowed).toBe(false);
+      expect(fact.claimReadiness).toBe("REAL_SOURCE_READY");
+      expect(fact.limitations.join(" ")).toMatch(/not published/i);
+      expect(fact.label).not.toMatch(/brand/i);
+    }
+    expect(() => assertCrossRoundDeltaAllowed("community-designation-count")).toThrow(/Cross-round delta blocked/);
+    expect(() => assertCrossRoundDeltaAllowed("geographic-designation-count")).toThrow(/Cross-round delta blocked/);
   });
 
   it("uses approved 2012 values in round pulse for the three swapped metrics without rehearsal deltas", () => {

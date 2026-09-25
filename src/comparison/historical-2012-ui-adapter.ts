@@ -99,6 +99,45 @@ export function buildApproved2012HistoricalFacts(
   return APPROVED_UI_SWAP_METRIC_IDS.map((metricId) => buildApproved2012HistoricalFact(metricId, claimActualityState));
 }
 
+const APPROVED_2012_DESIGNATION_METRIC_IDS = ["community-designation-count", "geographic-designation-count"] as const;
+
+const DESIGNATION_DISPLAY_LABEL: Record<(typeof APPROVED_2012_DESIGNATION_METRIC_IDS)[number], string> = {
+  "community-designation-count": "Community applications",
+  "geographic-designation-count": "Geographic applications",
+};
+
+function designationBaselineValue(metricId: (typeof APPROVED_2012_DESIGNATION_METRIC_IDS)[number]): number {
+  if (metricId === "community-designation-count") return APPROVED_2012_BASELINE.communityDesignations;
+  return APPROVED_2012_BASELINE.geographicDesignations;
+}
+
+/** Approved 2012 community and geographic designation counts. 2026 values are not published. */
+export function buildApproved2012DesignationHistoricalFacts(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): HistoricalMetricFact[] {
+  return APPROVED_2012_DESIGNATION_METRIC_IDS.map((metricId) => {
+    const entry = requireHubMetricEligibility(metricId, claimActualityState);
+    return {
+      metricId,
+      value: designationBaselineValue(metricId),
+      roundId: APPROVED_2012_HISTORICAL_ROUND_ID,
+      effectiveDate: APPROVED_2012_BASELINE.baselineAt,
+      sourceClassification: "ICANN_PRIMARY_ARCHIVED_COPY",
+      sourceSnapshotId: "snap-2012-reveal-day-csv-v1",
+      methodVersion: entry.source2012,
+      methodReadiness: entry.methodReadiness,
+      claimReadiness: entry.claimReadiness.round2012,
+      comparisonAllowed: entry.comparisonAllowed,
+      limitations: [
+        ...HISTORICAL_LIMITATIONS,
+        "Designation flag count only. Not a category, Brand designation, or IDN count.",
+        "2026 community and geographic designation counts are not published.",
+      ],
+      label: DESIGNATION_DISPLAY_LABEL[metricId],
+    };
+  });
+}
+
 /** Approved 2012 contention membership aggregate — PDF pipeline, not Reveal Day CSV. */
 export function buildApproved2012ContentionMembershipHistoricalFact(
   claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,

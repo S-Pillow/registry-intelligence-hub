@@ -108,6 +108,9 @@ describe("generateEditionContent — round-wide scope", () => {
       expect(standout.asOfNote).toContain(registryFixture.snapshotId);
       const serialized = editionClaimText(edition);
       for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
+      expect(serialized).not.toContain("applicant-legal-name-count");
+      expect(serialized).not.toContain("Community applications");
+      expect(serialized).not.toContain("Geographic applications");
       const headline = edition.sections.find((section) => section.id === "headline-metrics")!;
       expect(headline.claims.length).toBeGreaterThan(0);
       expect(headline.narrativeFrame?.length).toBeGreaterThan(0);
@@ -132,6 +135,9 @@ describe("generateEditionContent — round-wide scope", () => {
       expect(standout.asOfNote).toContain("snap-promoted-2026-example");
       const serialized = editionClaimText(edition);
       for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
+      expect(serialized).not.toContain("applicant-legal-name-count");
+      expect(serialized).not.toContain("Community applications");
+      expect(serialized).not.toContain("Geographic applications");
       expect(edition.snapshotId).toBe("snap-promoted-2026-example");
       expect(claimTexts(edition.sections.find((section) => section.id === "limitations")!.claims).some((text) => text.includes("Promoted 2026 application rows"))).toBe(true);
       expect(claimTexts(edition.sections.find((section) => section.id === "headline-metrics")!.claims).length).toBeGreaterThan(0);

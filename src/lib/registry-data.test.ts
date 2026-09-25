@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import manifest from "@/data/fixtures/manifest.json";
 import fixture from "@/data/fixtures/registry-applications.json";
 import {
+  buildApplicantLegalNameConcentration,
   buildApplicantsToWatch,
   buildBiggestChanges,
   buildCategoryMix,
@@ -73,6 +74,48 @@ describe("deterministic intelligence calculations", () => {
       contention: 754,
     });
     expect(fixture.applications.filter((item) => item.replacement === null)).toHaveLength(10);
+  });
+
+  it("ranks applicant legal names independently of resolved organization", () => {
+    const concentration = buildApplicantLegalNameConcentration(fixture.applications);
+    expect(concentration.eligibleApplicationCount).toBe(fixture.applications.length);
+    expect(concentration.distinctApplicantLegalNames).toBe(8);
+    expect(concentration.ranked.map((item) => [item.applicantLegalName, item.count])).toEqual([
+      ["Atlas Digital Registry LLC", 3],
+      ["Kizuna Registry KK", 2],
+      ["Northstar Naming Inc.", 2],
+      ["Future MENA Domains FZ-LLC", 1],
+      ["Harbor Brands GmbH", 1],
+      ["Sentinel Public Benefit Corp.", 1],
+      ["Terra Geographic Association", 1],
+      ["Verde Community Cooperative", 1],
+    ]);
+    expect(concentration.ranked[0].shareDenominator).toBe(12);
+    expect(concentration.ranked.some((item) => item.applicantLegalName === "Atlas Digital")).toBe(false);
+  });
+
+  it("keeps distinct legal names distinct and breaks ties by legal-name text", () => {
+    const base = fixture.applications[0];
+    const rows = [
+      { ...base, id: "a", applicant: "Beta Legal Inc.", organization: "Same Org" },
+      { ...base, id: "b", applicant: "Alpha Legal LLC", organization: "Same Org" },
+      { ...base, id: "c", applicant: "Beta Legal Inc.", organization: "Same Org" },
+      { ...base, id: "d", applicant: "Alpha Legal LLC", organization: "Same Org" },
+      { ...base, id: "e", applicant: "alpha legal llc", organization: "Same Org" },
+      { ...base, id: "f", applicant: "  Alpha Legal LLC  ", organization: "Other Org" },
+      { ...base, id: "g", applicant: "   ", organization: "Blank Org" },
+    ];
+    const first = buildApplicantLegalNameConcentration(rows);
+    const second = buildApplicantLegalNameConcentration([...rows].reverse());
+    expect(first.ranked.map((item) => [item.applicantLegalName, item.count])).toEqual([
+      ["Alpha Legal LLC", 3],
+      ["Beta Legal Inc.", 2],
+      ["alpha legal llc", 1],
+    ]);
+    expect(second.ranked).toEqual(first.ranked);
+    expect(first.eligibleApplicationCount).toBe(6);
+    expect(first.datasetApplicationCount).toBe(7);
+    expect(first.ranked.every((item) => item.shareDenominator === 6)).toBe(true);
   });
 
   it("ranks equal portfolios by organization name for reproducibility", () => {
