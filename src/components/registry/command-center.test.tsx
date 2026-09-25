@@ -4,6 +4,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
+import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
 import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
 
@@ -46,9 +48,12 @@ describe("Command Center interactions", () => {
     expect(focusMarkers()).toHaveLength(0);
     const rehearsalBanner = () => screen.getByText(/Rehearsal data only\./);
     const roundPulseSection = () => screen.getByTestId("round-pulse-section");
+    expect(documentBefore(screen.getByTestId("publication-state"), hubTitle())).toBe(true);
     expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
-    expect(documentBefore(screen.getByLabelText("Dataset health"), roundPulseSection())).toBe(true);
+    expect(documentBefore(roundPulseSection(), screen.getByLabelText("Dataset health"))).toBe(true);
     expect(documentBefore(rehearsalBanner(), roundPulseSection())).toBe(true);
+    expect(screen.getByTestId("publication-state-summary")).toHaveTextContent("Rehearsal fixture. The 2026 round is not published.");
+    expect(screen.queryByText("REHEARSAL READY")).not.toBeInTheDocument();
     expect(rehearsalBanner()).toBeInTheDocument();
     const baselineFacts = factValues();
     expect(baselineFacts).toContain("1930");
@@ -558,6 +563,65 @@ describe("Compare interactions", () => {
   });
 });
 
+describe("Command Center information hierarchy", () => {
+  const documentBefore = (earlier: Element, later: Element) =>
+    Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("reads publication state, one count strip, then gated modules, demoted insights, and trust", () => {
+    render(<CommandCenter />);
+
+    const publication = screen.getByTestId("publication-state");
+    const pulse = screen.getByTestId("round-pulse-section");
+    const gated = screen.getByTestId("gated-structure-section");
+    const supportingHeading = screen.getByRole("heading", { name: "Explore the shape behind the signals" });
+    const supporting = supportingHeading.closest("section") as HTMLElement;
+    const insights = screen.getByTestId("standout-insights-section");
+    const trust = screen.getByLabelText("Dataset health");
+
+    expect(documentBefore(publication, pulse)).toBe(true);
+    expect(documentBefore(pulse, gated)).toBe(true);
+    expect(documentBefore(gated, supportingHeading)).toBe(true);
+    expect(documentBefore(supportingHeading, insights)).toBe(true);
+    expect(documentBefore(insights, trust)).toBe(true);
+    expect(screen.getByRole("button", { name: "Current" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Compare" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reveal Day" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(gated).getByText("Comparison not yet approved.")).toBeInTheDocument();
+    expect(within(supporting).getByText(/Round-wide concentration gated/i)).toBeInTheDocument();
+    expect(screen.getByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).toBeInTheDocument();
+    expect(screen.queryByText(/registry service provider/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bRSP\b/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Q176")).not.toBeInTheDocument();
+  });
+
+  it("keeps promoted publication state distinct without inventing 2026 totals", () => {
+    const document = {
+      ...rehearsalRegistryApplicationsDocument(),
+      payloadMode: "promoted-2026" as const,
+      snapshotId: "snap-promoted-2026-example",
+    };
+    render(
+      <HubRegistryDataProvider resolution={{ document, mode: "promoted-2026", selectionReason: "promoted-active" }}>
+        <CommandCenter />
+      </HubRegistryDataProvider>,
+    );
+
+    const publication = screen.getByTestId("publication-state");
+    expect(publication).toHaveTextContent("Promoted 2026 snapshot");
+    expect(publication).toHaveTextContent("snap-promoted-2026-example");
+    expect(publication).toHaveTextContent("This view is not the rehearsal fixture.");
+    expect(publication).not.toHaveTextContent("The 2026 round is not published.");
+    expect(screen.queryByText("REHEARSAL READY")).not.toBeInTheDocument();
+    expect(screen.getByText("Promoted 2026 applications.")).toBeInTheDocument();
+    expect(screen.queryByText("Rehearsal data only.")).not.toBeInTheDocument();
+    expect(screen.getByTestId("orientation-count-basis")).toHaveTextContent(/remain historical 2012 baseline facts/i);
+    expect(screen.getAllByText("1930")).toHaveLength(1);
+    expect(screen.getAllByText("1409")).toHaveLength(1);
+    expect(screen.getAllByText("116")).toHaveLength(1);
+    expect(screen.queryByText("REVEAL DAY AT A GLANCE")).not.toBeInTheDocument();
+  });
+});
+
 describe("Investigate — shared intelligence drawer", () => {
   it("opens the intelligence drawer from Compare selection cards via Investigate", async () => {
     const user = userEvent.setup();
@@ -590,11 +654,19 @@ describe("Investigate — shared intelligence drawer", () => {
     expect(screen.queryByText(/SUPPORTING RECORDS · 12/)).not.toBeInTheDocument();
   });
 
-  it("opens glance baseline cards without internal eligibility codes", async () => {
+  it("keeps one orientation surface for the approved 2012 counts", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for Application count: 1930 (2012 approved baseline)" }));
+    expect(screen.queryByText("REVEAL DAY AT A GLANCE")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View intelligence for Application count: 1930 (2012 approved baseline)" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("1930")).toHaveLength(1);
+    expect(screen.getAllByText("1409")).toHaveLength(1);
+    expect(screen.getAllByText("116")).toHaveLength(1);
+    expect(screen.getByTestId("orientation-count-basis")).toHaveTextContent(/historical 2012 baseline facts/i);
+    expect(screen.getByTestId("orientation-count-basis")).toHaveTextContent(/not 2026 publication totals/i);
+
+    await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     expect(await screen.findByText(/INTELLIGENCE DRAWER · METRIC/)).toBeInTheDocument();
     expect(screen.queryByText(/BLOCKED_/)).not.toBeInTheDocument();
     expect(screen.getByText(/Entity-level historical records not yet loaded/i)).toBeInTheDocument();

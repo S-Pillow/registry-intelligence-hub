@@ -127,7 +127,7 @@ import {
   roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
-import { buildRevealDayGlanceMetrics, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
+import { type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import {
   participationStatusCellForApplication,
@@ -815,14 +815,6 @@ function humanizeMethodReadiness(readiness: string) {
   if (readiness === "BLOCKED_METHOD") return "Method gate";
   if (readiness === "COMPARABLE") return "Comparable method";
   if (readiness === "PARTIAL") return "Partial method";
-  return readiness.replaceAll("_", " ").toLowerCase();
-}
-
-function humanizeClaimReadiness(readiness: string) {
-  if (readiness === "REAL_SOURCE_READY") return "Approved source";
-  if (readiness === "HISTORICAL_ONLY") return "Historical baseline only";
-  if (readiness === "REHEARSAL_ONLY") return "Rehearsal fixture only";
-  if (readiness === "NOT_PUBLISHED") return "Not published";
   return readiness.replaceAll("_", " ").toLowerCase();
 }
 
@@ -1942,14 +1934,16 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const historical2012 = useHistorical2012Payload();
   const historical2012Loaded = historical2012.status === "loaded";
   const registryFixture = useHubRegistryDocument();
-  const snapshotPinSubtitle =
-    registryPayloadMode === "promoted-2026"
-      ? "Promoted application snapshot · steward-approved publication"
-      : "Rehearsal fixture pin · not official 2026";
-  const datasetDisclosureBanner =
-    registryPayloadMode === "promoted-2026"
-      ? "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval."
-      : "This curated fixture proves the experience and calculation contract; it is not an official 2026 publication.";
+  const publicationIsPromoted = registryPayloadMode === "promoted-2026";
+  const snapshotPinSubtitle = publicationIsPromoted
+    ? "Promoted application snapshot · steward-approved publication"
+    : "Rehearsal fixture pin · not official 2026";
+  const datasetDisclosureBanner = publicationIsPromoted
+    ? "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval."
+    : "This curated fixture proves the experience and calculation contract; it is not an official 2026 publication.";
+  const orientationCountBasis = publicationIsPromoted
+    ? "Approved application, string, IDN, and contention-membership figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
+    : "Approved application, string, IDN, and contention-membership figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
   const portfolioRanking = useMemo(() => buildPortfolioRanking(registryFixture.applications), [registryFixture.applications]);
   const categoryMix = useMemo(() => buildCategoryMix(registryFixture.applications), [registryFixture.applications]);
   const biggestChanges = useMemo(
@@ -1972,10 +1966,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const investigationQueue = useMemo(
     () => applicantsInvestigationQueueForLens(activeLens, registryFixture.applications),
     [activeLens, registryFixture.applications],
-  );
-  const glanceMetrics = useMemo(
-    () => buildRevealDayGlanceMetrics(registryFixture.applications, claimActualityState),
-    [claimActualityState, registryFixture.applications],
   );
   const roundPulseMetrics = useMemo(
     () => buildRoundPulse(registryFixture.applications, claimActualityState),
@@ -2019,13 +2009,27 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
       <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : view === "data-health" ? "Data Health" : "Command Center"} />
       {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+        <section data-testid="publication-state" aria-label="Publication state" className="mb-6 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> {publicationIsPromoted ? "Promoted 2026 snapshot" : "Rehearsal fixture"}</Badge>
+            <span className="text-xs font-medium text-slate-600">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
+            <ProvenanceSheet label="Dataset state" />
+          </div>
+          <p data-testid="publication-state-summary" className="max-w-3xl text-sm font-medium leading-6 text-slate-950">
+            {publicationIsPromoted
+              ? `Promoted 2026 snapshot ${registryFixture.snapshotId}. This view is not the rehearsal fixture.`
+              : "Rehearsal fixture. The 2026 round is not published."}
+          </p>
+          <div className="mt-3 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
+            <div className="flex-1">
+              <strong>{publicationIsPromoted ? "Promoted 2026 applications." : "Rehearsal data only."}</strong> {datasetDisclosureBanner}
+            </div>
+            <ProvenanceSheet label="Fixture limitations" />
+          </div>
+        </section>
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> REHEARSAL READY</Badge>
-              <span className="text-xs font-medium text-slate-600">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
-              <ProvenanceSheet label="Dataset state" />
-            </div>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Registry Intelligence Hub</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">A source-backed command center for understanding application portfolios, contention, categories, and cross-round signals.</p>
           </div>
@@ -2096,28 +2100,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
           </section>
         </div>
 
-        <section aria-label="Dataset health" className="mb-5 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
-          <ProvenanceSheet id="snapshot-lineage" kind="dataset" label={`Snapshot ${registryFixture.snapshotId}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{snapshotPinSubtitle}</span></>} />
-          <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Automated fixture validation pass</span></>} />
-          <ProvenanceSheet id="last-changed" kind="dataset" label={`Last changed ${registryFixture.changedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Content revision on pinned snapshot</span></>} />
-          <ProvenanceSheet
-            id="source-coverage"
-            kind="coverage"
-            label="Source coverage"
-            records={registryFixture.applications}
-            triggerClassName="group bg-emerald-50 px-4 py-3 text-left hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
-            trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Source coverage<ChevronRight className="size-4 transition group-hover:translate-x-0.5" /></span><span className="mt-1 flex items-center gap-2 text-sm font-bold text-[#004c3d]"><CheckCircle2 className="size-4" />{registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records · {((registryFixture.sourceHealth.requiredFieldsCovered / registryFixture.sourceHealth.requiredFieldsTotal) * 100).toFixed(1)}% fields</span></>}
-          />
-        </section>
-
-        <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
-          <div className="flex-1">
-            <strong>{registryPayloadMode === "promoted-2026" ? "Promoted 2026 applications." : "Rehearsal data only."}</strong> {datasetDisclosureBanner}
-          </div>
-          <ProvenanceSheet label="Fixture limitations" />
-        </div>
-
         {state === "loading" ? <LoadingState /> : state === "empty" || state === "error" ? <MessageState kind={state} /> : (
           <section className="mb-2" data-testid="round-pulse-section" aria-labelledby="round-pulse-heading">
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -2125,6 +2107,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-[#004c3d] sm:text-2xl" data-testid="lens-round-pulse-subtitle">{lensRoundPulseFraming[activeLens].subtitle}</h2>
                 <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600" data-testid="round-pulse-dataset-split">{roundPulseDatasetSplitLine}</p>
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-800" data-testid="orientation-count-basis">{orientationCountBasis}</p>
                 {historical2012Loaded ? (
                   <Link
                     href={exploreHistorical2012ApplicationsHref()}
@@ -2158,80 +2141,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
         {state === "loading" ? null : state === "empty" || state === "error" ? null : (
           <>
-            <section className="mt-5 rounded-xl border border-slate-300 bg-white p-4 shadow-sm" aria-labelledby="glance-heading">
-              <div className="mb-3 flex items-center justify-between">
-                <div><p className="text-xs font-bold tracking-[0.14em] text-[#006a56]">REVEAL DAY AT A GLANCE</p><h2 id="glance-heading" className="mt-1 text-lg font-bold">Approved 2012 Reveal Day baseline</h2></div>
-                <ProvenanceSheet kind="metric" id="at-a-glance" label="Reveal Day at a Glance — approved 2012 baseline" records={registryFixture.applications} />
-              </div>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                {glanceMetrics.map((fact) => {
-                  return (
-                    <ProvenanceSheet
-                      key={fact.metricId}
-                      id={`glance-${fact.metricId}`}
-                      kind="metric"
-                      label={`${fact.label}: ${fact.value} (2012 approved baseline)`}
-                      records={[]}
-                      historicalFact={fact}
-                      triggerClassName="group rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                      trigger={
-                        <>
-                          <p className="text-xs font-bold text-slate-700">{fact.label}</p>
-                          <p className="mt-2 text-2xl font-bold text-slate-950">{fact.value}</p>
-                          <HistoricalFactCaption fact={fact} />
-                          <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                            {humanizeMethodReadiness(fact.methodReadiness)} · {humanizeClaimReadiness(fact.claimReadiness)} · snapshot {fact.sourceSnapshotId}
-                          </p>
-                          <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Investigate baseline</span>
-                        </>
-                      }
-                    />
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-xs text-slate-600">Approved baseline from <code className="text-[11px]">icann2012-reveal-day-v1</code>. No rehearsal 2026 values or percentage deltas are shown here while 2026 remains unpublished.</p>
-            </section>
-
-            <section className="mt-10" aria-labelledby="intelligence-heading">
-              <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-                <div>
-                  <p className="flex items-center gap-1 text-xs font-bold tracking-[0.14em] text-[#007d65]"><Sparkles className="size-3.5" /> WHAT YOU SHOULD KNOW</p>
-                  <h2 id="intelligence-heading" className="mt-1 text-2xl font-bold tracking-tight">Reveal Day Intelligence</h2>
-                  <p className="mt-1 text-sm text-slate-600" data-testid="lens-intelligence-subtitle">{lensIntelligenceSubtitles[activeLens]}</p>
-                </div>
-                <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
-              </div>
-              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters">
-                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[activeLens]}
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {visibleInsights.map((insight) => {
-                  const viewEmphasis = insightEmphasisForLens(activeLens, insight.id);
-                  return (
-                  <ProvenanceSheet
-                    key={insight.id}
-                    id={`signal-${insight.id}`}
-                    kind="signal"
-                    label={insight.title}
-                    records={insight.records}
-                    triggerClassName="group rounded-xl border border-slate-300 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                    trigger={
-                      <>
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{insight.eyebrow}</Badge>
-                          {viewEmphasis ? <Badge className="bg-[#007d65] text-white">{viewEmphasis}</Badge> : null}
-                          <ChevronRight className="size-5 text-[#007d65] transition group-hover:translate-x-1" />
-                        </div>
-                        <h3 className="text-lg font-bold leading-6 text-slate-950">{insight.title}</h3>
-                        <p className="mt-3 text-sm leading-6 text-slate-700">{insight.body}</p>
-                        <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-xs"><span className="font-medium text-slate-600">{insight.confidence} confidence</span><span className="font-bold text-[#006a56]">Investigate evidence</span></div>
-                      </>
-                    }
-                  />
-                );})}
-              </div>
-
-              <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            <section className="mt-10" data-testid="gated-structure-section" aria-label="Gated category comparison and investigation queue">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`}>
                   <CardHeader className="flex-row items-start justify-between">
                     <div><p className="text-xs font-bold tracking-wider text-[#006a56]">BIGGEST CHANGES VS 2012</p><CardTitle className="mt-1 text-xl">Where the mix moved</CardTitle><p className="mt-1 text-sm text-slate-600">Rehearsal fixture only — category mix comparison not yet approved for publication</p></div>
@@ -2340,6 +2251,60 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   </CardContent>
                 </Card>
               </div>
+            </section>
+
+            <section className="mt-10" data-testid="standout-insights-section" aria-labelledby="intelligence-heading">
+              <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="flex items-center gap-1 text-xs font-bold tracking-[0.14em] text-[#007d65]"><Sparkles className="size-3.5" /> WHAT YOU SHOULD KNOW</p>
+                  <h2 id="intelligence-heading" className="mt-1 text-2xl font-bold tracking-tight">Reveal Day Intelligence</h2>
+                  <p className="mt-1 text-sm text-slate-600" data-testid="lens-intelligence-subtitle">{lensIntelligenceSubtitles[activeLens]}</p>
+                </div>
+                <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
+              </div>
+              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters">
+                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[activeLens]}
+              </div>
+              <div className="grid gap-4 lg:grid-cols-3">
+                {visibleInsights.map((insight) => {
+                  const viewEmphasis = insightEmphasisForLens(activeLens, insight.id);
+                  return (
+                  <ProvenanceSheet
+                    key={insight.id}
+                    id={`signal-${insight.id}`}
+                    kind="signal"
+                    label={insight.title}
+                    records={insight.records}
+                    triggerClassName="group rounded-xl border border-slate-300 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                    trigger={
+                      <>
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{insight.eyebrow}</Badge>
+                          {viewEmphasis ? <Badge className="bg-[#007d65] text-white">{viewEmphasis}</Badge> : null}
+                          <ChevronRight className="size-5 text-[#007d65] transition group-hover:translate-x-1" />
+                        </div>
+                        <h3 className="text-lg font-bold leading-6 text-slate-950">{insight.title}</h3>
+                        <p className="mt-3 text-sm leading-6 text-slate-700">{insight.body}</p>
+                        <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-xs"><span className="font-medium text-slate-600">{insight.confidence} confidence</span><span className="font-bold text-[#006a56]">Investigate evidence</span></div>
+                      </>
+                    }
+                  />
+                );})}
+              </div>
+            </section>
+
+            <section aria-label="Dataset health" className="mt-10 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
+              <ProvenanceSheet id="snapshot-lineage" kind="dataset" label={`Snapshot ${registryFixture.snapshotId}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{snapshotPinSubtitle}</span></>} />
+              <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Automated fixture validation pass</span></>} />
+              <ProvenanceSheet id="last-changed" kind="dataset" label={`Last changed ${registryFixture.changedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Content revision on pinned snapshot</span></>} />
+              <ProvenanceSheet
+                id="source-coverage"
+                kind="coverage"
+                label="Source coverage"
+                records={registryFixture.applications}
+                triggerClassName="group bg-emerald-50 px-4 py-3 text-left hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
+                trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Source coverage<ChevronRight className="size-4 transition group-hover:translate-x-0.5" /></span><span className="mt-1 flex items-center gap-2 text-sm font-bold text-[#004c3d]"><CheckCircle2 className="size-4" />{registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records · {((registryFixture.sourceHealth.requiredFieldsCovered / registryFixture.sourceHealth.requiredFieldsTotal) * 100).toFixed(1)}% fields</span></>}
+              />
             </section>
 
             <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
