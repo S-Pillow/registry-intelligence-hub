@@ -16,7 +16,6 @@ import {
   recordsForEntity,
   recordsForParams,
   buildRoundPulse,
-  standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
   type CompareCellLike,
@@ -474,19 +473,15 @@ function headlineMetricsSavedResearch(context: SavedResearchScopeContext, regist
   };
 }
 
-function whatStandsOutRoundWide(emphasis: Lens, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
-  const insights = standoutInsightsForLens(emphasis);
-  const claims = insights.map((insight) =>
-    makeClaim({
-      text: `${insight.title} ${insight.body}`,
-      truthClass: "calculated-metric",
-      confidence: insight.confidence as "High" | "Medium" | "Low",
-      method: insight.method,
-      evidence: [evidenceFor(insight.eyebrow, insight.records)],
-    })
-  );
-  const overflowCount = overflowCountFor(claims, detailLevel);
-  return { id: "what-stands-out", title: BRIEFING_SECTION_TITLES["what-stands-out"], included: true, asOfNote: `Derived from ${registry.applications.length} supporting records, as of snapshot ${registry.snapshotId}.`, claims, overflowCount };
+function whatStandsOutRoundWide(_emphasis: Lens, _detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
+  return {
+    id: "what-stands-out",
+    title: BRIEFING_SECTION_TITLES["what-stands-out"],
+    included: true,
+    asOfNote: `No eligible derived findings are available for this round-wide scope, as of snapshot ${registry.snapshotId}.`,
+    claims: [],
+    overflowCount: 0,
+  };
 }
 
 function whatStandsOutEntity(entityType: EntityType, entityKey: string, label: string, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {

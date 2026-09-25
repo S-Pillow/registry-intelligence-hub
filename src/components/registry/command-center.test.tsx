@@ -110,15 +110,33 @@ describe("Command Center interactions", () => {
   it("keeps downstream lens-dependent content when Views change", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
-    const fullWhy = () => screen.getByTestId("lens-why-matters").textContent ?? "";
     const topInvestigation = () => screen.getByTestId("investigation-queue-0").textContent ?? "";
-    expect(fullWhy()).toMatch(/concentrated portfolios, increased IDN representation/);
+    const retiredFixtureFindings = [
+      "Atlas Digital holds the rehearsal fixture’s largest portfolio",
+      "IDN interest reaches two regions and two scripts",
+      "Identity and technology each contain an identical-string set",
+    ];
+    const expectRetiredFindingsAbsent = () => {
+      expect(screen.queryByTestId("standout-insights-section")).not.toBeInTheDocument();
+      expect(screen.queryByText("WHAT YOU SHOULD KNOW")).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Reveal Day Intelligence" })).not.toBeInTheDocument();
+      for (const finding of retiredFixtureFindings) expect(screen.queryByText(finding)).not.toBeInTheDocument();
+    };
+    expectRetiredFindingsAbsent();
     expect(topInvestigation()).toBe("Atlas Digital");
 
     await user.click(screen.getByRole("button", { name: "Commercial" }));
-    expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
+    expectRetiredFindingsAbsent();
+    expect(screen.getByTestId("lens-view-panel-line")).toHaveTextContent(/Commercial/);
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
     expect(topInvestigation()).toBe("Kizuna Registry");
+    expectRetiredFindingsAbsent();
+    await user.click(screen.getByRole("button", { name: "Marketing" }));
+    expect(screen.getByTestId("lens-view-panel-line")).toHaveTextContent(/Marketing/);
+    expectRetiredFindingsAbsent();
+    await user.click(screen.getByRole("button", { name: "All Intelligence" }));
+    expect(screen.getByTestId("lens-view-panel-line")).toHaveTextContent(/All Intelligence/);
+    expectRetiredFindingsAbsent();
   });
 
   it("opens the intelligence drawer and separates evidence from classification", async () => {
@@ -567,7 +585,7 @@ describe("Command Center information hierarchy", () => {
   const documentBefore = (earlier: Element, later: Element) =>
     Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-  it("reads publication state, one count strip, then gated modules, demoted insights, and trust", () => {
+  it("reads publication state, one count strip, then gated modules, supporting charts, and trust", () => {
     render(<CommandCenter />);
 
     const publication = screen.getByTestId("publication-state");
@@ -575,20 +593,24 @@ describe("Command Center information hierarchy", () => {
     const gated = screen.getByTestId("gated-structure-section");
     const supportingHeading = screen.getByRole("heading", { name: "Explore the shape behind the signals" });
     const supporting = supportingHeading.closest("section") as HTMLElement;
-    const insights = screen.getByTestId("standout-insights-section");
     const trust = screen.getByLabelText("Dataset health");
 
     expect(documentBefore(publication, pulse)).toBe(true);
     expect(documentBefore(pulse, gated)).toBe(true);
     expect(documentBefore(gated, supportingHeading)).toBe(true);
-    expect(documentBefore(supportingHeading, insights)).toBe(true);
-    expect(documentBefore(insights, trust)).toBe(true);
+    expect(documentBefore(supporting, trust)).toBe(true);
+    expect(screen.queryByTestId("standout-insights-section")).not.toBeInTheDocument();
+    expect(screen.queryByText("WHAT YOU SHOULD KNOW")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Reveal Day Intelligence" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).not.toBeInTheDocument();
+    expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
+    expect(screen.queryByText("Identity and technology each contain an identical-string set")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Current" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Compare" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reveal Day" })).toHaveAttribute("aria-pressed", "true");
     expect(within(gated).getByText("Comparison not yet approved.")).toBeInTheDocument();
     expect(within(supporting).getByText(/Round-wide concentration gated/i)).toBeInTheDocument();
-    expect(screen.getByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).toBeInTheDocument();
+    expect(within(supporting).getByText(/Market demand is/i)).toBeInTheDocument();
     expect(screen.queryByText(/registry service provider/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/\bRSP\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("Q176")).not.toBeInTheDocument();
@@ -619,6 +641,11 @@ describe("Command Center information hierarchy", () => {
     expect(screen.getAllByText("1409")).toHaveLength(1);
     expect(screen.getAllByText("116")).toHaveLength(1);
     expect(screen.queryByText("REVEAL DAY AT A GLANCE")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("standout-insights-section")).not.toBeInTheDocument();
+    expect(screen.queryByText("Atlas Digital holds the rehearsal fixture’s largest portfolio")).not.toBeInTheDocument();
+    expect(screen.queryByText("IDN interest reaches two regions and two scripts")).not.toBeInTheDocument();
+    expect(screen.queryByText("Identity and technology each contain an identical-string set")).not.toBeInTheDocument();
+    expect(screen.queryByText("WHAT YOU SHOULD KNOW")).not.toBeInTheDocument();
   });
 });
 
@@ -672,14 +699,13 @@ describe("Investigate — shared intelligence drawer", () => {
     expect(screen.getByText(/Entity-level historical records not yet loaded/i)).toBeInTheDocument();
   });
 
-  it("labels signal insights as calculated and dataset health as action-unavailable", async () => {
+  it("keeps dataset health provenance reachable without fixture standout findings", async () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    await user.click(screen.getByRole("button", { name: "View intelligence for IDN interest reaches two regions and two scripts" }));
-    expect(await screen.findByText("Calculated insight")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View intelligence for IDN interest reaches two regions and two scripts" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "View intelligence for Atlas Digital holds the rehearsal fixture’s largest portfolio" })).not.toBeInTheDocument();
 
-    await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "View intelligence for Dataset state" }));
     expect(await screen.findByText(/Compare, Watch, and View full are not available/i)).toBeInTheDocument();
   });

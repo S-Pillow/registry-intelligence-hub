@@ -14,7 +14,21 @@ import {
   type BriefingScope,
   type GenerateEditionInput,
 } from "./briefing-data";
-import { registryFixture } from "./registry-data";
+import { rehearsalRegistryApplicationsDocument } from "./registry-application-payload-shared";
+import { registryFixture, type Lens } from "./registry-data";
+
+const RETIRED_FIXTURE_FINDING_PHRASES = [
+  "Atlas Digital holds the rehearsal fixture",
+  "IDN interest reaches two regions and two scripts",
+  "each contain an identical-string set",
+  "portfolio-ranking/1.0.0",
+  "idn-share/1.0.0",
+  "initial-contention/1.0.0",
+];
+
+function editionClaimText(edition: ReturnType<typeof generateEditionContent>) {
+  return edition.sections.flatMap((section) => section.claims.map((claim) => `${claim.text} ${claim.method ?? ""}`)).join("\n");
+}
 
 function claimTexts(claims: BriefingClaim[]): string[] {
   return claims.map((claim) => claim.text);
@@ -83,13 +97,45 @@ describe("generateEditionContent — round-wide scope", () => {
     expect(edition.dataAsOfTime).toBe(registryFixture.baselineAt);
   });
 
-  it("changes which stand-out claims appear when emphasis changes, without changing the underlying fixture", () => {
-    const all = generateEditionContent({ ...input, emphasis: "all" });
-    const marketing = generateEditionContent({ ...input, emphasis: "marketing" });
-    const allTexts = claimTexts(all.sections.find((section) => section.id === "what-stands-out")!.claims);
-    const marketingTexts = claimTexts(marketing.sections.find((section) => section.id === "what-stands-out")!.claims);
-    expect(marketingTexts.length).toBeLessThan(allTexts.length);
-    for (const text of marketingTexts) expect(allTexts).toContain(text);
+  it("does not export static fixture findings for any lens", () => {
+    const lenses: Lens[] = ["all", "commercial", "strategy", "marketing"];
+    for (const emphasis of lenses) {
+      const edition = generateEditionContent({ ...input, emphasis });
+      const standout = edition.sections.find((section) => section.id === "what-stands-out")!;
+      expect(standout.claims).toEqual([]);
+      expect(standout.overflowCount).toBe(0);
+      expect(standout.asOfNote).toMatch(/no eligible derived findings are available/i);
+      expect(standout.asOfNote).toContain(registryFixture.snapshotId);
+      const serialized = editionClaimText(edition);
+      for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
+      const headline = edition.sections.find((section) => section.id === "headline-metrics")!;
+      expect(headline.claims.length).toBeGreaterThan(0);
+      expect(headline.narrativeFrame?.length).toBeGreaterThan(0);
+      if (emphasis === "all") expect(headline.narrativeFrame).toMatch(/rehearsal fixture/i);
+      expect(edition.snapshotId).toBe(registryFixture.snapshotId);
+      expect(claimTexts(edition.sections.find((section) => section.id === "limitations")!.claims).some((text) => text.includes("Rehearsal fixture only"))).toBe(true);
+    }
+  });
+
+  it("does not let a promoted payload inherit static fixture findings", () => {
+    const promoted = {
+      ...rehearsalRegistryApplicationsDocument(),
+      payloadMode: "promoted-2026" as const,
+      snapshotId: "snap-promoted-2026-example",
+    };
+    const lenses: Lens[] = ["all", "commercial", "strategy", "marketing"];
+    for (const emphasis of lenses) {
+      const edition = generateEditionContent({ ...input, emphasis, registryDocument: promoted });
+      const standout = edition.sections.find((section) => section.id === "what-stands-out")!;
+      expect(standout.claims).toEqual([]);
+      expect(standout.asOfNote).toMatch(/no eligible derived findings are available/i);
+      expect(standout.asOfNote).toContain("snap-promoted-2026-example");
+      const serialized = editionClaimText(edition);
+      for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
+      expect(edition.snapshotId).toBe("snap-promoted-2026-example");
+      expect(claimTexts(edition.sections.find((section) => section.id === "limitations")!.claims).some((text) => text.includes("Promoted 2026 application rows"))).toBe(true);
+      expect(claimTexts(edition.sections.find((section) => section.id === "headline-metrics")!.claims).length).toBeGreaterThan(0);
+    }
   });
 
   it("never emits a reserved truth class (public-enrichment, ai-assisted-inference, human-reviewed-assertion)", () => {
@@ -107,15 +153,30 @@ describe("generateEditionContent — round-wide scope", () => {
     expect(first.recordedScopeCount).toBe(second.recordedScopeCount);
   });
 
+  it("keeps round-wide stand-out empty at every detail level", () => {
+    for (const detailLevel of ["brief", "standard", "deep"] as const) {
+      const edition = generateEditionContent({ ...input, detailLevel });
+      const standout = edition.sections.find((section) => section.id === "what-stands-out")!;
+      expect(standout.claims).toEqual([]);
+      expect(standout.overflowCount).toBe(0);
+    }
+  });
+
   it("never discards a generated claim: overflow is a count, not a deletion, so 'Show N more' has something to reveal", () => {
-    const brief = generateEditionContent({ ...input, detailLevel: "brief" });
-    const standard = generateEditionContent({ ...input, detailLevel: "standard" });
-    const briefSection = brief.sections.find((section) => section.id === "what-stands-out")!;
-    const standardSection = standard.sections.find((section) => section.id === "what-stands-out")!;
+    const compareInput: GenerateEditionInput = {
+      scope: { kind: "compare-config", params: { type: "organizations", ids: "Atlas Digital,Northstar Group" } },
+      emphasis: "all",
+      detailLevel: "brief",
+      sectionsWanted: defaultSectionsForScope("compare-config"),
+    };
+    const brief = generateEditionContent(compareInput);
+    const standard = generateEditionContent({ ...compareInput, detailLevel: "standard" });
+    const briefSection = brief.sections.find((section) => section.id === "comparison-table")!;
+    const standardSection = standard.sections.find((section) => section.id === "comparison-table")!;
     expect(briefSection.claims.length).toBe(standardSection.claims.length);
-    expect(briefSection.overflowCount).toBeGreaterThan(0);
-    expect(briefSection.claims.length - briefSection.overflowCount).toBeLessThanOrEqual(detailLevelCap("brief"));
-    expect(briefSection.claims.length - briefSection.overflowCount).toBe(2);
+    expect(briefSection.claims.length).toBeGreaterThan(detailLevelCap("brief"));
+    expect(briefSection.overflowCount).toBe(briefSection.claims.length - detailLevelCap("brief"));
+    expect(briefSection.claims.length - briefSection.overflowCount).toBe(detailLevelCap("brief"));
   });
 });
 

@@ -24,7 +24,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  Sparkles,
   Star,
   X,
 } from "lucide-react";
@@ -93,9 +92,7 @@ import {
   numericCellDelta,
   rowHasDifference,
   buildRoundPulse,
-  insightEmphasisForLens,
   investigationQueueLensNote,
-  lensIntelligenceSubtitles,
   lensRoundPulseFraming,
   rehearsalExploreFooterLabel,
   roundPulseDatasetSplitLine,
@@ -104,12 +101,10 @@ import {
   lensWhyMattersCondensedLabel,
   roundPulseEmphasisByLens,
   roundPulseViewFocusForLens,
-  standoutInsightsForLens,
   summarizeCompareDifferences,
   type Application,
   type CompareSectionId,
   type Lens,
-  lensInterpretations,
   exploreDrillDownHref,
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
@@ -1962,7 +1957,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     [item.string, item.applicant, item.organization, item.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [query, registryFixture.applications]);
   const activeLens = lens as Lens;
-  const visibleInsights = useMemo(() => standoutInsightsForLens(activeLens), [activeLens]);
   const investigationQueue = useMemo(
     () => applicantsInvestigationQueueForLens(activeLens, registryFixture.applications),
     [activeLens, registryFixture.applications],
@@ -2250,46 +2244,6 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     <p className="pt-3 text-xs leading-5 text-slate-600">Market demand is <strong>not available</strong> pending source-rights review; no proxy is substituted.</p>
                   </CardContent>
                 </Card>
-              </div>
-            </section>
-
-            <section className="mt-10" data-testid="standout-insights-section" aria-labelledby="intelligence-heading">
-              <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-                <div>
-                  <p className="flex items-center gap-1 text-xs font-bold tracking-[0.14em] text-[#007d65]"><Sparkles className="size-3.5" /> WHAT YOU SHOULD KNOW</p>
-                  <h2 id="intelligence-heading" className="mt-1 text-2xl font-bold tracking-tight">Reveal Day Intelligence</h2>
-                  <p className="mt-1 text-sm text-slate-600" data-testid="lens-intelligence-subtitle">{lensIntelligenceSubtitles[activeLens]}</p>
-                </div>
-                <span className="text-xs font-medium text-slate-600">Deterministic · {registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records covered</span>
-              </div>
-              <div className="mb-5 rounded-xl border border-[#007d65]/30 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-800" data-testid="lens-why-matters">
-                <strong className="text-[#005c49]">Why this matters for this View:</strong> {lensInterpretations[activeLens]}
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                {visibleInsights.map((insight) => {
-                  const viewEmphasis = insightEmphasisForLens(activeLens, insight.id);
-                  return (
-                  <ProvenanceSheet
-                    key={insight.id}
-                    id={`signal-${insight.id}`}
-                    kind="signal"
-                    label={insight.title}
-                    records={insight.records}
-                    triggerClassName="group rounded-xl border border-slate-300 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                    trigger={
-                      <>
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                          <Badge variant="outline" className="border-emerald-300 text-[#005c49]">{insight.eyebrow}</Badge>
-                          {viewEmphasis ? <Badge className="bg-[#007d65] text-white">{viewEmphasis}</Badge> : null}
-                          <ChevronRight className="size-5 text-[#007d65] transition group-hover:translate-x-1" />
-                        </div>
-                        <h3 className="text-lg font-bold leading-6 text-slate-950">{insight.title}</h3>
-                        <p className="mt-3 text-sm leading-6 text-slate-700">{insight.body}</p>
-                        <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-xs"><span className="font-medium text-slate-600">{insight.confidence} confidence</span><span className="font-bold text-[#006a56]">Investigate evidence</span></div>
-                      </>
-                    }
-                  />
-                );})}
               </div>
             </section>
 
