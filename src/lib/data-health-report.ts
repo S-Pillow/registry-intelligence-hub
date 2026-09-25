@@ -358,7 +358,7 @@ export function buildSourceHealthRows(
       coverage: `${baseline.contentionMembershipApplications} applications in PDF membership`,
       readiness: "Partial",
       limitation: historical2012Loaded
-        ? `Round Pulse handoff to Explore initial-contention filter when payload loaded; set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`
+        ? `Explore initial-contention handoff when the 2012 payload is loaded; set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`
         : `Set-entity headline blocked (${baseline.extractedContentionSetEntities} extracted vs ${baseline.icannCitedContentionSetEntities} ICANN-cited).`,
     },
     {

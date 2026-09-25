@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
 import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
-import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref } from "@/lib/registry-data";
+import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref, type Application } from "@/lib/registry-data";
 import { CommandCenter } from "./command-center";
 
 beforeEach(() => {
@@ -60,7 +60,10 @@ describe("Command Center interactions", () => {
     expect(baselineFacts).toContain("1930");
     expect(baselineFacts).toContain("1409");
     expect(baselineFacts).toContain("116");
-    expect(baselineFacts).toContain("754");
+    expect(baselineFacts).not.toContain(String(APPROVED_2012_BASELINE.contentionMembershipApplications));
+    const competitionText = () => screen.getByTestId("initial-string-competition").textContent;
+    const competitionAtAll = competitionText();
+    expect(within(screen.getByTestId("initial-string-competition")).getByText(String(APPROVED_2012_BASELINE.contentionMembershipApplications))).toBeInTheDocument();
 
     const allAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Commercial" }));
@@ -69,10 +72,9 @@ describe("Command Center interactions", () => {
     expect(condensedWhy()).toMatch(/Why this matters for Commercial:/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · COMMERCIAL VIEW");
     expect(pulseSubtitle()).toBe("Applicant portfolios, organizations, and contention signals at a glance");
-    expect(focusMarkers()).toEqual(
-      expect.arrayContaining(["View focus · Portfolio depth signal", "View focus · Contention timing watch"]),
-    );
+    expect(focusMarkers()).toEqual(["View focus · Portfolio depth signal"]);
     expect(factValues()).toEqual(baselineFacts);
+    expect(competitionText()).toBe(competitionAtAll);
 
     const commercialAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Product & Strategy" }));
@@ -81,14 +83,12 @@ describe("Command Center interactions", () => {
     expect(condensedWhy()).toMatch(/how the round is structured and where participation patterns differ/);
     expect(pulseEyebrow()).toBe("ROUND PULSE · PRODUCT & STRATEGY VIEW");
     expect(pulseSubtitle()).toBe("Composition, IDN participation, and contention signals at a glance");
-    expect(focusMarkers()).toEqual(
-      expect.arrayContaining([
-        "View focus · Composition geography",
-        "View focus · Composition shift",
-        "View focus · Round-structure signal",
-      ]),
-    );
+    expect(focusMarkers()).toEqual([
+      "View focus · Composition geography",
+      "View focus · Composition shift",
+    ]);
     expect(factValues()).toEqual(baselineFacts);
+    expect(competitionText()).toBe(competitionAtAll);
 
     const strategyAbove = lensCopyBundle();
     await user.click(screen.getByRole("button", { name: "Marketing" }));
@@ -104,6 +104,7 @@ describe("Command Center interactions", () => {
       expect.arrayContaining(["View focus · Cross-region narrative", "View focus · Geographic reach signal"]),
     );
     expect(factValues()).toEqual(baselineFacts);
+    expect(competitionText()).toBe(competitionAtAll);
     expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
     expect(documentBefore(rehearsalBanner(), roundPulseSection())).toBe(true);
   });
@@ -585,6 +586,132 @@ describe("Compare interactions", () => {
   });
 });
 
+describe("Initial string competition module", () => {
+  function renderPromoted(applications: Application[]) {
+    const base = rehearsalRegistryApplicationsDocument();
+    render(
+      <HubRegistryDataProvider resolution={{
+        document: {
+          ...base,
+          applications: applications as typeof base.applications,
+          payloadMode: "promoted-2026",
+          snapshotId: "snap-promoted-string-example",
+        },
+        mode: "promoted-2026",
+        selectionReason: "promoted-active",
+      }}
+      >
+        <CommandCenter />
+      </HubRegistryDataProvider>,
+    );
+  }
+
+  it("shows rehearsal exact-string groups, historical membership, and a blocked set count", async () => {
+    const user = userEvent.setup();
+    render(<CommandCenter />);
+    const competition = screen.getByTestId("initial-string-competition");
+    const pulse = screen.getByTestId("round-pulse-section");
+
+    expect(within(competition).getByText("Initial string competition")).toBeInTheDocument();
+    expect(within(competition).getByTestId("initial-string-competition-disclosure")).toHaveTextContent("Rehearsal fixture only. These groups are not published 2026 contention.");
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("snap-rehearsal-2026-09-16");
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("exact-applied-string-grouping/1.0.0");
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent(/grain exact applied-for string/);
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("Rehearsal fixture");
+    expect(within(competition).getByTestId("exact-string-competition-summary")).toHaveTextContent(
+      "2 exact applied-for strings are shared by more than one application (4 applications). This is a local grouping of loaded rows.",
+    );
+    expect(within(competition).getByTestId("exact-string-competition-summary")).not.toHaveTextContent(/contention/i);
+    expect(within(competition).getByTestId("exact-string-group-0")).toHaveTextContent(".atlas");
+    expect(within(competition).getByTestId("exact-string-group-0")).toHaveTextContent("2 applications");
+    expect(within(competition).getByTestId("exact-string-group-1")).toHaveTextContent(".secure");
+    expect(within(competition).queryByText(".verde")).not.toBeInTheDocument();
+    expect(within(competition).queryByText("ICS-atlas")).not.toBeInTheDocument();
+    expect(within(competition).queryByText("atlasnet")).not.toBeInTheDocument();
+    expect(competition).not.toHaveTextContent(/\b3\b/);
+    expect(within(pulse).queryByRole("button", { name: /Applications in initial contention/i })).not.toBeInTheDocument();
+    expect(within(competition).getByText("Applications in initial contention")).toBeInTheDocument();
+    expect(within(competition).getByText(/Not an exact applied-for string recount/i)).toBeInTheDocument();
+    expect(within(competition).getByText(String(APPROVED_2012_BASELINE.contentionMembershipApplications))).toBeInTheDocument();
+    expect(within(competition).getByTestId("historical-aggregate-only-contention")).toBeInTheDocument();
+    expect(within(competition).getByTestId("contention-set-count-unavailable")).toHaveTextContent(
+      "Contention-set count is unavailable. No set total is shown.",
+    );
+    expect(within(competition).getByTestId("contention-set-count-unavailable")).toHaveAttribute("data-set-count-available", "false");
+    expect(within(competition).queryByText(String(APPROVED_2012_BASELINE.extractedContentionSetEntities))).not.toBeInTheDocument();
+    expect(within(competition).queryByText(String(APPROVED_2012_BASELINE.icannCitedContentionSetEntities))).not.toBeInTheDocument();
+    expect(competition).not.toHaveTextContent(/auction|winner|severity|\brisk\b|sales|increased|decreased|%|vs 2012|BLOCKED_/i);
+    expect(screen.getByTestId("orientation-count-basis")).not.toHaveTextContent(/contention-membership/i);
+
+    const atlasRecords = rehearsalRegistryApplicationsDocument().applications
+      .filter((record) => record.string === "atlas")
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const atlasLink = within(competition).getByRole("link", { name: "Open .atlas applications in Explore" });
+    expect(atlasLink).toHaveAttribute("href", exploreFullHrefForInvestigation({ records: atlasRecords }));
+    const atlasHref = decodeURIComponent(atlasLink.getAttribute("href") ?? "");
+    expect(atlasHref).toContain("entity=applications");
+    expect(atlasHref).toContain("ids=APP-26001,APP-26002");
+    expect(atlasHref).not.toContain("dataset=2012-historical");
+
+    await user.click(within(competition).getByRole("button", { name: "View intelligence for .atlas: 2 applications" }));
+    expect(await screen.findByRole("link", { name: "View full" })).toHaveAttribute(
+      "href",
+      exploreFullHrefForInvestigation({ records: atlasRecords }),
+    );
+  });
+
+  it("recomputes promoted groups from loaded rows and does not keep fixture groups", () => {
+    const base = rehearsalRegistryApplicationsDocument().applications[0];
+    renderPromoted([
+      { ...base, id: "P-1", string: "promoted", contentionSet: null, replacement: null },
+      { ...base, id: "P-2", string: "promoted", contentionSet: "ICS-other", replacement: "not-grouped" },
+      { ...base, id: "P-3", string: "solo", contentionSet: "ICS-other", replacement: null },
+    ] as Application[]);
+    const competition = screen.getByTestId("initial-string-competition");
+    expect(within(competition).getByTestId("initial-string-competition-disclosure")).toHaveTextContent(
+      "Promoted snapshot. Groups are recomputed from the loaded application records. They are not an approved contention-set count.",
+    );
+    expect(within(competition).getByTestId("initial-string-competition-disclosure")).not.toHaveTextContent(/Rehearsal fixture only/);
+    expect(within(competition).getByTestId("initial-string-competition-disclosure")).not.toHaveTextContent(/published 2026 contention/i);
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("snap-promoted-string-example");
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("Promoted snapshot");
+    expect(within(competition).getByText(".promoted")).toBeInTheDocument();
+    expect(within(competition).queryByText(".atlas")).not.toBeInTheDocument();
+    expect(within(competition).queryByText(".secure")).not.toBeInTheDocument();
+    expect(within(competition).queryByText(".not-grouped")).not.toBeInTheDocument();
+    expect(within(competition).queryByText("ICS-other")).not.toBeInTheDocument();
+    expect(within(competition).getByText(String(APPROVED_2012_BASELINE.contentionMembershipApplications))).toBeInTheDocument();
+  });
+
+  it("says when no loaded application shares an exact applied-for string", () => {
+    const base = rehearsalRegistryApplicationsDocument().applications[0];
+    renderPromoted([
+      { ...base, id: "P-1", string: "one" },
+      { ...base, id: "P-2", string: "two" },
+    ] as Application[]);
+    expect(screen.getByTestId("exact-string-competition-summary")).toHaveTextContent(
+      "No loaded application shares an exact applied-for string with another application.",
+    );
+    expect(screen.queryByTestId("exact-string-group-0")).not.toBeInTheDocument();
+    expect(screen.getByTestId("exact-string-competition-summary")).not.toHaveTextContent(/0 contention/i);
+  });
+
+  it("shows only the first five competing strings", () => {
+    const base = rehearsalRegistryApplicationsDocument().applications[0];
+    const names = ["alpha", "beta", "delta", "epsilon", "gamma", "zeta"];
+    renderPromoted(names.flatMap((name) => [
+      { ...base, id: `${name}-a`, string: name },
+      { ...base, id: `${name}-b`, string: name },
+    ]) as Application[]);
+    const competition = screen.getByTestId("initial-string-competition");
+    expect(within(competition).getByText(".alpha")).toBeInTheDocument();
+    expect(within(competition).getByText(".gamma")).toBeInTheDocument();
+    expect(within(competition).queryByText(".zeta")).not.toBeInTheDocument();
+    expect(within(competition).getByText(/Showing 5 of 6 exact applied-for strings/i)).toBeInTheDocument();
+    expect(within(competition).queryByTestId("exact-string-group-5")).not.toBeInTheDocument();
+  });
+});
+
 describe("Command Center information hierarchy", () => {
   const documentBefore = (earlier: Element, later: Element) =>
     Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -630,6 +757,12 @@ describe("Command Center information hierarchy", () => {
     expect(within(screen.getByTestId("application-designations")).getByText(/2026 community and geographic designation counts are not published/i)).toBeInTheDocument();
     expect(within(screen.getByTestId("application-designations")).queryByText(/brand/i)).not.toBeInTheDocument();
     expect(within(screen.getByTestId("application-designations")).queryByText(/increase|decrease|\+\d/i)).not.toBeInTheDocument();
+    const competition = screen.getByTestId("initial-string-competition");
+    expect(documentBefore(screen.getByTestId("application-designations"), competition)).toBe(true);
+    expect(documentBefore(competition, screen.getByTestId("investigation-queue-0"))).toBe(true);
+    expect(within(screen.getByTestId("applicant-concentration")).queryByText("Initial string competition")).not.toBeInTheDocument();
+    expect(within(competition).queryByText("Applicant concentration")).not.toBeInTheDocument();
+    expect(within(competition).queryByText("Community applications")).not.toBeInTheDocument();
     expect(screen.queryByText(/registry service provider/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/\bRSP\b/)).not.toBeInTheDocument();
     expect(screen.queryByText("Q176")).not.toBeInTheDocument();
@@ -656,6 +789,10 @@ describe("Command Center information hierarchy", () => {
     expect(screen.getByText("Promoted 2026 applications.")).toBeInTheDocument();
     expect(screen.queryByText("Rehearsal data only.")).not.toBeInTheDocument();
     expect(screen.getByTestId("orientation-count-basis")).toHaveTextContent(/remain historical 2012 baseline facts/i);
+    expect(screen.getByTestId("orientation-count-basis")).not.toHaveTextContent(/contention-membership/i);
+    expect(screen.getByTestId("initial-string-competition-disclosure")).toHaveTextContent(/Promoted snapshot/);
+    expect(screen.getByTestId("initial-string-competition-disclosure")).not.toHaveTextContent(/Rehearsal fixture only/);
+    expect(screen.getByTestId("initial-string-competition-disclosure")).toHaveTextContent(/not an approved contention-set count/);
     expect(screen.getAllByText("1930")).toHaveLength(1);
     expect(screen.getAllByText("1409")).toHaveLength(1);
     expect(screen.getAllByText("116")).toHaveLength(1);

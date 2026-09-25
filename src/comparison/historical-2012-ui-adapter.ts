@@ -162,6 +162,28 @@ export function buildApproved2012ContentionMembershipHistoricalFact(
   };
 }
 
+/** Set-entity headline stays blocked. Neither extracted nor cited count is returned. */
+export function blockedContentionSetCountState(
+  claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+): {
+  metricId: "contention-set-count";
+  headlineAvailable: boolean;
+  methodReadiness: ResolvedMetricEligibility["methodReadiness"];
+  comparisonAllowed: boolean;
+  claimReadiness2012: ResolvedMetricEligibility["claimReadiness"]["round2012"];
+  claimReadiness2026: ResolvedMetricEligibility["claimReadiness"]["round2026"];
+} {
+  const entry = requireHubMetricEligibility("contention-set-count", claimActualityState);
+  return {
+    metricId: "contention-set-count",
+    headlineAvailable: false,
+    methodReadiness: entry.methodReadiness,
+    comparisonAllowed: entry.comparisonAllowed,
+    claimReadiness2012: entry.claimReadiness.round2012,
+    claimReadiness2026: entry.claimReadiness.round2026,
+  };
+}
+
 function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }

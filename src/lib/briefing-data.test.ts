@@ -14,6 +14,7 @@ import {
   type BriefingScope,
   type GenerateEditionInput,
 } from "./briefing-data";
+import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { rehearsalRegistryApplicationsDocument } from "./registry-application-payload-shared";
 import { registryFixture, type Lens } from "./registry-data";
 
@@ -109,8 +110,12 @@ describe("generateEditionContent — round-wide scope", () => {
       const serialized = editionClaimText(edition);
       for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
       expect(serialized).not.toContain("applicant-legal-name-count");
+      expect(serialized).not.toContain("exact-applied-string-grouping");
+      expect(serialized).not.toContain("Initial string competition");
       expect(serialized).not.toContain("Community applications");
       expect(serialized).not.toContain("Geographic applications");
+      expect(serialized).toContain("Applications in initial contention");
+      expect(serialized).toContain(String(APPROVED_2012_BASELINE.contentionMembershipApplications));
       const headline = edition.sections.find((section) => section.id === "headline-metrics")!;
       expect(headline.claims.length).toBeGreaterThan(0);
       expect(headline.narrativeFrame?.length).toBeGreaterThan(0);
@@ -136,6 +141,8 @@ describe("generateEditionContent — round-wide scope", () => {
       const serialized = editionClaimText(edition);
       for (const phrase of RETIRED_FIXTURE_FINDING_PHRASES) expect(serialized).not.toContain(phrase);
       expect(serialized).not.toContain("applicant-legal-name-count");
+      expect(serialized).not.toContain("exact-applied-string-grouping");
+      expect(serialized).not.toContain("Initial string competition");
       expect(serialized).not.toContain("Community applications");
       expect(serialized).not.toContain("Geographic applications");
       expect(edition.snapshotId).toBe("snap-promoted-2026-example");

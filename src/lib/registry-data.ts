@@ -778,6 +778,67 @@ export function buildApplicantLegalNameConcentration(applications: Application[]
   };
 }
 
+/**
+ * Local grouping by the canonical applied-for string (`Application.string`).
+ * Same grain as 2026 `stringUlabel` and 2012 string rows: exact field equality.
+ * Not a contention-set id, similarity class, or approved set-count.
+ */
+export const EXACT_APPLIED_STRING_COMPETITION_METHOD = "exact-applied-string-grouping/1.0.0";
+export const EXACT_APPLIED_STRING_COMPETITION_GRAIN = "exact-applied-for-string";
+export const EXACT_APPLIED_STRING_COMPETITION_LIMIT = 5;
+
+export type ExactAppliedStringGroup = {
+  appliedForString: string;
+  applicationCount: number;
+  applicationIds: string[];
+};
+
+export type ExactAppliedStringCompetition = {
+  datasetApplicationCount: number;
+  eligibleApplicationCount: number;
+  competingGroupCount: number;
+  applicationsInCompetingGroups: number;
+  method: typeof EXACT_APPLIED_STRING_COMPETITION_METHOD;
+  grain: typeof EXACT_APPLIED_STRING_COMPETITION_GRAIN;
+  competingGroups: ExactAppliedStringGroup[];
+};
+
+/** Canonical applied-for string. Empty is not a string. No trim, case fold, or IDN fold. */
+export function exactAppliedForStringKey(application: { string: string }): string | null {
+  if (application.string.length === 0) return null;
+  return application.string;
+}
+
+export function buildExactAppliedStringCompetition(applications: readonly Application[]): ExactAppliedStringCompetition {
+  const grouped = new Map<string, string[]>();
+  let eligibleApplicationCount = 0;
+  for (const item of applications) {
+    const appliedForString = exactAppliedForStringKey(item);
+    if (appliedForString === null) continue;
+    eligibleApplicationCount += 1;
+    const applicationIds = grouped.get(appliedForString) ?? [];
+    applicationIds.push(item.id);
+    grouped.set(appliedForString, applicationIds);
+  }
+  const competingGroups = [...grouped.entries()]
+    .filter(([, applicationIds]) => applicationIds.length >= 2)
+    .map(([appliedForString, applicationIds]) => ({
+      appliedForString,
+      applicationCount: applicationIds.length,
+      applicationIds: [...applicationIds].sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => b.applicationCount - a.applicationCount || a.appliedForString.localeCompare(b.appliedForString));
+  return {
+    datasetApplicationCount: applications.length,
+    eligibleApplicationCount,
+    competingGroupCount: competingGroups.length,
+    applicationsInCompetingGroups: competingGroups.reduce((sum, group) => sum + group.applicationCount, 0),
+    method: EXACT_APPLIED_STRING_COMPETITION_METHOD,
+    grain: EXACT_APPLIED_STRING_COMPETITION_GRAIN,
+    competingGroups,
+  };
+}
+
 export function buildPortfolioRanking(applications: Application[]) {
   const grouped = new Map<string, { count: number; returning: boolean; confidence: number }>();
   for (const item of applications) {
@@ -839,8 +900,8 @@ export const applicantsToWatch = buildApplicantsToWatch(fixture.applications);
 /** Round Pulse metric `filter` keys emphasized for the active View (border/tint + VIEW FOCUS marker; values unchanged). */
 export const roundPulseEmphasisByLens: Record<Lens, string[]> = {
   all: [],
-  commercial: ["organizations", "contention"],
-  strategy: ["regions", "idn", "contention"],
+  commercial: ["organizations"],
+  strategy: ["regions", "idn"],
   marketing: ["idn", "regions"],
 };
 
@@ -849,12 +910,10 @@ export const roundPulseViewFocusByLens: Record<Lens, Partial<Record<string, stri
   all: {},
   commercial: {
     organizations: "Portfolio depth signal",
-    contention: "Contention timing watch",
   },
   strategy: {
     regions: "Composition geography",
     idn: "Composition shift",
-    contention: "Round-structure signal",
   },
   marketing: {
     idn: "Cross-region narrative",

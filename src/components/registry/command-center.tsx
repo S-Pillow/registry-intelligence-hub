@@ -80,6 +80,8 @@ import {
   applicantsInvestigationQueueForLens,
   APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT,
   buildApplicantLegalNameConcentration,
+  buildExactAppliedStringCompetition,
+  EXACT_APPLIED_STRING_COMPETITION_LIMIT,
   buildBiggestChanges,
   buildCategoryMix,
   buildPortfolioRanking,
@@ -124,7 +126,7 @@ import {
   roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
-import { buildApproved2012DesignationHistoricalFacts, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
+import { blockedContentionSetCountState, buildApproved2012ContentionMembershipHistoricalFact, buildApproved2012DesignationHistoricalFacts, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import {
   participationStatusCellForApplication,
@@ -603,7 +605,7 @@ function IntelligenceDrawer({
                     </p>
                   ) : historicalContentionCorpusHref ? (
                     <p className="mt-2 text-xs text-slate-700">
-                      Aggregate value above is the approved baseline — not recomputed from Explore rows. Application browse with the initial-contention filter shows membership joined from the official contention publication (754 applications), not Reveal Day CSV columns.
+                      Aggregate value above is the approved baseline — not recomputed from Explore rows. Application browse with the initial-contention filter shows membership joined from the official contention publication ({item.historicalFact?.value} applications), not Reveal Day CSV columns.
                     </p>
                   ) : (
                     <p className="mt-2 text-xs text-slate-700">{ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE}</p>
@@ -867,7 +869,7 @@ function MetricCards({
   const emphasized = new Set(roundPulseEmphasisByLens[lens]);
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
       {metrics.map((metric) => {
         const isFocused = emphasized.has(metric.filter);
         const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
@@ -1946,8 +1948,8 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     ? "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval."
     : "This curated fixture proves the experience and calculation contract; it is not an official 2026 publication.";
   const orientationCountBasis = publicationIsPromoted
-    ? "Approved application, string, IDN, and contention-membership figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
-    : "Approved application, string, IDN, and contention-membership figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
+    ? "Approved application, string, and IDN figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
+    : "Approved application, string, and IDN figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
   const portfolioRanking = useMemo(() => buildPortfolioRanking(registryFixture.applications), [registryFixture.applications]);
   const categoryMix = useMemo(() => buildCategoryMix(registryFixture.applications), [registryFixture.applications]);
   const biggestChanges = useMemo(
@@ -1974,6 +1976,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     () => buildRoundPulse(registryFixture.applications, claimActualityState),
     [claimActualityState, registryFixture.applications],
   );
+  const orientationStripMetrics = useMemo(
+    () => roundPulseMetrics.filter((metric) => metric.metricId !== "contention-membership-exposure"),
+    [roundPulseMetrics],
+  );
   const categoryMixGated = true;
   const portfolioConcentrationGated = true;
   const applicantConcentration = useMemo(
@@ -1984,7 +1990,21 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     () => buildApproved2012DesignationHistoricalFacts(claimActualityState),
     [claimActualityState],
   );
+  const exactStringCompetition = useMemo(
+    () => buildExactAppliedStringCompetition(registryFixture.applications),
+    [registryFixture.applications],
+  );
+  const contentionMembershipFact = useMemo(
+    () => buildApproved2012ContentionMembershipHistoricalFact(claimActualityState),
+    [claimActualityState],
+  );
+  const contentionSetCount = useMemo(
+    () => blockedContentionSetCountState(claimActualityState),
+    [claimActualityState],
+  );
   const visibleApplicantConcentration = applicantConcentration.ranked.slice(0, APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT);
+  const visibleCompetingGroups = exactStringCompetition.competingGroups.slice(0, EXACT_APPLIED_STRING_COMPETITION_LIMIT);
+  const exactStringModeLabel = publicationIsPromoted ? "Promoted snapshot" : "Rehearsal fixture";
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -2132,7 +2152,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               </div>
               <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
             </div>
-            <MetricCards lens={activeLens} metrics={roundPulseMetrics} historical2012Loaded={historical2012Loaded} />
+            <MetricCards lens={activeLens} metrics={orientationStripMetrics} historical2012Loaded={historical2012Loaded} />
           </section>
         )}
 
@@ -2245,6 +2265,121 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       />
                     ))}
                     <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700">2026 community and geographic designation counts are not published. No comparison with 2012 is shown.</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-300 shadow-sm lg:col-span-2" data-testid="initial-string-competition">
+                  <CardHeader className="flex-row items-start justify-between">
+                    <div>
+                      <p className="text-xs font-bold tracking-wider text-[#006a56]">EXACT APPLIED-FOR STRING</p>
+                      <CardTitle className="mt-1 text-xl">Initial string competition</CardTitle>
+                      <p className="mt-1 text-sm text-slate-600">Applications that share one exact applied-for string on the loaded snapshot.</p>
+                    </div>
+                    <ProvenanceSheet
+                      kind="metric"
+                      label={`Exact applied-for string grouping · ${exactStringCompetition.method} · snapshot ${registryFixture.snapshotId} · ${exactStringModeLabel}`}
+                      records={registryFixture.applications.filter((record) => record.string.length > 0)}
+                    />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-xs leading-5 text-slate-700" data-testid="initial-string-competition-disclosure">
+                      {publicationIsPromoted
+                        ? "Promoted snapshot. Groups are recomputed from the loaded application records. They are not an approved contention-set count."
+                        : "Rehearsal fixture only. These groups are not published 2026 contention."}
+                    </p>
+                    <p className="text-xs leading-5 text-slate-700" data-testid="exact-string-competition-provenance">
+                      Snapshot {registryFixture.snapshotId} · method {exactStringCompetition.method} · grain exact applied-for string · {exactStringModeLabel}.
+                    </p>
+                    <p className="text-sm text-slate-800" data-testid="exact-string-competition-summary">
+                      {exactStringCompetition.competingGroupCount === 0
+                        ? "No loaded application shares an exact applied-for string with another application."
+                        : `${exactStringCompetition.competingGroupCount} exact applied-for strings are shared by more than one application (${exactStringCompetition.applicationsInCompetingGroups} applications). This is a local grouping of loaded rows.`}
+                    </p>
+                    {visibleCompetingGroups.map((group, index) => {
+                      const records = registryFixture.applications
+                        .filter((record) => record.string === group.appliedForString)
+                        .sort((a, b) => a.id.localeCompare(b.id));
+                      const href = exploreFullHrefForInvestigation({ records });
+                      return (
+                        <div key={group.appliedForString} className="rounded-lg border border-slate-200 px-3 py-3" data-testid={`exact-string-group-${index}`}>
+                          <ProvenanceSheet
+                            id={`exact-string-${group.appliedForString}`}
+                            kind="metric"
+                            label={`.${group.appliedForString}: ${group.applicationCount} applications`}
+                            records={records}
+                            triggerClassName="group flex w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                            trigger={
+                              <>
+                                <strong className="text-sm">.{group.appliedForString}</strong>
+                                <span className="text-sm font-semibold">{group.applicationCount} applications</span>
+                              </>
+                            }
+                          />
+                          <Link
+                            href={href}
+                            aria-label={`Open .${group.appliedForString} applications in Explore`}
+                            className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline"
+                          >
+                            Open applications<ArrowRight className="size-3" />
+                          </Link>
+                        </div>
+                      );
+                    })}
+                    {exactStringCompetition.competingGroups.length > visibleCompetingGroups.length ? (
+                      <p className="text-xs text-slate-600">Showing {visibleCompetingGroups.length} of {exactStringCompetition.competingGroupCount} exact applied-for strings shared by more than one application.</p>
+                    ) : null}
+                    <div className="rounded-lg border border-slate-200" data-testid="historical-contention-membership">
+                      <p
+                        className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]"
+                        data-testid="round-pulse-contention-provenance-band"
+                      >
+                        {roundPulseHistoricalAggregateBand(contentionMembershipFact.metricId)}
+                      </p>
+                      <ProvenanceSheet
+                        id="historical-contention-membership"
+                        kind="metric"
+                        label={`${contentionMembershipFact.label}: ${contentionMembershipFact.value}`}
+                        records={[]}
+                        historicalFact={contentionMembershipFact}
+                        exploreFullHref={roundPulseHistoricalCardExploreHref(contentionMembershipFact.metricId, historical2012Loaded) ?? undefined}
+                        exploreDataset={historical2012Loaded ? "2012-historical" : undefined}
+                        triggerClassName="group flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                        trigger={
+                          <>
+                            <span>
+                              <strong className="block text-sm">{contentionMembershipFact.label}</strong>
+                              <span className="text-xs text-slate-600">2012 official contention-publication membership · {contentionMembershipFact.methodVersion}. Not an exact applied-for string recount.</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <strong className="text-lg">{contentionMembershipFact.value}</strong>
+                              <ChevronRight className="size-4 text-[#007d65]" />
+                            </span>
+                          </>
+                        }
+                      />
+                      {historical2012Loaded ? (
+                        <Link
+                          href={exploreHistorical2012ContentionApplicationsHref()}
+                          className="flex items-center justify-between border-t border-slate-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50"
+                        >
+                          {roundPulseHistoricalCardExploreFooterLabel(contentionMembershipFact.metricId)}<ArrowRight className="size-3.5" />
+                        </Link>
+                      ) : (
+                        <p
+                          className="border-t border-slate-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400"
+                          data-testid="historical-aggregate-only-contention"
+                        >
+                          Aggregate only · entity browse unavailable
+                        </p>
+                      )}
+                    </div>
+                    <p
+                      className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700"
+                      data-testid="contention-set-count-unavailable"
+                      data-set-count-available={contentionSetCount.headlineAvailable ? "true" : "false"}
+                    >
+                      Contention-set count is unavailable. No set total is shown.
+                    </p>
                   </CardContent>
                 </Card>
               </div>
