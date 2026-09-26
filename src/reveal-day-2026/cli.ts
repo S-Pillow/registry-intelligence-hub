@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fetchOne } from "../pipeline/pipeline";
 import {
   evaluateApplicationActualityPromotion,
@@ -29,7 +29,8 @@ import {
 import { runSanityChecks } from "./sanity-checks";
 import { buildRevealDayVerificationReport } from "./verify-report";
 import { buildBrowserApplicationPayloadFromPublication } from "../lib/registry-application-payload";
-import { writeFile } from "node:fs/promises";
+import { buildPublicationFromLocalArtifact, writePublicationReview } from "./build-publication";
+import { readFile, rm, writeFile } from "node:fs/promises";
 
 const DEFAULT_STATE = "./.data/reveal-2026/claim-actuality-state.json";
 const DEFAULT_PIPELINE_ROOT = "./.data/source-pipeline";
@@ -50,6 +51,11 @@ Usage:
   npm run reveal-2026 -- promotion-history [--history <path>]
   npm run reveal-2026 -- verify-reveal-day [--snapshot <path>] [--state <path>] [--workspace <dir>] [--expected-application-count <n>]
   npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
+  npm run reveal-2026 -- build-publication --input <file> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --media-type application/x-ndjson --round 2026 --evidence-class <id> --expected-row-count <n> --expect-source-hash <sha256> --recorded-http-status <n> --parser-version <version> --normalizer-version <version> --schema-version registry-2026-publication/1.1.0 [--fixture-id <id>] [--limitation <text>]
+
+build-publication reads a local file only. It does not fetch URLs and does not promote.
+Every flag above is required. A file name is not treated as an official source.
+On failure the publication path is removed if present. The input file is not modified.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -73,6 +79,27 @@ async function main(): Promise<void> {
       "steward-approval": { type: "string" },
       "product-approval": { type: "string" },
       "expected-application-count": { type: "string" },
+      input: { type: "string" },
+      "review-out": { type: "string" },
+      "snapshot-id": { type: "string" },
+      "artifact-id": { type: "string" },
+      "capture-id": { type: "string" },
+      "source-url": { type: "string" },
+      "source-name": { type: "string" },
+      "source-version": { type: "string" },
+      "retrieved-at": { type: "string" },
+      "published-at": { type: "string" },
+      "media-type": { type: "string" },
+      round: { type: "string" },
+      "evidence-class": { type: "string" },
+      "expected-row-count": { type: "string" },
+      "expect-source-hash": { type: "string" },
+      "recorded-http-status": { type: "string" },
+      "parser-version": { type: "string" },
+      "normalizer-version": { type: "string" },
+      "schema-version": { type: "string" },
+      "fixture-id": { type: "string" },
+      limitation: { type: "string", multiple: true },
     },
   });
 
@@ -245,6 +272,81 @@ async function main(): Promise<void> {
       const report = await buildRevealDayVerificationReport(snapshot, diagnostics, state, workspaceRoot, sanity);
       console.log(JSON.stringify(report, null, 2));
       if (!diagnostics.validation.ok || !sanity.ok) process.exitCode = 1;
+      return;
+    }
+
+    case "build-publication": {
+      if (values.fetch) {
+        throw new Error("build-publication does not fetch URLs. Remove --fetch.");
+      }
+      const requiredFlags = [
+        "input",
+        "out",
+        "review-out",
+        "snapshot-id",
+        "artifact-id",
+        "capture-id",
+        "source-url",
+        "source-name",
+        "source-version",
+        "retrieved-at",
+        "published-at",
+        "media-type",
+        "round",
+        "evidence-class",
+        "expected-row-count",
+        "expect-source-hash",
+        "recorded-http-status",
+        "parser-version",
+        "normalizer-version",
+        "schema-version",
+      ] as const;
+      const missing = requiredFlags.filter((flag) => {
+        const value = values[flag];
+        return typeof value !== "string" || value.trim() === "";
+      });
+      if (missing.length > 0) {
+        throw new Error(`build-publication missing required flags: ${missing.map((flag) => `--${flag}`).join(", ")}`);
+      }
+      const inputPath = values.input as string;
+      const outPath = values.out as string;
+      const reviewPath = values["review-out"] as string;
+      const inputResolved = resolve(inputPath);
+      if (resolve(outPath) === inputResolved || resolve(reviewPath) === inputResolved || resolve(outPath) === resolve(reviewPath)) {
+        throw new Error("build-publication output paths must differ from each other and from the input artifact");
+      }
+      const bytes = new Uint8Array(await readFile(inputPath));
+      const fixtureId = values["fixture-id"];
+      const result = buildPublicationFromLocalArtifact({
+        bytes,
+        artifactId: values["artifact-id"] as string,
+        sourceVersion: values["source-version"] as string,
+        captureId: values["capture-id"] as string,
+        sourceUrl: values["source-url"] as string,
+        sourceName: values["source-name"] as string,
+        retrievedAt: values["retrieved-at"] as string,
+        publishedAt: values["published-at"] as string,
+        mediaType: values["media-type"] as string,
+        round: values.round as string,
+        evidenceClass: values["evidence-class"] as string,
+        snapshotId: values["snapshot-id"] as string,
+        ...(fixtureId ? { fixtureId } : {}),
+        expectedRowCount: values["expected-row-count"] as string,
+        expectSourceHash: values["expect-source-hash"] as string,
+        recordedHttpStatus: values["recorded-http-status"] as string,
+        parserVersion: values["parser-version"] as string,
+        normalizerVersion: values["normalizer-version"] as string,
+        schemaVersion: values["schema-version"] as string,
+        limitations: values.limitation,
+      });
+      if (result.ok && result.publication) {
+        await writePublicationSnapshot(outPath, result.publication);
+      } else {
+        await rm(outPath, { force: true });
+      }
+      await writePublicationReview(reviewPath, result.review);
+      console.log(JSON.stringify(result.review, null, 2));
+      if (!result.ok) process.exitCode = 1;
       return;
     }
 
