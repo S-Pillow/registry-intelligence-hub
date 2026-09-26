@@ -366,9 +366,8 @@ export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: st
   },
 };
 
-/** Round Pulse section — explicit split between 2026 rehearsal drill-down and approved 2012 aggregates. */
-export const roundPulseDatasetSplitLine =
-  "2026 rehearsal signals with approved 2012 historical baselines.";
+/** Primary orientation strip — approved 2012 baseline only, until a promoted comparison is shown. */
+export const roundPulseDatasetSplitLine = "Approved 2012 historical baseline.";
 
 /** Visible footer on Round Pulse / entity cards whose Explore handoff targets the default 2026 rehearsal dataset. */
 export const rehearsalExploreFooterLabel = "Open 2026 rehearsal Explore";
@@ -716,6 +715,27 @@ export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
+const PRIMARY_ORIENTATION_BASELINE_IDS = new Set([
+  "application-count",
+  "unique-applied-strings",
+  "idn-applications",
+]);
+
+/**
+ * Primary orientation peers are the approved historical baselines.
+ * Organization and region counts join that row only when the eligibility
+ * contract already permits a real 2026 claim or comparison.
+ */
+export function orientationMetricIsPrimaryPeer(metric: {
+  metricId?: string;
+  claimReadiness2026: string;
+  comparisonAllowed: boolean;
+  displayTier: string;
+}): boolean {
+  if (metric.metricId && PRIMARY_ORIENTATION_BASELINE_IDS.has(metric.metricId)) return true;
+  return metric.claimReadiness2026 === "REAL_SOURCE_READY" || metric.comparisonAllowed || metric.displayTier === "production-ready";
+}
+
 export function buildRoundPulse(
   applications: Application[],
   claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
@@ -884,11 +904,11 @@ export function buildApplicantsToWatch(applications: Application[]) {
     const contention = records.filter((item) => item.contentionSet).length;
     const idn = records.filter((item) => item.idn).length;
     const reasons = [
-      organization.count > 1 ? `${organization.count}-application portfolio` : null,
-      categories > 1 ? `${categories} categories` : null,
-      contention ? `${contention} application${contention > 1 ? "s" : ""} in initial contention` : null,
-      idn ? `${idn} IDN application${idn > 1 ? "s" : ""}` : null,
-      organization.returning ? "returning participant" : "new participant",
+      `${organization.count} loaded application${organization.count === 1 ? "" : "s"}`,
+      categories > 1 ? `${categories} category labels on the loaded snapshot` : null,
+      contention ? `${contention} application${contention === 1 ? "" : "s"} with a contention-set label` : null,
+      idn ? `${idn} IDN application${idn === 1 ? "" : "s"}` : null,
+      organization.returning ? "returning flag on the loaded snapshot" : "returning flag is not set",
     ].filter((reason): reason is string => Boolean(reason));
     return { ...organization, records, reasons };
   });
@@ -935,7 +955,7 @@ const investigationOrganizationOrderByLens: Record<Lens, string[]> = {
   marketing: ["Kizuna Registry", "Atlas Digital", "Northstar Group"],
 };
 
-/** Investigation queue ordering — same three organizations, lens-prioritized ranking. */
+/** Investigation queue ordering — same three organizations, fixed fixture display order per View. */
 export function applicantsInvestigationQueueForLens(lens: Lens, applications: Application[] = fixture.applications) {
   const order = investigationOrganizationOrderByLens[lens];
   const watchlist = buildApplicantsToWatch(applications);
@@ -947,13 +967,10 @@ export function applicantsInvestigationQueueForLens(lens: Lens, applications: Ap
 }
 
 export const investigationQueueLensNote: Record<Lens, string> = {
-  all: "portfolio size, category breadth, contention exposure, IDN participation, and returning status are transparent fixture rules.",
-  commercial:
-    "this View ranks by portfolio depth and contention exposure first — efficient account-research starting points, not sales recommendations.",
-  strategy:
-    "this View ranks by category span, IDN participation, and contention patterns that shape round composition versus the 2012 fixture cohort.",
-  marketing:
-    "this View ranks by cross-region IDN participation and multi-category organizations — evidence-backed themes only, not demand forecasts.",
+  all: "Fixed rehearsal display order: Atlas Digital, Northstar Group, Kizuna Registry. Not a ranking.",
+  commercial: "Fixed rehearsal display order: Atlas Digital, Northstar Group, Kizuna Registry. Not a ranking.",
+  strategy: "Fixed rehearsal display order: Kizuna Registry, Atlas Digital, Northstar Group. Not a ranking.",
+  marketing: "Fixed rehearsal display order: Kizuna Registry, Atlas Digital, Northstar Group. Not a ranking.",
 };
 
 /**

@@ -360,7 +360,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(regions.comparisonAllowed).toBe(false);
   });
 
-  it("33 — a promoted difference cites method, historical source, and the active snapshot", () => {
+  it("33 — a promoted difference cites method, historical source, and the active snapshot", async () => {
     const applications = [row({ id: "p1", string: "Alpha", idn: false }), row({ id: "p2", string: "Beta", idn: true })];
     const claim = promotedClaim();
     render(
@@ -381,7 +381,9 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
         </HubRegistryDataProvider>
       </HubClaimActualityProvider>,
     );
-    const provenance = screen.getByTestId("cross-round-provenance-applications");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /View intelligence for Applications: 2012 baseline 1930/ }));
+    const provenance = await screen.findByTestId("cross-round-provenance-applications");
     expect(provenance).toHaveTextContent("Method count(application)");
     expect(provenance).toHaveTextContent("Historical source");
     expect(provenance).toHaveTextContent("snap-2012-reveal-day-csv-v1");

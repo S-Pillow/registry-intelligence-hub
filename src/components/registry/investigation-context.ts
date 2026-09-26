@@ -47,6 +47,20 @@ export type InvestigationItem = {
   exploreDataset?: InvestigationExploreDataset;
   /** Steward-confirmed portfolio promotion metadata (D2.4). */
   confirmedPortfolio?: ConfirmedPortfolioInvestigationMeta;
+  /** Method, snapshot, and limitation detail kept off the card face. */
+  technicalProvenance?: TechnicalProvenance;
+};
+
+export type TechnicalProvenance = {
+  method?: string;
+  readiness?: string;
+  comparison?: string;
+  snapshotId?: string;
+  historicalSource?: string;
+  limitations?: string[];
+  archivedCopy?: string;
+  crossRoundTestId?: string;
+  crossRoundLine?: string;
 };
 
 export type InvestigationContextValue = {

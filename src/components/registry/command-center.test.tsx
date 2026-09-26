@@ -44,7 +44,7 @@ describe("Command Center interactions", () => {
     expect(pulseEyebrow()).toBe("ROUND PULSE · ALL INTELLIGENCE");
     expect(pulseSubtitle()).toBe("Round intelligence at a glance");
     expect(screen.getByTestId("round-pulse-dataset-split")).toHaveTextContent(
-      "2026 rehearsal signals with approved 2012 historical baselines.",
+      "Approved 2012 historical baseline.",
     );
     expect(focusMarkers()).toHaveLength(0);
     const rehearsalBanner = () => screen.getByText(/Rehearsal data only\./);
@@ -84,8 +84,8 @@ describe("Command Center interactions", () => {
     expect(pulseEyebrow()).toBe("ROUND PULSE · PRODUCT & STRATEGY VIEW");
     expect(pulseSubtitle()).toBe("Composition, IDN participation, and contention signals at a glance");
     expect(focusMarkers()).toEqual([
-      "View focus · Composition geography",
       "View focus · Composition shift",
+      "View focus · Composition geography",
     ]);
     expect(factValues()).toEqual(baselineFacts);
     expect(competitionText()).toBe(competitionAtAll);
@@ -233,7 +233,7 @@ describe("Command Center interactions", () => {
     const user = userEvent.setup();
     render(<CommandCenter />);
 
-    expect(screen.getByText("APPLICANTS WORTH INVESTIGATING")).toBeInTheDocument();
+    expect(screen.getByText("ORGANIZATION LABELS")).toBeInTheDocument();
     expect(screen.queryByText("APPLICANTS TO WATCH")).not.toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital investigation profile" })[0]);
     expect(screen.getByRole("button", { name: "Watch" })).toBeInTheDocument();
@@ -613,10 +613,10 @@ describe("Initial string competition module", () => {
     const pulse = screen.getByTestId("round-pulse-section");
 
     expect(within(competition).getByText("Initial string competition")).toBeInTheDocument();
-    expect(within(competition).getByTestId("initial-string-competition-disclosure")).toHaveTextContent("Rehearsal fixture only. These groups are not published 2026 contention.");
+    expect(within(competition).getByTestId("initial-string-competition-disclosure")).toHaveTextContent("Rehearsal. Not published 2026 contention.");
     expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("snap-rehearsal-2026-09-16");
-    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("exact-applied-string-grouping/1.0.0");
-    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent(/grain exact applied-for string/);
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent(/exact applied-for string/);
+    expect(within(competition).getByTestId("exact-string-competition-provenance")).not.toHaveTextContent("exact-applied-string-grouping/1.0.0");
     expect(within(competition).getByTestId("exact-string-competition-provenance")).toHaveTextContent("Rehearsal fixture");
     expect(within(competition).getByTestId("exact-string-competition-summary")).toHaveTextContent(
       "2 exact applied-for strings are shared by more than one application (4 applications). This is a local grouping of loaded rows.",
@@ -653,6 +653,9 @@ describe("Initial string competition module", () => {
     expect(atlasHref).toContain("ids=APP-26001,APP-26002");
     expect(atlasHref).not.toContain("dataset=2012-historical");
 
+    await user.click(within(competition).getByRole("button", { name: "View intelligence for Exact applied-for string grouping" }));
+    expect(await screen.findByTestId("technical-provenance")).toHaveTextContent("exact-applied-string-grouping/1.0.0");
+    await user.keyboard("{Escape}");
     await user.click(within(competition).getByRole("button", { name: "View intelligence for .atlas: 2 applications" }));
     expect(await screen.findByRole("link", { name: "View full" })).toHaveAttribute(
       "href",
@@ -748,7 +751,7 @@ describe("Command Center information hierarchy", () => {
     expect(documentBefore(structural, screen.getByTestId("investigation-queue-0"))).toBe(true);
     expect(documentBefore(structural, supportingHeading)).toBe(true);
     expect(within(screen.getByTestId("applicant-concentration")).getByText("Applications grouped by applicant legal name.")).toBeInTheDocument();
-    expect(within(screen.getByTestId("applicant-concentration")).getByTestId("applicant-concentration-disclosure")).toHaveTextContent(/Rehearsal fixture only/);
+    expect(within(screen.getByTestId("applicant-concentration")).getByTestId("applicant-concentration-disclosure")).toHaveTextContent(/Rehearsal\. Not a published 2026 result/);
     expect(within(screen.getByTestId("applicant-concentration")).getByText("3 of 12")).toBeInTheDocument();
     expect(within(screen.getByTestId("applicant-concentration")).queryByText(/organization portfolio|company concentration|organization concentration/i)).not.toBeInTheDocument();
     expect(within(screen.getByTestId("application-designations")).getByText("Community applications")).toBeInTheDocument();

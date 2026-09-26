@@ -150,7 +150,12 @@ describe("deterministic intelligence calculations", () => {
     const watched = buildApplicantsToWatch(fixture.applications);
 
     expect(watched.map((item) => item.organization)).toEqual(["Atlas Digital", "Kizuna Registry", "Northstar Group"]);
-    expect(watched[0].reasons).toEqual(["3-application portfolio", "2 categories", "1 application in initial contention", "returning participant"]);
+    expect(watched[0].reasons).toEqual([
+      "3 loaded applications",
+      "2 category labels on the loaded snapshot",
+      "1 application with a contention-set label",
+      "returning flag on the loaded snapshot",
+    ]);
     expect(watched.every((item) => item.reasons.length > 0)).toBe(true);
   });
 });

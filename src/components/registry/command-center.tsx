@@ -95,6 +95,7 @@ import {
   numericCellDelta,
   rowHasDifference,
   buildRoundPulse,
+  orientationMetricIsPrimaryPeer,
   investigationQueueLensNote,
   lensRoundPulseFraming,
   rehearsalExploreFooterLabel,
@@ -126,6 +127,7 @@ import {
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
 import { blockedContentionSetCountState, buildApproved2012ContentionMembershipHistoricalFact, buildApproved2012DesignationHistoricalFacts, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
+import { getMetricEligibility } from "@/comparison/metric-eligibility";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
 import {
   participationStatusCellForApplication,
@@ -151,6 +153,7 @@ import {
   type InvestigationContextValue,
   type InvestigationItem,
   type InvestigationKind,
+  type TechnicalProvenance,
 } from "@/components/registry/investigation-context";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
@@ -246,6 +249,7 @@ function ProvenanceSheet({
   exploreDataset,
   confirmedPortfolio,
   accessibilityLabel,
+  technicalProvenance,
 }: {
   label: string;
   records?: readonly Application[];
@@ -260,6 +264,7 @@ function ProvenanceSheet({
   exploreDataset?: InvestigationItem["exploreDataset"];
   confirmedPortfolio?: InvestigationItem["confirmedPortfolio"];
   accessibilityLabel?: string;
+  technicalProvenance?: TechnicalProvenance;
 }) {
   const { investigate } = useInvestigation();
   const registryFixture = useHubRegistryDocument();
@@ -274,6 +279,7 @@ function ProvenanceSheet({
     exploreFullHref,
     exploreDataset,
     confirmedPortfolio,
+    technicalProvenance,
   };
 
   return (
@@ -529,6 +535,19 @@ function IntelligenceDrawer({
   const sourceMethodSectionTitle = isConfirmedPortfolioDrawer
     ? "MEMBER APPLICATION SOURCE & METHOD"
     : "SOURCE & METHOD";
+  const drawerProvenance: TechnicalProvenance | null = item
+    ? {
+        method: item.technicalProvenance?.method ?? item.historicalFact?.methodVersion,
+        readiness: item.technicalProvenance?.readiness,
+        comparison: item.technicalProvenance?.comparison ?? (item.historicalFact ? (item.historicalFact.comparisonAllowed ? "Eligible" : "Not eligible") : undefined),
+        snapshotId: item.technicalProvenance?.snapshotId ?? item.historicalFact?.sourceSnapshotId,
+        historicalSource: item.technicalProvenance?.historicalSource,
+        archivedCopy: item.technicalProvenance?.archivedCopy ?? (item.historicalFact ? `${item.historicalFact.sourceClassification} archived copy` : undefined),
+        limitations: item.technicalProvenance?.limitations ?? item.historicalFact?.limitations,
+        crossRoundTestId: item.technicalProvenance?.crossRoundTestId,
+        crossRoundLine: item.technicalProvenance?.crossRoundLine,
+      }
+    : null;
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(open) => { if (!open) { setShowFull(false); onClose(); } }}>
@@ -611,6 +630,8 @@ function IntelligenceDrawer({
                   )}
                 </div>
               )}
+
+              {drawerProvenance ? <TechnicalProvenanceDetail provenance={drawerProvenance} /> : null}
 
               {canAct && (
                 <div className={`grid gap-2 ${canCompareEntity && showViewFull ? "grid-cols-3" : canCompareEntity || showViewFull ? "grid-cols-2" : "grid-cols-1"}`}>
@@ -795,7 +816,8 @@ function ComparisonTray() {
   );
 }
 
-function metricCardSurfaceClass(metric: { displayTier: string }) {
+function metricCardSurfaceClass(metric: { displayTier: string }, surfaceMode: "baseline" | "rehearsal-context") {
+  if (surfaceMode === "rehearsal-context") return "border-slate-300 bg-slate-50";
   if (metric.displayTier === "production-ready") {
     return "border-emerald-400/60 bg-white";
   }
@@ -816,20 +838,59 @@ function humanizeMethodReadiness(readiness: string) {
   return readiness.replaceAll("_", " ").toLowerCase();
 }
 
-function MetricReadinessCaption({ metric }: { metric: { methodReadiness: string; method: string; displayTier: string; comparisonAllowed: boolean } }) {
-  const tierLabel =
-    metric.displayTier === "production-ready"
-      ? "2012 baseline approved"
-      : metric.displayTier === "comparison-pending"
-        ? metric.comparisonAllowed
-          ? "Comparison pending publication"
-          : "Historical baseline only"
-        : metric.displayTier === "fixture"
-          ? "Rehearsal fixture"
-          : "Unavailable";
+function visibleLimitationLines(lines: string[] | undefined) {
+  return (lines ?? []).filter((line) => !line.includes("BLOCKED_"));
+}
+
+function TechnicalProvenanceDetail({ provenance }: { provenance: TechnicalProvenance }) {
+  const rows: Array<[string, string]> = [
+    provenance.method ? ["Method", provenance.method] : null,
+    provenance.readiness ? ["Readiness", provenance.readiness] : null,
+    provenance.comparison ? ["Comparison", provenance.comparison] : null,
+    provenance.snapshotId ? ["Source snapshot", provenance.snapshotId] : null,
+    provenance.historicalSource ? ["Historical source", provenance.historicalSource] : null,
+    provenance.archivedCopy ? ["Archived copy", provenance.archivedCopy] : null,
+    ...visibleLimitationLines(provenance.limitations).map((line) => ["Limitation", line] as [string, string]),
+  ].filter((row): row is [string, string] => row !== null);
+  if (!rows.length && !provenance.crossRoundLine) return null;
   return (
-    <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-      {tierLabel} · {humanizeMethodReadiness(metric.methodReadiness)} · {metric.method}
+    <section data-testid="technical-provenance">
+      <h3 className="mb-3 text-xs font-bold tracking-wider text-slate-600">TECHNICAL PROVENANCE</h3>
+      {rows.length ? (
+        <dl className="grid grid-cols-[130px_1fr] gap-y-2 text-sm">
+          {rows.map(([label, value]) => (
+            <Fragment key={`${label}-${value}`}>
+              <dt className="text-slate-600">{label}</dt>
+              <dd className={label === "Method" || label === "Source snapshot" ? "break-all font-mono text-xs" : "text-sm"}>{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      ) : null}
+      {provenance.crossRoundLine ? (
+        <p className="mt-3 text-xs leading-5 text-slate-700" data-testid={provenance.crossRoundTestId}>{provenance.crossRoundLine}</p>
+      ) : null}
+    </section>
+  );
+}
+
+function HistoricalFactCardCaption({ fact }: { fact: HistoricalMetricFact }) {
+  if (fact.metricId === "community-designation-count" || fact.metricId === "geographic-designation-count") {
+    return (
+      <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+        2012 designation flag. Not a 2026 count.
+      </span>
+    );
+  }
+  if (fact.metricId === "contention-membership-exposure") {
+    return (
+      <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+        2012 membership. Set count unavailable.
+      </span>
+    );
+  }
+  return (
+    <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]">
+      2012 baseline. 2026 comparison pending publication.
     </span>
   );
 }
@@ -867,15 +928,23 @@ function MetricCards({
   lens,
   metrics,
   historical2012Loaded,
+  surfaceMode = "baseline",
+  datasetMode = "rehearsal",
 }: {
   lens: Lens;
   metrics: ReturnType<typeof buildRoundPulse>;
   historical2012Loaded: boolean;
+  surfaceMode?: "baseline" | "rehearsal-context";
+  datasetMode?: "rehearsal" | "promoted";
 }) {
   const emphasized = new Set(roundPulseEmphasisByLens[lens]);
+  const gridClass = surfaceMode === "rehearsal-context"
+    ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+    : "grid grid-cols-1 gap-3 sm:grid-cols-3";
+  const exploreFooter = datasetMode === "promoted" ? "Open Explore" : rehearsalExploreFooterLabel;
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <div className={gridClass} data-testid={surfaceMode === "baseline" ? "primary-orientation-metrics" : undefined}>
       {metrics.map((metric) => {
         const isFocused = emphasized.has(metric.filter);
         const focusMarker = isFocused ? roundPulseViewFocusForLens(lens, metric.filter) : undefined;
@@ -895,16 +964,24 @@ function MetricCards({
         const historicalCardExploreLabel = metric.metricId
           ? roundPulseHistoricalCardExploreFooterLabel(metric.metricId)
           : null;
+        const loadedSnapshotHeadline = Boolean(showCrossRound && metric.crossRound?.numericDelta && metric.crossRound.active2026 !== null);
         return (
         <div
           key={metric.id}
+          data-metric-id={metric.metricId}
+          data-orientation-role={surfaceMode === "rehearsal-context" ? "rehearsal-context" : "primary"}
           data-lens-emphasized={isFocused ? "true" : undefined}
           data-historical-aggregate={isHistoricalAggregate ? "true" : undefined}
-          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric)} ${isFocused ? "border-[#007d65] bg-emerald-50/70 shadow-md ring-1 ring-[#72dfb4]/40" : ""}`}
+          className={`flex min-h-32 flex-col rounded-xl border shadow-sm transition hover:-translate-y-0.5 hover:border-[#007d65] hover:shadow-md ${metricCardSurfaceClass(metric, surfaceMode)} ${isFocused ? "border-[#007d65] bg-emerald-50/70 shadow-md ring-1 ring-[#72dfb4]/40" : ""}`}
         >
           {focusMarker ? (
             <p className="border-b border-emerald-200/80 bg-emerald-100/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]" data-testid="lens-view-focus-marker">
               View focus · {focusMarker}
+            </p>
+          ) : null}
+          {surfaceMode === "rehearsal-context" ? (
+            <p className="border-b border-slate-200 bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              {datasetMode === "promoted" ? "Loaded snapshot" : "Rehearsal snapshot"}
             </p>
           ) : null}
           {isHistoricalAggregate ? (
@@ -912,7 +989,7 @@ function MetricCards({
               className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]"
               data-testid={metric.metricId === "contention-membership-exposure" ? "round-pulse-contention-provenance-band" : undefined}
             >
-              {roundPulseHistoricalAggregateBand(metric.metricId)}
+              {loadedSnapshotHeadline ? "Loaded snapshot" : roundPulseHistoricalAggregateBand(metric.metricId)}
             </p>
           ) : null}
           <ProvenanceSheet
@@ -921,6 +998,17 @@ function MetricCards({
             label={provenanceLabel}
             records={roundPulseSupportingRecords(metric)}
             historicalFact={metric.historicalFact}
+            technicalProvenance={{
+              method: metric.method,
+              readiness: humanizeMethodReadiness(metric.methodReadiness),
+              comparison: metric.comparisonAllowed ? "Eligible" : "Not eligible",
+              snapshotId: metric.historicalFact?.sourceSnapshotId,
+              historicalSource: metric.source,
+              archivedCopy: metric.historicalFact ? "ICANN primary archived copy" : undefined,
+              limitations: metric.historicalFact?.limitations,
+              crossRoundTestId: metric.crossRound ? `cross-round-provenance-${metric.id}` : undefined,
+              crossRoundLine: metric.crossRound?.provenanceLine,
+            }}
             exploreFullHref={
               isHistoricalAggregate
                 ? historicalCardExploreHref ?? undefined
@@ -935,12 +1023,8 @@ function MetricCards({
                 </span>
                 <span className="mt-3 block text-3xl font-bold tracking-tight text-slate-950">{headlineValue}</span>
                 {showCrossRound && metric.crossRound ? (
-                  <>
-                    <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]" data-testid={`cross-round-delta-${metric.id}`}>{metric.crossRound.statement}</span>
-                    <span className="mt-1 block text-[10px] font-medium leading-snug text-slate-600" data-testid={`cross-round-provenance-${metric.id}`}>{metric.crossRound.provenanceLine}</span>
-                  </>
-                ) : metric.historicalFact ? <HistoricalFactCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
-                <MetricReadinessCaption metric={metric} />
+                  <span className="mt-2 block text-xs font-medium leading-snug text-[#006a56]" data-testid={`cross-round-delta-${metric.id}`}>{metric.crossRound.statement}</span>
+                ) : metric.historicalFact ? <HistoricalFactCardCaption fact={metric.historicalFact} /> : <span className="mt-2 block text-xs font-medium text-[#006a56]">{metric.delta}</span>}
                 <span className="mt-2 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {isHistoricalAggregate ? "View aggregate provenance" : "Investigate records"}
                 </span>
@@ -967,10 +1051,10 @@ function MetricCards({
           ) : (
             <Link
               href={exploreDrillDownHref(metric.filter)}
-              aria-label={`Open ${metric.label} in 2026 rehearsal Explore`}
+              aria-label={datasetMode === "promoted" ? `Open ${metric.label} in Explore` : `Open ${metric.label} in 2026 rehearsal Explore`}
               className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
             >
-              {rehearsalExploreFooterLabel}<ArrowRight className="size-3.5" />
+              {exploreFooter}<ArrowRight className="size-3.5" />
             </Link>
           )}
         </div>
@@ -1964,9 +2048,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const snapshotPinSubtitle = publicationIsPromoted
     ? "Promoted application snapshot · steward-approved publication"
     : "Rehearsal fixture pin · not official 2026";
-  const datasetDisclosureBanner = publicationIsPromoted
-    ? "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval."
-    : "This curated fixture proves the experience and calculation contract; it is not an official 2026 publication.";
+  const datasetDisclosureBanner = "Promoted 2026 application snapshot loaded for this deployment. Organization and portfolio intelligence remain gated until separate steward approval.";
   const portfolioRanking = useMemo(() => buildPortfolioRanking(registryFixture.applications), [registryFixture.applications]);
   const categoryMix = useMemo(() => buildCategoryMix(registryFixture.applications), [registryFixture.applications]);
   const [query, setQuery] = useState("");
@@ -1996,13 +2078,26 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     () => roundPulseMetrics.filter((metric) => metric.metricId !== "contention-membership-exposure"),
     [roundPulseMetrics],
   );
+  const primaryOrientationMetrics = useMemo(
+    () => orientationStripMetrics.filter((metric) => orientationMetricIsPrimaryPeer(metric)),
+    [orientationStripMetrics],
+  );
+  const rehearsalContextMetrics = useMemo(
+    () => orientationStripMetrics.filter((metric) => !orientationMetricIsPrimaryPeer(metric)),
+    [orientationStripMetrics],
+  );
   const comparableCountsShown = roundPulseMetrics.some((metric) => metric.crossRound?.numericDelta);
+  const orientationIdentityLine = comparableCountsShown
+    ? "Loaded snapshot beside the approved 2012 baseline."
+    : roundPulseDatasetSplitLine;
   const orientationCountBasis = comparableCountsShown
-    ? "Application, unique-string, and IDN figures on this strip are the loaded snapshot beside the approved 2012 baseline. Difference is loaded snapshot minus 2012 baseline. Other figures stay comparison-gated."
+    ? "Application, unique-string, and IDN figures are the loaded snapshot beside the approved 2012 baseline. Difference is loaded snapshot minus 2012 baseline."
     : publicationIsPromoted
-      ? "Approved application, string, and IDN figures on this strip remain historical 2012 baseline facts. Organization and region figures follow the loaded snapshot and stay comparison-gated."
+      ? "Approved application, string, and IDN figures on this strip remain historical 2012 baseline facts. Organization and region counts stay loaded-snapshot context."
       : "Approved application, string, and IDN figures on this strip are historical 2012 baseline facts. They are not 2026 publication totals.";
+  const datasetMode = publicationIsPromoted ? "promoted" as const : "rehearsal" as const;
   const categoryMixGated = true;
+  const categoryMixEligibility = getMetricEligibility("category-mix");
   const portfolioConcentrationGated = true;
   const applicantConcentration = useMemo(
     () => buildApplicantLegalNameConcentration(registryFixture.applications),
@@ -2069,18 +2164,28 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
             <span className="text-xs font-medium text-slate-600">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
             <ProvenanceSheet label="Dataset state" />
           </div>
-          <p data-testid="publication-state-summary" className="max-w-3xl text-sm font-medium leading-6 text-slate-950">
-            {publicationIsPromoted
-              ? `Promoted 2026 snapshot ${registryFixture.snapshotId}. This view is not the rehearsal fixture.`
-              : "Rehearsal fixture. The 2026 round is not published."}
-          </p>
-          <div className="mt-3 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
-            <div className="flex-1">
-              <strong>{publicationIsPromoted ? "Promoted 2026 applications." : "Rehearsal data only."}</strong> {datasetDisclosureBanner}
+          {publicationIsPromoted ? (
+            <>
+              <p data-testid="publication-state-summary" className="max-w-3xl text-sm font-medium leading-6 text-slate-950">
+                {`Promoted 2026 snapshot ${registryFixture.snapshotId}. This view is not the rehearsal fixture.`}
+              </p>
+              <div className="mt-3 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
+                <div className="flex-1">
+                  <strong>Promoted 2026 applications.</strong> {datasetDisclosureBanner}
+                </div>
+                <ProvenanceSheet label="Fixture limitations" />
+              </div>
+            </>
+          ) : (
+            <div data-testid="publication-state-summary" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
+              <div className="flex-1">
+                <strong>Rehearsal data only.</strong> Rehearsal fixture. The 2026 round is not published. This is not an official 2026 publication.
+              </div>
+              <ProvenanceSheet label="Fixture limitations" />
             </div>
-            <ProvenanceSheet label="Fixture limitations" />
-          </div>
+          )}
         </section>
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
@@ -2160,7 +2265,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               <div>
                 <p id="round-pulse-heading" className="text-xs font-bold tracking-[0.14em] text-[#007d65]" data-testid="lens-round-pulse-eyebrow">{lensRoundPulseFraming[activeLens].eyebrow}</p>
                 <h2 className="mt-1 text-xl font-bold tracking-tight text-[#004c3d] sm:text-2xl" data-testid="lens-round-pulse-subtitle">{lensRoundPulseFraming[activeLens].subtitle}</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600" data-testid="round-pulse-dataset-split">{roundPulseDatasetSplitLine}</p>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600" data-testid="round-pulse-dataset-split">{orientationIdentityLine}</p>
                 <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-800" data-testid="orientation-count-basis">{orientationCountBasis}</p>
                 {historical2012Loaded ? (
                   <Link
@@ -2174,7 +2279,18 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               </div>
               <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
             </div>
-            <MetricCards lens={activeLens} metrics={orientationStripMetrics} historical2012Loaded={historical2012Loaded} />
+            <MetricCards lens={activeLens} metrics={primaryOrientationMetrics} historical2012Loaded={historical2012Loaded} surfaceMode="baseline" datasetMode={datasetMode} />
+            {rehearsalContextMetrics.length > 0 ? (
+              <div className="mt-5 border-t border-slate-200 pt-4" data-testid="rehearsal-structural-context">
+                <p className="text-xs font-bold tracking-[0.14em] text-slate-500">{publicationIsPromoted ? "LOADED SNAPSHOT CONTEXT" : "REHEARSAL SNAPSHOT CONTEXT"}</p>
+                <p className="mt-1 mb-3 max-w-2xl text-xs leading-5 text-slate-600" data-testid="rehearsal-structural-context-note">
+                  {publicationIsPromoted
+                    ? "Organization and region counts from the loaded snapshot. Not an approved cross-round comparison."
+                    : "Organization and region counts from the loaded snapshot. Not an approved 2012 baseline and not a published 2026 fact."}
+                </p>
+                <MetricCards lens={activeLens} metrics={rehearsalContextMetrics} historical2012Loaded={historical2012Loaded} surfaceMode="rehearsal-context" datasetMode={datasetMode} />
+              </div>
+            ) : null}
           </section>
         )}
 
@@ -2206,15 +2322,21 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     </div>
                     <ProvenanceSheet
                       kind="metric"
-                      label={`Applicant concentration · ${applicantConcentration.method} · snapshot ${registryFixture.snapshotId}`}
+                      label="Applicant concentration"
                       records={registryFixture.applications.filter((record) => record.applicant.trim())}
+                      technicalProvenance={{
+                        method: applicantConcentration.method,
+                        snapshotId: registryFixture.snapshotId,
+                        comparison: "Not an organization comparison",
+                        limitations: ["Applicant legal name is not an organization."],
+                      }}
                     />
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <p className="text-xs leading-5 text-slate-700" data-testid="applicant-concentration-disclosure">
                       {publicationIsPromoted
                         ? "Promoted snapshot. Counts use the loaded application records only."
-                        : "Rehearsal fixture only. These applicant legal names are not a published 2026 result."}
+                        : "Rehearsal. Not a published 2026 result."}
                       {" "}
                       {applicantConcentration.distinctApplicantLegalNames} applicant legal names across {applicantConcentration.eligibleApplicationCount} applications with a legal name.
                       {applicantConcentration.datasetApplicationCount === applicantConcentration.eligibleApplicationCount
@@ -2276,7 +2398,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                           <>
                             <span>
                               <strong className="block text-sm">{fact.label}</strong>
-                              <span className="text-xs text-slate-600">2012 baseline · {fact.methodVersion}</span>
+                              <span className="text-xs text-slate-600">2012 baseline. Not a 2026 count.</span>
                             </span>
                             <span className="flex items-center gap-2">
                               <strong className="text-lg">{fact.value}</strong>
@@ -2299,18 +2421,27 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     </div>
                     <ProvenanceSheet
                       kind="metric"
-                      label={`Exact applied-for string grouping · ${exactStringCompetition.method} · snapshot ${registryFixture.snapshotId} · ${exactStringModeLabel}`}
+                      label="Exact applied-for string grouping"
                       records={registryFixture.applications.filter((record) => record.string.length > 0)}
+                      technicalProvenance={{
+                        method: exactStringCompetition.method,
+                        snapshotId: registryFixture.snapshotId,
+                        comparison: "Not an approved contention-set count",
+                        readiness: exactStringModeLabel,
+                        limitations: publicationIsPromoted
+                          ? ["Groups are recomputed from the loaded application records."]
+                          : ["Rehearsal fixture. Not published 2026 contention."],
+                      }}
                     />
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-xs leading-5 text-slate-700" data-testid="initial-string-competition-disclosure">
                       {publicationIsPromoted
                         ? "Promoted snapshot. Groups are recomputed from the loaded application records. They are not an approved contention-set count."
-                        : "Rehearsal fixture only. These groups are not published 2026 contention."}
+                        : "Rehearsal. Not published 2026 contention."}
                     </p>
                     <p className="text-xs leading-5 text-slate-700" data-testid="exact-string-competition-provenance">
-                      Snapshot {registryFixture.snapshotId} · method {exactStringCompetition.method} · grain exact applied-for string · {exactStringModeLabel}.
+                      Snapshot {registryFixture.snapshotId} · exact applied-for string · {exactStringModeLabel}.
                     </p>
                     <p className="text-sm text-slate-800" data-testid="exact-string-competition-summary">
                       {exactStringCompetition.competingGroupCount === 0
@@ -2370,7 +2501,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                           <>
                             <span>
                               <strong className="block text-sm">{contentionMembershipFact.label}</strong>
-                              <span className="text-xs text-slate-600">2012 official contention-publication membership · {contentionMembershipFact.methodVersion}. Not an exact applied-for string recount.</span>
+                              <span className="text-xs text-slate-600">2012 membership. Not an exact applied-for string recount.</span>
                             </span>
                             <span className="flex items-center gap-2">
                               <strong className="text-lg">{contentionMembershipFact.value}</strong>
@@ -2405,23 +2536,49 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   </CardContent>
                 </Card>
               </div>
-              <div className="grid gap-5 lg:grid-cols-2">
-                <Card className={`border-slate-300 shadow-sm ${categoryMixGated ? "opacity-95" : ""}`} data-testid="category-mix-comparison">
+              <div
+                className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                data-testid="category-mix-comparison"
+                data-compact="true"
+                data-coverage-gated={categoryMixGated ? "true" : "false"}
+              >
+                <p className="text-sm leading-6 text-slate-800">
+                  <strong>Category comparison unavailable.</strong>{" "}
+                  <strong>Comparison not yet approved.</strong>{" "}
+                  <span className="text-slate-700">Category mix comparison not yet approved for publication. 2012 taxonomy coverage does not support a category delta. No 2026 category comparison is shown.</span>
+                </p>
+                <div className="flex shrink-0 items-center gap-2">
+                  <ProvenanceSheet
+                    kind="metric"
+                    label="Category mix comparison unavailable"
+                    records={[]}
+                    technicalProvenance={{
+                      method: categoryMixEligibility?.method,
+                      readiness: "Coverage gate",
+                      comparison: "Not eligible",
+                      limitations: ["2012 taxonomy coverage does not support a category delta. No taxonomy bridge is applied."],
+                    }}
+                  />
+                  <Link href={hubPath("/data-health")} className="text-xs font-bold text-[#006a56] hover:underline">Open Data Health</Link>
+                </div>
+              </div>
+              <Card className="border-slate-300 shadow-sm">
                   <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">CATEGORY MIX</p><CardTitle className="mt-1 text-xl">Category comparison unavailable</CardTitle><p className="mt-1 text-sm text-slate-600">Category mix comparison not yet approved for publication</p></div>
-                    <ProvenanceSheet kind="metric" label="Category mix comparison unavailable" records={[]} />
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
-                      <strong>Comparison not yet approved.</strong> 2012 taxonomy coverage does not support a category delta. No 2026 category comparison is shown.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-300 shadow-sm">
-                  <CardHeader className="flex-row items-start justify-between">
-                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANTS WORTH INVESTIGATING</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">Ranked signals, not lead scores or recommendations</p></div>
-                    <ProvenanceSheet kind="metric" label="Applicants Worth Investigating method" records={registryFixture.applications} />
+                    <div><p className="text-xs font-bold tracking-wider text-[#006a56]">ORGANIZATION LABELS</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">{publicationIsPromoted ? "Fixed name list. Not a ranking." : "Fixed fixture order. Not a ranking."}</p></div>
+                    <ProvenanceSheet
+                      kind="metric"
+                      label="Investigation queue order"
+                      records={registryFixture.applications}
+                      technicalProvenance={{
+                        readiness: publicationIsPromoted ? "Fixed name list" : "Fixed rehearsal display order",
+                        comparison: "Not a ranking",
+                        limitations: [
+                          "Organization labels are not applicant legal names.",
+                          "A contention-set label is not an approved contention-set count.",
+                          "Category labels are not an approved category comparison.",
+                        ],
+                      }}
+                    />
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {investigationQueue.map((item, index) => {
@@ -2452,21 +2609,23 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                         </div>
                       );
                     })}
-                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700" data-testid="lens-investigation-note"><strong>Why these stand out in this View:</strong> {investigationQueueLensNote[activeLens]}</p>
+                    <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700" data-testid="lens-investigation-note"><strong>Display order:</strong> {publicationIsPromoted ? "Fixed name list. Not a ranking." : investigationQueueLensNote[activeLens]} Organization labels are not applicant legal names.</p>
                   </CardContent>
                 </Card>
-              </div>
             </section>
 
             <section className="mt-10 border-t border-slate-300 pt-8" aria-labelledby="supporting-heading">
               <div className="mb-5"><p className="text-xs font-bold tracking-[0.14em] text-slate-600">SUPPORTING CHARTS</p><h2 id="supporting-heading" className="mt-1 text-2xl font-bold">Explore the shape behind the signals</h2></div>
               <div className="grid gap-6 lg:grid-cols-5">
-                <Card className="border-slate-300 lg:col-span-3">
-                  <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">LARGEST PORTFOLIOS</p><CardTitle className="text-lg">Application concentration</CardTitle></CardHeader>
+                <Card className="border-slate-300 lg:col-span-3" data-testid="organization-label-counts">
+                  <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">LOADED SNAPSHOT</p><CardTitle className="text-lg">Organization labels</CardTitle><p className="text-sm text-slate-600">Applications grouped by organization label. Not applicant legal name.</p></CardHeader>
                   <CardContent className="space-y-2">
                     {portfolioConcentrationGated && (
-                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
-                        <strong>Round-wide concentration gated.</strong> Rehearsal fixture rankings are shown for UX proof only; they are not comparable to 2012 promoted portfolios or publishable concentration metrics.
+                      <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950" data-testid="organization-label-gate">
+                        <strong>Round-wide concentration gated.</strong>{" "}
+                        {publicationIsPromoted
+                          ? "Organization labels on the loaded snapshot are not an approved portfolio comparison."
+                          : "Rehearsal. Organization labels on the loaded snapshot are not an approved portfolio comparison."}
                       </p>
                     )}
                     {portfolioRanking.slice(0, 5).map((item, index) => {
@@ -2474,23 +2633,28 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       const exploreHref = exploreEntityResearchHref("organizations", item.organization);
                       return (
                         <div key={item.organization} className="rounded-lg hover:bg-emerald-50/60">
-                          <ProvenanceSheet id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} portfolio`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />
-                          <Link href={exploreHref} aria-label={`Open ${item.organization} in 2026 rehearsal Explore`} className="mx-2 mb-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
+                          <ProvenanceSheet id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} organization label`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />
+                          <Link href={exploreHref} aria-label={publicationIsPromoted ? `Open ${item.organization} in Explore` : `Open ${item.organization} in 2026 rehearsal Explore`} className="mx-2 mb-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{publicationIsPromoted ? "Open Explore" : rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
                         </div>
                       );
                     })}
                   </CardContent>
                 </Card>
 
-                <Card className="border-slate-300 lg:col-span-2">
-                  <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">APPLICATION MIX</p><CardTitle className="text-lg">Interest by category</CardTitle></CardHeader>
+                <Card className="border-slate-300 lg:col-span-2" data-testid="interest-by-category">
+                  <CardHeader><p className="text-xs font-bold tracking-wider text-slate-500">WITHIN THIS SNAPSHOT</p><CardTitle className="text-lg">Interest by category</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
+                    <p className="pb-2 text-xs leading-5 text-slate-600" data-testid="interest-by-category-disclosure">
+                      {publicationIsPromoted
+                        ? "Within this loaded snapshot. Not a cross-round comparison."
+                        : "Within this loaded snapshot. Not a cross-round comparison. Rehearsal fixture."}
+                    </p>
                     {categoryMix.map((item, index) => {
                       const exploreHref = exploreEntityResearchHref("categories", item.category);
                       return (
                         <div key={item.category} className="rounded-lg hover:bg-emerald-50/60">
                           <ProvenanceSheet id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
-                          <Link href={exploreHref} aria-label={`Open ${item.category} category in 2026 rehearsal Explore`} className="mx-2 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
+                          <Link href={exploreHref} aria-label={publicationIsPromoted ? `Open ${item.category} category in Explore` : `Open ${item.category} category in 2026 rehearsal Explore`} className="mx-2 mb-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:underline">{publicationIsPromoted ? "Open Explore" : rehearsalExploreFooterLabel}<ArrowRight className="size-3" /></Link>
                         </div>
                       );
                     })}
@@ -2502,7 +2666,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
 
             <section aria-label="Dataset health" className="mt-10 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
               <ProvenanceSheet id="snapshot-lineage" kind="dataset" label={`Snapshot ${registryFixture.snapshotId}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{snapshotPinSubtitle}</span></>} />
-              <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Automated fixture validation pass</span></>} />
+              <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{publicationIsPromoted ? "Promoted snapshot check" : "Automated fixture validation pass"}</span></>} />
               <ProvenanceSheet id="last-changed" kind="dataset" label={`Last changed ${registryFixture.changedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Content revision on pinned snapshot</span></>} />
               <ProvenanceSheet
                 id="source-coverage"
@@ -2515,7 +2679,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
             </section>
 
             <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-              <span>Snapshot {registryFixture.snapshotId} · Method {registryFixture.methodVersion}</span>
+              <span>Snapshot {registryFixture.snapshotId}</span>
               <span className="flex items-center gap-1"><BookOpen className="size-3.5" /> Catalog integration flag: <strong className="text-slate-700">disabled</strong></span>
             </footer>
           </>
