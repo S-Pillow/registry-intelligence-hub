@@ -1,5 +1,8 @@
 import rehearsalFixture from "@/data/fixtures/registry-applications.json";
-import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
+import {
+  DEFAULT_CLAIM_ACTUALITY_STATE,
+  type ClaimActualityState,
+} from "@/reveal-day-2026/claim-actuality";
 import { REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION } from "@/reveal-day-2026/browser-payload-types";
 import { PUBLICATION_SCHEMA_VERSION_V11, type Registry2026PublicationSnapshot } from "@/reveal-day-2026/types";
 import type { RegistryApplicationsDocument } from "@/lib/registry-applications-document";
@@ -81,4 +84,19 @@ export function resolveActiveRegistryApplicationsDocument(
     mode: "promoted-2026",
     selectionReason: "promoted-active",
   };
+}
+
+/**
+ * Publication may be asserted only when the active snapshot is the
+ * hash-matched promoted payload. A configured claim that does not pin
+ * that payload stays NOT_PUBLISHED so rehearsal rows cannot look published.
+ */
+export function claimActualityAssertedForBrowser(
+  configured: ClaimActualityState,
+  resolution: Pick<HubRegistryDataResolution, "mode" | "selectionReason">,
+): ClaimActualityState {
+  if (resolution.mode === "promoted-2026" && resolution.selectionReason === "promoted-active") {
+    return configured;
+  }
+  return DEFAULT_CLAIM_ACTUALITY_STATE;
 }

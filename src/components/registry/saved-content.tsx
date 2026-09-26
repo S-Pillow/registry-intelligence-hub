@@ -569,7 +569,7 @@ export function SavedContent({ state, initial }: { state: ViewState; initial: Sa
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Saved Research and Watchlists</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Watchlists track entities. Saved Research tracks questions, cohorts, and filter states. Both reopen straight into Explore or Compare.</p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture · local browser storage only</div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId} · local browser storage only` : "Rehearsal fixture · local browser storage only"}</div>
       </div>
 
       {state === "loading" ? (
@@ -588,7 +588,7 @@ export function SavedContent({ state, initial }: { state: ViewState; initial: Sa
       )}
 
       <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between">
-        <span>Fixture snapshot {registryFixture.snapshotId} · fixture last changed {formatDateTime(registryFixture.changedAt)}</span>
+        <span>{registryFixture.payloadMode === "promoted-2026" ? "Promoted snapshot" : "Fixture snapshot"} {registryFixture.snapshotId} · {registryFixture.payloadMode === "promoted-2026" ? "snapshot" : "fixture"} last changed {formatDateTime(registryFixture.changedAt)}</span>
         <span>Storage: browser-local fixture prototype · not yet identity-backed</span>
       </footer>
     </main>

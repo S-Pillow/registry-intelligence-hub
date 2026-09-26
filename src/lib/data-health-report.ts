@@ -16,7 +16,10 @@ import {
 } from "@/historical-2012/confirmed-portfolios-constants";
 import type { ConfirmedPortfoliosSidecarResolution } from "@/historical-2012/confirmed-portfolios-sidecar-shared";
 import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
-import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
+import {
+  claimActualityAssertedForBrowser,
+  type HubRegistryDataResolution,
+} from "@/lib/registry-application-payload-shared";
 import { ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE } from "@/lib/registry-data";
 import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
 import {
@@ -221,7 +224,12 @@ function buildCurrentStateSummary(
         claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY"
           ? "Real 2026 application source promoted"
           : "Not published — rehearsal identity only",
-      secondary: claimActuality.round2026ApplicationActuality,
+      secondary:
+        resolution.selectionReason === "payload-not-configured"
+        || resolution.selectionReason === "snapshot-id-mismatch"
+        || resolution.selectionReason === "content-hash-mismatch"
+          ? humanizePayloadSelectionReason(resolution.selectionReason)
+          : claimActuality.round2026ApplicationActuality,
       tone:
         claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY" ? "ready" : "muted",
     },
@@ -408,7 +416,12 @@ export function buildSourceHealthRows(
           ? "Promoted immutable publication"
           : "NOT_PUBLISHED",
       readiness: claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY" ? "Ready" : "Not published",
-      limitation: "Real 2026 identity requires steward promote-actuality — not inferred from rehearsal.",
+      limitation:
+        resolution.selectionReason === "payload-not-configured"
+        || resolution.selectionReason === "snapshot-id-mismatch"
+        || resolution.selectionReason === "content-hash-mismatch"
+          ? humanizePayloadSelectionReason(resolution.selectionReason)
+          : "Real 2026 identity requires steward promote-actuality — not inferred from rehearsal.",
     },
     {
       id: "browser-application-payload",
@@ -465,9 +478,10 @@ export function buildDataHealthSnapshot(
     errorMessage: "2012 confirmed portfolio sidecar not configured.",
   },
 ): DataHealthSnapshot {
+  const claim = claimActualityAssertedForBrowser(claimActuality, resolution);
   const historical2012Loaded = historical2012.status === "loaded";
   const confirmedPortfoliosLoaded = confirmedPortfolios.status === "loaded";
-  const unlock = buildComparisonUnlockReport(claimActuality);
+  const unlock = buildComparisonUnlockReport(claim);
   const comparableTotal = unlock.metrics.filter((m) => m.methodReadiness === "COMPARABLE").length;
   const comparableUnlocked = unlock.metrics.filter((m) => m.comparisonAllowed).length;
 
@@ -480,21 +494,21 @@ export function buildDataHealthSnapshot(
       : "Entity-level 2012 browser payload (REGISTRY_HUB_2012_APPLICATION_PAYLOAD_*) before Explore historical rows.",
   ];
 
-  if (claimActuality.round2026ApplicationActuality === "NOT_PUBLISHED") {
+  if (claim.round2026ApplicationActuality === "NOT_PUBLISHED") {
     prerequisites.unshift("2026 round remains NOT_PUBLISHED — cross-round COMPARABLE metrics stay gated.");
   }
 
   return {
     catalogVersion: METRIC_ELIGIBILITY_CATALOG_VERSION,
     currentStateSummary: buildCurrentStateSummary(
-      claimActuality,
+      claim,
       resolution,
       historical2012,
       comparableUnlocked,
       comparableTotal,
     ),
-    sourceHealth: buildSourceHealthRows(resolution, claimActuality, historical2012, confirmedPortfolios),
-    intelligenceReadiness: buildIntelligenceReadinessRows(claimActuality),
+    sourceHealth: buildSourceHealthRows(resolution, claim, historical2012, confirmedPortfolios),
+    intelligenceReadiness: buildIntelligenceReadinessRows(claim),
     browserDataState: {
       approved2012Aggregates: {
         applications: APPROVED_2012_BASELINE.applications,
@@ -517,9 +531,13 @@ export function buildDataHealthSnapshot(
         : `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
       browserEntityDataset: `${resolution.document.applications.length}-record ${resolution.mode === "rehearsal" ? "2026 rehearsal" : "promoted 2026"} fixture (${resolution.document.fixtureId ?? resolution.document.snapshotId})`,
       real2026Publication:
-        claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY"
+        claim.round2026ApplicationActuality === "REAL_SOURCE_READY"
           ? "REAL_SOURCE_READY"
-          : "Not published / not promoted",
+          : resolution.selectionReason === "payload-not-configured"
+            || resolution.selectionReason === "snapshot-id-mismatch"
+            || resolution.selectionReason === "content-hash-mismatch"
+            ? "Not published — promoted configuration rejected"
+            : "Not published / not promoted",
       rehearsalEntityWarning:
         "Rehearsal entities (Atlas Digital, Kizuna, Northstar Group, Harbor Brands, Future MENA, etc.) are curated 2026 drill names — not 2012 Reveal Day applicants.",
     },
@@ -535,15 +553,15 @@ export function buildDataHealthSnapshot(
       "Portfolio concentration and round-wide organization metrics stay gated per eligibility catalog.",
     ],
     publicationReadiness: {
-      round2026ApplicationActuality: claimActuality.round2026ApplicationActuality,
-      claimActualityPromotedAt: claimActuality.promotedAt,
+      round2026ApplicationActuality: claim.round2026ApplicationActuality,
+      claimActualityPromotedAt: claim.promotedAt,
       browserPayloadMode: resolution.mode,
       browserPayloadSelectionReason: resolution.selectionReason,
       comparableMetricsUnlocked: comparableUnlocked,
       comparableMetricsTotal: comparableTotal,
       unlockSummary: `${comparableUnlocked} of ${comparableTotal} COMPARABLE metrics allow cross-round comparison at current actuality.`,
       prerequisites,
-      checklist: buildPublicationChecklist(claimActuality, resolution, historical2012, comparableUnlocked),
+      checklist: buildPublicationChecklist(claim, resolution, historical2012, comparableUnlocked),
     },
   };
 }

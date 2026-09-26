@@ -7,6 +7,7 @@ import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
 import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-2012/confirmed-portfolios-server";
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
+import { claimActualityAssertedForBrowser } from "@/lib/registry-application-payload-shared";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,9 +33,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const claimActualityState = await loadPromotedClaimActualityState();
+  const configuredClaimActuality = await loadPromotedClaimActualityState();
   const [registryData, historical2012, confirmedPortfolios] = await Promise.all([
-    loadHubRegistryData(claimActualityState),
+    loadHubRegistryData(configuredClaimActuality),
     loadHistorical2012PayloadResolution(),
     loadHistorical2012ConfirmedPortfoliosResolution(),
   ]);
@@ -44,7 +45,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <HubClaimActualityProvider claimActualityState={claimActualityState}>
+        <HubClaimActualityProvider claimActualityState={claimActualityAssertedForBrowser(configuredClaimActuality, registryData)}>
           <HubRegistryDataProvider resolution={registryData}>
             <HubHistorical2012Provider
               applicationPayload={historical2012}

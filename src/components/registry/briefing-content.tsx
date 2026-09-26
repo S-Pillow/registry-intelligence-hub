@@ -54,6 +54,7 @@ import {
   type TruthClass,
 } from "@/lib/briefing-data";
 import { listEntityOptions, type EntityType, type Lens } from "@/lib/registry-data";
+import type { RegistryApplicationsDocument } from "@/lib/registry-applications-document";
 import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { summarizeChangeSinceVisit } from "@/lib/saved-change-summary";
 import { useInvestigation } from "@/components/registry/investigation-context";
@@ -316,10 +317,10 @@ function BriefingDriftBanner({ definition, edition }: { definition: BriefingDefi
   );
 }
 
-function buildPlainTextCopy(definition: BriefingDefinition, edition: BriefingEdition): string {
+function buildPlainTextCopy(definition: BriefingDefinition, edition: BriefingEdition, registry?: RegistryApplicationsDocument): string {
   const lines: string[] = [
     definition.name,
-    `Scope: ${describeBriefingScope(definition.scope)}`,
+    `Scope: ${describeBriefingScope(definition.scope, registry)}`,
     `Audience: ${audienceLabel(definition.audience)} · Emphasis: ${definition.emphasis} · Detail: ${definition.detailLevel}`,
     `Generated ${formatDateTime(edition.generatedAt)} · Data as of ${formatDateTime(edition.dataAsOfTime)} · Snapshot ${edition.snapshotId} · Method ${edition.methodVersion}`,
     "",
@@ -393,7 +394,7 @@ function BriefingWorkspace({ id }: { id: string }) {
               <CardTitle className="text-xl">{definition.name}</CardTitle>
               <Badge variant="outline" className={STATUS_BADGE_CLASS[edition.status]}>{STATUS_LABEL[edition.status]}</Badge>
             </div>
-            <p className="mt-2 text-sm text-slate-700">{describeBriefingScope(definition.scope)}</p>
+            <p className="mt-2 text-sm text-slate-700">{describeBriefingScope(definition.scope, registryFixture)}</p>
             <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-semibold text-slate-600">
               <span>{audienceLabel(definition.audience)}</span>
               <span>Emphasis: {definition.emphasis}</span>
@@ -475,7 +476,7 @@ function BriefingWorkspace({ id }: { id: string }) {
                   size="sm"
                   variant="outline"
                   onClick={async () => {
-                    const text = buildPlainTextCopy(definition, edition);
+                    const text = buildPlainTextCopy(definition, edition, registryFixture);
                     try {
                       await navigator.clipboard?.writeText(text);
                       setCopyStatus("Copied as plain text.");
@@ -524,6 +525,7 @@ const ENTITY_TYPE_LABEL: Record<EntityType, string> = { organizations: "Organiza
  */
 function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitionId: string) => void; onCancel: () => void }) {
   const { savedWork, compareItems } = useInvestigation();
+  const registryDocument = useHubRegistryDocument();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [scopeChoice, setScopeChoice] = useState<ScopeChoice>("round-wide");
   const [entityType, setEntityType] = useState<EntityType>("organizations");
@@ -537,7 +539,10 @@ function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitio
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [openMenuCount, setOpenMenuCount] = useState(0);
 
-  const entityOptions = useMemo(() => listEntityOptions(entityType), [entityType]);
+  const entityOptions = useMemo(
+    () => listEntityOptions(entityType, registryDocument.applications),
+    [entityType, registryDocument.applications],
+  );
   const compareSelectionAvailable = compareItems.length >= 2 && Boolean(compareItems[0].entityType);
 
   const requestCancel = useCallback(() => {
@@ -771,7 +776,7 @@ function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitio
                 onClick={() => {
                   if (!scope) return;
                   const created = savedWork.createBriefing({
-                    name: `Briefing: ${describeBriefingScope(scope)}`.slice(0, 80),
+                    name: `Briefing: ${describeBriefingScope(scope, registryDocument)}`.slice(0, 80),
                     entryPath: "guided",
                     audience,
                     emphasis,
@@ -807,6 +812,7 @@ function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitio
 
 function BriefingCard({ definition }: { definition: BriefingDefinition }) {
   const { savedWork } = useInvestigation();
+  const registryDocument = useHubRegistryDocument();
   const edition = savedWork.briefingEditions.find((entry) => entry.id === definition.currentEditionId);
   if (!edition) return null;
 
@@ -819,7 +825,7 @@ function BriefingCard({ definition }: { definition: BriefingDefinition }) {
             <Badge variant="outline" className={STATUS_BADGE_CLASS[edition.status]}>{STATUS_LABEL[edition.status]}</Badge>
             <Badge variant="outline" className="border-slate-300 text-slate-600">{audienceLabel(definition.audience)}</Badge>
           </div>
-          <p className="mt-1.5 text-xs text-slate-700">{describeBriefingScope(definition.scope)}</p>
+          <p className="mt-1.5 text-xs text-slate-700">{describeBriefingScope(definition.scope, registryDocument)}</p>
           <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(definition.lastOpenedAt)} · Generated {formatDateTime(edition.generatedAt)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1">
@@ -914,7 +920,7 @@ export function BriefingsContent({ state, briefingId }: { state: ViewState; brie
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Communication layer</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Briefings</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture · local browser storage only</div>
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId} · local browser storage only` : "Rehearsal fixture · local browser storage only"}</div>
         </div>
       )}
 
@@ -930,7 +936,7 @@ export function BriefingsContent({ state, briefingId }: { state: ViewState; brie
 
       {!briefingId && (
         <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between">
-          <span>Fixture snapshot {registryFixture.snapshotId} · {savedWork.briefingDefinitions.length} briefing{savedWork.briefingDefinitions.length === 1 ? "" : "s"}</span>
+          <span>{registryFixture.payloadMode === "promoted-2026" ? "Promoted snapshot" : "Fixture snapshot"} {registryFixture.snapshotId} · {savedWork.briefingDefinitions.length} briefing{savedWork.briefingDefinitions.length === 1 ? "" : "s"}</span>
           <span>Storage: browser-local fixture prototype · not yet identity-backed</span>
         </footer>
       )}

@@ -1706,7 +1706,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
         </section>
       )}
 
-      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Snapshot {activeDocument.snapshotId}{is2012Historical && historical2012Loaded ? ` · corpus ${historical2012.document.corpusContentHash.slice(0, 12)}…` : ""}</span><span>{is2012Historical ? "2012 historical dataset — not mixed with 2026 rehearsal rows" : "Field-level provenance · fixture coverage disclosed · no unavailable value shown as zero"}</span></footer>
+      <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between"><span>Snapshot {activeDocument.snapshotId}{is2012Historical && historical2012Loaded ? ` · corpus ${historical2012.document.corpusContentHash.slice(0, 12)}…` : ""}</span><span>{is2012Historical ? "2012 historical dataset — not mixed with 2026 rehearsal rows" : registryPayloadMode === "promoted-2026" ? "Field-level provenance · promoted snapshot · no unavailable value shown as zero" : "Field-level provenance · fixture coverage disclosed · no unavailable value shown as zero"}</span></footer>
     </main>
   );
 }
@@ -1726,6 +1726,7 @@ export type CompareParams = {
  */
 function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
   const claimActualityState = useHubClaimActualityState();
+  const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
   const initialType = (["organizations", "applications", "categories"].includes(initial.type ?? "") ? initial.type : "organizations") as CompareEntityType;
   const [type, setType] = useState<CompareEntityType>(initialType);
@@ -1890,7 +1891,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         </section>
       )}
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>Rehearsal comparison.</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; effective dates follow the fixture baseline.</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>{registryPayloadMode === "promoted-2026" ? "Promoted snapshot comparison." : "Rehearsal comparison."}</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; {registryPayloadMode === "promoted-2026" ? "rows are the active promoted application snapshot." : "effective dates follow the fixture baseline."}</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
 
       <div className="mb-5 flex flex-wrap justify-end gap-2">
         <SaveResearchButton

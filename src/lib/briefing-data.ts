@@ -4,7 +4,7 @@ import {
   type ClaimActualityState,
 } from "@/lib/hub-metric-eligibility";
 import {
-  applicantsToWatch,
+  buildApplicantsToWatch,
   compareSectionLabel,
   compareSectionOrder,
   describeCompareSelection,
@@ -279,16 +279,18 @@ function baseLimitations(registry: RegistryApplicationsDocument = defaultBriefin
   ];
 }
 
-export function describeBriefingScope(scope: BriefingScope): string {
+export function describeBriefingScope(scope: BriefingScope, registry?: RegistryApplicationsDocument): string {
   switch (scope.kind) {
     case "round-wide":
-      return "Round-wide — the full rehearsal fixture";
+      return registry?.payloadMode === "promoted-2026"
+        ? "Round-wide — the active promoted application snapshot"
+        : "Round-wide — the full rehearsal fixture";
     case "entity":
       return `Entity — ${scope.label}`;
     case "explore-view":
       return `Explore view — ${describeExploreFilters(scope.params)}`;
     case "compare-config": {
-      const { type, entities } = compareEntitiesFromParams(scope.params);
+      const { type, entities } = compareEntitiesFromParams(scope.params, registry?.applications);
       return describeCompareSelection(type, entities.map((entity) => entity.label));
     }
     case "watchlist":
@@ -488,8 +490,10 @@ function whatStandsOutRoundWide(_emphasis: Lens, _detailLevel: DetailLevel, regi
 }
 
 function whatStandsOutEntity(entityType: EntityType, entityKey: string, label: string, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
-  const watched = entityType === "organizations" ? applicantsToWatch.find((entry) => entry.organization === entityKey) : undefined;
-  const records = recordsForEntity(entityType, entityKey);
+  const records = recordsForEntity(entityType, entityKey, registry.applications);
+  const watched = entityType === "organizations"
+    ? buildApplicantsToWatch(registry.applications).find((entry) => entry.organization === entityKey)
+    : undefined;
   let claims: BriefingClaim[];
   if (watched) {
     claims = watched.reasons.map((reason) => makeClaim({ text: `${label}: ${reason}.`, truthClass: "calculated-metric", method: "applicants-to-watch/1.0.0", evidence: [evidenceFor(label, watched.records, entityType, entityKey)] }));
@@ -506,7 +510,7 @@ function whatStandsOutEntity(entityType: EntityType, entityKey: string, label: s
 }
 
 function whatStandsOutExploreView(params: Record<string, string>, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
-  const records = recordsForParams("explore-view", params);
+  const records = recordsForParams("explore-view", params, registry.applications);
   const contention = records.filter((record) => record.contentionSet).length;
   const idn = records.filter((record) => record.idn).length;
   const returning = records.filter((record) => record.returning).length;
@@ -521,11 +525,11 @@ function whatStandsOutExploreView(params: Record<string, string>, detailLevel: D
 
 function whatStandsOutWatchlist(context: WatchlistScopeContext, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
   const changedItems = context.items
-    .map((item) => ({ item, current: recordsForEntity(item.entityType, item.entityKey).length }))
+    .map((item) => ({ item, current: recordsForEntity(item.entityType, item.entityKey, registry.applications).length }))
     .filter(({ item, current }) => current !== item.recordCountAtAdd);
   const claims = changedItems.length
-    ? changedItems.map(({ item, current }) => makeClaim({ text: `${item.label}: supporting records changed from ${item.recordCountAtAdd} to ${current}.`, truthClass: "calculated-metric", evidence: [evidenceFor(item.label, recordsForEntity(item.entityType, item.entityKey), item.entityType, item.entityKey)] }))
-    : [makeClaim({ text: "No individual entity's supporting-record count has moved since it was added.", truthClass: "calculated-metric", evidence: [evidenceFor("Watchlist entities", context.items.flatMap((item) => recordsForEntity(item.entityType, item.entityKey)))] })];
+    ? changedItems.map(({ item, current }) => makeClaim({ text: `${item.label}: supporting records changed from ${item.recordCountAtAdd} to ${current}.`, truthClass: "calculated-metric", evidence: [evidenceFor(item.label, recordsForEntity(item.entityType, item.entityKey, registry.applications), item.entityType, item.entityKey)] }))
+    : [makeClaim({ text: "No individual entity's supporting-record count has moved since it was added.", truthClass: "calculated-metric", evidence: [evidenceFor("Watchlist entities", context.items.flatMap((item) => recordsForEntity(item.entityType, item.entityKey, registry.applications)))] })];
   const overflowCount = overflowCountFor(claims, detailLevel);
   return { id: "what-stands-out", title: BRIEFING_SECTION_TITLES["what-stands-out"], included: true, asOfNote: `Derived from ${context.items.length} watched entities, as of snapshot ${registry.snapshotId}.`, claims, overflowCount };
 }
@@ -578,13 +582,13 @@ function comparisonTableAndStandout(
 
 function watchlistSummarySection(context: WatchlistScopeContext, detailLevel: DetailLevel, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
   const claims = context.items.map((item) => {
-    const current = recordsForEntity(item.entityType, item.entityKey).length;
+    const current = recordsForEntity(item.entityType, item.entityKey, registry.applications).length;
     return makeClaim({
       text: current === item.recordCountAtAdd
         ? `${item.label}: ${current} supporting records (unchanged since added).`
         : `${item.label}: ${current} supporting records (was ${item.recordCountAtAdd} at add).`,
       truthClass: "calculated-metric",
-      evidence: [evidenceFor(item.label, recordsForEntity(item.entityType, item.entityKey), item.entityType, item.entityKey)],
+      evidence: [evidenceFor(item.label, recordsForEntity(item.entityType, item.entityKey, registry.applications), item.entityType, item.entityKey)],
     });
   });
   const overflowCount = overflowCountFor(claims, detailLevel);
@@ -592,7 +596,7 @@ function watchlistSummarySection(context: WatchlistScopeContext, detailLevel: De
 }
 
 function savedResearchSummarySection(context: SavedResearchScopeContext, registry: RegistryApplicationsDocument = defaultBriefingRegistry): BriefingSection {
-  const records = recordsForParams(context.kind, context.params);
+  const records = recordsForParams(context.kind, context.params, registry.applications);
   const claims = [
     makeClaim({ text: `Source: ${context.kind === "explore-view" ? "Explore view" : "Compare configuration"}.`, truthClass: "authoritative-fact", evidence: [evidenceFor("Source kind", records)] }),
     makeClaim({ text: `Cohort / filter definition: ${context.summary}.`, truthClass: "calculated-metric", evidence: [evidenceFor("Cohort definition", records)] }),

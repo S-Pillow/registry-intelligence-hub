@@ -55,5 +55,14 @@ export async function loadConfiguredApplicationPayload(): Promise<RegistryApplic
   const absolute = configuredPath.startsWith("/")
     ? configuredPath
     : join(process.cwd(), configuredPath);
-  return loadPayloadFromPath(absolute);
+  try {
+    return await loadPayloadFromPath(absolute);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new Error(
+        `${APPLICATION_PAYLOAD_PATH_ENV} is set but the application payload file could not be read`,
+      );
+    }
+    throw error;
+  }
 }

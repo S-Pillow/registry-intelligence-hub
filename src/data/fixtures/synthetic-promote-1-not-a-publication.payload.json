@@ -1,0 +1,95 @@
+{
+  "payloadVersion": "registry-browser-applications/1.0.0",
+  "payloadMode": "promoted-2026",
+  "fixtureId": "synthetic-promote-1-not-a-publication",
+  "snapshotId": "snap-synthetic-promote-1-not-a-publication",
+  "snapshotContentHash": "synthetic-promote-1-pin-not-a-publication-hash",
+  "publicationSchemaVersion": "registry-2026-publication/1.1.0",
+  "baselineAt": "2099-01-01T00:00:00.000Z",
+  "retrievedAt": "2099-01-01T00:00:00.000Z",
+  "checkedAt": "2099-01-01T00:00:00.000Z",
+  "changedAt": "2099-01-01T00:00:00.000Z",
+  "parserVersion": "synthetic-promote-1/not-a-parser",
+  "methodVersion": "round-pulse/1.0.0",
+  "sourceHealth": {
+    "status": "healthy",
+    "recordsCovered": 3,
+    "recordsTotal": 3,
+    "requiredFieldsCovered": 36,
+    "requiredFieldsTotal": 36,
+    "gaps": [
+      {
+        "status": "not-public",
+        "source": "Synthetic promote-1 fixture",
+        "detail": "SYNTHETIC TEST FIXTURE. Not an ICANN 2026 publication and not official totals.",
+        "affected": "This file must never be read as a published 2026 round."
+      }
+    ]
+  },
+  "historicalContext": {
+    "comparisonLabel": "Not a 2012 baseline. Synthetic promote-1 fixture only.",
+    "applications": 0,
+    "uniqueStrings": 0,
+    "organizations": 0,
+    "idnApplications": 0,
+    "contentionSets": 0,
+    "categoryCounts": {}
+  },
+  "source": {
+    "name": "Synthetic promote-1 fixture (not an ICANN publication)",
+    "url": "https://example.invalid/synthetic-promote-1-not-a-publication",
+    "evidenceClass": "synthetic-test-fixture"
+  },
+  "limitations": [
+    "SYNTHETIC TEST FIXTURE. Not an ICANN 2026 publication. Not official 2026 totals.",
+    "Organization labels in this file are not resolved organizations.",
+    "Exact applied-for string groups in this file are not contention sets."
+  ],
+  "applications": [
+    {
+      "id": "SYNTH-NOT-A-PUBLICATION-001",
+      "string": "synthetic-not-a-2026-publication-alpha",
+      "applicant": "Synthetic Legal Name Alpha",
+      "organization": "Synthetic Org Label Alpha",
+      "country": "ZZ",
+      "region": "Synthetic Region",
+      "category": "Synthetic Category Label",
+      "type": "Synthetic Type",
+      "returning": false,
+      "idn": false,
+      "replacement": null,
+      "contentionSet": null,
+      "confidence": 0
+    },
+    {
+      "id": "SYNTH-NOT-A-PUBLICATION-002",
+      "string": "synthetic-not-a-2026-publication-alpha",
+      "applicant": "Synthetic Legal Name Alpha",
+      "organization": "Synthetic Org Label Alpha",
+      "country": "ZZ",
+      "region": "Synthetic Region",
+      "category": "Synthetic Category Label",
+      "type": "Synthetic Type",
+      "returning": false,
+      "idn": true,
+      "replacement": null,
+      "contentionSet": null,
+      "confidence": 0
+    },
+    {
+      "id": "SYNTH-NOT-A-PUBLICATION-003",
+      "string": "synthetic-not-a-2026-publication-beta",
+      "applicant": "Synthetic Legal Name Beta",
+      "organization": "Synthetic Org Label Beta",
+      "country": "ZZ",
+      "region": "Synthetic Region",
+      "category": "Synthetic Category Label",
+      "type": "Synthetic Type",
+      "returning": false,
+      "idn": false,
+      "replacement": null,
+      "contentionSet": null,
+      "confidence": 0
+    }
+  ]
+}
