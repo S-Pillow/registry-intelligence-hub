@@ -27,28 +27,48 @@ async function fetchOk(url, attempts = 8) {
   return last;
 }
 
-/** Rehearsal deploy default: no REGISTRY_HUB_* pins → 12-app fixture + 2012 approved baseline counts. */
-function assertRehearsalProductionContract(html) {
+/** Default production: no promoted 2026 publication and no demo opt-in. */
+function assertPreRevealProductionContract(html) {
   if (!registryHubEnvUnset()) return;
 
   const required = [
-    ["Rehearsal data only", "rehearsal banner"],
-    ["snap-rehearsal-2026-09-16", "rehearsal snapshot id"],
+    ["Pre-Reveal — 2026 public application data has not been promoted", "pre-reveal banner"],
+    ["2026 Reveal Day data is not promoted yet", "waiting explanation"],
     ["1930", "2012 approved application count"],
     ["1409", "2012 approved unique string count"],
     ["116", "2012 approved IDN application count"],
     ["2026 comparison pending publication", "gated cross-round delta copy"],
+    ["Contention-set count is unavailable", "set count stays unavailable"],
   ];
   for (const [needle, label] of required) {
     if (!html.includes(needle)) {
       throw new Error(`Command Center missing ${label} (${needle})`);
     }
   }
-  if (html.includes("APP-91000")) {
-    throw new Error("Command Center must not show staging promoted id APP-91000 in rehearsal mode");
+  if (html.includes("Rehearsal data only")) {
+    throw new Error("Default Command Center must not present the demo rehearsal banner");
   }
-  if (!/12(?:<!-- -->)?\/(?:<!-- -->)?12(?:<!-- -->)? records/.test(html)) {
-    throw new Error("Command Center missing 12/12 rehearsal fixture record coverage");
+  if (html.includes("APP-91000")) {
+    throw new Error("Command Center must not show staging promoted id APP-91000");
+  }
+  if (/12(?:<!-- -->)?\/(?:<!-- -->)?12(?:<!-- -->)? records/.test(html)) {
+    throw new Error("Default Command Center must not present 12/12 rehearsal record coverage");
+  }
+}
+
+function assertDemoProductionContract(html) {
+  const required = [
+    ["Demo / Rehearsal — synthetic data, not an ICANN publication", "demo banner"],
+    ["Rehearsal data only", "demo disclosure"],
+    ["Atlas Digital", "rehearsal organization"],
+  ];
+  for (const [needle, label] of required) {
+    if (!html.includes(needle)) {
+      throw new Error(`Demo Command Center missing ${label} (${needle})`);
+    }
+  }
+  if (html.includes("https://newgtldprogram.icann.org/")) {
+    throw new Error("Demo Command Center must not cite the ICANN program URL as the rehearsal source");
   }
 }
 
@@ -79,6 +99,7 @@ const paths = [
   withBasePath("/compare?type=organizations&ids=Atlas+Digital,Northstar+Group"),
   withBasePath("/saved"),
   withBasePath("/briefings"),
+  withBasePath("/data-health"),
 ];
 
 killListenersOnPort(port);
@@ -131,9 +152,25 @@ try {
     }
     if (path === withBasePath("/")) {
       await assertClientChunksResolvable(html, path);
-      assertRehearsalProductionContract(html);
+      assertPreRevealProductionContract(html);
+    }
+    if (path === withBasePath("/explore") && !html.includes("2026 Explore is waiting for publication")) {
+      throw new Error("Default Explore must explain that 2026 rows are waiting for publication");
+    }
+    if (path.startsWith(withBasePath("/compare")) && !html.includes("2026 comparison is waiting for publication")) {
+      throw new Error("Default Compare must not present rehearsal entities");
+    }
+    if (path === withBasePath("/briefings") && !html.includes("2026 briefings are waiting for publication")) {
+      throw new Error("Default Briefings must not generate synthetic 2026 content");
+    }
+    if (path === withBasePath("/saved") && !html.includes("Saved 2026 entities are waiting for publication")) {
+      throw new Error("Default Saved must not offer synthetic 2026 entities");
     }
   }
+
+  const demo = await fetch(`${base}${withBasePath("/")}?presentation=rehearsal`);
+  if (!demo.ok) throw new Error(`demo command center returned HTTP ${demo.status}`);
+  assertDemoProductionContract(await demo.text());
 
   console.log(`production smoke OK (${paths.length} routes on ${base}, ${HUB_BASE_PATH}/_next chunks verified)`);
 } catch (error) {

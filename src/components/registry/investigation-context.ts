@@ -3,6 +3,7 @@
 import { createContext, useContext } from "react";
 import type { HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import type { Application, EntityType } from "@/lib/registry-data";
+import type { ProductPresentation } from "@/lib/presentation-mode";
 import type { SavedWork } from "@/lib/use-saved-work";
 
 export type CompareEntityType = EntityType;
@@ -71,6 +72,7 @@ export type InvestigationContextValue = {
   compareItems: InvestigationItem[];
   watchedIds: Set<string>;
   savedWork: SavedWork;
+  presentation: ProductPresentation;
 };
 
 export const InvestigationContext = createContext<InvestigationContextValue | null>(null);

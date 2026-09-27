@@ -110,13 +110,26 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     ).toBe("/explore?entity=applications&ids=1-1386-27446&dataset=2012-historical");
   });
 
-  it("keeps 2026 rehearsal Explore drawer rehearsal provenance unchanged", async () => {
-    const user = userEvent.setup();
+  it("keeps 2026 rehearsal Explore drawer provenance synthetic and off the default page", async () => {
     render(
       <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
         <HubRegistryDataProvider resolution={registryResolution}>
           <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
             <CommandCenter view="explore" exploreParams={{ q: "secure" }} />
+          </HubHistorical2012Provider>
+        </HubRegistryDataProvider>
+      </HubClaimActualityProvider>,
+    );
+    expect(screen.queryByRole("button", { name: "View intelligence for .secure" })).not.toBeInTheDocument();
+    expect(screen.getByText("2026 Explore is waiting for publication")).toBeInTheDocument();
+    cleanup();
+
+    const user = userEvent.setup();
+    render(
+      <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
+        <HubRegistryDataProvider resolution={registryResolution}>
+          <HubHistorical2012Provider applicationPayload={historical2012} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
+            <CommandCenter presentation="rehearsal" view="explore" exploreParams={{ q: "secure" }} />
           </HubHistorical2012Provider>
         </HubRegistryDataProvider>
       </HubClaimActualityProvider>,

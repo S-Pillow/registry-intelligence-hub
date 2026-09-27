@@ -1,4 +1,5 @@
 import rehearsalFixture from "@/data/fixtures/registry-applications.json";
+import { REHEARSAL_BROWSER_SOURCE } from "@/lib/presentation-mode";
 import {
   DEFAULT_CLAIM_ACTUALITY_STATE,
   type ClaimActualityState,
@@ -35,6 +36,11 @@ export function rehearsalRegistryApplicationsDocument(): RegistryApplicationsDoc
     payloadVersion: REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION,
     payloadMode: "rehearsal",
     snapshotContentHash: REHEARSAL_REGISTRY_SNAPSHOT_CONTENT_HASH,
+    source: { ...REHEARSAL_BROWSER_SOURCE },
+    limitations: [
+      "Synthetic rehearsal fixture — not an ICANN publication and not a promoted 2026 application list.",
+      ...rehearsalFixture.limitations.filter((line) => !/official 2026 publication/i.test(line)),
+    ],
   };
 }
 

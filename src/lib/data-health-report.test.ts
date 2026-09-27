@@ -37,7 +37,7 @@ describe("data-health-report", () => {
       idnApplications: 116,
     });
     expect(snapshot.browserDataState.entityLevel2012InBrowser).toBe(false);
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
     expect(snapshot.publicationReadiness.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
     expect(snapshot.browserDataState.real2026Publication).toMatch(/Not published/i);
     expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
@@ -155,7 +155,7 @@ describe("data-health-report", () => {
     expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed/i);
 
     const snapshot = buildDataHealthSnapshot(promoted, hashMismatch);
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "browser-payload")?.status).toBe(
       "warning",
     );
@@ -187,6 +187,6 @@ describe("data-health-report", () => {
     expect(snapshot.browserDataState.historical2012CorpusHash).toBe(APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH);
     expect(snapshot.currentStateSummary.find((r) => r.id === "2012-entity-browser")?.badgeLabel).toBe("Loaded");
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "entity-2012")?.status).toBe("complete");
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
   });
 });

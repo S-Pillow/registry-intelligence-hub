@@ -1,4 +1,5 @@
 import { CommandCenter, type ExploreParams } from "@/components/registry/command-center";
+import { presentationFromSearchParam } from "@/lib/presentation-mode";
 
 const allowedStates = new Set(["ready", "loading", "empty", "error"]);
 const keys: (keyof ExploreParams)[] = [
@@ -26,5 +27,5 @@ export default async function ExplorePage({
     keys.flatMap((key) => typeof params[key] === "string" ? [[key, params[key]]] : [])
   ) as ExploreParams;
 
-  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="explore" exploreParams={exploreParams} />;
+  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="explore" exploreParams={exploreParams} presentation={presentationFromSearchParam(params.presentation)} />;
 }

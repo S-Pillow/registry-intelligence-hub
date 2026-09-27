@@ -1,4 +1,5 @@
 import { CommandCenter, type CompareParams } from "@/components/registry/command-center";
+import { presentationFromSearchParam } from "@/lib/presentation-mode";
 
 const allowedStates = new Set(["ready", "loading", "empty", "error"]);
 
@@ -16,5 +17,5 @@ export default async function ComparePage({
     origin: typeof params.origin === "string" ? params.origin : undefined,
   };
 
-  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="compare" compareParams={compareParams} />;
+  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="compare" compareParams={compareParams} presentation={presentationFromSearchParam(params.presentation)} />;
 }

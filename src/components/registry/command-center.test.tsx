@@ -8,6 +8,7 @@ import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data
 import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
 import { exploreDrillDownHref, exploreEntityResearchHref, exploreFullHrefForInvestigation, exploreResearchHref, type Application } from "@/lib/registry-data";
+import { withRehearsalPresentation } from "@/lib/presentation-mode";
 import { CommandCenter } from "./command-center";
 
 beforeEach(() => {
@@ -22,7 +23,7 @@ afterEach(() => {
 describe("Command Center interactions", () => {
   it("passes the cover-the-buttons contract for all four Views", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     const lensCopyBundle = () =>
       `${screen.getByTestId("above-fold-lens-surface").textContent ?? ""}${screen.getByTestId("round-pulse-section").textContent ?? ""}`;
@@ -53,7 +54,8 @@ describe("Command Center interactions", () => {
     expect(documentBefore(hubTitle(), screen.getByTestId("lens-round-pulse-eyebrow"))).toBe(true);
     expect(documentBefore(roundPulseSection(), screen.getByLabelText("Dataset health"))).toBe(true);
     expect(documentBefore(rehearsalBanner(), roundPulseSection())).toBe(true);
-    expect(screen.getByTestId("publication-state-summary")).toHaveTextContent("Rehearsal fixture. The 2026 round is not published.");
+    expect(screen.getByTestId("publication-state-summary")).toHaveTextContent("Demo / Rehearsal mode");
+    expect(screen.getByTestId("publication-state-summary")).toHaveTextContent("not an ICANN publication");
     expect(screen.queryByText("REHEARSAL READY")).not.toBeInTheDocument();
     expect(rehearsalBanner()).toBeInTheDocument();
     const baselineFacts = factValues();
@@ -111,7 +113,7 @@ describe("Command Center interactions", () => {
 
   it("keeps downstream lens-dependent content when Views change", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const topInvestigation = () => screen.getByTestId("investigation-queue-0").textContent ?? "";
     const retiredFixtureFindings = [
       "Atlas Digital holds the rehearsal fixture’s largest portfolio",
@@ -146,7 +148,7 @@ describe("Command Center interactions", () => {
 
   it("opens the intelligence drawer and separates evidence from classification", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
 
@@ -162,7 +164,7 @@ describe("Command Center interactions", () => {
 
   it("connects like-entity Explore selections to the full Compare route", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "Add to compare Atlas Digital" })[0]);
     await user.click(screen.getAllByRole("button", { name: "Add to compare Kizuna Registry" })[0]);
@@ -173,7 +175,7 @@ describe("Command Center interactions", () => {
 
   it("explains fixture-backed source coverage exceptions", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Source coverage" }));
 
@@ -186,16 +188,16 @@ describe("Command Center interactions", () => {
 
   it("links Command Center search to the Explore research context", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
-    const search = screen.getByRole("textbox", { name: "Search fixture records" });
+    render(<CommandCenter presentation="rehearsal" />);
+    const search = screen.getByRole("textbox", { name: "Search rehearsal records" });
     await user.type(search, "Atlas");
     expect(exploreResearchHref("Atlas")).toBe("/explore?q=Atlas");
-    expect(screen.getByRole("link", { name: "Open in Explore" })).toHaveAttribute("href", "/explore?q=Atlas");
+    expect(screen.getByRole("link", { name: "Open in Explore" })).toHaveAttribute("href", "/explore?q=Atlas&presentation=rehearsal");
   });
 
   it("opens provenance for snapshot lineage from dataset health", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "View intelligence for Snapshot snap-rehearsal-2026-09-16" }));
     expect(await screen.findByText(/INTELLIGENCE DRAWER · DATASET/)).toBeInTheDocument();
     expect(screen.getByText("snap-rehearsal-2026-09-16")).toBeInTheDocument();
@@ -203,7 +205,7 @@ describe("Command Center interactions", () => {
 
   it("wires Investigate, Compare, and Watch for applicants worth investigating", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const applicantCard = screen.getByText("Evidence-led investigation queue").closest("[data-slot=card]") as HTMLElement;
     await user.click(within(applicantCard).getByRole("button", { name: "Add to compare Atlas Digital investigation profile" }));
     expect(screen.getByLabelText("Comparison selection tray")).toBeInTheDocument();
@@ -214,15 +216,15 @@ describe("Command Center interactions", () => {
   });
 
   it("does not show internal blocked-eligibility codes in Biggest Changes copy", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.queryByText(/BLOCKED_COVERAGE/)).not.toBeInTheDocument();
     expect(screen.getByText(/category mix comparison not yet approved/i)).toBeInTheDocument();
   });
 
   it("focuses global search with the slash shortcut", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
-    const search = screen.getByRole("textbox", { name: "Search fixture records" });
+    render(<CommandCenter presentation="rehearsal" />);
+    const search = screen.getByRole("textbox", { name: "Search rehearsal records" });
 
     await user.keyboard("/");
 
@@ -231,7 +233,7 @@ describe("Command Center interactions", () => {
 
   it("freezes the Command Center terminology while preserving Watch actions", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     expect(screen.getByText("ORGANIZATION LABELS")).toBeInTheDocument();
     expect(screen.queryByText("APPLICANTS TO WATCH")).not.toBeInTheDocument();
@@ -243,7 +245,7 @@ describe("Command Center interactions", () => {
 describe("Explore interactions", () => {
   it("composes filters, updates counts, and writes shareable URL state", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" />);
+    render(<CommandCenter presentation="rehearsal" view="explore" />);
 
     expect(screen.getByText("12 applications results · 12 applications")).toBeInTheDocument();
     await user.keyboard("/");
@@ -258,7 +260,7 @@ describe("Explore interactions", () => {
 
   it("restores initial URL filters and opens records in the shared drawer", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ category: "Identity", status: "returning" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ category: "Identity", status: "returning" }} />);
 
     expect(screen.getByText("2 applications results · 2 applications")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Add to compare \.secure/ }).length).toBeGreaterThan(0);
@@ -269,7 +271,7 @@ describe("Explore interactions", () => {
   });
 
   it("shows a clear empty research state", () => {
-    render(<CommandCenter view="explore" exploreParams={{ q: "no-such-record" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ q: "no-such-record" }} />);
 
     expect(screen.getByText("No records match this research view")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Clear filters" }).length).toBeGreaterThan(0);
@@ -277,23 +279,23 @@ describe("Explore interactions", () => {
 
   it("focuses Explore search with Ctrl/Cmd+K", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" />);
+    render(<CommandCenter presentation="rehearsal" view="explore" />);
     const search = screen.getByRole("textbox", { name: "Search all registry records" });
     await user.keyboard("{Control>}k{/Control}");
     expect(search).toHaveFocus();
   });
 
   it("covers Explore loading and error rehearsal states", () => {
-    const { rerender } = render(<CommandCenter view="explore" state="loading" />);
+    const { rerender } = render(<CommandCenter presentation="rehearsal" view="explore" state="loading" />);
     expect(screen.getByLabelText("Loading Explore")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Search all registry records" })).toBeInTheDocument();
 
-    rerender(<CommandCenter view="explore" state="error" />);
+    rerender(<CommandCenter presentation="rehearsal" view="explore" state="error" />);
     expect(screen.getByText("Explore is temporarily unavailable")).toBeInTheDocument();
   });
 
   it("disables compare and watch in strings browse with explicit guidance", () => {
-    render(<CommandCenter view="explore" exploreParams={{ entity: "strings" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "strings" }} />);
     const compare = screen.getAllByRole("button", { name: /\+ Compare/ })[0];
     expect(compare).toBeDisabled();
     expect(compare).toHaveAttribute("title", expect.stringContaining("Strings browse"));
@@ -301,7 +303,7 @@ describe("Explore interactions", () => {
 
   it("writes sort choice to shareable URL state", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations", sort: "name-asc" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations", sort: "name-asc" }} />);
     const rows = screen.getAllByRole("row");
     expect(within(rows[1]).getByText("Atlas Digital")).toBeInTheDocument();
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort records" }), "contention-desc");
@@ -309,7 +311,7 @@ describe("Explore interactions", () => {
   });
 
   it("shows catalog-gated historical disclosure without local comparison gates", () => {
-    render(<CommandCenter view="explore" />);
+    render(<CommandCenter presentation="rehearsal" view="explore" />);
     expect(screen.getByText(/Historical intelligence follows/)).toBeInTheDocument();
     expect(screen.getByText(/cross-round comparison withheld/i)).toBeInTheDocument();
     expect(screen.queryByText(/BLOCKED_/)).not.toBeInTheDocument();
@@ -318,30 +320,30 @@ describe("Explore interactions", () => {
 
 describe("Command Center → Explore drill-down", () => {
   it("links rehearsal Round Pulse metrics and supporting charts into Explore — not historical aggregates", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.queryByRole("link", { name: "Open IDN applications in Explore" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Applications in Explore" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open Unique strings in Explore" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Organizations in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
-      exploreDrillDownHref("organizations"),
+      withRehearsalPresentation(exploreDrillDownHref("organizations"), "rehearsal"),
     );
     expect(screen.queryByRole("link", { name: /Open Initial contention sets in 2026 rehearsal Explore/i })).not.toBeInTheDocument();
     expect(screen.getByTestId("historical-aggregate-only-contention")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Atlas Digital in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
-      exploreEntityResearchHref("organizations", "Atlas Digital"),
+      withRehearsalPresentation(exploreEntityResearchHref("organizations", "Atlas Digital"), "rehearsal"),
     );
     expect(screen.getByRole("link", { name: "Open Technology category in 2026 rehearsal Explore" })).toHaveAttribute(
       "href",
-      exploreEntityResearchHref("categories", "Technology"),
+      withRehearsalPresentation(exploreEntityResearchHref("categories", "Technology"), "rehearsal"),
     );
   });
 });
 
 describe("Compare interactions", () => {
   it("renders stable organization rows with provenance and unavailable states", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getByText("Stable dimension")).toBeInTheDocument();
     expect(screen.getAllByText("2026 applications").length).toBeGreaterThan(0);
@@ -353,7 +355,7 @@ describe("Compare interactions", () => {
 
   it("adds, reorders, replaces, and removes like entities with URL state", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
 
     await user.selectOptions(screen.getByRole("combobox", { name: "Add category" }), "Consumer");
     await user.click(screen.getByRole("button", { name: "Add" }));
@@ -370,7 +372,7 @@ describe("Compare interactions", () => {
   });
 
   it("keeps application unavailable and not-comparable states distinct", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
 
     expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Not comparable").length).toBeGreaterThanOrEqual(2);
@@ -380,18 +382,18 @@ describe("Compare interactions", () => {
   });
 
   it("covers empty, loading, and error states", () => {
-    const { rerender } = render(<CommandCenter view="compare" state="empty" />);
+    const { rerender } = render(<CommandCenter presentation="rehearsal" view="compare" state="empty" />);
     expect(screen.getByText("Choose at least two organizations")).toBeInTheDocument();
 
-    rerender(<CommandCenter view="compare" state="loading" />);
+    rerender(<CommandCenter presentation="rehearsal" view="compare" state="loading" />);
     expect(screen.getByLabelText("Loading Compare")).toBeInTheDocument();
 
-    rerender(<CommandCenter view="compare" state="error" />);
+    rerender(<CommandCenter presentation="rehearsal" view="compare" state="error" />);
     expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
   });
 
   it("groups dimensions into scalable sections while preserving unavailable states", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getAllByText("Round Activity").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Historical Participation").length).toBeGreaterThan(0);
@@ -401,19 +403,19 @@ describe("Compare interactions", () => {
   });
 
   it("labels the same sections differently per entity type while comparing the same underlying dimensions", () => {
-    const { unmount } = render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    const { unmount } = render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
     expect(screen.getAllByText("Round Activity").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Existing Portfolio").length).toBeGreaterThan(0);
     unmount();
 
-    const { unmount: unmountApplications } = render(<CommandCenter view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
+    const { unmount: unmountApplications } = render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "applications", ids: "APP-26001,APP-26003" }} />);
     expect(screen.getAllByText("Application Details").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Application Context").length).toBeGreaterThan(0);
     expect(screen.queryByText("Round Activity")).not.toBeInTheDocument();
     expect(screen.queryByText("Existing Portfolio")).not.toBeInTheDocument();
     unmountApplications();
 
-    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "categories", ids: "Technology,Identity" }} />);
     expect(screen.getAllByText("Round Composition").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Category Footprint").length).toBeGreaterThan(0);
     expect(screen.queryByText("Round Activity")).not.toBeInTheDocument();
@@ -424,7 +426,7 @@ describe("Compare interactions", () => {
   });
 
   it("shows a deterministic Key differences summary with actual directional facts and shared dimensions, never AI or winner language", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getByText("Key differences")).toBeInTheDocument();
     expect(screen.getByText(/of \d+ dimensions differ across selections/)).toBeInTheDocument();
@@ -438,7 +440,7 @@ describe("Compare interactions", () => {
 
   it("toggles between All dimensions and Differences only, hiding matching rows", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getByRole("button", { name: "All dimensions" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getAllByText("Historical market demand").length).toBeGreaterThan(0);
@@ -454,7 +456,7 @@ describe("Compare interactions", () => {
   });
 
   it("displays an unambiguous delta naming the reference entity for a differing numeric dimension", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     // Atlas Digital (reference) has 3 applications; Northstar Group has 2 — a deterministic -1 delta.
     expect(screen.getAllByText("(-1 vs Atlas Digital)").length).toBeGreaterThan(0);
@@ -462,7 +464,7 @@ describe("Compare interactions", () => {
 
   it("explicitly labels the first selected entity as Reference and keeps it deterministic under reorder/replace", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     const headerBefore = screen.getByRole("columnheader", { name: /Atlas Digital/ });
     expect(within(headerBefore).getByText("Reference")).toBeInTheDocument();
@@ -480,7 +482,7 @@ describe("Compare interactions", () => {
 
   it("caps Key differences to a concise, ranked set and reveals the rest via 'View all N differences'", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group,Verde Cooperative,Future MENA" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group,Verde Cooperative,Future MENA" }} />);
 
     const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
     const initialFindings = within(summarySection).getAllByRole("listitem");
@@ -498,7 +500,7 @@ describe("Compare interactions", () => {
   });
 
   it("scales the Key differences summary down to a single concise finding for a two-entity comparison with one real difference", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     const summarySection = screen.getByText("Key differences").closest("section") as HTMLElement;
     expect(screen.queryByRole("button", { name: /View all/ })).not.toBeInTheDocument();
@@ -506,18 +508,18 @@ describe("Compare interactions", () => {
   });
 
   it("uses a neutral, non-amber tint for difference affordances, reserving amber for warning/evidence banners", () => {
-    const { container } = render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    const { container } = render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     const differingCells = container.querySelectorAll("td.bg-sky-50\\/70");
     expect(differingCells.length).toBeGreaterThan(0);
     differingCells.forEach((cell) => expect(cell.className).not.toMatch(/amber|yellow/));
 
     // The rehearsal-baseline banner is a warning/evidence caveat, so it keeps its amber treatment.
-    expect(screen.getByText("Rehearsal comparison.").closest("div")?.className).toMatch(/amber/);
+    expect(screen.getByText("Demo / Rehearsal comparison.").closest("div")?.className).toMatch(/amber/);
   });
 
   it("keeps entity column headers sticky for long comparisons", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     const header = screen.getByRole("columnheader", { name: /Atlas Digital/ });
     expect(header.className).toContain("sticky");
@@ -525,7 +527,7 @@ describe("Compare interactions", () => {
   });
 
   it("keeps sticky, correctly aligned entity headers with three selected entities", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer" }} />);
 
     const dimensionHeader = screen.getByRole("columnheader", { name: "Stable dimension" });
     expect(dimensionHeader.className).toContain("sticky");
@@ -543,7 +545,7 @@ describe("Compare interactions", () => {
   });
 
   it("keeps sticky, correctly aligned entity headers with four selected entities", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer,Community" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "categories", ids: "Technology,Identity,Consumer,Community" }} />);
 
     const dimensionHeader = screen.getByRole("columnheader", { name: "Stable dimension" });
     expect(dimensionHeader.className).toContain("sticky");
@@ -560,7 +562,7 @@ describe("Compare interactions", () => {
 
   it("collapses the large entity selector into a compact editable selection bar and back", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.getByText("Entity type boundary")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Collapse selector" }));
@@ -578,7 +580,7 @@ describe("Compare interactions", () => {
   });
 
   it("replaces consumer-shopping copy with internal intelligence language and shows originating context", () => {
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     expect(screen.queryByText(/^Shop /)).not.toBeInTheDocument();
     expect(screen.getByText(/Review two to four like entities side by side/)).toBeInTheDocument();
@@ -601,14 +603,14 @@ describe("Initial string competition module", () => {
         selectionReason: "promoted-active",
       }}
       >
-        <CommandCenter />
+        <CommandCenter presentation="rehearsal" />
       </HubRegistryDataProvider>,
     );
   }
 
   it("shows rehearsal exact-string groups, historical membership, and a blocked set count", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const competition = screen.getByTestId("initial-string-competition");
     const pulse = screen.getByTestId("round-pulse-section");
 
@@ -720,7 +722,7 @@ describe("Command Center information hierarchy", () => {
     Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
 
   it("reads publication state, one count strip, then gated modules, supporting charts, and trust", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     const publication = screen.getByTestId("publication-state");
     const pulse = screen.getByTestId("round-pulse-section");
@@ -779,7 +781,7 @@ describe("Command Center information hierarchy", () => {
     };
     render(
       <HubRegistryDataProvider resolution={{ document, mode: "promoted-2026", selectionReason: "promoted-active" }}>
-        <CommandCenter />
+        <CommandCenter presentation="rehearsal" />
       </HubRegistryDataProvider>,
     );
 
@@ -822,7 +824,7 @@ describe("Command Center information hierarchy", () => {
     };
     render(
       <HubRegistryDataProvider resolution={{ document, mode: "promoted-2026", selectionReason: "promoted-active" }}>
-        <CommandCenter />
+        <CommandCenter presentation="rehearsal" />
       </HubRegistryDataProvider>,
     );
 
@@ -846,7 +848,7 @@ describe("Command Center information hierarchy", () => {
 describe("Investigate — shared intelligence drawer", () => {
   it("opens the intelligence drawer from Compare selection cards via Investigate", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     await user.click(screen.getByRole("button", { name: "Investigate Atlas Digital" }));
     expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
@@ -854,7 +856,7 @@ describe("Investigate — shared intelligence drawer", () => {
 
   it("opens from Compare entity provenance with entity-scoped View full", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
     expect(await screen.findByText(/INTELLIGENCE DRAWER · APPLICANT/)).toBeInTheDocument();
@@ -866,7 +868,7 @@ describe("Investigate — shared intelligence drawer", () => {
 
   it("separates approved 2012 historical aggregates from rehearsal entity browse in Round Pulse", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     expect(await screen.findByText("Approved 2012 historical aggregate")).toBeInTheDocument();
@@ -877,7 +879,7 @@ describe("Investigate — shared intelligence drawer", () => {
 
   it("keeps one orientation surface for the approved 2012 counts", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     expect(screen.queryByText("REVEAL DAY AT A GLANCE")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "View intelligence for Application count: 1930 (2012 approved baseline)" })).not.toBeInTheDocument();
@@ -895,7 +897,7 @@ describe("Investigate — shared intelligence drawer", () => {
 
   it("keeps dataset health provenance reachable without fixture standout findings", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     await user.click(screen.getByRole("button", { name: `View intelligence for Community applications: ${APPROVED_2012_BASELINE.communityDesignations}` }));
     expect(await screen.findByText(/Historical aggregate only — not a 2026 count, category, Brand designation, or IDN count/i)).toBeInTheDocument();
@@ -910,7 +912,7 @@ describe("Investigate — shared intelligence drawer", () => {
 
   it("routes organization Explore drawer View full to entity browse, not application ids", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
     expect(screen.getByRole("link", { name: "View full" })).toHaveAttribute(
@@ -922,26 +924,26 @@ describe("Investigate — shared intelligence drawer", () => {
 
 describe("Saved navigation and one-click Watch", () => {
   it("enables Saved, Briefings, and Data Health navigation links", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
-    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved");
-    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/briefings");
-    expect(screen.getByRole("link", { name: "Data Health" })).toHaveAttribute("href", "/data-health");
+    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved?presentation=rehearsal");
+    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/briefings?presentation=rehearsal");
+    expect(screen.getByRole("link", { name: "Data Health" })).toHaveAttribute("href", "/data-health?presentation=rehearsal");
   });
 
   it("exposes Briefings and Data Health in Hub nav without relying on horizontal scroll", () => {
-    render(<CommandCenter view="data-health" />);
+    render(<CommandCenter presentation="rehearsal" view="data-health" />);
 
     const briefings = screen.getByRole("link", { name: "Briefings" });
     const dataHealth = screen.getByRole("link", { name: "Data Health" });
-    expect(briefings).toHaveAttribute("href", "/briefings");
-    expect(dataHealth).toHaveAttribute("href", "/data-health");
+    expect(briefings).toHaveAttribute("href", "/briefings?presentation=rehearsal");
+    expect(dataHealth).toHaveAttribute("href", "/data-health?presentation=rehearsal");
     expect(dataHealth).toHaveAttribute("aria-current", "page");
   });
 
   it("one-click Watches an entity from Explore and reflects the same watched state from the intelligence drawer", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "Watch Atlas Digital" })[0]);
     await waitFor(() => expect(screen.getAllByRole("button", { name: "Watching Atlas Digital" }).length).toBeGreaterThan(0));
@@ -952,7 +954,7 @@ describe("Saved navigation and one-click Watch", () => {
 
   it("does not persist a watch action for non-entity metric or signal cards", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     await user.click(screen.getByRole("button", { name: "Watch" }));

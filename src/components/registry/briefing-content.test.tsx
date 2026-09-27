@@ -25,7 +25,8 @@ afterEach(() => {
  * without requiring a mocked Next.js router.
  */
 function idFromHref(link: HTMLElement): string {
-  return link.getAttribute("href")!.split("/").pop()!;
+  const path = link.getAttribute("href")!.split("?")[0];
+  return path.split("/").pop()!;
 }
 
 /**
@@ -49,22 +50,22 @@ async function readOptionLabels(user: ReturnType<typeof userEvent.setup>, combob
 }
 
 async function openFreshRoundWideBriefing(user: ReturnType<typeof userEvent.setup>) {
-  const view = render(<CommandCenter />);
+  const view = render(<CommandCenter presentation="rehearsal" />);
   await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
   const link = await screen.findByRole("link", { name: "Open Briefing" });
   const id = idFromHref(link);
-  view.rerender(<CommandCenter view="briefings" briefingId={id} />);
+  view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={id} />);
   return view;
 }
 
 describe("Instant Briefing — primary entry path", () => {
   it("inherits the active Command Center View lens into emphasis, audience defaults, and rendered narrative framing", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter />);
+    const view = render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "Commercial" }));
     await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
     const link = await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(link)} />);
 
     expect(await screen.findByText("Commercial")).toBeInTheDocument();
     expect(screen.getByText(/Emphasis: commercial/)).toBeInTheDocument();
@@ -94,22 +95,22 @@ describe("Instant Briefing — primary entry path", () => {
 describe("Brief Current View — contextual entry path", () => {
   it("scopes a Briefing to the active Explore filters and describes the same cohort", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter view="explore" exploreParams={{ idn: "idn" }} />);
+    const view = render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ idn: "idn" }} />);
 
     await user.click(screen.getByRole("button", { name: "Brief this view" }));
     const link = await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(link)} />);
 
     expect(await screen.findByText(/Explore view —/)).toBeInTheDocument();
   });
 
   it("scopes a Briefing to the active Compare selection", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    const view = render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     await user.click(screen.getByRole("button", { name: "Brief this comparison" }));
     const link = await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(link)} />);
 
     expect(await screen.findByRole("heading", { name: "Comparison" })).toBeInTheDocument();
     expect(screen.getAllByText(/Atlas Digital/).length).toBeGreaterThan(0);
@@ -134,12 +135,12 @@ describe("Brief Current View — contextual entry path", () => {
       ]),
     );
     const user = userEvent.setup();
-    const view = render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    const view = render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
     expect(await screen.findByText("IDN cohort")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Create briefing" }));
     const link = await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(link)} />);
 
     expect(await screen.findByText("Saved Research — IDN cohort")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Saved research summary" })).toBeInTheDocument();
@@ -147,12 +148,12 @@ describe("Brief Current View — contextual entry path", () => {
 
   it("offers Brief this from the shared intelligence drawer for an entity", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    const view = render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "View intelligence for Atlas Digital" })[0]);
     await user.click(await screen.findByRole("button", { name: "Brief this" }));
     const link = await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(link)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(link)} />);
 
     expect(await screen.findByText("Entity — Atlas Digital")).toBeInTheDocument();
   });
@@ -161,7 +162,7 @@ describe("Brief Current View — contextual entry path", () => {
 describe("Guided Briefing — secondary entry path", () => {
   it("orders audiences Executive, Commercial, Product & Strategy, Marketing and applies audience-appropriate defaults", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -175,7 +176,7 @@ describe("Guided Briefing — secondary entry path", () => {
 
   it("walks scope → audience → sections and generates a Briefing scoped to a chosen entity", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter view="briefings" />);
+    const view = render(<CommandCenter presentation="rehearsal" view="briefings" />);
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Entity" }));
@@ -188,7 +189,7 @@ describe("Guided Briefing — secondary entry path", () => {
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
     const openLink = await screen.findByRole("link", { name: "Open" });
-    view.rerender(<CommandCenter view="briefings" briefingId={idFromHref(openLink)} />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(openLink)} />);
 
     expect(await screen.findByText("Entity — Atlas Digital")).toBeInTheDocument();
     expect(screen.getByText("Commercial")).toBeInTheDocument();
@@ -196,12 +197,12 @@ describe("Guided Briefing — secondary entry path", () => {
 
   it("only offers a live watchlist by name, and inherits its current entities into the generated claims", async () => {
     const user = userEvent.setup();
-    const exploreView = render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    const exploreView = render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
     await user.click(screen.getAllByRole("button", { name: "Watch Atlas Digital" })[0]);
     await waitFor(() => expect(screen.getAllByRole("button", { name: "Watching Atlas Digital" }).length).toBeGreaterThan(0));
     exploreView.unmount();
 
-    const hub = render(<CommandCenter view="briefings" />);
+    const hub = render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Watchlist" }));
     expect(await readOptionLabels(user, "Watchlist")).toContain("Quick Watchlist");
@@ -211,7 +212,7 @@ describe("Guided Briefing — secondary entry path", () => {
     await user.click(screen.getByRole("button", { name: "Generate" }));
 
     const openLink = await screen.findByRole("link", { name: "Open" });
-    hub.rerender(<CommandCenter view="briefings" briefingId={idFromHref(openLink)} />);
+    hub.rerender(<CommandCenter presentation="rehearsal" view="briefings" briefingId={idFromHref(openLink)} />);
 
     expect(await screen.findByText("Watchlist — Quick Watchlist")).toBeInTheDocument();
     expect(screen.getByText("1 entity watched.")).toBeInTheDocument();
@@ -322,7 +323,7 @@ describe("Evidence and provenance integrity", () => {
 describe("New Briefing wizard — portal layering, cancel, Escape, and Back (contained UX correction)", () => {
   it("renders every wizard dropdown's popup through a body portal, never nested inside the (overflow-hidden) Card that triggers it", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Next" }));
 
@@ -342,7 +343,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("regression-checks every wizard dropdown across all three steps for the same body-portal layering", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Entity" }));
 
@@ -368,7 +369,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("Step 1 Cancel discards immediately with no confirmation, since no meaningful choice has been made yet", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     expect(screen.getByText("New Briefing — step 1 of 3")).toBeInTheDocument();
 
@@ -380,7 +381,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("the top-right close icon is an equivalent Cancel affordance on step 1", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Cancel New Briefing" }));
     expect(screen.queryByText(/New Briefing — step/)).not.toBeInTheDocument();
@@ -388,7 +389,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("Steps 2 and 3 show a 'Discard this briefing draft?' confirmation on Cancel, and only discard on explicit confirmation", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Next" })); // step 2 — a scope has already been committed
@@ -410,7 +411,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("Escape closes an open dropdown without canceling the wizard, and only cancels the wizard once no dropdown is open", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Entity" }));
 
@@ -427,7 +428,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("Escape on a dirty step opens the discard confirmation, and a second Escape only dismisses that confirmation (never both at once)", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
     await user.click(screen.getByRole("button", { name: "Next" })); // step 2, dirty
 
@@ -441,10 +442,10 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("browser Back closes the New Briefing wizard and returns to the Briefings list instead of navigating away, with prior Briefings preserved", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter />);
+    const view = render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
     await screen.findByRole("link", { name: "Open Briefing" });
-    view.rerender(<CommandCenter view="briefings" />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" />);
     expect(await screen.findByText("Briefing: Round-wide")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
@@ -460,7 +461,7 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 
   it("does not trap a normal Cancel behind an extra history entry — Cancel consumes the checkpoint it pushed on open", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     const startingState: unknown = window.history.state;
 
     await user.click(screen.getByRole("button", { name: "New Briefing" }));
@@ -474,11 +475,11 @@ describe("New Briefing wizard — portal layering, cancel, Escape, and Back (con
 describe("Briefings hub and CRUD", () => {
   it("lists generated Briefings and supports rename, duplicate, and delete", async () => {
     const user = userEvent.setup();
-    const view = render(<CommandCenter />);
+    const view = render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
     await screen.findByRole("link", { name: "Open Briefing" });
 
-    view.rerender(<CommandCenter view="briefings" />);
+    view.rerender(<CommandCenter presentation="rehearsal" view="briefings" />);
     expect(await screen.findByRole("heading", { name: "Briefings" })).toBeInTheDocument();
     expect(screen.getByText("Briefing: Round-wide")).toBeInTheDocument();
 
@@ -497,7 +498,7 @@ describe("Briefings hub and CRUD", () => {
   });
 
   it("shows a clear empty state before any Briefing is created", () => {
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     expect(screen.getByText("No Briefings yet")).toBeInTheDocument();
   });
 });
@@ -505,7 +506,7 @@ describe("Briefings hub and CRUD", () => {
 describe("Persistence", () => {
   it("persists a generated Briefing and its Draft edition to browser-local storage across a full remount", async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<CommandCenter />);
+    const { unmount } = render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "Instant Briefing" }));
     await screen.findByRole("link", { name: "Open Briefing" });
     unmount();
@@ -513,7 +514,7 @@ describe("Persistence", () => {
     expect(window.localStorage.getItem("registry-hub:briefing-definitions:v1")).toContain("Briefing: Round-wide");
     expect(window.localStorage.getItem("registry-hub:briefing-editions:v1")).toContain("\"draft\"");
 
-    render(<CommandCenter view="briefings" />);
+    render(<CommandCenter presentation="rehearsal" view="briefings" />);
     expect(await screen.findByText("Briefing: Round-wide")).toBeInTheDocument();
   });
 });

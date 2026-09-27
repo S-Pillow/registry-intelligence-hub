@@ -126,6 +126,7 @@ import {
   roundPulseHistoricalAggregateBand,
   roundPulseSupportingRecords,
 } from "@/lib/registry-data";
+import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import { blockedContentionSetCountState, buildApproved2012ContentionMembershipHistoricalFact, buildApproved2012DesignationHistoricalFacts, type HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import { getMetricEligibility } from "@/comparison/metric-eligibility";
 import { exploreHistoricalComparisonDisclosure } from "@/comparison/explore-eligibility-consumer";
@@ -144,6 +145,12 @@ import {
 } from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { hubPath } from "@/lib/hub-paths";
+import {
+  isHttpSourceUrl,
+  retainPresentationParam,
+  withRehearsalPresentation,
+  type ProductPresentation,
+} from "@/lib/presentation-mode";
 
 export type { SavedParams };
 import {
@@ -166,8 +173,41 @@ function hubNavHref(item: string, index: number): string {
   return `/${item.toLowerCase().replace(/ /g, "-")}`;
 }
 
+function presentationHref(href: string, presentation: ProductPresentation) {
+  return withRehearsalPresentation(href, presentation);
+}
+
+function PreRevealNotice({ title, detail }: { title: string; detail: string }) {
+  return (
+    <Card className="border-slate-300 bg-white shadow-sm" data-testid="pre-reveal-waiting">
+      <CardContent className="py-8">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#006a56]">Pre-Reveal</p>
+        <h2 className="mt-2 text-xl font-semibold text-slate-950">{title}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{detail}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PresentationModeBanner({ presentation, promoted }: { presentation: ProductPresentation; promoted: boolean }) {
+  if (promoted) return null;
+  const rehearsal = presentation === "rehearsal";
+  return (
+    <div
+      data-testid="presentation-mode-banner"
+      className={rehearsal
+        ? "bg-amber-200 px-4 py-2 text-center text-xs font-bold text-amber-950 sm:text-sm"
+        : "bg-[#152331] px-4 py-2 text-center text-xs font-semibold text-slate-100 sm:text-sm"}
+    >
+      {rehearsal
+        ? "Demo / Rehearsal — synthetic data, not an ICANN publication"
+        : "Pre-Reveal — 2026 public application data has not been promoted"}
+    </div>
+  );
+}
+
 const TIME_BASIS_UNAVAILABLE =
-  "Unavailable while the 2026 round remains unpublished. Reveal Day shows the approved 2012 baseline and rehearsal fixture context only.";
+  "Unavailable until 2026 public application data is promoted. Reveal Day shows the approved 2012 baseline.";
 
 function briefingAudienceForLens(lens: string): { audience: "executive" | "commercial" | "product-strategy" | "marketing"; emphasis: Lens } {
   if (lens === "commercial") return { audience: "commercial", emphasis: "commercial" };
@@ -176,21 +216,21 @@ function briefingAudienceForLens(lens: string): { audience: "executive" | "comme
   return { audience: "executive", emphasis: "all" };
 }
 
-function ShellHeader() {
+function ShellHeader({ presentation }: { presentation: ProductPresentation }) {
+  const homeHref = presentationHref("/", presentation);
   return (
     <header className="border-b border-white/10 bg-[#101923] text-white">
-      <div className="mx-auto flex h-16 max-w-[1480px] items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="font-mono text-sm font-semibold tracking-[0.2em]">
+      <div className="mx-auto flex h-16 max-w-[1480px] items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-8">
+          <Link href={homeHref} className="font-mono text-sm font-semibold tracking-[0.2em]">
             FORGE<span className="text-[#72dfb4]">/</span>FORWARD
           </Link>
           <nav aria-label="Main navigation" className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-            <Link href="/" className="hover:text-white">Home</Link>
+            <Link href={homeHref} className="hover:text-white">Home</Link>
             <a href="https://forgeforward.app/tools" className="border-b border-[#72dfb4] py-5 text-white">Tools</a>
           </nav>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className="hidden bg-white/10 text-slate-200 sm:inline-flex" variant="outline">PUBLIC FIXTURE</Badge>
+        <div className="flex shrink-0 items-center gap-2">
           <Sheet>
             <SheetTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-slate-200 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72dfb4] md:hidden" aria-label="Open navigation">
               <Menu />
@@ -201,11 +241,11 @@ function ShellHeader() {
                 <SheetDescription>Navigation and Hub sections</SheetDescription>
               </SheetHeader>
               <nav aria-label="Mobile navigation" className="space-y-1 px-4">
-                <Link href="/" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Home</Link>
+                <Link href={homeHref} className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Home</Link>
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
                 {navItems.map((item, index) => (
-                  <Link key={item} href={hubNavHref(item, index)} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link>
+                  <Link key={item} href={presentationHref(hubNavHref(item, index), presentation)} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link>
                 ))}
               </nav>
             </SheetContent>
@@ -216,14 +256,14 @@ function ShellHeader() {
   );
 }
 
-function HubNav({ active = "Command Center" }: { active?: string }) {
+function HubNav({ active = "Command Center", presentation }: { active?: string; presentation: ProductPresentation }) {
   return (
     <div className="border-b bg-white">
       <div className="mx-auto grid max-w-[1480px] grid-cols-3 gap-x-0 gap-y-0 px-2 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto sm:px-6">
         {navItems.map((item, index) => (
           <Link
             key={item}
-            href={hubNavHref(item, index)}
+            href={presentationHref(hubNavHref(item, index), presentation)}
             aria-current={active === item ? "page" : undefined}
             className={`border-b-2 px-2 py-2.5 text-center text-xs font-semibold leading-tight sm:shrink-0 sm:px-3 sm:py-3 sm:text-left sm:text-sm ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
           >
@@ -399,7 +439,7 @@ function SaveResearchButton({
   buildParams: () => Record<string, string>;
   disabled?: boolean;
 }) {
-  const { savedWork } = useInvestigation();
+  const { savedWork, presentation } = useInvestigation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(defaultName);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -407,7 +447,7 @@ function SaveResearchButton({
   if (confirmation) {
     return (
       <p role="status" className="flex items-center gap-2 text-xs font-semibold text-[#005c49]">
-        Saved “{confirmation}” to Saved Research. <Link href="/saved?tab=research" className="underline">View in Saved</Link>
+        Saved “{confirmation}” to Saved Research. <Link href={withRehearsalPresentation("/saved?tab=research", presentation)} className="underline">View in Saved</Link>
         <button type="button" className="text-slate-500 underline" onClick={() => setConfirmation(null)}>Dismiss</button>
       </p>
     );
@@ -457,7 +497,7 @@ function IntelligenceDrawer({
   const historical2012 = useHistorical2012Payload();
   const confirmedPortfoliosSidecar = useHistorical2012ConfirmedPortfolios();
   const [showFull, setShowFull] = useState(false);
-  const { addCompare, toggleWatch, watchedIds, compareItems, savedWork } = useInvestigation();
+  const { addCompare, toggleWatch, watchedIds, compareItems, savedWork, presentation } = useInvestigation();
   const isHistoricalExplore = item?.exploreDataset === "2012-historical";
   const historicalProvenanceLoaded = isHistoricalExplore && historical2012.status === "loaded";
   const provenanceDoc = historicalProvenanceLoaded ? historical2012.document : registryFixture;
@@ -675,7 +715,7 @@ function IntelligenceDrawer({
               )}
 
               {canCompareEntity && isWatching && (
-                <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href="/saved?tab=watchlists" className="underline">View in Saved</Link></p>
+                <p className="text-xs font-semibold text-amber-800">Added to your Quick Watchlist. <Link href={withRehearsalPresentation("/saved?tab=watchlists", presentation)} className="underline">View in Saved</Link></p>
               )}
 
               {item.kind === "coverage" && (
@@ -714,8 +754,22 @@ function IntelligenceDrawer({
                   </p>
                 ) : null}
                 <dl className="grid grid-cols-[105px_1fr] gap-y-3 text-sm">
-                  <dt className="text-slate-600">Round</dt><dd className="font-semibold">{isHistoricalExplore ? "2012 Reveal Day (historical)" : "2026 rehearsal / promoted"}</dd>
-                  <dt className="text-slate-600">Source</dt><dd><a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={provenanceDoc.source.url} target="_blank" rel="noreferrer">{provenanceDoc.source.name}<ExternalLink className="size-3" /></a></dd>
+                  <dt className="text-slate-600">Round</dt><dd className="font-semibold">{isHistoricalExplore ? "2012 Reveal Day (historical)" : item?.historicalFact ? "2012 Reveal Day (historical aggregate)" : provenanceDoc.source.evidenceClass === "synthetic-rehearsal" ? "2026 rehearsal" : "2026 promoted"}</dd>
+                  <dt className="text-slate-600">Source</dt>
+                  <dd>
+                    {item?.historicalFact && !historicalProvenanceLoaded ? (
+                      <span className="font-semibold" data-testid="historical-aggregate-source">{item.historicalFact.metricId === "contention-membership-exposure" ? "ICANN preliminary string-similarity contention publication (26 Feb 2013)" : APPROVED_2012_BASELINE.sourceLabel}</span>
+                    ) : provenanceDoc.source.evidenceClass === "synthetic-rehearsal" || !isHttpSourceUrl(provenanceDoc.source.url) ? (
+                      <span className="font-semibold" data-testid="rehearsal-source-name">{provenanceDoc.source.name}</span>
+                    ) : (
+                      <a className="inline-flex items-center gap-1 font-semibold text-[#006a56] underline" href={provenanceDoc.source.url} target="_blank" rel="noreferrer">{provenanceDoc.source.name}<ExternalLink className="size-3" /></a>
+                    )}
+                  </dd>
+                  {item?.historicalFact && !historicalProvenanceLoaded ? (
+                    <><dt className="text-slate-600">Evidence class</dt><dd>Historical archive</dd></>
+                  ) : provenanceDoc.source.evidenceClass === "synthetic-rehearsal" ? (
+                    <><dt className="text-slate-600">Evidence class</dt><dd data-testid="rehearsal-evidence-class">synthetic / rehearsal</dd></>
+                  ) : null}
                   <dt className="text-slate-600">Snapshot</dt><dd className="break-all font-mono text-xs">{provenanceDoc.snapshotId}</dd>
                   {historicalProvenanceLoaded ? (
                     <>
@@ -937,6 +991,7 @@ function MetricCards({
   surfaceMode?: "baseline" | "rehearsal-context";
   datasetMode?: "rehearsal" | "promoted";
 }) {
+  const { presentation } = useInvestigation();
   const emphasized = new Set(roundPulseEmphasisByLens[lens]);
   const gridClass = surfaceMode === "rehearsal-context"
     ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -1034,7 +1089,7 @@ function MetricCards({
           {isHistoricalAggregate ? (
             historicalCardExploreHref && historicalCardExploreLabel ? (
               <Link
-                href={historicalCardExploreHref}
+                href={withRehearsalPresentation(historicalCardExploreHref, presentation)}
                 className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
               >
                 {historicalCardExploreLabel}<ArrowRight className="size-3.5" />
@@ -1050,7 +1105,7 @@ function MetricCards({
             )
           ) : (
             <Link
-              href={exploreDrillDownHref(metric.filter)}
+              href={withRehearsalPresentation(exploreDrillDownHref(metric.filter), presentation)}
               aria-label={datasetMode === "promoted" ? `Open ${metric.label} in Explore` : `Open ${metric.label} in 2026 rehearsal Explore`}
               className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#006a56] hover:bg-emerald-50/80"
             >
@@ -1111,7 +1166,7 @@ function exploreDatasetFromParam(value: string | undefined): ExploreDatasetMode 
   return value === "2012-historical" ? "2012-historical" : "2026-rehearsal";
 }
 
-function ExploreContent({ state, initial }: { state: ViewState; initial: ExploreParams }) {
+function ExploreContent({ state, initial, presentation }: { state: ViewState; initial: ExploreParams; presentation: ProductPresentation }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
@@ -1149,8 +1204,9 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       if (is2012Historical && key === "status") return;
       if (value && !["all", "applications", "applications-desc"].includes(value)) params.set(key, value);
     });
+    retainPresentationParam(params, presentation);
     window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
-  }, [filters, is2012Historical]);
+  }, [filters, is2012Historical, presentation]);
 
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
@@ -1274,8 +1330,9 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       : "2026 rehearsal fixture (12 applications)";
   const exploreSearchPlaceholder = historical2012ExploreSearchPlaceholder(filters.entity, is2012Historical);
 
-  const explore2012Href = `${hubPath("/explore")}?dataset=2012-historical`;
-  const explore2026Href = hubPath("/explore");
+  const explore2012Href = presentationHref(`${hubPath("/explore")}?dataset=2012-historical`, presentation);
+  const explore2026Href = presentationHref(hubPath("/explore"), presentation);
+  const withholdSynthetic2026 = !is2012Historical && presentation === "pre-reveal" && registryPayloadMode !== "promoted-2026";
   const historicalApplicationBrowse = isHistorical2012ApplicationBrowse(is2012Historical, filters.entity);
   const historicalStringBrowse = isHistorical2012StringBrowse(is2012Historical, filters.entity);
   const historicalConfirmedPortfolioBrowse =
@@ -1355,6 +1412,30 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
     };
   };
+
+  if (withholdSynthetic2026) {
+    return (
+      <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">2026 application rows are not available until Reveal Day data is promoted. Historical 2012 browse stays separate and does not fall back to a synthetic cohort.</p>
+        </div>
+        <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
+          <span className="text-slate-600">Dataset:</span>
+          <Link href={explore2026Href} className="rounded-lg bg-[#007d65] px-3 py-1.5 text-white">2026 Reveal Day</Link>
+          <Link href={explore2012Href} className="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">2012 historical corpus</Link>
+        </div>
+        <PreRevealNotice
+          title="2026 Explore is waiting for publication"
+          detail="No 2026 application list has been promoted into RIH. This is not an ingestion failure. Historical 2012 rows appear here only when that payload is configured."
+        />
+        <p className="mt-4 text-sm">
+          <Link href={presentationHref("/?presentation=rehearsal", "rehearsal")} className="font-semibold text-[#006a56] underline">Open Demo / Rehearsal</Link>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -1498,7 +1579,7 @@ function ExploreContent({ state, initial }: { state: ViewState; initial: Explore
       </div>
 
       {is2012Historical && (!historical2012Loaded || (historicalConfirmedPortfolioBrowseActive && !confirmedPortfoliosLoaded)) ? null : state === "loading" ? <LoadingState surface="explore" /> : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely; Command Center context and fixture evidence remain unchanged.</p><Link href="/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Explore is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">The isolated research view failed safely. Command Center context is unchanged.</p><Link href="/explore" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
       ) : state === "empty" || !rows.length ? (
         <Card className="border-dashed py-14 text-center"><CardContent><Database className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">No records match this research view</h2><p className="mt-2 text-sm text-slate-700">Clear or broaden one filter. Unknown values were not converted to zero.</p><Button className="mt-5 bg-[#007d65]" onClick={clear}>Clear filters</Button></CardContent></Card>
       ) : (
@@ -1724,7 +1805,7 @@ export type CompareParams = {
  * UI, cohort comparison, set-as-reference interaction, new sections, etc.)
  * belong in a v2 proposal, not incremental edits to this component.
  */
-function CompareContent({ state, initial }: { state: ViewState; initial: CompareParams }) {
+function CompareContent({ state, initial, presentation }: { state: ViewState; initial: CompareParams; presentation: ProductPresentation }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const registryFixture = useHubRegistryDocument();
@@ -1750,8 +1831,9 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     const params = new URLSearchParams();
     params.set("type", type);
     if (selected.length) params.set("ids", selected.join(","));
+    retainPresentationParam(params, presentation);
     window.history.replaceState(null, "", `${window.location.pathname}?${params}`);
-  }, [selected, type]);
+  }, [selected, type, presentation]);
 
   const chooseType = (next: CompareEntityType) => {
     setType(next);
@@ -1784,7 +1866,6 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   type CompareRow = { label: string; definition: string; section: CompareSectionId; cells: CompareCell[] };
   const rows: CompareRow[] = useMemo(() => {
     const cell = (value: ReactNode, state?: CompareCell["state"]): CompareCell => ({ value, state });
-    const historical = registryFixture.historicalContext.categoryCounts as Record<string, number>;
     const baseRows: CompareRow[] = type === "organizations" ? [
         { label: "2026 applications", definition: "Count of fixture applications resolved to this organization.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.length)) },
         { label: "Initial contention exposure", definition: "Applications in initial identical-string contention; not final contention.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.contentionSet).length)) },
@@ -1816,7 +1897,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
       { label: "Regions", definition: "Distinct applicant regions represented.", section: "round-activity", cells: entities.map((entity) => cell([...new Set(entity.records.map((record) => record.region))].join(", "))) },
       { label: "IDN applications", definition: "Applications preserving Unicode and A-label values.", section: "round-activity", cells: entities.map((entity) => cell(entity.records.filter((record) => record.idn).length)) },
       { label: "New / returning mix", definition: "Application count by normalized participation status.", section: "historical-participation", cells: entities.map((entity) => cell(`${entity.records.filter((record) => !record.returning).length} new · ${entity.records.filter((record) => record.returning).length} returning`)) },
-      { label: "2012 cohort applications", definition: "Compatible normalized rehearsal cohort count; not an official total.", section: "historical-participation", cells: entities.map((entity) => cell(historical[entity.key] ?? "Not available", historical[entity.key] === undefined ? "unavailable" : undefined)) },
+      { label: "2012 cohort applications", definition: "No authoritative 2012 category cohort is approved for this comparison.", section: "historical-participation", cells: entities.map(() => cell("Not available — 2012 category cohort is not an approved comparison", "unavailable")) },
       { label: "Organizations", definition: "Distinct resolved organizations represented.", section: "existing-portfolio", cells: entities.map((entity) => cell(new Set(entity.records.map((record) => record.organization)).size)) },
       { label: "Market demand", definition: "Approved public/licensed demand measure with a comparable period.", section: "market-context", cells: entities.map(() => cell("Not comparable — reporting source unavailable", "not-comparable")) },
     ];
@@ -1834,7 +1915,22 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
     setLastDifferencesSelectionKey(differencesSelectionKey);
     setShowAllDifferences(false);
   }
-  const exploreHref = `/explore?entity=${type}`;
+  const exploreHref = presentationHref(`/explore?entity=${type}`, presentation);
+  const withholdSyntheticCompare = presentation === "pre-reveal" && registryPayloadMode !== "promoted-2026";
+  if (withholdSyntheticCompare) {
+    return (
+      <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Side by side</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Compare</h1>
+        <div className="mt-6">
+          <PreRevealNotice
+            title="2026 comparison is waiting for publication"
+            detail="No promoted 2026 applications are available to compare. Illustrative rehearsal counts are not shown as 2012 evidence. Market demand stays unavailable rather than zero."
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -1891,7 +1987,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         </section>
       )}
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>{registryPayloadMode === "promoted-2026" ? "Promoted snapshot comparison." : "Rehearsal comparison."}</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; {registryPayloadMode === "promoted-2026" ? "rows are the active promoted application snapshot." : "effective dates follow the fixture baseline."}</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-950"><span><strong>{registryPayloadMode === "promoted-2026" ? "Promoted snapshot comparison." : "Demo / Rehearsal comparison."}</strong> As of {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { timeZone: "UTC" })}; {registryPayloadMode === "promoted-2026" ? "rows are the active promoted application snapshot." : "these rows are synthetic and are not an ICANN publication."}</span><span>Snapshot {registryFixture.snapshotId} · Dimensions {COMPARE_DIMENSIONS_VERSION}</span></div>
 
       <div className="mb-5 flex flex-wrap justify-end gap-2">
         <SaveResearchButton
@@ -1918,7 +2014,7 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
         />
       </div>
 
-      {state === "loading" ? <LoadingState surface="compare" /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">The fixture comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
+      {state === "loading" ? <LoadingState surface="compare" /> : state === "error" ? <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Comparison unavailable</h2><p className="mt-2 text-sm text-slate-700">This comparison could not be calculated. Selections remain encoded in the URL.</p></CardContent></Card> : state === "empty" || entities.length < 2 ? <Card className="border-dashed py-14 text-center"><CardContent><GitCompareArrows className="mx-auto mb-4 size-9 text-slate-500" /><h2 className="text-lg font-bold">Choose at least two {type}</h2><p className="mt-2 text-sm text-slate-700">Use the selector above or add like entities from Explore. Up to four can be compared.</p><Link href={exploreHref} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-bold text-white">Find in Explore</Link></CardContent></Card> : (
         <>
           <section className="mb-4 flex flex-col justify-between gap-3 rounded-xl border border-slate-300 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
             <div aria-live="polite" className="min-w-0">
@@ -2039,13 +2135,15 @@ function CompareContent({ state, initial }: { state: ViewState; initial: Compare
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string }) {
+export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId, presentation = "pre-reveal" }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string; presentation?: ProductPresentation }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const historical2012 = useHistorical2012Payload();
   const historical2012Loaded = historical2012.status === "loaded";
   const registryFixture = useHubRegistryDocument();
   const publicationIsPromoted = registryPayloadMode === "promoted-2026";
+  const showRehearsal = !publicationIsPromoted && presentation === "rehearsal";
+  const preReveal = !publicationIsPromoted && presentation !== "rehearsal";
   const snapshotPinSubtitle = publicationIsPromoted
     ? "Promoted application snapshot · steward-approved publication"
     : "Rehearsal fixture pin · not official 2026";
@@ -2150,18 +2248,20 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
     compareItems,
     watchedIds,
     savedWork,
+    presentation,
   };
 
   return (
     <InvestigationContext.Provider value={controls}>
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
-      <ShellHeader />
-      <HubNav active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : view === "data-health" ? "Data Health" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
+      <ShellHeader presentation={presentation} />
+      <PresentationModeBanner presentation={presentation} promoted={publicationIsPromoted} />
+      <HubNav presentation={presentation} active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : view === "data-health" ? "Data Health" : "Command Center"} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} presentation={presentation} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <section data-testid="publication-state" aria-label="Publication state" className="mb-6 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> {publicationIsPromoted ? "Promoted 2026 snapshot" : "Rehearsal fixture"}</Badge>
+            <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> {publicationIsPromoted ? "Promoted 2026 snapshot" : showRehearsal ? "Demo / Rehearsal" : "Pre-Reveal"}</Badge>
             <span className="text-xs font-medium text-slate-600">Baseline {new Date(registryFixture.baselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</span>
             <ProvenanceSheet label="Dataset state" />
           </div>
@@ -2178,20 +2278,31 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <ProvenanceSheet label="Fixture limitations" />
               </div>
             </>
-          ) : (
+          ) : showRehearsal ? (
             <div data-testid="publication-state-summary" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
               <ShieldCheck className="mt-0.5 size-5 shrink-0 text-amber-700" />
               <div className="flex-1">
-                <strong>Rehearsal data only.</strong> Rehearsal fixture. The 2026 round is not published. This is not an official 2026 publication.
+                <strong>Rehearsal data only.</strong> Demo / Rehearsal mode. These rows are synthetic. They are not an ICANN publication and not a promoted 2026 application list.
+                {" "}
+                <Link href="/" className="underline">Leave demo</Link>
               </div>
-              <ProvenanceSheet label="Fixture limitations" />
+              <ProvenanceSheet label="Rehearsal limitations" />
+            </div>
+          ) : (
+            <div data-testid="publication-state-summary" className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+              <Clock3 className="mt-0.5 size-5 shrink-0 text-[#006a56]" />
+              <div className="flex-1">
+                <strong>2026 Reveal Day data is not promoted yet.</strong> Historical 2012 evidence on this page is real. 2026 application rows, rankings, and charts stay hidden until a publication is promoted. This is not an error.
+                {" "}
+                <Link href="/?presentation=rehearsal" className="font-semibold text-[#006a56] underline">Open Demo / Rehearsal</Link>
+              </div>
             </div>
           )}
         </section>
         <div className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Registry Intelligence Hub</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">A source-backed command center for understanding application portfolios, contention, categories, and cross-round signals.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{preReveal ? "Historical 2012 evidence is on this page. 2026 application intelligence appears after Reveal Day data is promoted." : "A source-backed command center for application portfolios, contention, and cross-round signals."}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative block">
@@ -2201,18 +2312,23 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && query.trim()) {
+                    if (event.key === "Enter" && query.trim() && !preReveal) {
                     event.preventDefault();
-                    window.location.assign(exploreResearchHref(query));
+                    window.location.assign(presentationHref(exploreResearchHref(query), presentation));
                   }
                 }}
-                placeholder="Search fixture records…"
-                aria-label="Search fixture records"
+                placeholder={preReveal ? "2026 search opens when Reveal Day data is promoted" : showRehearsal ? "Search rehearsal records…" : "Search promoted applications…"}
+                aria-label={preReveal ? "2026 application search" : showRehearsal ? "Search rehearsal records" : "Search promoted applications"}
+                disabled={preReveal}
+                readOnly={preReveal}
                 aria-keyshortcuts="/ Control+K Meta+K"
                 className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65] sm:w-80"
               />
               <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
             </label>
+            {preReveal ? (
+              <p className="max-w-xs text-xs leading-5 text-slate-600">Briefings from 2026 applications are unavailable until Reveal Day data is promoted.</p>
+            ) : (
             <BriefThisButton
               scope={{ kind: "round-wide" }}
               label="Instant Briefing"
@@ -2223,6 +2339,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
               variant="default"
               className="bg-[#007d65] text-white hover:bg-[#006a56]"
             />
+            )}
           </div>
         </div>
 
@@ -2243,9 +2360,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     </button>
                   ))}
                 </div>
-                <p className="mt-3 text-sm font-medium leading-6 text-slate-100" data-testid="lens-view-panel-line">{lensViewPanelLine[activeLens]}</p>
+                <p className="mt-3 text-sm font-medium leading-6 text-slate-100" data-testid="lens-view-panel-line">{preReveal ? "Historical 2012 baselines stay visible. 2026 entity rankings stay hidden until publication." : lensViewPanelLine[activeLens]}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-50" data-testid="lens-why-matters-condensed">
-                  <strong className="font-semibold text-[#72dfb4]">{lensWhyMattersCondensedLabel(activeLens)}:</strong> {lensWhyMattersCondensed[activeLens]}
+                  <strong className="font-semibold text-[#72dfb4]">{lensWhyMattersCondensedLabel(activeLens)}:</strong> {preReveal ? "Historical 2012 evidence stays on this page. 2026 application rankings stay hidden until Reveal Day data is promoted." : lensWhyMattersCondensed[activeLens]}
                 </p>
               </div>
               <div className="shrink-0">
@@ -2278,10 +2395,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   </Link>
                 ) : null}
               </div>
-              <ProvenanceSheet label="Round Pulse metrics" records={registryFixture.applications} />
+              <ProvenanceSheet label="Round Pulse metrics" records={preReveal ? [] : registryFixture.applications} />
             </div>
             <MetricCards lens={activeLens} metrics={primaryOrientationMetrics} historical2012Loaded={historical2012Loaded} surfaceMode="baseline" datasetMode={datasetMode} />
-            {rehearsalContextMetrics.length > 0 ? (
+            {rehearsalContextMetrics.length > 0 && !preReveal ? (
               <div className="mt-5 border-t border-slate-200 pt-4" data-testid="rehearsal-structural-context">
                 <p className="text-xs font-bold tracking-[0.14em] text-slate-500">{publicationIsPromoted ? "LOADED SNAPSHOT CONTEXT" : "REHEARSAL SNAPSHOT CONTEXT"}</p>
                 <p className="mt-1 mb-3 max-w-2xl text-xs leading-5 text-slate-600" data-testid="rehearsal-structural-context-note">
@@ -2295,26 +2412,37 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
           </section>
         )}
 
-        {state === "ready" && query && (
+        {preReveal ? (
+          <p className="mb-6 text-sm leading-6 text-slate-700" data-testid="pre-reveal-search-note">2026 search is waiting. It will not return synthetic rehearsal rows.</p>
+        ) : null}
+        {state === "ready" && query && showRehearsal && (
           <section aria-live="polite" className="mb-6 rounded-xl border border-emerald-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">Fixture search results</h2>
+              <h2 className="font-semibold">Rehearsal search results</h2>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{filtered.length} records</Badge>
-                <Link href={exploreResearchHref(query)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#007d65] bg-emerald-50 px-3 text-xs font-bold text-[#006a56] hover:bg-emerald-100">
+                <Link href={presentationHref(exploreResearchHref(query), presentation)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#007d65] bg-emerald-50 px-3 text-xs font-bold text-[#006a56] hover:bg-emerald-100">
                   Open in Explore<ArrowRight className="size-3.5" />
                 </Link>
               </div>
             </div>
-            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="application" entityType="applications" entityKey={item.id} label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No fixture records match “{query}”. Try an organization, string, or category.</p>}
+            {filtered.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => <ProvenanceSheet key={item.id} id={`search-${item.id}`} kind="application" entityType="applications" entityKey={item.id} label={`.${item.string} · ${item.organization}`} records={[item]} triggerClassName="group rounded-lg border border-slate-300 p-3 text-left text-sm hover:border-[#007d65] hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>.{item.string}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-slate-700">{item.organization} · {item.category}</span></>} />)}</div> : <p className="py-5 text-center text-sm text-slate-700">No rehearsal records match “{query}”. Try an organization, string, or category.</p>}
           </section>
         )}
 
         {state === "loading" ? null : state === "empty" || state === "error" ? null : (
           <>
             <section className="mt-10" data-testid="gated-structure-section" aria-label="Structural application intelligence, gated category comparison, and investigation queue">
+              {preReveal ? (
+                <div className="mb-5">
+                  <PreRevealNotice
+                    title="2026 rankings are waiting for publication"
+                    detail="Applicant concentration, organization charts, category bars, and exact-string groups from the synthetic cohort are hidden. Historical 2012 designation counts and contention membership remain on this page. Missing 2026 values are not shown as zero."
+                  />
+                </div>
+              ) : null}
               <div className="mb-5 grid gap-5 lg:grid-cols-2" data-testid="structural-application-intelligence">
-                <Card className="border-slate-300 shadow-sm" data-testid="applicant-concentration">
+                {(showRehearsal || publicationIsPromoted) ? <Card className="border-slate-300 shadow-sm" data-testid="applicant-concentration">
                   <CardHeader className="flex-row items-start justify-between">
                     <div>
                       <p className="text-xs font-bold tracking-wider text-[#006a56]">APPLICANT LEGAL NAME</p>
@@ -2377,7 +2505,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       <p className="text-xs text-slate-600">Showing {visibleApplicantConcentration.length} of {applicantConcentration.distinctApplicantLegalNames} applicant legal names, ranked by application count.</p>
                     ) : null}
                   </CardContent>
-                </Card>
+                </Card> : null}
 
                 <Card className="border-slate-300 shadow-sm" data-testid="application-designations">
                   <CardHeader>
@@ -2416,11 +2544,11 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 <Card className="border-slate-300 shadow-sm lg:col-span-2" data-testid="initial-string-competition">
                   <CardHeader className="flex-row items-start justify-between">
                     <div>
-                      <p className="text-xs font-bold tracking-wider text-[#006a56]">EXACT APPLIED-FOR STRING</p>
-                      <CardTitle className="mt-1 text-xl">Initial string competition</CardTitle>
-                      <p className="mt-1 text-sm text-slate-600">Applications that share one exact applied-for string on the loaded snapshot.</p>
+                      <p className="text-xs font-bold tracking-wider text-[#006a56]">{preReveal ? "2012 CONTENTION" : "EXACT APPLIED-FOR STRING"}</p>
+                      <CardTitle className="mt-1 text-xl">{preReveal ? "Contention membership" : "Initial string competition"}</CardTitle>
+                      <p className="mt-1 text-sm text-slate-600">{preReveal ? "Official 2012 contention-publication membership. The set-entity count stays unavailable." : "Applications that share one exact applied-for string on the loaded snapshot."}</p>
                     </div>
-                    <ProvenanceSheet
+                    {showRehearsal || publicationIsPromoted ? <ProvenanceSheet
                       kind="metric"
                       label="Exact applied-for string grouping"
                       records={registryFixture.applications.filter((record) => record.string.length > 0)}
@@ -2433,9 +2561,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                           ? ["Groups are recomputed from the loaded application records."]
                           : ["Rehearsal fixture. Not published 2026 contention."],
                       }}
-                    />
+                    /> : null}
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {showRehearsal || publicationIsPromoted ? <>
                     <p className="text-xs leading-5 text-slate-700" data-testid="initial-string-competition-disclosure">
                       {publicationIsPromoted
                         ? "Promoted snapshot. Groups are recomputed from the loaded application records. They are not an approved contention-set count."
@@ -2482,6 +2611,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     {exactStringCompetition.competingGroups.length > visibleCompetingGroups.length ? (
                       <p className="text-xs text-slate-600">Showing {visibleCompetingGroups.length} of {exactStringCompetition.competingGroupCount} exact applied-for strings shared by more than one application.</p>
                     ) : null}
+                    </> : null}
                     <div className="rounded-lg border border-slate-200" data-testid="historical-contention-membership">
                       <p
                         className="border-b border-emerald-200/80 bg-emerald-100/60 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#005c49]"
@@ -2560,10 +2690,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                       limitations: ["2012 taxonomy coverage does not support a category delta. No taxonomy bridge is applied."],
                     }}
                   />
-                  <Link href={hubPath("/data-health")} className="text-xs font-bold text-[#006a56] hover:underline">Open Data Health</Link>
+                  <Link href={presentationHref(hubPath("/data-health"), presentation)} className="text-xs font-bold text-[#006a56] hover:underline">Open Data Health</Link>
                 </div>
               </div>
-              <Card className="border-slate-300 shadow-sm">
+              {(showRehearsal || publicationIsPromoted) ? <Card className="border-slate-300 shadow-sm">
                   <CardHeader className="flex-row items-start justify-between">
                     <div><p className="text-xs font-bold tracking-wider text-[#006a56]">ORGANIZATION LABELS</p><CardTitle className="mt-1 text-xl">Evidence-led investigation queue</CardTitle><p className="mt-1 text-sm text-slate-600">{publicationIsPromoted ? "Fixed name list. Not a ranking." : "Fixed fixture order. Not a ranking."}</p></div>
                     <ProvenanceSheet
@@ -2612,10 +2742,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     })}
                     <p className="rounded-lg bg-slate-100 p-3 text-xs leading-5 text-slate-700" data-testid="lens-investigation-note"><strong>Display order:</strong> {publicationIsPromoted ? "Fixed name list. Not a ranking." : investigationQueueLensNote[activeLens]} Organization labels are not applicant legal names.</p>
                   </CardContent>
-                </Card>
+                </Card> : null}
             </section>
 
-            <section className="mt-10 border-t border-slate-300 pt-8" aria-labelledby="supporting-heading">
+            {(showRehearsal || publicationIsPromoted) ? <section className="mt-10 border-t border-slate-300 pt-8" aria-labelledby="supporting-heading">
               <div className="mb-5"><p className="text-xs font-bold tracking-[0.14em] text-slate-600">SUPPORTING CHARTS</p><h2 id="supporting-heading" className="mt-1 text-2xl font-bold">Explore the shape behind the signals</h2></div>
               <div className="grid gap-6 lg:grid-cols-5">
                 <Card className="border-slate-300 lg:col-span-3" data-testid="organization-label-counts">
@@ -2631,7 +2761,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     )}
                     {portfolioRanking.slice(0, 5).map((item, index) => {
                       const records = registryFixture.applications.filter((record) => record.organization === item.organization);
-                      const exploreHref = exploreEntityResearchHref("organizations", item.organization);
+                      const exploreHref = presentationHref(exploreEntityResearchHref("organizations", item.organization), presentation);
                       return (
                         <div key={item.organization} className="rounded-lg hover:bg-emerald-50/60">
                           <ProvenanceSheet id={`organization-${item.organization}`} kind="applicant" entityType="organizations" entityKey={item.organization} label={`${item.organization} organization label`} records={records} triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="font-mono text-xs text-slate-600">0{index + 1}</span><span><span className="flex items-center justify-between gap-4"><strong className="text-sm">{item.organization}</strong><strong className="text-sm">{item.count}</strong></span><span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${(item.count / portfolioRanking[0].count) * 100}%` }} /></span></span><ChevronRight className="size-4 text-[#007d65]" /></>} />
@@ -2648,10 +2778,10 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                     <p className="pb-2 text-xs leading-5 text-slate-600" data-testid="interest-by-category-disclosure">
                       {publicationIsPromoted
                         ? "Within this loaded snapshot. Not a cross-round comparison."
-                        : "Within this loaded snapshot. Not a cross-round comparison. Rehearsal fixture."}
+                        : "Within this loaded snapshot. Not a cross-round comparison. Demo / Rehearsal."}
                     </p>
                     {categoryMix.map((item, index) => {
-                      const exploreHref = exploreEntityResearchHref("categories", item.category);
+                      const exploreHref = presentationHref(exploreEntityResearchHref("categories", item.category), presentation);
                       return (
                         <div key={item.category} className="rounded-lg hover:bg-emerald-50/60">
                           <ProvenanceSheet id={`category-${item.category}`} kind="category" entityType="categories" entityKey={item.category} label={`${item.category}: ${item.count} applications`} records={registryFixture.applications.filter((record) => record.category === item.category)} triggerClassName="group grid w-full grid-cols-[90px_1fr_38px] items-center gap-3 rounded-lg px-2 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><strong className="truncate text-sm">{item.category}</strong><span className="h-2.5 rounded-full bg-slate-200"><span className={`block h-full rounded-full ${index === 0 ? "bg-[#007d65]" : "bg-slate-600"}`} style={{ width: `${Math.max(item.percent, 12)}%` }} /></span><span className="flex items-center justify-end gap-1 font-mono text-xs font-bold">{item.count}<ChevronRight className="size-3 text-[#007d65]" /></span></>} />
@@ -2663,9 +2793,9 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                   </CardContent>
                 </Card>
               </div>
-            </section>
+            </section> : null}
 
-            <section aria-label="Dataset health" className="mt-10 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
+            {(showRehearsal || publicationIsPromoted) ? <section aria-label="Dataset health" className="mt-10 grid gap-px overflow-hidden rounded-xl border border-slate-300 bg-slate-300 sm:grid-cols-4">
               <ProvenanceSheet id="snapshot-lineage" kind="dataset" label={`Snapshot ${registryFixture.snapshotId}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Snapshot<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-[#007d65]" />{registryFixture.snapshotId.replace("snap-rehearsal-", "")}</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{snapshotPinSubtitle}</span></>} />
               <ProvenanceSheet id="last-checked" kind="dataset" label={`Last checked ${registryFixture.checkedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last checked<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Clock3 className="size-4 text-[#007d65]" />{new Date(registryFixture.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">{publicationIsPromoted ? "Promoted snapshot check" : "Automated fixture validation pass"}</span></>} />
               <ProvenanceSheet id="last-changed" kind="dataset" label={`Last changed ${registryFixture.changedAt}`} records={registryFixture.applications} triggerClassName="group bg-white px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-600">Last changed<ChevronRight className="size-4 text-[#007d65] opacity-0 transition group-hover:opacity-100" /></span><span className="mt-1 flex items-center gap-2 text-sm font-semibold"><Layers3 className="size-4 text-[#007d65]" />{new Date(registryFixture.changedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })} UTC</span><span className="mt-1 block text-[10px] font-medium text-slate-500">Content revision on pinned snapshot</span></>} />
@@ -2677,10 +2807,12 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
                 triggerClassName="group bg-emerald-50 px-4 py-3 text-left hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007d65]"
                 trigger={<><span className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-[#006a56]">Source coverage<ChevronRight className="size-4 transition group-hover:translate-x-0.5" /></span><span className="mt-1 flex items-center gap-2 text-sm font-bold text-[#004c3d]"><CheckCircle2 className="size-4" />{registryFixture.sourceHealth.recordsCovered}/{registryFixture.sourceHealth.recordsTotal} records · {((registryFixture.sourceHealth.requiredFieldsCovered / registryFixture.sourceHealth.requiredFieldsTotal) * 100).toFixed(1)}% fields</span></>}
               />
-            </section>
+            </section> : (
+              <p className="mt-10 text-sm leading-6 text-slate-700">Market demand is not available. No proxy is substituted, and no zero is shown.</p>
+            )}
 
             <footer className="mt-10 flex flex-col gap-4 border-t py-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-              <span>Snapshot {registryFixture.snapshotId}</span>
+              <span>{preReveal ? "No 2026 snapshot promoted" : `Snapshot ${registryFixture.snapshotId}`}</span>
               <span className="flex items-center gap-1"><BookOpen className="size-3.5" /> Catalog integration flag: <strong className="text-slate-700">disabled</strong></span>
             </footer>
           </>

@@ -432,7 +432,7 @@ export function buildSourceHealthRows(
       readiness: resolution.mode === "promoted-2026" ? "Ready" : "Rehearsal",
       limitation:
         resolution.mode === "rehearsal"
-          ? "Atlas Digital, Kizuna Registry, and other rehearsal names are not historical 2012 facts."
+          ? "The synthetic rehearsal cohort is not shown as registry intelligence unless Demo / Rehearsal mode is on."
           : "Payload must match promoted snapshot id and content hash.",
     },
   ];
@@ -529,7 +529,9 @@ export function buildDataHealthSnapshot(
       offlineNormalizedCorpus: historical2012Loaded
         ? `Offline normalization (${APPROVED_2012_BASELINE_BUNDLE}) materialized as browser payload ${historical2012.document.corpusContentHash.slice(0, 16)}…${confirmedPortfoliosLoaded ? ` · confirmed portfolio sidecar ${confirmedPortfolios.document.payloadVersion}` : " · org promotion offline unless confirmed portfolio sidecar loaded."}`
         : `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
-      browserEntityDataset: `${resolution.document.applications.length}-record ${resolution.mode === "rehearsal" ? "2026 rehearsal" : "promoted 2026"} fixture (${resolution.document.fixtureId ?? resolution.document.snapshotId})`,
+      browserEntityDataset: resolution.mode === "rehearsal"
+        ? "Synthetic rehearsal cohort is withheld from the default product surface. Demo / Rehearsal mode is opt-in."
+        : `${resolution.document.applications.length}-record promoted 2026 snapshot (${resolution.document.snapshotId})`,
       real2026Publication:
         claim.round2026ApplicationActuality === "REAL_SOURCE_READY"
           ? "REAL_SOURCE_READY"
@@ -539,7 +541,7 @@ export function buildDataHealthSnapshot(
             ? "Not published — promoted configuration rejected"
             : "Not published / not promoted",
       rehearsalEntityWarning:
-        "Rehearsal entities (Atlas Digital, Kizuna, Northstar Group, Harbor Brands, Future MENA, etc.) are curated 2026 drill names — not 2012 Reveal Day applicants.",
+        "Demo / Rehearsal mode uses a synthetic cohort. Those names are not 2012 Reveal Day applicants and are not the default product surface.",
     },
     coverageLimitations: [
       historical2012Loaded

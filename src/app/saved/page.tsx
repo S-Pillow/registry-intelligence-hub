@@ -1,4 +1,5 @@
 import { CommandCenter, type SavedParams } from "@/components/registry/command-center";
+import { presentationFromSearchParam } from "@/lib/presentation-mode";
 
 const allowedStates = new Set(["ready", "loading", "empty", "error"]);
 
@@ -15,5 +16,5 @@ export default async function SavedPage({
     open: typeof params.open === "string" ? params.open : undefined,
   };
 
-  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="saved" savedParams={savedParams} />;
+  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="saved" savedParams={savedParams} presentation={presentationFromSearchParam(params.presentation)} />;
 }

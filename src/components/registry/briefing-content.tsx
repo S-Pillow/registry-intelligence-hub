@@ -58,6 +58,7 @@ import type { RegistryApplicationsDocument } from "@/lib/registry-applications-d
 import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { summarizeChangeSinceVisit } from "@/lib/saved-change-summary";
 import { useInvestigation } from "@/components/registry/investigation-context";
+import { isHttpSourceUrl, withRehearsalPresentation, withholdSyntheticPresentation, type ProductPresentation } from "@/lib/presentation-mode";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
 
@@ -318,13 +319,22 @@ function BriefingDriftBanner({ definition, edition }: { definition: BriefingDefi
 }
 
 function buildPlainTextCopy(definition: BriefingDefinition, edition: BriefingEdition, registry?: RegistryApplicationsDocument): string {
-  const lines: string[] = [
+  const lines: string[] = [];
+  if (registry?.source.evidenceClass === "synthetic-rehearsal") {
+    lines.push(
+      "DEMO / REHEARSAL — synthetic data, not an ICANN publication",
+      `Source: ${registry.source.name}`,
+      "Evidence class: synthetic / rehearsal",
+      "",
+    );
+  }
+  lines.push(
     definition.name,
     `Scope: ${describeBriefingScope(definition.scope, registry)}`,
     `Audience: ${audienceLabel(definition.audience)} · Emphasis: ${definition.emphasis} · Detail: ${definition.detailLevel}`,
     `Generated ${formatDateTime(edition.generatedAt)} · Data as of ${formatDateTime(edition.dataAsOfTime)} · Snapshot ${edition.snapshotId} · Method ${edition.methodVersion}`,
     "",
-  ];
+  );
   for (const section of edition.sections) {
     if (!section.included) continue;
     lines.push(section.title.toUpperCase());
@@ -335,7 +345,7 @@ function buildPlainTextCopy(definition: BriefingDefinition, edition: BriefingEdi
   return lines.join("\n");
 }
 
-function BriefingWorkspace({ id }: { id: string }) {
+function BriefingWorkspace({ id, presentation }: { id: string; presentation: ProductPresentation }) {
   const registryFixture = useHubRegistryDocument();
   const { savedWork } = useInvestigation();
   const definition = savedWork.briefingDefinitions.find((entry) => entry.id === id);
@@ -358,7 +368,7 @@ function BriefingWorkspace({ id }: { id: string }) {
           <CardContent>
             <FileClock className="mx-auto mb-4 size-9 text-slate-500" />
             <h2 className="text-lg font-bold">Briefing deleted</h2>
-            <Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
+            <Link href={withRehearsalPresentation("/briefings", presentation)} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
           </CardContent>
         </Card>
       </main>
@@ -373,7 +383,7 @@ function BriefingWorkspace({ id }: { id: string }) {
             <CircleAlert className="mx-auto mb-4 size-9 text-slate-500" />
             <h2 className="text-lg font-bold">Briefing not found</h2>
             <p className="mt-2 text-sm text-slate-700">It may have been deleted, or the link is out of date.</p>
-            <Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
+            <Link href={withRehearsalPresentation("/briefings", presentation)} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Back to Briefings</Link>
           </CardContent>
         </Card>
       </main>
@@ -385,7 +395,7 @@ function BriefingWorkspace({ id }: { id: string }) {
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
-      <Link href="/briefings" className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#006a56] hover:underline"><ArrowLeft className="size-3.5" />Back to Briefings</Link>
+      <Link href={withRehearsalPresentation("/briefings", presentation)} className="mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#006a56] hover:underline"><ArrowLeft className="size-3.5" />Back to Briefings</Link>
 
       <Card className="mb-5 border-slate-300">
         <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
@@ -405,12 +415,12 @@ function BriefingWorkspace({ id }: { id: string }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4 shrink-0" />Rehearsal fixture only — this Briefing proves the workflow and calculation contract; it is not an official 2026 publication.</div>
+          <div data-testid="briefing-rehearsal-banner" className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4 shrink-0" />{registryFixture.source.evidenceClass === "synthetic-rehearsal" ? "Demo / Rehearsal — synthetic data, not an ICANN publication. Copied text keeps this identification." : `Promoted snapshot ${registryFixture.snapshotId}.`}</div>
           <BriefingDriftBanner definition={definition} edition={edition} />
           {edition.status === "superseded" && edition.supersededByEditionId && (
             <p className="text-xs font-semibold text-slate-600">
               Superseded by a newer edition — this is a read-only historical record.{" "}
-              <Link href={`/briefings/${definition.id}`} className="underline">Open the current edition</Link>.
+              <Link href={withRehearsalPresentation(`/briefings/${definition.id}`, presentation)} className="underline">Open the current edition</Link>.
             </p>
           )}
         </CardContent>
@@ -495,7 +505,14 @@ function BriefingWorkspace({ id }: { id: string }) {
           <Card className="border-slate-300">
             <CardContent className="space-y-2 pt-5 text-xs text-slate-700">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Sources &amp; Methodology</h3>
-              <p>{registryFixture.source.name} — <a href={registryFixture.source.url} className="underline" target="_blank" rel="noreferrer">{registryFixture.source.url}</a></p>
+              {isHttpSourceUrl(registryFixture.source.url) ? (
+                <p>{registryFixture.source.name} — <a href={registryFixture.source.url} className="underline" target="_blank" rel="noreferrer">{registryFixture.source.url}</a></p>
+              ) : (
+                <p data-testid="briefing-source-name">Source: {registryFixture.source.name}</p>
+              )}
+              {registryFixture.source.evidenceClass === "synthetic-rehearsal" ? (
+                <p data-testid="briefing-evidence-class">Evidence class: synthetic / rehearsal</p>
+              ) : null}
               <p>Retrieved {formatDateTime(registryFixture.retrievedAt)} · Snapshot {edition.snapshotId} · Method {edition.methodVersion}</p>
               <ul className="space-y-1 pt-1">
                 {TRUTH_CLASS_LEGEND.map((entry) => (
@@ -810,7 +827,7 @@ function GuidedBriefingForm({ onGenerated, onCancel }: { onGenerated: (definitio
   );
 }
 
-function BriefingCard({ definition }: { definition: BriefingDefinition }) {
+function BriefingCard({ definition, presentation }: { definition: BriefingDefinition; presentation: ProductPresentation }) {
   const { savedWork } = useInvestigation();
   const registryDocument = useHubRegistryDocument();
   const edition = savedWork.briefingEditions.find((entry) => entry.id === definition.currentEditionId);
@@ -829,7 +846,7 @@ function BriefingCard({ definition }: { definition: BriefingDefinition }) {
           <p className="mt-1 text-xs text-slate-500">Last opened {formatDateTime(definition.lastOpenedAt)} · Generated {formatDateTime(edition.generatedAt)}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Link href={`/briefings/${definition.id}`} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]"><FileClock className="size-3.5" />Open</Link>
+          <Link href={withRehearsalPresentation(`/briefings/${definition.id}`, presentation)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]"><FileClock className="size-3.5" />Open</Link>
           <Button size="sm" variant="ghost" onClick={() => savedWork.duplicateBriefing(definition.id)}><Copy />Duplicate</Button>
           <RenameControl name={definition.name} entityLabel={definition.id} onRename={(next) => savedWork.renameBriefing(definition.id, next)} />
           <DeleteControl name={definition.name} onConfirm={() => savedWork.deleteBriefing(definition.id)} />
@@ -852,7 +869,7 @@ function BriefingCard({ definition }: { definition: BriefingDefinition }) {
  * never leaves a dangling entry that would otherwise require two Back
  * presses to leave the page.
  */
-function BriefingsHub() {
+function BriefingsHub({ presentation }: { presentation: ProductPresentation }) {
   const { savedWork } = useInvestigation();
   const [creating, setCreating] = useState(false);
   const wizardHistoryPushedRef = useRef(false);
@@ -902,15 +919,16 @@ function BriefingsHub() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">{savedWork.briefingDefinitions.map((definition) => <BriefingCard key={definition.id} definition={definition} />)}</div>
+        <div className="space-y-4">{savedWork.briefingDefinitions.map((definition) => <BriefingCard key={definition.id} definition={definition} presentation={presentation} />)}</div>
       )}
     </div>
   );
 }
 
-export function BriefingsContent({ state, briefingId }: { state: ViewState; briefingId?: string }) {
+export function BriefingsContent({ state, briefingId, presentation = "pre-reveal" }: { state: ViewState; briefingId?: string; presentation?: ProductPresentation }) {
   const { savedWork } = useInvestigation();
   const registryFixture = useHubRegistryDocument();
+  const withhold = withholdSyntheticPresentation(presentation, registryFixture.payloadMode);
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -920,24 +938,26 @@ export function BriefingsContent({ state, briefingId }: { state: ViewState; brie
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Communication layer</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Briefings</h1>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />{registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId} · local browser storage only` : "Rehearsal fixture · local browser storage only"}</div>
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4 shrink-0" />{registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId} · local browser storage only` : presentation === "rehearsal" ? "Demo / Rehearsal — synthetic data, not an ICANN publication" : "Pre-Reveal — 2026 public application data has not been promoted"}</div>
         </div>
       )}
 
       {state === "loading" ? (
         <div className="space-y-3">{Array.from({ length: 2 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}</div>
       ) : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Briefings is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Your Watchlist, Saved Research, and other Briefings are unaffected.</p><Link href="/briefings" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Briefings is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Your Watchlist, Saved Research, and other Briefings are unaffected.</p><Link href={withRehearsalPresentation("/briefings", presentation)} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+      ) : withhold ? (
+        <BriefingsPreRevealState hydrated={savedWork.hydrated} storedCount={savedWork.briefingDefinitions.length} opened={Boolean(briefingId)} />
       ) : briefingId ? (
-        <BriefingWorkspace id={briefingId} />
+        <BriefingWorkspace id={briefingId} presentation={presentation} />
       ) : (
-        <BriefingsHub />
+        <BriefingsHub presentation={presentation} />
       )}
 
       {!briefingId && (
         <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between">
-          <span>{registryFixture.payloadMode === "promoted-2026" ? "Promoted snapshot" : "Fixture snapshot"} {registryFixture.snapshotId} · {savedWork.briefingDefinitions.length} briefing{savedWork.briefingDefinitions.length === 1 ? "" : "s"}</span>
-          <span>Storage: browser-local fixture prototype · not yet identity-backed</span>
+          <span>{withhold ? "No 2026 snapshot promoted" : registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId}` : `Demo / Rehearsal snapshot ${registryFixture.snapshotId}`} · {withhold ? "stored briefings withheld" : `${savedWork.briefingDefinitions.length} briefing${savedWork.briefingDefinitions.length === 1 ? "" : "s"}`}</span>
+          <span>Storage: browser-local only · not yet identity-backed</span>
         </footer>
       )}
     </main>
@@ -951,6 +971,25 @@ export function BriefingsContent({ state, briefingId }: { state: ViewState; brie
  * shows an inline confirmation with a link into the Preview workspace —
  * the exact interaction convention `SaveResearchButton` already established.
  */
+function BriefingsPreRevealState({ hydrated, storedCount, opened }: { hydrated: boolean; storedCount: number; opened: boolean }) {
+  return (
+    <div className="space-y-4">
+      <Card className="border-slate-300 bg-white shadow-sm" data-testid="pre-reveal-waiting">
+        <CardContent className="py-8">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#006a56]">Pre-Reveal</p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">{opened ? "This briefing is withheld" : "2026 briefings are waiting for publication"}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Briefings are not generated from synthetic 2026 entities in the default product. Copied text cannot leave this page with rehearsal names. This is not an error. Demo / Rehearsal can still generate briefings, and that mode stays labeled.</p>
+        </CardContent>
+      </Card>
+      {hydrated && storedCount > 0 ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" data-testid="briefing-rehearsal-quarantine">
+          {storedCount} browser-local briefing{storedCount === 1 ? "" : "s"} from Demo / Rehearsal {storedCount === 1 ? "is" : "are"} withheld. Their text is not shown or copied here.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function BriefThisButton({
   scope,
   label,
@@ -977,15 +1016,25 @@ export function BriefThisButton({
   variant?: "outline" | "default" | "ghost";
   className?: string;
 }) {
-  const { savedWork } = useInvestigation();
+  const { savedWork, presentation } = useInvestigation();
+  const registryFixture = useHubRegistryDocument();
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const withholdGeneration = withholdSyntheticPresentation(presentation, registryFixture.payloadMode);
 
   if (createdId) {
     return (
       <p role="status" className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#005c49]">
-        Briefing generated. <Link href={`/briefings/${createdId}`} className="underline">Open Briefing</Link>
+        Briefing generated. <Link href={withRehearsalPresentation(`/briefings/${createdId}`, presentation)} className="underline">Open Briefing</Link>
         <button type="button" className="text-slate-500 underline" onClick={() => setCreatedId(null)}>Dismiss</button>
       </p>
+    );
+  }
+
+  if (withholdGeneration) {
+    return (
+      <Button variant={variant} disabled title="Briefings from 2026 applications are unavailable until Reveal Day data is promoted." className={className}>
+        {icon ?? <FileClock />}{label}
+      </Button>
     );
   }
 

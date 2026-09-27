@@ -60,7 +60,7 @@ function renderPromoted(applications?: Application[]) {
           selectionReason: "promoted-active",
         }}
       >
-        <CommandCenter />
+        <CommandCenter presentation="rehearsal" />
       </HubRegistryDataProvider>
     </HubClaimActualityProvider>,
   );
@@ -68,7 +68,7 @@ function renderPromoted(applications?: Application[]) {
 
 describe("CC-OR-1 operator readiness", () => {
   it("1 — the primary Applications card shows the metric name and approved value", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = document.querySelector("[data-testid='primary-orientation-metrics'] [data-metric-id='application-count']");
     expect(card).not.toBeNull();
     expect(card).toHaveTextContent("Applications");
@@ -76,28 +76,28 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("2 — the primary Unique strings card shows the metric name and approved value", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = document.querySelector("[data-testid='primary-orientation-metrics'] [data-metric-id='unique-applied-strings']");
     expect(card).toHaveTextContent("Unique strings");
     expect(card).toHaveTextContent(String(APPROVED_2012_BASELINE.uniqueStrings));
   });
 
   it("3 — the primary IDN card shows the metric name and approved value", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = document.querySelector("[data-testid='primary-orientation-metrics'] [data-metric-id='idn-applications']");
     expect(card).toHaveTextContent("IDN applications");
     expect(card).toHaveTextContent(String(APPROVED_2012_BASELINE.idnApplications));
   });
 
   it("4 — primary cards keep a concise 2012 identity and the pending-publication state", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const primary = screen.getByTestId("primary-orientation-metrics");
     expect(within(primary).getAllByText("Historical aggregate · 2012 Reveal Day")).toHaveLength(3);
     expect(within(primary).getAllByText(/2026 comparison pending publication/)).toHaveLength(3);
   });
 
   it("5 — primary cards do not show method ids or archived-copy detail", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const primary = screen.getByTestId("primary-orientation-metrics");
     expect(primary).not.toHaveTextContent("count(application)");
     expect(primary).not.toHaveTextContent("count(distinct stringUlabel)");
@@ -107,7 +107,7 @@ describe("CC-OR-1 operator readiness", () => {
 
   it("6 — Applications provenance still exposes method, archived copy, snapshot, eligibility, and limitations", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     const drawer = await screen.findByTestId("technical-provenance");
     expect(drawer).toHaveTextContent("count(application)");
@@ -119,22 +119,22 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("7 — one global rehearsal disclosure states fixture, unpublished 2026, and not official", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const disclosure = screen.getByTestId("publication-state-summary");
     expect(disclosure).toHaveTextContent("Rehearsal data only.");
-    expect(disclosure).toHaveTextContent("Rehearsal fixture.");
-    expect(disclosure).toHaveTextContent("The 2026 round is not published.");
-    expect(disclosure).toHaveTextContent("not an official 2026 publication");
+    expect(disclosure).toHaveTextContent("Demo / Rehearsal mode");
+    expect(disclosure).toHaveTextContent("not an ICANN publication");
+    expect(disclosure).toHaveTextContent("not a promoted 2026 application list");
   });
 
   it("8 — the long rehearsal essay is not repeated beside that disclosure", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.getAllByText(/Rehearsal data only\./)).toHaveLength(1);
     expect(screen.queryByText(/proves the experience and calculation contract/i)).not.toBeInTheDocument();
   });
 
   it("9 — applicant concentration keeps a short local rehearsal qualifier", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const disclosure = within(screen.getByTestId("applicant-concentration")).getByTestId("applicant-concentration-disclosure");
     expect(disclosure).toHaveTextContent("Rehearsal.");
     expect(disclosure).toHaveTextContent("Not a published 2026 result.");
@@ -142,45 +142,45 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("10 — exact-string competition keeps a short local rehearsal qualifier", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const disclosure = screen.getByTestId("initial-string-competition-disclosure");
     expect(disclosure).toHaveTextContent("Rehearsal.");
     expect(disclosure).toHaveTextContent("Not published 2026 contention.");
   });
 
   it("11 — organization labels keep a short local rehearsal qualifier", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.getByTestId("organization-label-gate")).toHaveTextContent("Rehearsal.");
     expect(screen.getByTestId("organization-label-gate")).toHaveTextContent("not an approved portfolio comparison");
   });
 
   it("12 — interest by category keeps a short local rehearsal qualifier", () => {
-    render(<CommandCenter />);
-    expect(screen.getByTestId("interest-by-category-disclosure")).toHaveTextContent("Rehearsal fixture.");
+    render(<CommandCenter presentation="rehearsal" />);
+    expect(screen.getByTestId("interest-by-category-disclosure")).toHaveTextContent("Demo / Rehearsal.");
   });
 
   it("13 — the primary orientation peers are only Applications, Unique strings, and IDN applications", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const ids = [...document.querySelectorAll("[data-testid='primary-orientation-metrics'] [data-metric-id]")].map((node) => node.getAttribute("data-metric-id"));
     expect(ids).toEqual(["application-count", "unique-applied-strings", "idn-applications"]);
   });
 
   it("14 — Organizations sit outside the primary peer row", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = document.querySelector("[data-metric-id='organization-round-count']");
     expect(card).toHaveAttribute("data-orientation-role", "rehearsal-context");
     expect(screen.getByTestId("primary-orientation-metrics").contains(card)).toBe(false);
   });
 
   it("15 — Regions sit outside the primary peer row", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = document.querySelector("[data-metric-id='distinct-regions']");
     expect(card).toHaveAttribute("data-orientation-role", "rehearsal-context");
     expect(screen.getByTestId("primary-orientation-metrics").contains(card)).toBe(false);
   });
 
   it("16 — the organization count is still the loaded-snapshot calculation", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const expected = buildRoundPulse(rehearsalRegistryApplicationsDocument().applications).find((metric) => metric.metricId === "organization-round-count");
     const card = document.querySelector("[data-metric-id='organization-round-count']");
     expect(card).toHaveTextContent("Organizations");
@@ -188,7 +188,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("17 — the region count is still the loaded-snapshot calculation", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const expected = buildRoundPulse(rehearsalRegistryApplicationsDocument().applications).find((metric) => metric.metricId === "distinct-regions");
     const card = document.querySelector("[data-metric-id='distinct-regions']");
     expect(card).toHaveTextContent("Regions");
@@ -196,7 +196,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("18 — demoted organization and region copy does not call them published 2026 facts", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const note = screen.getByTestId("rehearsal-structural-context-note");
     expect(note).toHaveTextContent("not a published 2026 fact");
     expect(note).not.toHaveTextContent(/published 2026 (organization|region) total/i);
@@ -206,7 +206,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("19 — demoted cards do not invent a 2012 historical equivalent", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const context = screen.getByTestId("rehearsal-structural-context");
     expect(context).toHaveTextContent("Not an approved 2012 baseline");
     expect(context).not.toHaveTextContent("1930");
@@ -216,7 +216,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("20 — applicant concentration stays on legal names", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = screen.getByTestId("applicant-concentration");
     expect(within(card).getByText("Applicant concentration")).toBeInTheDocument();
     expect(within(card).getByTestId("applicant-concentration-0")).toHaveTextContent("Atlas Digital Registry LLC");
@@ -224,18 +224,18 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("21 — the supporting organization module is not titled Application concentration", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.queryByText("Application concentration")).not.toBeInTheDocument();
     expect(within(screen.getByTestId("organization-label-counts")).getByText("Organization labels")).toBeInTheDocument();
   });
 
   it("22 — the supporting module states organization-label grain", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.getByTestId("organization-label-counts")).toHaveTextContent("Applications grouped by organization label. Not applicant legal name.");
   });
 
   it("23 — the organization coverage gate remains closed", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const gate = screen.getByTestId("organization-label-gate");
     expect(gate).toHaveTextContent("Round-wide concentration gated.");
     expect(gate).toHaveTextContent("not an approved portfolio comparison");
@@ -245,7 +245,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("24 — legal-name concentration and organization labels stay separate modules", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const legal = screen.getByTestId("applicant-concentration");
     const organizations = screen.getByTestId("organization-label-counts");
     expect(legal).not.toHaveTextContent("Organization labels");
@@ -255,7 +255,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("25 — category comparison is a compact full-width status, not a half-row beside the queue", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const section = screen.getByTestId("gated-structure-section");
     const category = screen.getByTestId("category-mix-comparison");
     const queue = screen.getByText("Evidence-led investigation queue").closest("[data-slot=card]");
@@ -266,7 +266,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("26 — the category status keeps the blocked reason", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const status = screen.getByTestId("category-mix-comparison");
     expect(status).toHaveTextContent("Comparison not yet approved.");
     expect(status).toHaveTextContent("2012 taxonomy coverage does not support a category delta.");
@@ -274,21 +274,21 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("27 — the category status keeps provenance and a Data Health handoff", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const status = screen.getByTestId("category-mix-comparison");
     expect(within(status).getByRole("button", { name: "View intelligence for Category mix comparison unavailable" })).toBeInTheDocument();
-    expect(within(status).getByRole("link", { name: "Open Data Health" })).toHaveAttribute("href", "/data-health");
+    expect(within(status).getByRole("link", { name: "Open Data Health" })).toHaveAttribute("href", "/data-health?presentation=rehearsal");
   });
 
   it("28 — the category status shows no directional or fixture delta", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const status = screen.getByTestId("category-mix-comparison");
     expect(status).not.toHaveTextContent(/rose|doubled|increased|decreased|\+\d|previous/i);
     expect(status).not.toHaveTextContent("Identity");
   });
 
   it("29 — the investigation queue discloses that its order is a fixed fixture list", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const note = screen.getByTestId("lens-investigation-note");
     expect(note).toHaveTextContent("Fixed rehearsal display order");
     expect(note).toHaveTextContent("Atlas Digital, Northstar Group, Kizuna Registry");
@@ -297,13 +297,13 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("30 — investigation reasons do not use lead, opportunity, risk, or sales language", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const queue = screen.getByText("Evidence-led investigation queue").closest("[data-slot=card]") as HTMLElement;
     expect(queue).not.toHaveTextContent(/\blead\b|opportunit|risk score|sales|recommendation|account research/i);
   });
 
   it("31 — investigation reasons do not claim final contention or an approved category comparison", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const queue = screen.getByText("Evidence-led investigation queue").closest("[data-slot=card]") as HTMLElement;
     expect(queue).not.toHaveTextContent(/final contention|approved category|versus the 2012|in initial contention/i);
     expect(queue).toHaveTextContent("contention-set label");
@@ -312,7 +312,7 @@ describe("CC-OR-1 operator readiness", () => {
 
   it("32 — a lens change reorders the same fixture list and does not change legal-name concentration", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.getByTestId("investigation-queue-0")).toHaveTextContent("Atlas Digital");
     expect(applicantsInvestigationQueueForLens("strategy").map((item) => item.organization)).toEqual([
       "Kizuna Registry",
@@ -326,29 +326,29 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("33 — interest by category stays within the loaded snapshot and rehearsal-only", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = screen.getByTestId("interest-by-category");
     expect(within(card).getByText("Interest by category")).toBeInTheDocument();
     expect(screen.getByTestId("interest-by-category-disclosure")).toHaveTextContent("Within this loaded snapshot.");
-    expect(screen.getByTestId("interest-by-category-disclosure")).toHaveTextContent("Rehearsal fixture.");
+    expect(screen.getByTestId("interest-by-category-disclosure")).toHaveTextContent("Demo / Rehearsal.");
   });
 
   it("34 — interest by category does not bridge taxonomy to 2012", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const card = screen.getByTestId("interest-by-category");
     expect(card).toHaveTextContent("Not a cross-round comparison.");
     expect(card).not.toHaveTextContent(/2012|taxonomy bridge|rose|doubled/i);
   });
 
   it("35 — applicant legal name is not labeled as an organization", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const legal = screen.getByTestId("applicant-concentration");
     expect(legal).toHaveTextContent("applicant legal name");
     expect(legal).not.toHaveTextContent(/organization concentration|organization portfolio/i);
   });
 
   it("36 — exact applied-for string groups are not labeled as a contention-set total", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const competition = screen.getByTestId("initial-string-competition");
     expect(within(competition).getByTestId("exact-string-competition-summary")).toHaveTextContent("local grouping of loaded rows");
     expect(within(competition).getByTestId("exact-string-competition-summary")).not.toHaveTextContent(/contention/i);
@@ -357,7 +357,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("37 — values present in both rounds are not called comparable on the rehearsal strip", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     const primary = screen.getByTestId("primary-orientation-metrics");
     expect(primary).toHaveTextContent("2026 comparison pending publication");
     expect(primary).not.toHaveTextContent("Difference");
@@ -366,18 +366,18 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("38 — navigation, lenses, time basis, search, and Instant Briefing stay in place", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     for (const name of ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
-    expect(screen.getByRole("link", { name: "Open Data Health" })).toHaveAttribute("href", "/data-health");
+    expect(screen.getByRole("link", { name: "Open Data Health" })).toHaveAttribute("href", "/data-health?presentation=rehearsal");
     for (const name of ["All Intelligence", "Commercial", "Product & Strategy", "Marketing"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: "Reveal Day" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Current" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Compare" })).toBeDisabled();
-    expect(screen.getByRole("textbox", { name: "Search fixture records" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Search rehearsal records" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Instant Briefing" })).toBeInTheDocument();
   });
 
@@ -436,7 +436,7 @@ describe("CC-OR-1 operator readiness", () => {
   });
 
   it("44 — round-wide stand-out findings stay empty and What You Should Know stays retired", () => {
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     expect(screen.queryByTestId("standout-insights-section")).not.toBeInTheDocument();
     expect(screen.queryByText("WHAT YOU SHOULD KNOW")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Reveal Day Intelligence" })).not.toBeInTheDocument();
@@ -465,7 +465,7 @@ describe("CC-OR-1 operator readiness", () => {
 
   it("46 — provenance stays reachable for the snapshot, the method, and the unavailable contention-set count", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter />);
+    render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "View intelligence for Snapshot snap-rehearsal-2026-09-16" }));
     expect(await screen.findByText(/INTELLIGENCE DRAWER · DATASET/)).toBeInTheDocument();
     expect(screen.getByText("round-pulse/1.0.0")).toBeInTheDocument();

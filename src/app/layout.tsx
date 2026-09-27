@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     default: "Registry Intelligence Hub",
     template: "%s · Registry Intelligence Hub",
   },
-  description: "A fixture-backed, source-provenance command center for ICANN application intelligence.",
+  description: "Historical 2012 evidence for ICANN application intelligence. 2026 Reveal Day data is shown only after it is promoted.",
 };
 
 export default async function RootLayout({
