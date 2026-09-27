@@ -5,8 +5,8 @@ import { HubHistorical2012Provider } from "@/components/registry/hub-historical-
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
 import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-2012/confirmed-portfolios-server";
-import { omitHistoricalApplicationsForSharedLayout } from "@/historical-2012/payload-shared";
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
+import { prepareHistorical2012SharedLayout } from "@/historical-2012/structural-summary";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import { claimActualityAssertedForBrowser } from "@/lib/registry-application-payload-shared";
 import "./globals.css";
@@ -40,7 +40,7 @@ export default async function RootLayout({
     loadHistorical2012PayloadResolution(),
     loadHistorical2012ConfirmedPortfoliosResolution(),
   ]);
-  const historical2012 = omitHistoricalApplicationsForSharedLayout(historical2012Full);
+  const { applicationPayload: historical2012, structuralSummary } = prepareHistorical2012SharedLayout(historical2012Full);
   return (
     <html
       lang="en"
@@ -52,6 +52,7 @@ export default async function RootLayout({
             <HubHistorical2012Provider
               applicationPayload={historical2012}
               confirmedPortfolios={confirmedPortfolios}
+              structuralSummary={structuralSummary}
             >
               {children}
             </HubHistorical2012Provider>

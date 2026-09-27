@@ -141,10 +141,12 @@ import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 import { DataHealthContent } from "@/components/registry/data-health-content";
+import { Historical2012StructureSection } from "@/components/registry/historical-2012-structure-section";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 import {
   useHistorical2012ConfirmedPortfolios,
   useHistorical2012Payload,
+  useHistorical2012StructuralSummary,
 } from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { hubPath } from "@/lib/hub-paths";
@@ -2160,6 +2162,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   const { mode: registryPayloadMode } = useHubRegistryData();
   const historical2012 = useHistorical2012Payload();
   const historical2012Loaded = historical2012.status === "loaded";
+  const structuralSummary = useHistorical2012StructuralSummary();
   const registryFixture = useHubRegistryDocument();
   const publicationIsPromoted = registryPayloadMode === "promoted-2026";
   const showRehearsal = !publicationIsPromoted && presentation === "rehearsal";
@@ -2453,11 +2456,14 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
         {state === "loading" ? null : state === "empty" || state === "error" ? null : (
           <>
             <section className="mt-10" data-testid="gated-structure-section" aria-label="Structural application intelligence, gated category comparison, and investigation queue">
+              {structuralSummary ? <Historical2012StructureSection summary={structuralSummary} /> : null}
               {preReveal ? (
                 <div className="mb-5">
                   <PreRevealNotice
                     title="2026 rankings are waiting for publication"
-                    detail="Applicant concentration, organization charts, category bars, and exact-string groups from the synthetic cohort are hidden. Historical 2012 designation counts and contention membership remain on this page. Missing 2026 values are not shown as zero."
+                    detail={structuralSummary
+                      ? "Applicant concentration, organization charts, category bars, and exact-string groups from the synthetic cohort are hidden. The 2012 Reveal Day section is historical structure from that export, not a 2026 ranking. Historical 2012 designation counts and contention membership remain on this page. Missing 2026 values are not shown as zero."
+                      : "Applicant concentration, organization charts, category bars, and exact-string groups from the synthetic cohort are hidden. Historical 2012 designation counts and contention membership remain on this page. Missing 2026 values are not shown as zero."}
                   />
                 </div>
               ) : null}
