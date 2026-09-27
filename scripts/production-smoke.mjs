@@ -54,6 +54,9 @@ function assertPreRevealProductionContract(html) {
   if (/12(?:<!-- -->)?\/(?:<!-- -->)?12(?:<!-- -->)? records/.test(html)) {
     throw new Error("Default Command Center must not present 12/12 rehearsal record coverage");
   }
+  if (html.includes("STARTING DOT")) {
+    throw new Error("Default Command Center must not receive historical application rows");
+  }
 }
 
 function assertDemoProductionContract(html) {
@@ -92,6 +95,19 @@ async function assertClientChunksResolvable(html, pagePath) {
   }
 }
 
+function historicalSmokeEnv() {
+  const env = { ...process.env, NODE_ENV: "production" };
+  for (const key of [
+    "REGISTRY_HUB_2012_APPLICATION_PAYLOAD_JSON",
+    "REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH",
+    "REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_JSON",
+    "REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_PATH",
+  ]) {
+    delete env[key];
+  }
+  return env;
+}
+
 const paths = [
   withBasePath("/"),
   withBasePath("/explore"),
@@ -108,7 +124,7 @@ await delay(1200);
 const server = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", port], {
   cwd: process.cwd(),
   stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, NODE_ENV: "production" },
+  env: historicalSmokeEnv(),
   detached: true,
 });
 
@@ -171,6 +187,40 @@ try {
   const demo = await fetch(`${base}${withBasePath("/")}?presentation=rehearsal`);
   if (!demo.ok) throw new Error(`demo command center returned HTTP ${demo.status}`);
   assertDemoProductionContract(await demo.text());
+
+  const historicalExplore = await fetch(`${base}${withBasePath("/explore?dataset=2012-historical&ids=1-1000-18032")}`);
+  if (!historicalExplore.ok) throw new Error(`historical Explore returned HTTP ${historicalExplore.status}`);
+  const historicalHtml = await historicalExplore.text();
+  for (const [needle, label] of [
+    ["Applicant legal name", "applicant field label"],
+    ["not resolved organization ownership", "applicant is not an organization"],
+    ["1-1000-18032", "committed application id"],
+    ["STARTING DOT", "committed applicant legal name"],
+    ["1930", "corpus size"],
+  ]) {
+    if (!historicalHtml.includes(needle)) {
+      throw new Error(`Historical Explore missing ${label} (${needle})`);
+    }
+  }
+  if (historicalHtml.includes("Atlas Digital") || historicalHtml.includes("Confidence: 1")) {
+    const visible = historicalHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");
+    if (visible.includes("Atlas Digital") || visible.includes("Confidence: 1")) {
+      throw new Error("Historical Explore must not show rehearsal entities or payload confidence as a score");
+    }
+  }
+
+  const portfolios = await fetch(`${base}${withBasePath("/explore?dataset=2012-historical&entity=confirmed-portfolios")}`);
+  if (!portfolios.ok) throw new Error(`confirmed portfolios returned HTTP ${portfolios.status}`);
+  const portfolioHtml = await portfolios.text();
+  if (!portfolioHtml.includes("1,429") || !portfolioHtml.includes("Afilias")) {
+    throw new Error("Confirmed portfolios must disclose 1,429 unresolved applications and a committed portfolio");
+  }
+  if (portfolioHtml.includes("Atlas Digital")) {
+    const visible = portfolioHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");
+    if (visible.includes("Atlas Digital")) {
+      throw new Error("Confirmed portfolios must not include rehearsal organizations");
+    }
+  }
 
   console.log(`production smoke OK (${paths.length} routes on ${base}, ${HUB_BASE_PATH}/_next chunks verified)`);
 } catch (error) {

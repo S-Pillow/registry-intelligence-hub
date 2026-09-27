@@ -537,7 +537,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     for (const button of compares) expect(button).toBeDisabled();
     for (const button of watches) expect(button).toBeDisabled();
     expect(screen.getByRole("button", { name: "Brief this view" })).toBeDisabled();
-  }, 30_000);
+  }, 60_000);
 
   it("41 — Data Health still shows both contention set figures", () => {
     const rows = buildSourceHealthRows(

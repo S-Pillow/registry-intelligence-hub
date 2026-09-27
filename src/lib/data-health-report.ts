@@ -15,7 +15,10 @@ import {
   OFFLINE_2012_ORG_CANDIDATE_ORGANIZATIONS,
 } from "@/historical-2012/confirmed-portfolios-constants";
 import type { ConfirmedPortfoliosSidecarResolution } from "@/historical-2012/confirmed-portfolios-sidecar-shared";
-import type { Historical2012PayloadResolution } from "@/historical-2012/payload-shared";
+import {
+  historical2012CorpusApplicationCount,
+  type Historical2012PayloadResolution,
+} from "@/historical-2012/payload-shared";
 import {
   claimActualityAssertedForBrowser,
   type HubRegistryDataResolution,
@@ -207,7 +210,7 @@ function buildCurrentStateSummary(
       id: "2012-entity-browser",
       title: "2012 entity browser",
       primary: historical2012Loaded
-        ? `Loaded — ${historical2012.document.applications.length} applications · ${historical2012.document.payloadVersion}`
+        ? `Loaded — ${historical2012CorpusApplicationCount(historical2012)} applications · ${historical2012.document.payloadVersion}`
         : "Not loaded — aggregate-only historical counts",
       secondary: historical2012Loaded
         ? `Corpus ${historical2012.document.corpusContentHash.slice(0, 12)}… · source ${historical2012.document.provenance.inputContentHash.slice(0, 12)}… (offline normalization input)`
@@ -286,10 +289,10 @@ function buildPublicationChecklist(
       label: "Entity-level 2012 browser payload (Ticket D1)",
       status: historical2012Loaded ? "complete" : "pending",
       detail: historical2012Loaded
-        ? `${historical2012.document.applications.length} application rows · ${APPROVED_2012_BASELINE.uniqueStrings} derived strings · Explore ?dataset=2012-historical · hash ${historical2012.document.corpusContentHash.slice(0, 16)}…`
+        ? `${historical2012CorpusApplicationCount(historical2012)} application rows · ${APPROVED_2012_BASELINE.uniqueStrings} derived strings · Explore ?dataset=2012-historical · hash ${historical2012.document.corpusContentHash.slice(0, 16)}…`
         : historical2012.status === "not-loaded"
           ? historical2012.errorMessage
-          : "Configure REGISTRY_HUB_2012_APPLICATION_PAYLOAD_* — no fallback to rehearsal.",
+          : "2012 historical rows are not available in this process. A rejected override is not replaced, and rehearsal rows are not substituted.",
     },
     {
       id: "comparison-unlock",
@@ -377,12 +380,12 @@ export function buildSourceHealthRows(
         ? `${historical2012.document.payloadVersion} · ${historical2012.document.corpusContentHash.slice(0, 12)}…`
         : baseline.bundleId,
       coverage: historical2012Loaded
-        ? `${historical2012.document.applications.length} runtime-loaded Explore rows`
+        ? `${historical2012CorpusApplicationCount(historical2012)} historical application rows available to Explore`
         : `${baseline.applications} observations (CLI normalize + verify)`,
       readiness: historical2012Loaded ? "Ready" : "Browser not loaded",
       limitation: historical2012Loaded
         ? "Generated artifact from offline normalization input — organization/category coverage unchanged."
-        : "Configure REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH or _JSON for Explore historical mode.",
+        : "Historical Explore rows are unavailable. An explicit payload override that fails is not replaced with another corpus.",
     },
     {
       id: "2012-org-promotion",
@@ -491,7 +494,7 @@ export function buildDataHealthSnapshot(
     `${ORGANIZATION_RESOLUTION_METHOD} steward promotion before organization or portfolio cross-round metrics unlock.`,
     historical2012Loaded
       ? "Explore historical mode (D1) active — Compare and org/portfolio unlock remain deferred (D2+)."
-      : "Entity-level 2012 browser payload (REGISTRY_HUB_2012_APPLICATION_PAYLOAD_*) before Explore historical rows.",
+      : "2012 historical rows are unavailable. An explicit override that fails is not replaced, and rehearsal rows are not substituted.",
   ];
 
   if (claim.round2026ApplicationActuality === "NOT_PUBLISHED") {
@@ -517,7 +520,7 @@ export function buildDataHealthSnapshot(
       },
       entityLevel2012InBrowser: historical2012Loaded,
       entityLevel2012Message: historical2012Loaded
-        ? `Historical 2012 entity browser loaded (${historical2012.document.applications.length} applications + ${APPROVED_2012_BASELINE.uniqueStrings} strings derived from the same payload) — Explore ?dataset=2012-historical; 2026 rehearsal remains the default dataset.`
+        ? `Historical 2012 entity browser loaded (${historical2012CorpusApplicationCount(historical2012)} applications + ${APPROVED_2012_BASELINE.uniqueStrings} strings derived from the same payload) — Explore ?dataset=2012-historical; 2026 rehearsal remains the default dataset.`
         : ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE,
       historical2012PayloadStatus: historical2012Loaded ? "loaded" : "not-loaded",
       ...(historical2012Loaded

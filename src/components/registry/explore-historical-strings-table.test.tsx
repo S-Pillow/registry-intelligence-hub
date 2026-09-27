@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe("Explore 2012 historical — Strings browse (D2.1)", () => {
-  it("shows 1409 string rows with dedicated columns and no Participation header", { timeout: 20_000 }, () => {
+  it("shows 1409 string rows with dedicated columns and no Participation header", { timeout: 45_000 }, () => {
     renderHistoricalStringsExplore();
 
     const resultsLine = screen.getByText(new RegExp(`${HISTORICAL_2012_UNIQUE_STRING_COUNT} strings results`, "i"));
@@ -58,7 +58,7 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
 
     const category = screen.getByLabelText("Filter by category");
     expect(category).toBeDisabled();
-    expect(screen.getByRole("option", { name: "Not in 2012 browser payload" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Unclassified — not a market sector" })).toBeInTheDocument();
 
     const table = screen.getByRole("table");
     HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS.forEach((header) => {

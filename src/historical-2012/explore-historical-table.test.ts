@@ -16,7 +16,7 @@ describe("2012 historical Explore application table model", () => {
     expect(HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS).toEqual([
       "Applied string",
       "Application ID",
-      "Applicant",
+      "Applicant legal name",
       "Region",
       "Contention membership",
       "IDN",
@@ -33,10 +33,16 @@ describe("2012 historical Explore application table model", () => {
         status: "returning",
         entity: "applications",
       }),
-    ).toEqual({ status: "all", entity: "applications" });
+    ).toEqual({ status: "all", category: "all", entity: "applications" });
   });
 
-  it("strips category filters for historical string browse", () => {
+  it("strips participation and category filters for every 2012 browse", () => {
+    expect(
+      exploreFiltersFor2012Historical(
+        { status: "returning", category: "Technology", entity: "applications" },
+        { browseEntity: "applications" },
+      ),
+    ).toEqual({ status: "all", category: "all", entity: "applications" });
     expect(
       exploreFiltersFor2012Historical(
         { status: "all", category: "Technology", entity: "strings" },

@@ -37,7 +37,7 @@ export function resolveConfirmedPortfoliosSidecar(
       status: "not-loaded",
       reason: "not-configured",
       errorMessage:
-        "2012 confirmed portfolio sidecar is not configured. Set REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_JSON or REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_PATH.",
+        "No 2012 confirmed portfolio sidecar was supplied. An explicit override that fails is not replaced with the committed sidecar.",
     };
   }
 

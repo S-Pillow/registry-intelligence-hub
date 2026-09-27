@@ -23,6 +23,9 @@ export const HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER =
 export const HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE =
   "Applicant legal names from the Reveal Day CSV — not steward organization resolution. For confirmed portfolios, switch to Confirmed portfolios.";
 
+export const HISTORICAL_2012_APPLICANT_FIELD_DISCLOSURE =
+  "Applicant legal name is the Reveal Day CSV field. It is not resolved organization ownership. Confirmed organizations come only from the steward-confirmed portfolio sidecar; every other application stays unresolved.";
+
 export const HISTORICAL_2012_CONFIRMED_PORTFOLIO_TRUST_BADGE =
   "Steward confirmed · organization-promotion/1.0.0";
 

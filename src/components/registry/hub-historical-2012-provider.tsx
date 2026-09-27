@@ -8,14 +8,14 @@ const defaultApplicationResolution: Historical2012PayloadResolution = {
   status: "not-loaded",
   reason: "not-configured",
   errorMessage:
-    "2012 historical application payload is not configured. Set REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH or REGISTRY_HUB_2012_APPLICATION_PAYLOAD_JSON.",
+    "2012 historical application rows are not available.",
 };
 
 const defaultConfirmedPortfoliosResolution: ConfirmedPortfoliosSidecarResolution = {
   status: "not-loaded",
   reason: "not-configured",
   errorMessage:
-    "2012 confirmed portfolio sidecar is not configured. Set REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_PATH or REGISTRY_HUB_2012_CONFIRMED_PORTFOLIOS_JSON.",
+    "2012 confirmed portfolio sidecar is not available.",
 };
 
 export type HubHistorical2012ContextValue = {

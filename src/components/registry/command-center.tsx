@@ -41,6 +41,7 @@ import {
   HISTORICAL_2012_TRUST_REVEAL_DAY_CSV,
   HISTORICAL_2012_TRUST_STRING_DERIVED,
   HISTORICAL_2012_UNIQUE_STRING_COUNT,
+  historical2012ALabel,
   historical2012ContentionMembershipEvidenceId,
   historical2012ContentionMembershipLabel,
   historical2012DistinctRegionsLabel,
@@ -58,7 +59,9 @@ import {
   isHistorical2012StringBrowse,
   underlyingApplicationsInHistorical2012StringAggregates,
 } from "@/historical-2012/explore-historical-table";
+import { historical2012CorpusApplicationCount } from "@/historical-2012/payload-shared";
 import {
+  HISTORICAL_2012_APPLICANT_FIELD_DISCLOSURE,
   HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE,
   HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER,
   HISTORICAL_2012_CONFIRMED_PORTFOLIO_DRAWER_CLASSIFICATION,
@@ -1291,11 +1294,13 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
       }));
     } else {
       const keyFor = (item: Application) =>
-        filters.entity === "organizations" || filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
-          ? item.organization
-          : filters.entity === "strings"
-            ? item.string
-            : item.category;
+        filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
+          ? item.applicant
+          : filters.entity === "organizations"
+            ? item.organization
+            : filters.entity === "strings"
+              ? item.string
+              : item.category;
       const grouped = new Map<string, Application[]>();
       applications.forEach((item) => grouped.set(keyFor(item), [...(grouped.get(keyFor(item)) ?? []), item]));
       built = [...grouped.entries()].map(([name, records]) => ({
@@ -1318,10 +1323,10 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
   const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
   const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure(claimActualityState);
   const datasetBadge = is2012Historical
-    ? historical2012Loaded
+    ? historical2012.status === "loaded"
       ? historical2012ExploreDatasetBadge(
           filters.entity,
-          historical2012.document.applications.length,
+          historical2012CorpusApplicationCount(historical2012),
           HISTORICAL_2012_UNIQUE_STRING_COUNT,
         )
       : "2012 historical — payload not loaded"
@@ -1338,9 +1343,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
   const historicalConfirmedPortfolioBrowse =
     historicalConfirmedPortfolioBrowseActive && historical2012Loaded && confirmedPortfoliosLoaded;
   const historicalApplicantLegalNameBrowse = historicalApplicantLegalNameBrowseActive && historical2012Loaded;
-  const historicalCategoryFilterDisabled =
-    is2012Historical
-    && (filters.entity === "strings" || filters.entity === HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY);
+  const historicalCategoryFilterDisabled = is2012Historical;
   const exploreSaveResearchEnabled =
     !is2012Historical
     || (historicalConfirmedPortfolioBrowseActive
@@ -1486,6 +1489,12 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
         </div>
       ) : null}
 
+      {historicalApplicationBrowse ? (
+        <div className="mb-5 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium leading-6 text-slate-800" data-testid="historical-applicant-field-disclosure">
+          {HISTORICAL_2012_APPLICANT_FIELD_DISCLOSURE}
+        </div>
+      ) : null}
+
       {historicalApplicantLegalNameBrowse ? (
         <div className="mb-5 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">
           {HISTORICAL_2012_APPLICANT_LEGAL_NAMES_DISCLOSURE}
@@ -1507,10 +1516,10 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                 aria-label="Filter by category"
                 value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}
                 disabled
-                title="2012 browser payload does not include steward taxonomy — category filters are unavailable for string browse."
+                title="2012 category is unclassified. Community 84 and geographic 66 stay on the approved aggregates, including 11 applications with both flags. Derived type is not a geographic count."
                 className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
               >
-                <option value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}>Not in 2012 browser payload</option>
+                <option value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}>Unclassified — not a market sector</option>
               </select>
             </label>
           ) : (
@@ -1524,7 +1533,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                 aria-label="Filter by participation"
                 value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}
                 disabled
-                title="The 2012 Reveal Day application corpus does not include new/returning participation fields."
+                title="Returning is not a measured 2012 participation fact. The corpus does not record new versus returning applicants."
                 className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 <option value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}>Not in 2012 corpus</option>
@@ -1605,16 +1614,24 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                             {...investigationItem}
                             triggerClassName="group block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
                             trigger={(
-                              <strong className="flex items-center gap-1 text-slate-950">
-                                {row.name}
-                                <ChevronRight className="size-4 text-[#007d65]" />
-                              </strong>
+                              <>
+                                <strong className="flex items-center gap-1 text-slate-950">
+                                  {row.name}
+                                  <ChevronRight className="size-4 text-[#007d65]" />
+                                </strong>
+                                {historical2012ALabel(application) ? (
+                                  <span className="mt-1 block font-mono text-[11px] text-slate-600">A-label {historical2012ALabel(application)}</span>
+                                ) : null}
+                              </>
                             )}
                           />
                         </td>
                         <td className="p-3 font-mono text-xs text-slate-800">{application.id}</td>
                         <td className="p-3 text-slate-800">{application.applicant}</td>
-                        <td className="p-3 text-slate-700">{application.region}</td>
+                        <td className="p-3 text-slate-700">
+                          <span className="block">{application.region}</span>
+                          <span className="block text-xs text-slate-600">{application.country}</span>
+                        </td>
                         <td className="p-3 text-xs text-slate-700">{historical2012ContentionMembershipLabel(application.contentionSet)}</td>
                         <td className="p-3 text-slate-700">{historical2012IdnLabel(application.idn)}</td>
                         <td className="p-3"><Badge variant="outline" className="border-emerald-300 text-[#005c49]">{HISTORICAL_2012_TRUST_REVEAL_DAY_CSV}</Badge></td>
@@ -1725,7 +1742,10 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                       <>
                         <span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span>
                         <span className="mt-2 block font-mono text-xs text-slate-600">{application.id}</span>
-                        <span className="mt-1 block text-xs text-slate-700">{application.applicant} · {application.region}</span>
+                        <span className="mt-1 block text-xs text-slate-700">{application.applicant} · {application.country} · {application.region}</span>
+                        {historical2012ALabel(application) ? (
+                          <span className="mt-1 block font-mono text-[11px] text-slate-600">A-label {historical2012ALabel(application)}</span>
+                        ) : null}
                         <span className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
                           <Badge variant="outline">{historical2012ContentionMembershipLabel(application.contentionSet)}</Badge>
                           <Badge variant="secondary">{historical2012IdnLabel(application.idn)}</Badge>

@@ -5,6 +5,7 @@ import { HubHistorical2012Provider } from "@/components/registry/hub-historical-
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
 import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-2012/confirmed-portfolios-server";
+import { omitHistoricalApplicationsForSharedLayout } from "@/historical-2012/payload-shared";
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import { claimActualityAssertedForBrowser } from "@/lib/registry-application-payload-shared";
@@ -34,11 +35,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const configuredClaimActuality = await loadPromotedClaimActualityState();
-  const [registryData, historical2012, confirmedPortfolios] = await Promise.all([
+  const [registryData, historical2012Full, confirmedPortfolios] = await Promise.all([
     loadHubRegistryData(configuredClaimActuality),
     loadHistorical2012PayloadResolution(),
     loadHistorical2012ConfirmedPortfoliosResolution(),
   ]);
+  const historical2012 = omitHistoricalApplicationsForSharedLayout(historical2012Full);
   return (
     <html
       lang="en"
