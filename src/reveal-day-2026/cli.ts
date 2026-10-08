@@ -35,6 +35,11 @@ import {
   writePublicationV2Artifacts,
 } from "./build-publication-v2";
 import {
+  buildContentionMembershipFromLocalArtifact,
+  writeContentionMembershipArtifacts,
+} from "./build-contention-membership";
+import {
+  applicationGraphHashInput,
   APS_APPLICATION_CSV_ARTIFACT_ROLE,
   APS_APPLICATION_CSV_MEDIA_TYPE,
   APS_APPLICATION_CSV_NORMALIZER_VERSION,
@@ -42,7 +47,16 @@ import {
   PUBLICATION_SCHEMA_VERSION_V20,
   type KnownExcludedRecordV2,
   type OfficialAggregatesV2,
+  type Registry2026PublicationV2,
 } from "./publication-v2-types";
+import {
+  APS_CONTENTION_CSV_ARTIFACT_ROLE,
+  APS_CONTENTION_CSV_MEDIA_TYPE,
+  APS_CONTENTION_CSV_NORMALIZER_VERSION,
+  APS_CONTENTION_CSV_PARSER_VERSION,
+  CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
+} from "./contention-membership-types";
+import { contentHash } from "../normalization/hashes";
 import { readFile, rm, writeFile } from "node:fs/promises";
 
 const DEFAULT_STATE = "./.data/reveal-2026/claim-actuality-state.json";
@@ -66,9 +80,11 @@ Usage:
   npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
   npm run reveal-2026 -- build-publication --input <file> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --media-type application/x-ndjson --round 2026 --evidence-class <id> --expected-row-count <n> --expect-source-hash <sha256> --recorded-http-status <n> --parser-version <version> --normalizer-version <version> --schema-version registry-2026-publication/1.1.0 [--fixture-id <id>] [--limitation <text>]
   npm run reveal-2026 -- build-publication-aps-csv --input <csv> --aggregates <json> --excluded <json> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --recorded-http-status <n> [--evidence-class <id>] [--limitation <text>]
+  npm run reveal-2026 -- build-contention-membership --input <csv> --application-publication <json> --out <file> --review-out <file> --bundle-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --expect-application-graph-hash <sha256> --recorded-http-status <n> [--final-url <url>] [--evidence-class <id>] [--limitation <text>]
 
 build-publication reads a local NDJSON wire file only (1.1.0 rehearsal/drill). It does not fetch or promote.
 build-publication-aps-csv reads a local APS Application CSV + official aggregate/coverage JSON (2.0.0). Role-gated; not an unrestricted text/csv parser. Does not fetch, promote, or mutate claim actuality.
+build-contention-membership reads a local Reveal Day contention CSV + pinned Application 2.0.0 publication into registry-2026-contention-membership/1.0.0. Does not rewrite the Application publication, promote, or mutate claim actuality.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -115,6 +131,11 @@ async function main(): Promise<void> {
       limitation: { type: "string", multiple: true },
       aggregates: { type: "string" },
       excluded: { type: "string" },
+      "application-publication": { type: "string" },
+      "bundle-out": { type: "string" },
+      "expect-application-graph-hash": { type: "string" },
+      "final-url": { type: "string" },
+      "bundle-id": { type: "string" },
     },
   });
 
@@ -484,6 +505,107 @@ async function main(): Promise<void> {
             parserVersion: APS_APPLICATION_CSV_PARSER_VERSION,
             normalizerVersion: APS_APPLICATION_CSV_NORMALIZER_VERSION,
             artifactRole: APS_APPLICATION_CSV_ARTIFACT_ROLE,
+            review: result.review,
+          },
+          null,
+          2,
+        ),
+      );
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+
+    case "build-contention-membership": {
+      if (values.fetch) {
+        throw new Error("build-contention-membership does not fetch URLs. Remove --fetch.");
+      }
+      const requiredFlags = [
+        "input",
+        "application-publication",
+        "out",
+        "review-out",
+        "bundle-out",
+        "snapshot-id",
+        "artifact-id",
+        "capture-id",
+        "source-url",
+        "source-name",
+        "source-version",
+        "retrieved-at",
+        "published-at",
+        "expect-source-hash",
+        "expect-application-graph-hash",
+        "recorded-http-status",
+      ] as const;
+      const missing = requiredFlags.filter((flag) => {
+        const value = values[flag];
+        return typeof value !== "string" || value.trim() === "";
+      });
+      if (missing.length > 0) {
+        throw new Error(
+          `build-contention-membership missing required flags: ${missing.map((flag) => `--${flag}`).join(", ")}`,
+        );
+      }
+      const inputPath = values.input as string;
+      const outPath = values.out as string;
+      const reviewPath = values["review-out"] as string;
+      const bundlePath = values["bundle-out"] as string;
+      const appPubPath = values["application-publication"] as string;
+      const inputResolved = resolve(inputPath);
+      const paths = [outPath, reviewPath, bundlePath, appPubPath].map((p) => resolve(p));
+      if (new Set([inputResolved, ...paths]).size !== 1 + paths.length) {
+        throw new Error("build-contention-membership output paths must differ from each other and from input/publication paths");
+      }
+      const bytes = new Uint8Array(await readFile(inputPath));
+      const applicationPublication = JSON.parse(await readFile(appPubPath, "utf8")) as Registry2026PublicationV2;
+      const sourceVersion = Number.parseInt(values["source-version"] as string, 10);
+      const recordedHttpStatus = Number.parseInt(values["recorded-http-status"] as string, 10);
+      const computedPin = contentHash(applicationGraphHashInput(applicationPublication));
+      const result = buildContentionMembershipFromLocalArtifact({
+        bytes,
+        artifactId: values["artifact-id"] as string,
+        sourceVersion,
+        captureId: values["capture-id"] as string,
+        sourceUrl: values["source-url"] as string,
+        finalUrl: values["final-url"] as string | undefined,
+        sourceName: values["source-name"] as string,
+        retrievedAt: values["retrieved-at"] as string,
+        publishedAt: values["published-at"] as string,
+        mediaType: (values["media-type"] as string | undefined) ?? APS_CONTENTION_CSV_MEDIA_TYPE,
+        artifactRole: APS_CONTENTION_CSV_ARTIFACT_ROLE,
+        evidenceClass: (values["evidence-class"] as string | undefined) ?? "icann-reveal-day-contention-csv",
+        snapshotId: values["snapshot-id"] as string,
+        recordedHttpStatus,
+        expectSourceHash: values["expect-source-hash"] as string,
+        applicationPublication,
+        expectApplicationGraphHash: values["expect-application-graph-hash"] as string,
+        bundleId: values["bundle-id"] as string | undefined,
+        limitations: values.limitation,
+      });
+      if (result.ok && result.snapshot && result.evidenceBundle) {
+        await writeContentionMembershipArtifacts({
+          snapshotPath: outPath,
+          reviewPath,
+          bundlePath,
+          snapshot: result.snapshot,
+          review: result.review,
+          evidenceBundle: result.evidenceBundle,
+        });
+      } else {
+        await rm(outPath, { force: true });
+        await rm(bundlePath, { force: true });
+        await writeFile(reviewPath, `${JSON.stringify(result.review, null, 2)}\n`, "utf8");
+      }
+      for (const line of result.review.qualityLines) console.log(line);
+      console.log(
+        JSON.stringify(
+          {
+            ok: result.ok,
+            schemaVersion: CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
+            parserVersion: APS_CONTENTION_CSV_PARSER_VERSION,
+            normalizerVersion: APS_CONTENTION_CSV_NORMALIZER_VERSION,
+            artifactRole: APS_CONTENTION_CSV_ARTIFACT_ROLE,
+            computedApplicationGraphHash: computedPin,
             review: result.review,
           },
           null,

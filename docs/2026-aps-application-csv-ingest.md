@@ -115,7 +115,7 @@ Existing NDJSON path (`registry-2026-publication/1.1.0`, `build-publication`) re
 
 **Promotion ≠ complete metric eligibility.** Row-derived round-wide metrics requiring complete coverage remain blocked/partial while coverage is 1614/1615.
 
-Deferred: `APS-CONTENTION-CSV-1` (`registry-2026-contention-membership/1.0.0` sidecar), browser/promotion integration, organization resolution, cross-round identity.
+Contention sidecar: see `docs/2026-aps-contention-membership.md` (offline; NOT PROMOTED). Deferred: browser/promotion integration, organization resolution, cross-round identity.
 
 ---
 

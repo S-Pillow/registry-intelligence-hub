@@ -1,6 +1,6 @@
 # 2026 APS schema / grain decision (APS-SCHEMA-GRAIN-1)
 
-**Status:** ACCEPTED — offline Application CSV ingest implemented as `registry-2026-publication/2.0.0` (see `docs/2026-aps-application-csv-ingest.md`). Still NOT PROMOTED; browser/contention deferred.  
+**Status:** ACCEPTED — offline Application CSV ingest (`registry-2026-publication/2.0.0`) and Reveal Day contention sidecar (`registry-2026-contention-membership/1.0.0`; see `docs/2026-aps-contention-membership.md`) implemented offline. Still NOT PROMOTED; browser deferred.  
 **Base (decision):** `d456f1f384587681f0502676d6d6bff8f71d2046` (`docs(data): record live APS source contract`).  
 **Scope of this decision record:** architecture. Implementation is APS-INGEST-CSV-1 (offline only).
 
