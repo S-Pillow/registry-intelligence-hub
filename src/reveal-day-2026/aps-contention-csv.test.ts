@@ -370,6 +370,106 @@ describe("APS Contention CSV parser / membership 1.0.0", () => {
     );
   });
 
+  it("normalized semantic hash ignores CSV row order, set order, and sourceRowIndex", () => {
+    const ordered = withBom(loadFixture("valid-sets.csv"));
+    const reorderedText = `\uFEFF"#","Application ID","Org Name","Applied-for string(s)"\r
+2,"SYN3000T-T30002","Delta Partners","beta"\r
+1,"SYN2000T-T20001","Beta Applicant Inc","alpha"\r
+2,"SYN3000T-T30001","Gamma Holdings","beta"\r
+2,"SYN3000T-T30003","Epsilon Group","beta"\r
+1,"SYN1000T-T10001","Alpha Applicant LLC","alpha"\r
+`;
+    const reordered = new TextEncoder().encode(reorderedText);
+    const publication = makePinnedPublication(validApps);
+    const pin = publication.bundleManifest.applicationGraphContentSha256;
+    const build = (bytes: Uint8Array) =>
+      buildContentionMembershipFromLocalArtifact({
+        bytes,
+        artifactId: "aps-2026-reveal-day-contention",
+        sourceVersion: 1,
+        captureId: "capture-contention-synthetic-1",
+        sourceUrl: "https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv",
+        sourceName: "Reveal Day contention CSV (synthetic)",
+        retrievedAt: "2026-10-08T00:00:00Z",
+        publishedAt: "2026-10-07T18:00:00Z",
+        mediaType: "text/csv",
+        artifactRole: APS_CONTENTION_CSV_ARTIFACT_ROLE,
+        evidenceClass: "icann-reveal-day-contention-csv",
+        snapshotId: "snap-synthetic-contention-v1",
+        recordedHttpStatus: 200,
+        expectSourceHash: sha256Hex(bytes),
+        applicationPublication: publication,
+        expectApplicationGraphHash: pin,
+      });
+    const a = build(ordered);
+    const b = build(reordered);
+    expect(a.ok && b.ok).toBe(true);
+    expect(a.review.sidecarContentHash).toBe(b.review.sidecarContentHash);
+    // Raw SHA remains order-sensitive.
+    expect(sha256Hex(ordered)).not.toBe(sha256Hex(reordered));
+    expect(a.review.sourceHash).not.toBe(b.review.sourceHash);
+
+    // sourceRowIndex-only mutation must not change semantic hash.
+    const mutated = structuredClone(a.snapshot!);
+    for (const set of mutated.contentionSets) {
+      for (const member of set.members) member.sourceRowIndex += 1000;
+    }
+    expect(contentHash(contentionSidecarHashInput(mutated))).toBe(a.review.sidecarContentHash);
+
+    // Set array order on snapshot object must not change semantic hash.
+    const setSwapped = structuredClone(a.snapshot!);
+    setSwapped.contentionSets = [...setSwapped.contentionSets].reverse();
+    expect(contentHash(contentionSidecarHashInput(setSwapped))).toBe(a.review.sidecarContentHash);
+  });
+
+  it("normalized semantic hash changes when membership semantics change", () => {
+    const bytes = withBom(loadFixture("valid-sets.csv"));
+    const publication = makePinnedPublication(validApps);
+    const result = buildContentionMembershipFromLocalArtifact({
+      bytes,
+      artifactId: "aps-2026-reveal-day-contention",
+      sourceVersion: 1,
+      captureId: "capture-contention-synthetic-1",
+      sourceUrl: "https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv",
+      sourceName: "Reveal Day contention CSV (synthetic)",
+      retrievedAt: "2026-10-08T00:00:00Z",
+      publishedAt: "2026-10-07T18:00:00Z",
+      mediaType: "text/csv",
+      artifactRole: APS_CONTENTION_CSV_ARTIFACT_ROLE,
+      evidenceClass: "icann-reveal-day-contention-csv",
+      snapshotId: "snap-synthetic-contention-v1",
+      recordedHttpStatus: 200,
+      expectSourceHash: sha256Hex(bytes),
+      applicationPublication: publication,
+      expectApplicationGraphHash: publication.bundleManifest.applicationGraphContentSha256,
+    });
+    expect(result.ok).toBe(true);
+    const baseHash = result.review.sidecarContentHash!;
+
+    const changeAppId = structuredClone(result.snapshot!);
+    changeAppId.contentionSets[0].members[0].applicationId = "SYN9999T-T99999";
+    expect(contentHash(contentionSidecarHashInput(changeAppId))).not.toBe(baseHash);
+
+    const changeSetId = structuredClone(result.snapshot!);
+    changeSetId.contentionSets[0].officialContentionSetId = "99";
+    expect(contentHash(contentionSidecarHashInput(changeSetId))).not.toBe(baseHash);
+
+    const changeString = structuredClone(result.snapshot!);
+    changeString.contentionSets[0].members[0].appliedForStringsAsPublished = "changed-string";
+    expect(contentHash(contentionSidecarHashInput(changeString))).not.toBe(baseHash);
+
+    const changeOrg = structuredClone(result.snapshot!);
+    changeOrg.contentionSets[0].members[0].publishedOrgName = "Changed Org Name LLC";
+    expect(contentHash(contentionSidecarHashInput(changeOrg))).not.toBe(baseHash);
+
+    const changePin = structuredClone(result.snapshot!);
+    changePin.applicationPublicationPin = {
+      ...changePin.applicationPublicationPin,
+      applicationGraphContentSha256: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    };
+    expect(contentHash(contentionSidecarHashInput(changePin))).not.toBe(baseHash);
+  });
+
   it("keeps exact-string method separate and untouched", () => {
     const base = fixture.applications[0] as Application;
     const row = (overrides: Partial<Application> & { id: string; string: string }): Application =>
@@ -451,5 +551,12 @@ describe("APS Contention CSV real-source Reveal Day capture", () => {
     expect(result.review.qualityLines.join("\n")).toContain("SOURCE MEMBERSHIP ROWS: 891");
     expect(result.review.qualityLines.join("\n")).toContain(OFFICIAL_VS_EXACT_STRING_NOTE);
     expect(result.snapshot?.quality.applicationCoverageUnchangedByContentionJoin).toBe(true);
+    // Hash-boundary correction: old order-sensitive hash must not be re-emitted.
+    expect(result.review.sidecarContentHash).not.toBe(
+      "0e7aeea4b2a1f5a541da5d5eb7c747595b1a0a686547da6d2c27b65b53453a5d",
+    );
+    expect(result.review.sourceHash).toBe(EXPECTED_CONTENTION_HASH);
+    expect(result.review.claimActualityWritten).toBe(false);
+    expect(result.review.promotionStatus).toBe("NOT_PROMOTED");
   });
 });

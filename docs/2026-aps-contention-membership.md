@@ -97,15 +97,31 @@ Application publication graph hash ↔ Contention sidecar content hash
 
 ## Hash boundary
 
-Sidecar content hash includes:
+Two distinct identities:
+
+| Identity | Field | Meaning |
+| --- | --- | --- |
+| Raw source | `lineage.rawSha256` / bundle `rawSourceSha256` | Exact capture bytes (order-/BOM-/EOL-sensitive). Reveal Day: `86f2ebd3764d1f3ea21d5d844cff004e271a443a3431e8ac440da7f72c67e2bf` |
+| Normalized semantic | `bundleManifest.sidecarContentSha256` | Official membership semantics (order-independent) |
+
+Semantic hash includes:
 
 - `snapshotId`
-- `applicationPublicationPin`
-- normalized `contentionSets` (official ids, members, publishedOrgName, applied-for strings)
+- `applicationPublicationPin` (Application graph hash `09e75b1c…` for Reveal Day)
+- official set ids, member Application IDs, `publishedOrgName`, `appliedForStringsAsPublished`
 
-Excludes: retrieval timestamp, local filesystem paths.
+Canonical semantic ordering before hash: sets by `officialContentionSetId`; members by `applicationId`.
 
-Raw source SHA-256 is preserved separately.
+Excludes: retrieval timestamp, local filesystem paths, **`sourceRowIndex`** (provenance/debug only; incidental CSV row order).
+
+`sourceRowIndex` may remain on member objects for provenance; it must not affect the semantic content hash.
+
+Reveal Day corrected semantic content hash (post APS-CONTENTION-HASH-1):  
+`480b378bab0b4d643e86d9b967f91777dcab147566747df577b469cb209825e7`  
+(supersedes defect hash `0e7aeea4…` which included `sourceRowIndex`).
+
+Status: **NOT PROMOTED**.  
+Schema version remains `registry-2026-contention-membership/1.0.0` (structure unchanged; hash projection clarified before promotion).
 
 ---
 

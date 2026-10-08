@@ -99,16 +99,54 @@ export type ContentionMembershipSnapshotV1 = {
   };
 };
 
-/** Stable hash boundary for normalized sidecar content (excludes retrievedAt / paths). */
+/**
+ * Semantic member projection for content hashing.
+ * Excludes sourceRowIndex (provenance only; incidental CSV order).
+ */
+export type ContentionMemberSemanticHashV1 = {
+  applicationId: string;
+  publishedOrgName: string;
+  appliedForStringsAsPublished: string;
+};
+
+export type ContentionSetSemanticHashV1 = {
+  officialContentionSetId: string;
+  members: ContentionMemberSemanticHashV1[];
+};
+
+/**
+ * Stable hash boundary for normalized sidecar content.
+ * Includes: snapshotId, Application publication pin, official sets/members + published fields.
+ * Excludes: retrievedAt, paths, sourceRowIndex / incidental CSV row order.
+ *
+ * Canonical ordering (also enforced by the parser before emit):
+ * - sets by officialContentionSetId (numeric then lexical)
+ * - members by applicationId
+ */
 export function contentionSidecarHashInput(snapshot: ContentionMembershipSnapshotV1): {
   snapshotId: string;
   applicationPublicationPin: ApplicationPublicationPinV1;
-  contentionSets: ContentionSetV1[];
+  contentionSets: ContentionSetSemanticHashV1[];
 } {
+  const contentionSets: ContentionSetSemanticHashV1[] = [...snapshot.contentionSets]
+    .sort((a, b) =>
+      Number(a.officialContentionSetId) - Number(b.officialContentionSetId)
+      || a.officialContentionSetId.localeCompare(b.officialContentionSetId)
+    )
+    .map((set) => ({
+      officialContentionSetId: set.officialContentionSetId,
+      members: [...set.members]
+        .sort((a, b) => a.applicationId.localeCompare(b.applicationId))
+        .map((m) => ({
+          applicationId: m.applicationId,
+          publishedOrgName: m.publishedOrgName,
+          appliedForStringsAsPublished: m.appliedForStringsAsPublished,
+        })),
+    }));
   return {
     snapshotId: snapshot.snapshotId,
     applicationPublicationPin: snapshot.applicationPublicationPin,
-    contentionSets: snapshot.contentionSets,
+    contentionSets,
   };
 }
 

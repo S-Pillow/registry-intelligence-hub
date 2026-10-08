@@ -31,6 +31,7 @@ export const CONTENTION_CAPTURE_LIMITATIONS = [
   "NOT PROMOTED.",
   "Built offline from a local Reveal Day contention CSV. No network fetch was performed by this command.",
   "Official ICANN contention membership sidecar (registry-2026-contention-membership/1.0.0).",
+  "Normalized sidecar content hash is semantic (sets/members/published fields + Application pin); sourceRowIndex and CSV row order are excluded. Raw source SHA-256 remains byte/order-sensitive.",
   OFFICIAL_VS_EXACT_STRING_NOTE,
   "publishedOrgName is the exact CSV Org Name text — not RIH resolved Organization.",
   "Does not mutate the pinned Application publication artifact; relationship is via evidence bundle pin.",
