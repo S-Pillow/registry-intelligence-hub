@@ -57,14 +57,13 @@ Official contention membership is joined as a separate overlay (`officialContent
 
 ## 1.1 compatibility
 
-`buildBrowserApplicationPayloadFromPublication` remains the 1.1 path. Active payload loading (`REGISTRY_HUB_APPLICATION_PAYLOAD_*`) rejects 2.x / Publication 2.0 so the product surface stays on the accepted source.
+`buildBrowserApplicationPayloadFromPublication` remains the 1.1 path.
 
-## Active source remains unchanged / NOT PROMOTED
+## Activation
 
-This ticket builds **inactive** projections (`payloadMode: "inactive-2x"`).
+See `docs/2026-publication-2x-activation.md` (RIH-ACTIVATION-2X-1).
 
-- No `REAL_SOURCE_READY` write
-- No active configuration switch
-- CLI: `npm run reveal-2026 -- build-browser-payload-2x --snapshot <2.0.json> [--contention-snapshot <sidecar.json>]`
-
-Saved/Briefings explicitly reject 2.x (require 1.1-shaped fields). Command Center orientation continues on the 1.x active document.
+- Generate: `build-browser-payload-2x` → `.data/reveal-2026/browser/applications-browser-v2.json`
+- Activate only when claim actuality is `REAL_SOURCE_READY` **and** pins match
+- `REAL` + missing/mismatched payload **fails closed** (no rehearsal fallback)
+- Saved/Briefings remain explicitly gated for 2.x

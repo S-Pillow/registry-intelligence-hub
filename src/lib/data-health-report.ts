@@ -21,7 +21,9 @@ import {
 } from "@/historical-2012/payload-shared";
 import {
   claimActualityAssertedForBrowser,
+  coerceHubRegistryDataResolution,
   type HubRegistryDataResolution,
+  type HubRegistryDataResolutionInput,
 } from "@/lib/registry-application-payload-shared";
 import { ENTITY_LEVEL_HISTORICAL_2012_UNAVAILABLE } from "@/lib/registry-data";
 import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
@@ -148,6 +150,8 @@ export function humanizeClaimReadiness(readiness: ClaimReadiness | string): stri
 
 export function humanizeBrowserPayloadMode(mode: HubRegistryDataResolution["mode"]): string {
   if (mode === "promoted-2026") return "Promoted 2026 payload active";
+  if (mode === "promoted-2026-v2") return "Promoted 2026 Publication 2.x payload active";
+  if (mode === "unavailable") return "Active source unavailable (fail-closed)";
   return "Rehearsal payload (12-app drill fixture)";
 }
 
@@ -160,13 +164,23 @@ export function humanizePayloadSelectionReason(
     case "claim-not-promoted":
       return "2026 claim not promoted — rehearsal fallback";
     case "payload-not-configured":
-      return "Promoted claim set but browser payload missing — rehearsal fallback";
+      return "REAL_SOURCE_READY but browser payload missing — fail-closed (no rehearsal)";
     case "snapshot-id-mismatch":
-      return "Snapshot id pin mismatch — fail-closed to rehearsal";
+      return "Snapshot id pin mismatch — fail-closed (no rehearsal)";
     case "content-hash-mismatch":
-      return "Content hash pin mismatch — fail-closed to rehearsal";
+      return "Content hash pin mismatch — fail-closed (no rehearsal)";
+    case "payload-malformed":
+      return "Browser payload malformed — fail-closed (no rehearsal)";
+    case "pin-mismatch":
+      return "Publication pin mismatch — fail-closed (no rehearsal)";
     case "promoted-active":
       return "Pins match promoted publication — payload active";
+    case "promoted-active-v2":
+      return "Pins match Publication 2.x — registry-browser-applications/2.0.0 active";
+    case "active-source-fail-closed":
+      return "Active source failed closed — rehearsal withheld";
+    case "payload-version-unsupported-for-active":
+      return "Payload version unsupported for active selection";
     default:
       return reason;
   }
@@ -194,7 +208,12 @@ function buildCurrentStateSummary(
       title: "Browser payload mode",
       primary: humanizeBrowserPayloadMode(resolution.mode),
       secondary: resolution.mode,
-      tone: resolution.mode === "promoted-2026" ? "ready" : "context",
+      tone:
+        resolution.mode === "promoted-2026" || resolution.mode === "promoted-2026-v2"
+          ? "ready"
+          : resolution.mode === "unavailable"
+            ? "blocked"
+            : "context",
     },
     {
       id: "2012-aggregates",
@@ -258,10 +277,10 @@ function buildPublicationChecklist(
 ): PublicationChecklistItem[] {
   const historical2012Loaded = historical2012.status === "loaded";
   const actualityComplete = claimActuality.round2026ApplicationActuality === "REAL_SOURCE_READY";
-  const payloadComplete = resolution.selectionReason === "promoted-active";
-  const payloadWarning =
-    resolution.selectionReason === "snapshot-id-mismatch" ||
-    resolution.selectionReason === "content-hash-mismatch";
+  const payloadComplete =
+    resolution.selectionReason === "promoted-active"
+    || resolution.selectionReason === "promoted-active-v2";
+  const payloadFailClosed = resolution.status === "fail-closed";
 
   return [
     {
@@ -275,7 +294,7 @@ function buildPublicationChecklist(
     {
       id: "browser-payload",
       label: "Hash-matched browser application payload",
-      status: payloadComplete ? "complete" : payloadWarning ? "warning" : "pending",
+      status: payloadComplete ? "complete" : payloadFailClosed ? "warning" : "pending",
       detail: humanizePayloadSelectionReason(resolution.selectionReason),
     },
     {
@@ -331,7 +350,7 @@ function intelligenceExplanation(
 }
 
 export function buildSourceHealthRows(
-  resolution: HubRegistryDataResolution,
+  resolutionInput: HubRegistryDataResolutionInput,
   claimActuality: ClaimActualityState,
   historical2012: Historical2012PayloadResolution = {
     status: "not-loaded",
@@ -344,8 +363,10 @@ export function buildSourceHealthRows(
     errorMessage: "2012 confirmed portfolio sidecar not configured.",
   },
 ): SourceHealthRow[] {
+  const resolution = coerceHubRegistryDataResolution(resolutionInput);
   const baseline = APPROVED_2012_BASELINE;
   const doc = resolution.document;
+  const docV2 = resolution.documentV2;
   const historical2012Loaded = historical2012.status === "loaded";
   const confirmedPortfoliosLoaded = confirmedPortfolios.status === "loaded";
 
@@ -429,14 +450,37 @@ export function buildSourceHealthRows(
     {
       id: "browser-application-payload",
       name: "Current browser application payload",
-      classification: resolution.mode === "promoted-2026" ? "Browser payload" : "Rehearsal",
-      snapshotOrVersion: `${doc.fixtureId ?? "promoted"} · ${doc.snapshotId}`,
-      coverage: `${doc.applications.length} entity records in browser`,
-      readiness: resolution.mode === "promoted-2026" ? "Ready" : "Rehearsal",
+      classification:
+        resolution.mode === "promoted-2026" || resolution.mode === "promoted-2026-v2"
+          ? "Browser payload"
+          : resolution.mode === "unavailable"
+            ? "Unpublished"
+            : "Rehearsal",
+      snapshotOrVersion: docV2
+        ? `${docV2.payloadVersion} · ${docV2.snapshotId}`
+        : doc
+          ? `${doc.fixtureId ?? "promoted"} · ${doc.snapshotId}`
+          : resolution.activeSourceError?.code ?? "unavailable",
+      coverage: docV2
+        ? `${docV2.observedApplicationRecords} observed / ${docV2.officialApplications} official · ${docV2.applicationRecordCoverage.completeness}`
+        : doc
+          ? `${doc.applications.length} entity records in browser`
+          : "No active browser document (fail-closed)",
+      readiness:
+        resolution.mode === "promoted-2026" || resolution.mode === "promoted-2026-v2"
+          ? "Ready"
+          : resolution.mode === "unavailable"
+            ? "Browser not loaded"
+            : "Rehearsal",
       limitation:
         resolution.mode === "rehearsal"
           ? "The synthetic rehearsal cohort is not shown as registry intelligence unless Demo / Rehearsal mode is on."
-          : "Payload must match promoted snapshot id and content hash.",
+          : resolution.mode === "unavailable"
+            ? resolution.activeSourceError?.message
+              ?? "REAL_SOURCE_READY without matching payload — rehearsal withheld."
+            : docV2
+              ? `Publication 2.x · graph ${docV2.snapshotContentHash.slice(0, 12)}… · contention ${docV2.contentionOverlay.status}`
+              : "Payload must match promoted snapshot id and content hash.",
     },
   ];
 }
@@ -469,7 +513,7 @@ export function buildIntelligenceReadinessRows(
 
 export function buildDataHealthSnapshot(
   claimActuality: ClaimActualityState,
-  resolution: HubRegistryDataResolution,
+  resolutionInput: HubRegistryDataResolutionInput,
   historical2012: Historical2012PayloadResolution = {
     status: "not-loaded",
     reason: "not-configured",
@@ -481,6 +525,7 @@ export function buildDataHealthSnapshot(
     errorMessage: "2012 confirmed portfolio sidecar not configured.",
   },
 ): DataHealthSnapshot {
+  const resolution = coerceHubRegistryDataResolution(resolutionInput);
   const claim = claimActualityAssertedForBrowser(claimActuality, resolution);
   const historical2012Loaded = historical2012.status === "loaded";
   const confirmedPortfoliosLoaded = confirmedPortfolios.status === "loaded";
@@ -532,17 +577,26 @@ export function buildDataHealthSnapshot(
       offlineNormalizedCorpus: historical2012Loaded
         ? `Offline normalization (${APPROVED_2012_BASELINE_BUNDLE}) materialized as browser payload ${historical2012.document.corpusContentHash.slice(0, 16)}…${confirmedPortfoliosLoaded ? ` · confirmed portfolio sidecar ${confirmedPortfolios.document.payloadVersion}` : " · org promotion offline unless confirmed portfolio sidecar loaded."}`
         : `Available offline (${APPROVED_2012_BASELINE_BUNDLE}); not loaded in browser entity tables.`,
-      browserEntityDataset: resolution.mode === "rehearsal"
-        ? "Synthetic rehearsal cohort is withheld from the default product surface. Demo / Rehearsal mode is opt-in."
-        : `${resolution.document.applications.length}-record promoted 2026 snapshot (${resolution.document.snapshotId})`,
+      browserEntityDataset:
+        resolution.mode === "rehearsal"
+          ? "Synthetic rehearsal cohort is withheld from the default product surface. Demo / Rehearsal mode is opt-in."
+          : resolution.mode === "promoted-2026-v2" && resolution.documentV2
+            ? `${resolution.documentV2.observedApplicationRecords}-record Publication 2.x payload (${resolution.documentV2.snapshotId}) · official ${resolution.documentV2.officialApplications}`
+            : resolution.mode === "unavailable"
+              ? `Active source fail-closed: ${resolution.activeSourceError?.message ?? resolution.selectionReason}`
+              : resolution.document
+                ? `${resolution.document.applications.length}-record promoted 2026 snapshot (${resolution.document.snapshotId})`
+                : "No active browser document",
       real2026Publication:
-        claim.round2026ApplicationActuality === "REAL_SOURCE_READY"
-          ? "REAL_SOURCE_READY"
-          : resolution.selectionReason === "payload-not-configured"
-            || resolution.selectionReason === "snapshot-id-mismatch"
-            || resolution.selectionReason === "content-hash-mismatch"
-            ? "Not published — promoted configuration rejected"
-            : "Not published / not promoted",
+        resolution.status === "fail-closed"
+          ? "REAL configured but active source fail-closed"
+          : claim.round2026ApplicationActuality === "REAL_SOURCE_READY"
+            ? "REAL_SOURCE_READY"
+            : resolution.selectionReason === "payload-not-configured"
+              || resolution.selectionReason === "snapshot-id-mismatch"
+              || resolution.selectionReason === "content-hash-mismatch"
+              ? "Not published — promoted configuration rejected"
+              : "Not published / not promoted",
       rehearsalEntityWarning:
         "Demo / Rehearsal mode uses a synthetic cohort. Those names are not 2012 Reveal Day applicants and are not the default product surface.",
     },

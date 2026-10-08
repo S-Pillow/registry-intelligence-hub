@@ -8,7 +8,6 @@
  * Application may promote independently of contention; contention fails closed alone.
  */
 
-import { readFile } from "node:fs/promises";
 import { contentHash } from "../normalization/hashes";
 import {
   resolveMetricEligibilityWithActuality,
@@ -21,7 +20,6 @@ import {
   CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
   contentionSidecarHashInput,
   type ContentionMembershipSnapshotV1,
-  type RevealDayEvidenceBundleV1,
 } from "./contention-membership-types";
 import {
   applicationGraphHashInput,
@@ -127,33 +125,6 @@ export type RevealDayPromotion2xDryRunReport = {
     category: "STILL_BLOCKED" | "UNEXPECTED";
   };
 };
-
-export async function loadPublicationV2FromPath(path: string): Promise<Registry2026PublicationV2> {
-  const text = await readFile(path, "utf8");
-  const raw = JSON.parse(text) as unknown;
-  const { snapshot, issues } = validatePublicationV2(raw);
-  if (!snapshot || validationV2Failed(issues)) {
-    const messages = issues.filter((i) => i.severity === "error").map((i) => `${i.code}: ${i.message}`);
-    throw new Error(`Publication 2.0.0 validation failed:\n${messages.join("\n")}`);
-  }
-  return snapshot;
-}
-
-export async function loadContentionMembershipFromPath(path: string): Promise<ContentionMembershipSnapshotV1> {
-  const text = await readFile(path, "utf8");
-  const raw = JSON.parse(text) as unknown;
-  const { snapshot, issues } = validateContentionMembershipSnapshot(raw);
-  if (!snapshot || issues.some((i) => i.severity === "error")) {
-    const messages = issues.filter((i) => i.severity === "error").map((i) => `${i.code}: ${i.message}`);
-    throw new Error(`Contention membership validation failed:\n${messages.join("\n")}`);
-  }
-  return snapshot;
-}
-
-export async function loadEvidenceBundleFromPath(path: string): Promise<RevealDayEvidenceBundleV1> {
-  const text = await readFile(path, "utf8");
-  return JSON.parse(text) as RevealDayEvidenceBundleV1;
-}
 
 function recomputeAggregatePin(publication: Registry2026PublicationV2): string {
   return contentHash(publication.officialAggregates);
@@ -579,7 +550,10 @@ export function runRevealDayPromotion2xDryRun(input: {
   };
 }
 
-/** Refuse writing REAL_SOURCE_READY for 2.0 until a later explicit promotion authorization. */
+/**
+ * @deprecated RIH-ACTIVATION-2X-1 authorizes writes via evaluateApplicationPublicationV2ActualityPromotion.
+ * Kept for test discovery; always points operators at the activation write path.
+ */
 export function refuseActualApplicationV2Promotion(): {
   ok: false;
   errors: string[];
@@ -587,7 +561,7 @@ export function refuseActualApplicationV2Promotion(): {
   return {
     ok: false,
     errors: [
-      "RIH-PROMOTION-2X-1 implements the promotion CONTRACT only. Actual promote-actuality for registry-2026-publication/2.0.0 is not authorized in this ticket. Use dry-run-promotion-2x.",
+      "Use evaluateApplicationPublicationV2ActualityPromotion / CLI promote-actuality for registry-2026-publication/2.0.0 (requires steward + product approvals). dry-run-promotion-2x never writes.",
     ],
   };
 }

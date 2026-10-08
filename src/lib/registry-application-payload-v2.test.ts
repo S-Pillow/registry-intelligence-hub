@@ -19,7 +19,7 @@ import {
 import {
   loadContentionMembershipFromPath,
   loadPublicationV2FromPath,
-} from "@/reveal-day-2026/promotion-contract-2x";
+} from "@/reveal-day-2026/promotion-contract-2x-io";
 import {
   applicationGraphHashInput,
   PUBLICATION_SCHEMA_VERSION_V20,
@@ -430,7 +430,7 @@ describe("registry-browser-applications/2.0.0 projection", () => {
     }
   });
 
-  it("26-27 — 1.1 browser projection unchanged; active source rejects 2.x", async () => {
+  it("26-27 — 1.1 browser projection unchanged; NOT_PUBLISHED keeps 2.x inactive (rehearsal)", async () => {
     const publication = await loadPublicationSnapshotFromPath(DRILL_1_1);
     const payload = buildBrowserApplicationPayloadFromPublication(publication);
     expect(payload.payloadVersion).toBe(REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION);
@@ -440,8 +440,8 @@ describe("registry-browser-applications/2.0.0 projection", () => {
     const v2 = buildBrowserApplicationPayloadFromPublicationV2(makePublication());
     const resolution = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, v2);
     expect(resolution.mode).toBe("rehearsal");
-    expect(resolution.selectionReason).toBe("payload-version-unsupported-for-active");
-    expect(resolution.document.applications[0]?.id).toBe(rehearsalFixture.applications[0]?.id);
+    expect(resolution.selectionReason).toBe("claim-not-promoted");
+    expect(resolution.document?.applications[0]?.id).toBe(rehearsalFixture.applications[0]?.id);
 
     expect(() =>
       buildBrowserApplicationPayloadFromPublication({
@@ -543,7 +543,7 @@ describe("inactive real-source 2.x browser projection", () => {
       withContention,
     );
     expect(activeResolution.mode).toBe("rehearsal");
-    expect(activeResolution.selectionReason).toBe("payload-version-unsupported-for-active");
+    expect(activeResolution.selectionReason).toBe("claim-not-promoted");
 
     const contentionActuality: ContentionActualityState = {
       ...DEFAULT_CONTENTION_ACTUALITY_STATE,

@@ -160,13 +160,13 @@ export function evaluateApplicationActualityPromotion(
   if (snapshot.publicationKind !== "immutable-publication") {
     errors.push(`publicationKind must be immutable-publication (got ${snapshot.publicationKind})`);
   }
-  // 2.0.0 has a separate promotion CONTRACT (promotion-contract-2x). Do not convert to 1.1.
-  // Actual 2.0 promote-actuality write remains unauthorized in RIH-PROMOTION-2X-1.
+  // 2.0.0 uses evaluateApplicationPublicationV2ActualityPromotion (CLI schema dispatch).
+  // Do not convert Publication 2.0 into a fake 1.1 snapshot for this evaluator.
   if ((snapshot.schemaVersion as string) === PUBLICATION_SCHEMA_VERSION_V20) {
     return {
       ok: false,
       errors: [
-        "RIH-PROMOTION-2X-1 implements the promotion CONTRACT only. Actual promote-actuality for registry-2026-publication/2.0.0 is not authorized in this ticket. Use dry-run-promotion-2x.",
+        "registry-2026-publication/2.0.0 must use the 2.0 promote-actuality path (evaluateApplicationPublicationV2ActualityPromotion), not the 1.1 evaluator.",
       ],
       nextState: current,
     };

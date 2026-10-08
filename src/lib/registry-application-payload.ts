@@ -17,6 +17,7 @@ export {
   assertDocumentCompatibleWithBriefingsOrSaved,
   metricEligibilityProbeForBrowserV2,
   dataHealthMetadataFromBrowserV2,
+  bindContentionOverlayForActiveBrowserV2,
   UNSUPPORTED_EXPLORE_FACETS_V2,
 } from "@/lib/registry-application-payload-v2";
 

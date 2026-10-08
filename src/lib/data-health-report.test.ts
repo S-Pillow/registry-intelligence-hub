@@ -150,16 +150,19 @@ describe("data-health-report", () => {
       { ...promoted, snapshotContentHash: "wrong-hash" },
       payload,
     );
-    expect(hashMismatch.mode).toBe("rehearsal");
+    expect(hashMismatch.status).toBe("fail-closed");
+    expect(hashMismatch.mode).toBe("unavailable");
     expect(hashMismatch.selectionReason).toBe("content-hash-mismatch");
-    expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed/i);
+    expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed \(no rehearsal\)/i);
 
     const snapshot = buildDataHealthSnapshot(promoted, hashMismatch);
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/fail-closed/i);
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "browser-payload")?.status).toBe(
       "warning",
     );
-    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(/Rehearsal/i);
+    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
+      /unavailable|fail-closed/i,
+    );
   });
 
   it("marks 2012 entity browser loaded when historical payload resolves", async () => {

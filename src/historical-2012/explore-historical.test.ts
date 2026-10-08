@@ -12,7 +12,7 @@ describe("Explore dataset isolation (D1)", () => {
   it("2026 rehearsal resolution unchanged when 2012 payload is absent", () => {
     const rehearsal = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
     expect(rehearsal.mode).toBe("rehearsal");
-    expect(rehearsal.document.applications).toHaveLength(rehearsalFixture.applications.length);
+    expect(rehearsal.document?.applications).toHaveLength(rehearsalFixture.applications.length);
   });
 
   it("2012 historical payload does not replace 2026 hub registry document", async () => {
@@ -23,8 +23,8 @@ describe("Explore dataset isolation (D1)", () => {
     const historical = parse2012ApplicationPayloadJson(text);
     const rehearsal = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
     expect(historical.applications).toHaveLength(1930);
-    expect(rehearsal.document.applications).toHaveLength(12);
-    expect(rehearsal.document.applications[0]?.id).not.toBe(historical.applications[0]?.id);
+    expect(rehearsal.document?.applications).toHaveLength(12);
+    expect(rehearsal.document?.applications[0]?.id).not.toBe(historical.applications[0]?.id);
   });
 
   it("loaded 2012 resolution is distinct from rehearsal row count", async () => {

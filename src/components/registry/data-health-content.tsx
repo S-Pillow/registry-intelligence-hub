@@ -100,7 +100,7 @@ function ChecklistStatus({ item }: { item: PublicationChecklistItem }) {
     item.status === "complete"
       ? "Complete"
       : item.status === "warning"
-        ? "Fail-closed fallback"
+        ? "Fail-closed (no rehearsal)"
         : item.status === "blocked"
           ? "Blocked"
           : "Pending";

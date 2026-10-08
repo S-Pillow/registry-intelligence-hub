@@ -29,7 +29,6 @@ import {
 } from "@/lib/registry-data";
 import {
   claimActualityAssertedForBrowser,
-  rehearsalRegistryApplicationsDocument,
   resolveActiveRegistryApplicationsDocument,
   type RegistryApplicationsDocument,
 } from "@/lib/registry-application-payload-shared";
@@ -95,14 +94,14 @@ describe("promoted 2026 application snapshot consumption", () => {
     const resolution = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
     const asserted = claimActualityAssertedForBrowser(DEFAULT_CLAIM_ACTUALITY_STATE, resolution);
     expect(resolution.mode).toBe("rehearsal");
-    expect(resolution.document.applications).toHaveLength(12);
-    expect(resolution.document.applications[0]?.id).toBe("APP-26001");
-    expect(resolution.document.payloadMode).toBe("rehearsal");
+    expect(resolution.document?.applications).toHaveLength(12);
+    expect(resolution.document?.applications[0]?.id).toBe("APP-26001");
+    expect(resolution.document?.payloadMode).toBe("rehearsal");
     expect(asserted.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
     expect(resolveHubMetricEligibility("application-count", asserted)?.comparisonAllowed).toBe(false);
-    expect(presentPromotedCrossRoundCount("application-count", resolution.document.applications, asserted, {
-      payloadMode: resolution.mode,
-      snapshotId: resolution.document.snapshotId,
+    expect(presentPromotedCrossRoundCount("application-count", resolution.document!.applications, asserted, {
+      payloadMode: "rehearsal",
+      snapshotId: resolution.document!.snapshotId,
     })).toBeNull();
   });
 
@@ -113,8 +112,8 @@ describe("promoted 2026 application snapshot consumption", () => {
         const resolution = await loadHubRegistryData(claim);
         expect(resolution.selectionReason).toBe("promoted-active");
         expect(resolution.mode).toBe("promoted-2026");
-        expect(resolution.document.snapshotId).toBe("snap-synthetic-promote-1-not-a-publication");
-        expect(resolution.document.applications.map((row) => row.id)).toEqual([
+        expect(resolution.document?.snapshotId).toBe("snap-synthetic-promote-1-not-a-publication");
+        expect(resolution.document?.applications.map((row) => row.id)).toEqual([
           "SYNTH-NOT-A-PUBLICATION-001",
           "SYNTH-NOT-A-PUBLICATION-002",
           "SYNTH-NOT-A-PUBLICATION-003",
@@ -143,9 +142,9 @@ describe("promoted 2026 application snapshot consumption", () => {
     const asserted = claimActualityAssertedForBrowser(DEFAULT_CLAIM_ACTUALITY_STATE, resolution);
     expect(resolution.selectionReason).toBe("claim-not-promoted");
     expect(resolution.mode).toBe("rehearsal");
-    expect(resolution.document.applications).toHaveLength(12);
+    expect(resolution.document?.applications).toHaveLength(12);
     expect(asserted.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
-    expect(resolution.document.applications.some((row) => row.id.startsWith("SYNTH-"))).toBe(false);
+    expect(resolution.document?.applications.some((row) => row.id.startsWith("SYNTH-"))).toBe(false);
   });
 
   it("5b — a configured claim-state path that cannot be read fails closed", async () => {
@@ -158,18 +157,18 @@ describe("promoted 2026 application snapshot consumption", () => {
     const claim = matchingClaim();
     const resolution = resolveActiveRegistryApplicationsDocument(claim, SYNTHETIC);
     const asserted = claimActualityAssertedForBrowser(claim, resolution);
-    const apps = resolution.document.applications;
+    const apps = resolution.document!.applications;
     const applications = presentPromotedCrossRoundCount("application-count", apps, asserted, {
-      payloadMode: resolution.mode,
-      snapshotId: resolution.document.snapshotId,
+      payloadMode: "promoted-2026",
+      snapshotId: resolution.document!.snapshotId,
     });
     const strings = presentPromotedCrossRoundCount("unique-applied-strings", apps, asserted, {
-      payloadMode: resolution.mode,
-      snapshotId: resolution.document.snapshotId,
+      payloadMode: "promoted-2026",
+      snapshotId: resolution.document!.snapshotId,
     });
     const idn = presentPromotedCrossRoundCount("idn-applications", apps, asserted, {
-      payloadMode: resolution.mode,
-      snapshotId: resolution.document.snapshotId,
+      payloadMode: "promoted-2026",
+      snapshotId: resolution.document!.snapshotId,
     });
     expect(applications?.active2026).toBe(3);
     expect(applications?.baseline2012).toBe(1930);
@@ -201,8 +200,8 @@ describe("promoted 2026 application snapshot consumption", () => {
 
   it("11-12 — Explore and Compare options use the same promoted population", () => {
     const resolution = resolveActiveRegistryApplicationsDocument(matchingClaim(), SYNTHETIC);
-    expect(resolution.document.applications).toHaveLength(3);
-    const organizations = listEntityOptions("organizations", resolution.document.applications);
+    expect(resolution.document?.applications).toHaveLength(3);
+    const organizations = listEntityOptions("organizations", resolution.document!.applications);
     expect(organizations.map((option) => option.key).sort()).toEqual([
       "Synthetic Org Label Alpha",
       "Synthetic Org Label Beta",
@@ -239,11 +238,11 @@ describe("promoted 2026 application snapshot consumption", () => {
       SYNTHETIC,
     );
     const rejectedHealth = buildDataHealthSnapshot(claim, rejected);
-    expect(rejected.mode).toBe("rehearsal");
-    expect(rejected.document.snapshotId).toBe(rehearsalRegistryApplicationsDocument().snapshotId);
+    expect(rejected.status).toBe("fail-closed");
+    expect(rejected.mode).toBe("unavailable");
+    expect(rejected.document).toBeNull();
     expect(claimActualityAssertedForBrowser(claim, rejected).round2026ApplicationActuality).toBe("NOT_PUBLISHED");
-    expect(rejectedHealth.browserDataState.real2026Publication).toMatch(/Not published/);
-    expect(rejectedHealth.browserDataState.real2026Publication).toMatch(/rejected/);
+    expect(rejectedHealth.browserDataState.real2026Publication).toMatch(/fail-closed/i);
     expect(rejectedHealth.currentStateSummary.find((row) => row.id === "2026-publication")?.primary).not.toMatch(/Real 2026/);
     expect(rejectedHealth.intelligenceReadiness.find((row) => row.metricId === "application-count")?.comparisonAllowed).toBe(false);
     expect(rejectedHealth.publicationReadiness.checklist.find((item) => item.id === "browser-payload")?.status).toBe("warning");
@@ -258,7 +257,7 @@ describe("promoted 2026 application snapshot consumption", () => {
       detailLevel: "standard",
       sectionsWanted: ["headline-metrics", "what-stands-out", "limitations"],
       claimActualityState: claimActualityAssertedForBrowser(claim, resolution),
-      registryDocument: resolution.document,
+      registryDocument: resolution.document!,
     });
     expect(edition.snapshotId).toBe("snap-synthetic-promote-1-not-a-publication");
     const standout = edition.sections.find((section) => section.id === "what-stands-out");
@@ -270,7 +269,7 @@ describe("promoted 2026 application snapshot consumption", () => {
     expect(serialized).not.toMatch(/Unique strings: 2/);
     expect(serialized).toContain("IDN applications: 1");
     expect(serialized).not.toContain("APP-26001");
-    expect(describeBriefingScope({ kind: "round-wide" }, resolution.document)).toMatch(/active promoted application snapshot/);
+    expect(describeBriefingScope({ kind: "round-wide" }, resolution.document!)).toMatch(/active promoted application snapshot/);
   });
 
   it("renders Explore and Compare from the promoted snapshot without rehearsal rows", () => {

@@ -19,12 +19,16 @@ import { evaluateHumanApprovals } from "./human-approval";
 import {
   evaluateApplicationPublicationV2PromotionCandidate,
   evaluateContentionMembershipPromotionCandidate,
-  loadContentionMembershipFromPath,
-  loadPublicationV2FromPath,
+  refuseActualApplicationV2Promotion,
   runRevealDayPromotion2xDryRun,
+  PROMOTION_CONTRACT_2X_VERSION,
   type ApplicationV2PromotionExpectedPins,
   type ContentionPromotionExpectedPins,
 } from "./promotion-contract-2x";
+import {
+  loadContentionMembershipFromPath,
+  loadPublicationV2FromPath,
+} from "./promotion-contract-2x-io";
 import {
   applicationGraphHashInput,
   PUBLICATION_SCHEMA_VERSION_V20,

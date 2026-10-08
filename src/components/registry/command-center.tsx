@@ -149,6 +149,10 @@ import {
   useHistorical2012StructuralSummary,
 } from "@/components/registry/hub-historical-2012-provider";
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
+import { ActiveSourceFailClosed } from "@/components/registry/active-source-fail-closed";
+import { ExploreContentV2 } from "@/components/registry/explore-content-v2";
+import { SearchContentV2 } from "@/components/registry/search-content-v2";
+import { CommandCenterOrientationV2 } from "@/components/registry/command-center-orientation-v2";
 import { hubPath } from "@/lib/hub-paths";
 import {
   isHttpSourceUrl,
@@ -156,6 +160,9 @@ import {
   withRehearsalPresentation,
   type ProductPresentation,
 } from "@/lib/presentation-mode";
+import type { RegistryApplicationsDocumentV2 } from "@/lib/registry-applications-document-v2";
+import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
+import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
 
 export type { SavedParams };
 import {
@@ -2157,7 +2164,147 @@ function CompareContent({ state, initial, presentation }: { state: ViewState; in
   );
 }
 
-export function CommandCenter({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId, presentation = "pre-reveal" }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string; presentation?: ProductPresentation }) {
+function CommandCenterFailClosedShell({
+  view,
+  presentation,
+  resolution,
+}: {
+  view: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  presentation: ProductPresentation;
+  resolution: HubRegistryDataResolution;
+}) {
+  return (
+    <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
+      <HubNav
+        presentation={presentation}
+        active={
+          view === "explore"
+            ? "Explore"
+            : view === "compare"
+              ? "Compare"
+              : view === "saved"
+                ? "Saved"
+                : view === "briefings"
+                  ? "Briefings"
+                  : view === "data-health"
+                    ? "Data Health"
+                    : "Command Center"
+        }
+      />
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        {view === "data-health" ? <DataHealthContent state="ready" /> : <ActiveSourceFailClosed resolution={resolution} />}
+      </main>
+    </div>
+  );
+}
+
+function CommandCenterActiveV2({
+  state = "ready",
+  view = "command",
+  presentation = "pre-reveal",
+  document,
+  claimActuality,
+}: {
+  state?: ViewState;
+  view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  exploreParams?: ExploreParams;
+  compareParams?: CompareParams;
+  savedParams?: SavedParams;
+  briefingId?: string;
+  presentation?: ProductPresentation;
+  document: RegistryApplicationsDocumentV2;
+  claimActuality: ClaimActualityState;
+}) {
+  return (
+    <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
+      <HubNav
+        presentation={presentation}
+        active={
+          view === "explore"
+            ? "Explore"
+            : view === "compare"
+              ? "Compare"
+              : view === "saved"
+                ? "Saved"
+                : view === "briefings"
+                  ? "Briefings"
+                  : view === "data-health"
+                    ? "Data Health"
+                    : "Command Center"
+        }
+      />
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        {view === "explore" ? (
+          <ExploreContentV2 document={document} />
+        ) : view === "compare" ? (
+          <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
+            <h1 className="text-xl font-bold">Compare remains eligibility-gated for Publication 2.x</h1>
+            <p className="mt-2 text-slate-700">
+              No broad 2.x Compare enablement in this activation path. Blocked metrics stay blocked;
+              do not fabricate 1.1 organization/category/returning dimensions.
+            </p>
+          </section>
+        ) : view === "saved" ? (
+          <section data-testid="saved-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
+            <h1 className="text-xl font-bold">Saved is gated for Publication 2.x</h1>
+            <p className="mt-2 text-slate-700">
+              Saved workflows require 1.1-shaped Application fields (organization/category/returning).
+              They are explicitly unsupported for active registry-browser-applications/2.0.0.
+            </p>
+          </section>
+        ) : view === "briefings" ? (
+          <section data-testid="briefings-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
+            <h1 className="text-xl font-bold">Briefings are gated for Publication 2.x</h1>
+            <p className="mt-2 text-slate-700">
+              Briefings require 1.1-shaped Application fields. Do not fabricate compatibility for 2.x.
+            </p>
+          </section>
+        ) : view === "data-health" ? (
+          <DataHealthContent state={state} />
+        ) : (
+          <div className="space-y-8">
+            <CommandCenterOrientationV2 document={document} claimActuality={claimActuality} />
+            <SearchContentV2 document={document} />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export function CommandCenter(props: {
+  state?: ViewState;
+  view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  exploreParams?: ExploreParams;
+  compareParams?: CompareParams;
+  savedParams?: SavedParams;
+  briefingId?: string;
+  presentation?: ProductPresentation;
+}) {
+  const resolution = useHubRegistryData();
+  const claimActualityState = useHubClaimActualityState();
+  if (resolution.status === "fail-closed") {
+    return (
+      <CommandCenterFailClosedShell
+        view={props.view ?? "command"}
+        presentation={props.presentation ?? "pre-reveal"}
+        resolution={resolution}
+      />
+    );
+  }
+  if (resolution.mode === "promoted-2026-v2" && resolution.documentV2) {
+    return (
+      <CommandCenterActiveV2
+        {...props}
+        document={resolution.documentV2}
+        claimActuality={claimActualityState}
+      />
+    );
+  }
+  return <CommandCenterV1 {...props} />;
+}
+
+function CommandCenterV1({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId, presentation = "pre-reveal" }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string; presentation?: ProductPresentation }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const historical2012 = useHistorical2012Payload();
@@ -2191,7 +2338,7 @@ export function CommandCenter({ state = "ready", view = "command", exploreParams
   );
   const roundPulseMetrics = useMemo(
     () => buildRoundPulse(registryFixture.applications, claimActualityState, {
-      payloadMode: registryPayloadMode,
+      payloadMode: registryPayloadMode === "promoted-2026" ? "promoted-2026" : "rehearsal",
       snapshotId: registryFixture.snapshotId,
     }),
     [claimActualityState, registryFixture.applications, registryFixture.snapshotId, registryPayloadMode],

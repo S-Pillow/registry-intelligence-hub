@@ -7,9 +7,18 @@ import {
   organizationMetricsRemainGatedAfterApplicationPromotion,
 } from "./claim-actuality";
 import {
+  evaluateApplicationPublicationV2ActualityPromotion,
+  evaluateContentionActualityPromotion,
+} from "./activation-2x";
+import {
   readClaimActualityState,
   writeClaimActualityState,
 } from "./claim-actuality-persistence";
+import {
+  readContentionActualityState,
+  writeContentionActualityState,
+} from "./contention-actuality-persistence";
+import { BROWSER_V2_ARTIFACT_RELATIVE_PATH } from "../lib/registry-browser-v2-delivery";
 import { buildComparisonUnlockReport } from "./comparison-unlock";
 import { assertNoFixtureContaminationInRealBuild } from "./contamination";
 import { loadPublicationSnapshotFromPath, runDryRunIngestion } from "./dry-run";
@@ -57,10 +66,12 @@ import {
   CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
 } from "./contention-membership-types";
 import {
-  loadContentionMembershipFromPath,
-  loadPublicationV2FromPath,
   runRevealDayPromotion2xDryRun,
 } from "./promotion-contract-2x";
+import {
+  loadContentionMembershipFromPath,
+  loadPublicationV2FromPath,
+} from "./promotion-contract-2x-io";
 import { buildBrowserApplicationPayloadFromPublicationV2 } from "../lib/registry-application-payload-v2";
 import { contentHash } from "../normalization/hashes";
 import { readFile, rm, writeFile } from "node:fs/promises";
@@ -82,10 +93,11 @@ Usage:
   npm run reveal-2026 -- intake-derive [--pipeline-root <dir>] [--out <path>] [--fetch]
   npm run reveal-2026 -- comparison-unlock [--state <path>]
   npm run reveal-2026 -- promote-actuality --snapshot <path> --steward-approval <id> --product-approval <id> [--state <path>] [--history <path>]
+  npm run reveal-2026 -- promote-contention-actuality --contention-snapshot <path> --application-graph-hash <sha256> --steward-approval <id> --product-approval <id> [--contention-state <path>]
   npm run reveal-2026 -- promotion-history [--history <path>]
   npm run reveal-2026 -- verify-reveal-day [--snapshot <path>] [--state <path>] [--workspace <dir>] [--expected-application-count <n>]
   npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
-  npm run reveal-2026 -- build-browser-payload-2x --snapshot <path> [--contention-snapshot <path>] [--out <path>]
+  npm run reveal-2026 -- build-browser-payload-2x --snapshot <path> [--contention-snapshot <path>] [--out <path>] [--compact]
   npm run reveal-2026 -- build-publication --input <file> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --media-type application/x-ndjson --round 2026 --evidence-class <id> --expected-row-count <n> --expect-source-hash <sha256> --recorded-http-status <n> --parser-version <version> --normalizer-version <version> --schema-version registry-2026-publication/1.1.0 [--fixture-id <id>] [--limitation <text>]
   npm run reveal-2026 -- build-publication-aps-csv --input <csv> --aggregates <json> --excluded <json> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --recorded-http-status <n> [--evidence-class <id>] [--limitation <text>]
   npm run reveal-2026 -- build-contention-membership --input <csv> --application-publication <json> --out <file> --review-out <file> --bundle-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --expect-application-graph-hash <sha256> --recorded-http-status <n> [--final-url <url>] [--evidence-class <id>] [--limitation <text>]
@@ -93,8 +105,10 @@ Usage:
 build-publication reads a local NDJSON wire file only (1.1.0 rehearsal/drill). It does not fetch or promote.
 build-publication-aps-csv reads a local APS Application CSV + official aggregate/coverage JSON (2.0.0). Role-gated; not an unrestricted text/csv parser. Does not fetch, promote, or mutate claim actuality.
 build-contention-membership reads a local Reveal Day contention CSV + pinned Application 2.0.0 publication into registry-2026-contention-membership/1.0.0. Does not rewrite the Application publication, promote, or mutate claim actuality.
-dry-run-promotion-2x validates Application 2.0.0 (± contention sidecar) promotion candidates without writing claim actuality, promotion history, or browser payloads. Actual 2.0 promote-actuality is not authorized by this command.
-build-browser-payload-2x writes an inactive registry-browser-applications/2.0.0 projection (no fabricated 1.1 fields). Does not change active source configuration or claim actuality.
+dry-run-promotion-2x validates Application 2.0.0 (± contention sidecar) promotion candidates without writing claim actuality, promotion history, or browser payloads.
+promote-actuality for registry-2026-publication/2.0.0 persists ClaimActualityState after promotion-contract-2x validation + steward/product approvals. Does not switch active browser config by itself.
+promote-contention-actuality persists ContentionActualityState independently; Application remains active if contention is absent/invalid.
+build-browser-payload-2x writes registry-browser-applications/2.0.0 (default out: ${BROWSER_V2_ARTIFACT_RELATIVE_PATH}). Does not change claim actuality. Activate via claim + REGISTRY_HUB_APPLICATION_PAYLOAD_PATH.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -147,6 +161,9 @@ async function main(): Promise<void> {
       "final-url": { type: "string" },
       "bundle-id": { type: "string" },
       "contention-snapshot": { type: "string" },
+      "contention-state": { type: "string" },
+      "application-graph-hash": { type: "string" },
+      compact: { type: "boolean" },
     },
   });
 
@@ -200,8 +217,10 @@ async function main(): Promise<void> {
       const payload = buildBrowserApplicationPayloadFromPublicationV2(publication, { contention });
       const outPath = values.out
         ? resolve(values.out)
-        : join(workspaceRoot, ".data/reveal-2026/publications/aps-applications-2.0.0.browser-inactive.json");
-      await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`);
+        : join(workspaceRoot, BROWSER_V2_ARTIFACT_RELATIVE_PATH);
+      const compact = Boolean(values.compact);
+      const body = compact ? `${JSON.stringify(payload)}\n` : `${JSON.stringify(payload, null, 2)}\n`;
+      await writeFile(outPath, body);
       const afterState = await readClaimActualityState(statePath);
       if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
         throw new Error("build-browser-payload-2x mutated claim actuality state — abort");
@@ -220,7 +239,8 @@ async function main(): Promise<void> {
             contentionOverlay: payload.contentionOverlay.status,
             activeSourceChanged: false,
             claimActualityWritten: false,
-            serializedBytes: Buffer.byteLength(JSON.stringify(payload), "utf8"),
+            compact,
+            serializedBytes: Buffer.byteLength(body, "utf8"),
           },
           null,
           2,
@@ -328,19 +348,58 @@ async function main(): Promise<void> {
       if (!values.snapshot) {
         throw new Error("promote-actuality requires --snapshot pointing at an immutable publication (not the default rehearsal fixture)");
       }
-      // Schema dispatch: refuse 2.0.0 actual writes (contract-only ticket). Keep 1.1 path intact.
-      const peek = JSON.parse(await readFile(resolve(snapshotPath), "utf8")) as { schemaVersion?: string };
-      if (peek.schemaVersion === PUBLICATION_SCHEMA_VERSION_V20) {
-        console.error(
-          "RIH-PROMOTION-2X-1: actual promote-actuality for registry-2026-publication/2.0.0 is not authorized. Use dry-run-promotion-2x.",
-        );
-        process.exitCode = 1;
-        return;
-      }
       const humanApproval = evaluateHumanApprovals({
         stewardApprovalId: values["steward-approval"],
         productApprovalId: values["product-approval"],
       });
+      const peek = JSON.parse(await readFile(resolve(snapshotPath), "utf8")) as { schemaVersion?: string };
+      if (peek.schemaVersion === PUBLICATION_SCHEMA_VERSION_V20) {
+        const publication = await loadPublicationV2FromPath(resolve(snapshotPath));
+        const current = await readClaimActualityState(statePath);
+        const result = evaluateApplicationPublicationV2ActualityPromotion(
+          publication,
+          current,
+          humanApproval,
+        );
+        if (!result.ok) {
+          console.error(result.errors.join("\n"));
+          process.exitCode = 1;
+          return;
+        }
+        await writeClaimActualityState(statePath, result.nextState);
+        if (!result.nextState.rawSha256 || !humanApproval.stewardApprovalId || !humanApproval.productApprovalId) {
+          throw new Error("Internal error: 2.0 promotion succeeded without lineage or approvals");
+        }
+        await recordActualityPromotion({
+          historyPath,
+          snapshotId: result.nextState.snapshotId!,
+          snapshotContentHash: result.nextState.snapshotContentHash!,
+          rawSha256: result.nextState.rawSha256,
+          stewardApprovalId: humanApproval.stewardApprovalId,
+          productApprovalId: humanApproval.productApprovalId,
+          previousSnapshotId: current.snapshotId,
+        });
+        const unlock = buildComparisonUnlockReport(result.nextState);
+        console.log(
+          JSON.stringify(
+            {
+              promoted: true,
+              schemaVersion: PUBLICATION_SCHEMA_VERSION_V20,
+              round2026ApplicationActuality: result.nextState.round2026ApplicationActuality,
+              snapshotId: result.nextState.snapshotId,
+              snapshotContentHash: result.nextState.snapshotContentHash,
+              rawSha256: result.nextState.rawSha256,
+              organizationMetricsRemainGated: organizationMetricsRemainGatedAfterApplicationPromotion(result.nextState),
+              newlyUnlocked: unlock.metrics.filter((m) => m.unlockStatus === "newly-eligible").map((m) => m.metricId),
+              activeBrowserConfigChanged: false,
+              note: "Claim actuality written only. Point REGISTRY_HUB_APPLICATION_PAYLOAD_PATH at browser 2.x artifact to activate.",
+            },
+            null,
+            2,
+          ),
+        );
+        return;
+      }
       const snapshot = await loadPublicationSnapshotFromPath(snapshotPath);
       const contamination = assertNoFixtureContaminationInRealBuild(snapshot, "promote");
       if (!contamination.ok) {
@@ -380,6 +439,51 @@ async function main(): Promise<void> {
             rawSha256: result.nextState.rawSha256,
             organizationMetricsRemainGated: organizationMetricsRemainGatedAfterApplicationPromotion(result.nextState),
             newlyUnlocked: unlock.metrics.filter((m) => m.unlockStatus === "newly-eligible").map((m) => m.metricId),
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    case "promote-contention-actuality": {
+      if (!values["contention-snapshot"]) {
+        throw new Error("promote-contention-actuality requires --contention-snapshot");
+      }
+      if (!values["application-graph-hash"]) {
+        throw new Error("promote-contention-actuality requires --application-graph-hash (Application publication pin)");
+      }
+      const humanApproval = evaluateHumanApprovals({
+        stewardApprovalId: values["steward-approval"],
+        productApprovalId: values["product-approval"],
+      });
+      const contentionStatePath = values["contention-state"]
+        ? resolve(values["contention-state"])
+        : join(workspaceRoot, ".data/reveal-2026/contention-actuality-state.json");
+      const sidecar = await loadContentionMembershipFromPath(resolve(values["contention-snapshot"]));
+      const current = await readContentionActualityState(contentionStatePath);
+      const result = evaluateContentionActualityPromotion(
+        sidecar,
+        values["application-graph-hash"],
+        current,
+        humanApproval,
+      );
+      if (!result.ok) {
+        console.error(result.errors.join("\n"));
+        process.exitCode = 1;
+        return;
+      }
+      await writeContentionActualityState(contentionStatePath, result.nextState);
+      console.log(
+        JSON.stringify(
+          {
+            promoted: true,
+            round2026ContentionActuality: result.nextState.round2026ContentionActuality,
+            snapshotId: result.nextState.snapshotId,
+            sidecarContentHash: result.nextState.sidecarContentHash,
+            applicationPublicationPinHash: result.nextState.applicationPublicationPinHash,
+            applicationActualityUnchanged: true,
           },
           null,
           2,

@@ -22,7 +22,7 @@ const HISTORY_PATH = join(process.cwd(), ".data/reveal-2026/promotion-history.js
 describe("staging Path B/C deployment drill (automated acceptance)", () => {
   it("step 1 — rehearsal resolution when claim is default NOT_PUBLISHED", () => {
     const rehearsal = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
-    expect(rehearsal.document.applications).toHaveLength(rehearsalFixture.applications.length);
+    expect(rehearsal.document?.applications).toHaveLength(rehearsalFixture.applications.length);
     for (const metricId of APPLICATION_ACTUALITY_METRIC_IDS) {
       const entry = resolveHubMetricEligibility(metricId, DEFAULT_CLAIM_ACTUALITY_STATE);
       expect(entry?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
@@ -38,10 +38,10 @@ describe("staging Path B/C deployment drill (automated acceptance)", () => {
     expect(payload.applications).toHaveLength(100);
     const active = resolveActiveRegistryApplicationsDocument(state, payload);
     expect(active.mode).toBe("promoted-2026");
-    expect(active.document.applications[0]?.id).toBe("APP-91000");
+    expect(active.document?.applications[0]?.id).toBe("APP-91000");
   });
 
-  it("step 7 — snapshot or content-hash mismatch falls back to rehearsal (fail closed)", async () => {
+  it("step 7 — snapshot or content-hash mismatch fails closed (no rehearsal)", async () => {
     const state = await readClaimActualityState(STATE_PATH).catch(() => null);
     if (!state || state.round2026ApplicationActuality !== "REAL_SOURCE_READY") return;
     const publicationPath = state.snapshotId === "snap-drill-2026-intake-v2" ? DRILL_V2 : DRILL_V1;
@@ -52,12 +52,14 @@ describe("staging Path B/C deployment drill (automated acceptance)", () => {
       payload,
     );
     expect(idMismatch.selectionReason).toBe("snapshot-id-mismatch");
-    expect(idMismatch.document.applications[0]?.id).toBe("APP-26001");
+    expect(idMismatch.status).toBe("fail-closed");
+    expect(idMismatch.document).toBeNull();
     const hashMismatch = resolveActiveRegistryApplicationsDocument(
       { ...state, snapshotContentHash: "wrong-hash" },
       payload,
     );
     expect(hashMismatch.selectionReason).toBe("content-hash-mismatch");
+    expect(hashMismatch.status).toBe("fail-closed");
   });
 
   it("step 8 — promotion history records superseded + promoted when operator ran Path C", async () => {

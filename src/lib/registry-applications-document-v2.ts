@@ -66,10 +66,10 @@ export type BrowserContentionOverlayDocumentV2 = {
 export type RegistryApplicationsDocumentV2 = {
   payloadVersion: typeof REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20;
   /**
-   * This ticket only builds inactive projections.
-   * Active promotion/selection remains a later authorization.
+   * inactive-2x — generated offline, not selected as active.
+   * promoted-2026 — selected as active after REAL_SOURCE_READY + pin match.
    */
-  payloadMode: "inactive-2x";
+  payloadMode: "inactive-2x" | "promoted-2026";
   snapshotId: string;
   /** Application graph content hash (Publication 2.0 semantic pin). */
   snapshotContentHash: string;

@@ -96,7 +96,7 @@ describe("DataHealthContent", () => {
     expect(screen.getByLabelText(/Hash-matched browser application payload: Complete/i)).toBeInTheDocument();
   });
 
-  it("shows fail-closed rehearsal fallback when promotion pins mismatch", async () => {
+  it("shows fail-closed (no rehearsal) when promotion pins mismatch under REAL", async () => {
     const publication = await loadPublicationSnapshotFromPath(DRILL_PUBLICATION);
     const payload = buildBrowserApplicationPayloadFromPublication(publication);
     const promoted = {
@@ -111,11 +111,10 @@ describe("DataHealthContent", () => {
     renderDataHealth(promoted, resolution);
 
     expect(
-      screen.getAllByText(/Content hash pin mismatch — fail-closed to rehearsal/i).length,
+      screen.getAllByText(/Content hash pin mismatch — fail-closed \(no rehearsal\)/i).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByLabelText(/Hash-matched browser application payload: Fail-closed fallback/i),
+      screen.getByLabelText(/Hash-matched browser application payload: Fail-closed \(no rehearsal\)/i),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/withheld from the default product surface/i).length).toBeGreaterThan(0);
   });
 });

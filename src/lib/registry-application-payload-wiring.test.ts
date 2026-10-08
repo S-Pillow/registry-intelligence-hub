@@ -23,8 +23,8 @@ describe("2026 application payload wiring (acceptance)", () => {
   it("rehearsal path unchanged when payload absent or claim not promoted", () => {
     const rehearsal = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
     expect(rehearsal.mode).toBe("rehearsal");
-    expect(rehearsal.document.applications).toHaveLength(rehearsalFixture.applications.length);
-    expect(rehearsal.document.applications[0]?.id).toBe("APP-26001");
+    expect(rehearsal.document?.applications).toHaveLength(rehearsalFixture.applications.length);
+    expect(rehearsal.document?.applications[0]?.id).toBe("APP-26001");
   });
 
   it("drill fixture produces 100 application rows distinct from 12-app rehearsal", async () => {
@@ -49,14 +49,16 @@ describe("2026 application payload wiring (acceptance)", () => {
     const active = resolveActiveRegistryApplicationsDocument(promoted, payload);
     expect(active.mode).toBe("promoted-2026");
     expect(active.selectionReason).toBe("promoted-active");
-    expect(active.document.applications).toHaveLength(100);
+    expect(active.document?.applications).toHaveLength(100);
 
     const hashMismatch = resolveActiveRegistryApplicationsDocument(
       { ...promoted, snapshotContentHash: "wrong" },
       payload,
     );
-    expect(hashMismatch.mode).toBe("rehearsal");
+    expect(hashMismatch.status).toBe("fail-closed");
+    expect(hashMismatch.mode).toBe("unavailable");
     expect(hashMismatch.selectionReason).toBe("content-hash-mismatch");
+    expect(hashMismatch.document).toBeNull();
   });
 
   it("parses env-injected application payload JSON", async () => {

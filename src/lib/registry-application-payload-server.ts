@@ -7,7 +7,10 @@ import {
   isPublicationV2SnapshotDocument,
   type RegistryApplicationsDocument,
 } from "@/lib/registry-application-payload-shared";
-import { isBrowserApplicationPayloadDocumentV2 } from "@/lib/registry-applications-document-v2";
+import {
+  isBrowserApplicationPayloadDocumentV2,
+  type RegistryApplicationsDocumentV2,
+} from "@/lib/registry-applications-document-v2";
 import {
   REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION,
   REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20,
@@ -19,11 +22,15 @@ export const APPLICATION_PAYLOAD_PATH_ENV = "REGISTRY_HUB_APPLICATION_PAYLOAD_PA
 export const DEFAULT_DRILL_BROWSER_PAYLOAD_PATH =
   "src/data/fixtures/drill-2026-registry-applications.payload.json";
 
+export type LoadedApplicationPayload =
+  | { kind: "v1"; document: RegistryApplicationsDocument }
+  | { kind: "v2"; document: RegistryApplicationsDocumentV2 };
+
 export function parseApplicationPayloadJson(text: string): RegistryApplicationsDocument {
   const parsed = JSON.parse(text) as unknown;
   if (isBrowserApplicationPayloadDocumentV2(parsed)) {
     throw new Error(
-      `${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20} cannot be loaded as the active 1.x application payload. Inactive 2.x projection uses buildBrowserApplicationPayloadFromPublicationV2.`,
+      `${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20} must be loaded via loadConfiguredApplicationPayloadAny (PATH preferred for ~1.7MB corpus)`,
     );
   }
   if (!isBrowserApplicationPayloadDocument(parsed)) {
@@ -34,39 +41,62 @@ export function parseApplicationPayloadJson(text: string): RegistryApplicationsD
   return parsed;
 }
 
+export function parseApplicationPayloadAny(text: string): LoadedApplicationPayload {
+  const parsed = JSON.parse(text) as unknown;
+  if (isBrowserApplicationPayloadDocumentV2(parsed)) {
+    return { kind: "v2", document: parsed };
+  }
+  if (isBrowserApplicationPayloadDocument(parsed)) {
+    return { kind: "v1", document: parsed };
+  }
+  if (isPublicationV2SnapshotDocument(parsed)) {
+    throw new Error(
+      "registry-2026-publication/2.0.0 cannot load as an active browser payload (would fabricate 1.1 fields). Generate registry-browser-applications/2.0.0 via build-browser-payload-2x.",
+    );
+  }
+  if (isPublicationSnapshotDocument(parsed)) {
+    return { kind: "v1", document: buildBrowserApplicationPayloadFromPublication(parsed) };
+  }
+  throw new Error(
+    `Application payload must be ${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION}, ${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20}, or registry-2026-publication/1.1.0 snapshot JSON`,
+  );
+}
+
 export function loadApplicationPayloadFromEnv(): RegistryApplicationsDocument | null {
   const raw = process.env[APPLICATION_PAYLOAD_JSON_ENV];
   if (!raw?.trim()) return null;
   return parseApplicationPayloadJson(raw);
 }
 
-async function loadPayloadFromPath(absolutePath: string): Promise<RegistryApplicationsDocument> {
-  const text = await readFile(absolutePath, "utf8");
-  const parsed = JSON.parse(text) as unknown;
-  if (isBrowserApplicationPayloadDocumentV2(parsed)) {
-    throw new Error(
-      `${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20} is not an active browser source path. Keep REGISTRY_HUB_APPLICATION_PAYLOAD_PATH on 1.x / rehearsal / 1.1 publications.`,
-    );
-  }
-  if (isBrowserApplicationPayloadDocument(parsed)) {
-    return parsed;
-  }
-  if (isPublicationV2SnapshotDocument(parsed)) {
-    throw new Error(
-      "registry-2026-publication/2.0.0 cannot load through the active 1.x payload path (would fabricate 1.1 fields). Use inactive buildBrowserApplicationPayloadFromPublicationV2.",
-    );
-  }
-  if (isPublicationSnapshotDocument(parsed)) {
-    return buildBrowserApplicationPayloadFromPublication(parsed);
-  }
-  throw new Error(
-    `Application payload path must be ${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION} or registry-2026-publication/1.1.0 snapshot JSON`,
-  );
+export function loadApplicationPayloadAnyFromEnv(): LoadedApplicationPayload | null {
+  const raw = process.env[APPLICATION_PAYLOAD_JSON_ENV];
+  if (!raw?.trim()) return null;
+  return parseApplicationPayloadAny(raw);
 }
 
-/** Server-only: configured promoted application payload (env JSON wins over file). */
+async function loadPayloadAnyFromPath(absolutePath: string): Promise<LoadedApplicationPayload> {
+  const text = await readFile(absolutePath, "utf8");
+  return parseApplicationPayloadAny(text);
+}
+
+/**
+ * Server-only: configured application payload (env JSON wins over file).
+ * Legacy 1.x-only helper — rejects 2.x (use loadConfiguredApplicationPayloadAny).
+ */
 export async function loadConfiguredApplicationPayload(): Promise<RegistryApplicationsDocument | null> {
-  const fromEnv = loadApplicationPayloadFromEnv();
+  const any = await loadConfiguredApplicationPayloadAny();
+  if (!any) return null;
+  if (any.kind === "v2") {
+    throw new Error(
+      `${REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20} is configured — use loadConfiguredApplicationPayloadAny / version-aware hub loader`,
+    );
+  }
+  return any.document;
+}
+
+/** Server-only: 1.x or 2.x browser payload (PATH preferred for 2.x production). */
+export async function loadConfiguredApplicationPayloadAny(): Promise<LoadedApplicationPayload | null> {
+  const fromEnv = loadApplicationPayloadAnyFromEnv();
   if (fromEnv) return fromEnv;
 
   const configuredPath = process.env[APPLICATION_PAYLOAD_PATH_ENV];
@@ -76,7 +106,7 @@ export async function loadConfiguredApplicationPayload(): Promise<RegistryApplic
     ? configuredPath
     : join(process.cwd(), configuredPath);
   try {
-    return await loadPayloadFromPath(absolute);
+    return await loadPayloadAnyFromPath(absolute);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(

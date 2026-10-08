@@ -419,7 +419,7 @@ export function metricEligibilityProbeForBrowserV2(
   );
 }
 
-/** Data Health metadata slice for an inactive 2.x document (not primary business surface). */
+/** Data Health metadata slice for a 2.x document (operator support). */
 export function dataHealthMetadataFromBrowserV2(document: RegistryApplicationsDocumentV2) {
   return {
     payloadVersion: document.payloadVersion,
@@ -431,6 +431,10 @@ export function dataHealthMetadataFromBrowserV2(document: RegistryApplicationsDo
     officialApplicants: document.officialApplicants,
     coverageCompleteness: document.applicationRecordCoverage.completeness,
     knownExcludedApplicationIds: document.knownExcludedRecords.map((r) => r.applicationId),
+    knownExcludedDescriptors: document.knownExcludedRecords.map((r) => ({
+      applicationId: r.applicationId,
+      notes: r.notes,
+    })),
     officialAggregatesContentSha256: document.bundleManifest.officialAggregatesContentSha256,
     coverageDescriptorSha256: document.bundleManifest.coverageDescriptorSha256,
     applicationGraphContentSha256: document.bundleManifest.applicationGraphContentSha256,
@@ -439,5 +443,118 @@ export function dataHealthMetadataFromBrowserV2(document: RegistryApplicationsDo
     contentionSidecarContentSha256: document.contentionOverlay.sidecarContentSha256,
     contentionReason: document.contentionOverlay.reason ?? null,
     payloadMode: document.payloadMode,
+  };
+}
+
+/**
+ * Apply or clear official contention overlay for an active 2.x document.
+ * Fail-closed for contention only — never invalidates Application rows.
+ * Never infers contention from exact-string grouping.
+ */
+export function bindContentionOverlayForActiveBrowserV2(
+  document: RegistryApplicationsDocumentV2,
+  options: {
+    contentionActuality: ContentionActualityState;
+    sidecar?: ContentionMembershipSnapshotV1 | null;
+    applicationGraphContentSha256: string;
+  },
+): RegistryApplicationsDocumentV2 {
+  const stripOverlay = (apps: readonly BrowserApplicationV2[]): BrowserApplicationV2[] =>
+    apps.map((app) => {
+      const next: BrowserApplicationV2 = { ...app };
+      delete next.officialContention;
+      return next;
+    });
+
+  const base: RegistryApplicationsDocumentV2 = {
+    ...document,
+    applications: stripOverlay(document.applications),
+    contentionOverlay: unavailableContention("Contention actuality not REAL_SOURCE_READY"),
+  };
+
+  if (options.contentionActuality.round2026ContentionActuality !== "REAL_SOURCE_READY") {
+    return base;
+  }
+  if (!options.sidecar) {
+    return {
+      ...base,
+      contentionOverlay: unavailableContention("Contention sidecar not configured"),
+    };
+  }
+  if (
+    !options.contentionActuality.sidecarContentHash
+    || !options.contentionActuality.applicationPublicationPinHash
+  ) {
+    return {
+      ...base,
+      contentionOverlay: unavailableContention("Contention actuality pins incomplete"),
+    };
+  }
+  if (
+    options.contentionActuality.applicationPublicationPinHash
+    !== options.applicationGraphContentSha256
+  ) {
+    return {
+      ...base,
+      contentionOverlay: unavailableContention(
+        "Contention Application pin mismatch — overlay unavailable; Application remains active",
+      ),
+    };
+  }
+
+  const candidate = evaluateContentionMembershipPromotionCandidate(
+    options.sidecar,
+    options.applicationGraphContentSha256,
+  );
+  if (candidate.status !== "PROMOTABLE") {
+    return {
+      ...base,
+      contentionOverlay: unavailableContention(
+        `Contention overlay disabled: ${candidate.errors[0] ?? "pin/validation failed"}`,
+      ),
+    };
+  }
+  if (candidate.sidecarContentSha256 !== options.contentionActuality.sidecarContentHash) {
+    return {
+      ...base,
+      contentionOverlay: unavailableContention(
+        "Contention semantic hash mismatch — overlay unavailable; Application remains active",
+      ),
+    };
+  }
+
+  const index = buildContentionMembershipIndex(options.sidecar);
+  const applications = stripOverlay(document.applications).map((app) => {
+    const setIds = index.get(app.applicationId);
+    const overlay: BrowserOfficialContentionOverlayV2 = setIds?.length
+      ? {
+          membershipPresent: true,
+          officialContentionSetIds: [...setIds].sort(
+            (a, b) => Number(a) - Number(b) || a.localeCompare(b),
+          ),
+          terminology: "official-initial-contention",
+        }
+      : {
+          membershipPresent: false,
+          officialContentionSetIds: [],
+          terminology: "official-initial-contention",
+        };
+    return { ...app, officialContention: overlay };
+  });
+
+  return {
+    ...document,
+    applications,
+    contentionOverlay: {
+      status: "available",
+      schemaVersion: CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
+      snapshotId: options.sidecar.snapshotId,
+      sidecarContentSha256: contentHash(contentionSidecarHashInput(options.sidecar)),
+      rawSha256: options.sidecar.lineage.rawSha256,
+      applicationPublicationPinHash:
+        options.sidecar.applicationPublicationPin.applicationGraphContentSha256,
+      officialContentionSetCount: options.sidecar.quality.officialContentionSetCount,
+      joinedMemberCount: options.sidecar.quality.joinedMemberCount,
+    },
   };
 }
