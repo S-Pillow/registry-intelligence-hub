@@ -1,8 +1,8 @@
 # 2026 APS schema / grain decision (APS-SCHEMA-GRAIN-1)
 
-**Status:** READY_FOR_IMPLEMENTATION (schema design).  
-**Base:** `d456f1f384587681f0502676d6d6bff8f71d2046` (`docs(data): record live APS source contract`).  
-**Scope:** architecture decision only. No parser, no ingestion, no promotion, no UI, no code/schema implementation in this ticket.
+**Status:** ACCEPTED — offline Application CSV ingest implemented as `registry-2026-publication/2.0.0` (see `docs/2026-aps-application-csv-ingest.md`). Still NOT PROMOTED; browser/contention deferred.  
+**Base (decision):** `d456f1f384587681f0502676d6d6bff8f71d2046` (`docs(data): record live APS source contract`).  
+**Scope of this decision record:** architecture. Implementation is APS-INGEST-CSV-1 (offline only).
 
 This record resolves the APS-CONTRACT-2 Decision Request for normalization grain and schema evolution, under the governing product intent (logical Application ≠ APS export row; applicant ≠ organization; no fabricated category/returning; official contention ≠ exact-string; fail-closed promotion).
 

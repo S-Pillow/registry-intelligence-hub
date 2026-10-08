@@ -30,6 +30,19 @@ import { runSanityChecks } from "./sanity-checks";
 import { buildRevealDayVerificationReport } from "./verify-report";
 import { buildBrowserApplicationPayloadFromPublication } from "../lib/registry-application-payload";
 import { buildPublicationFromLocalArtifact, writePublicationReview } from "./build-publication";
+import {
+  buildPublicationFromApsApplicationCsv,
+  writePublicationV2Artifacts,
+} from "./build-publication-v2";
+import {
+  APS_APPLICATION_CSV_ARTIFACT_ROLE,
+  APS_APPLICATION_CSV_MEDIA_TYPE,
+  APS_APPLICATION_CSV_NORMALIZER_VERSION,
+  APS_APPLICATION_CSV_PARSER_VERSION,
+  PUBLICATION_SCHEMA_VERSION_V20,
+  type KnownExcludedRecordV2,
+  type OfficialAggregatesV2,
+} from "./publication-v2-types";
 import { readFile, rm, writeFile } from "node:fs/promises";
 
 const DEFAULT_STATE = "./.data/reveal-2026/claim-actuality-state.json";
@@ -52,10 +65,10 @@ Usage:
   npm run reveal-2026 -- verify-reveal-day [--snapshot <path>] [--state <path>] [--workspace <dir>] [--expected-application-count <n>]
   npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
   npm run reveal-2026 -- build-publication --input <file> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --media-type application/x-ndjson --round 2026 --evidence-class <id> --expected-row-count <n> --expect-source-hash <sha256> --recorded-http-status <n> --parser-version <version> --normalizer-version <version> --schema-version registry-2026-publication/1.1.0 [--fixture-id <id>] [--limitation <text>]
+  npm run reveal-2026 -- build-publication-aps-csv --input <csv> --aggregates <json> --excluded <json> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --recorded-http-status <n> [--evidence-class <id>] [--limitation <text>]
 
-build-publication reads a local file only. It does not fetch URLs and does not promote.
-Every flag above is required. A file name is not treated as an official source.
-On failure the publication path is removed if present. The input file is not modified.
+build-publication reads a local NDJSON wire file only (1.1.0 rehearsal/drill). It does not fetch or promote.
+build-publication-aps-csv reads a local APS Application CSV + official aggregate/coverage JSON (2.0.0). Role-gated; not an unrestricted text/csv parser. Does not fetch, promote, or mutate claim actuality.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -100,6 +113,8 @@ async function main(): Promise<void> {
       "schema-version": { type: "string" },
       "fixture-id": { type: "string" },
       limitation: { type: "string", multiple: true },
+      aggregates: { type: "string" },
+      excluded: { type: "string" },
     },
   });
 
@@ -346,6 +361,135 @@ async function main(): Promise<void> {
       }
       await writePublicationReview(reviewPath, result.review);
       console.log(JSON.stringify(result.review, null, 2));
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+
+    case "build-publication-aps-csv": {
+      if (values.fetch) {
+        throw new Error("build-publication-aps-csv does not fetch URLs. Remove --fetch.");
+      }
+      const requiredFlags = [
+        "input",
+        "aggregates",
+        "excluded",
+        "out",
+        "review-out",
+        "snapshot-id",
+        "artifact-id",
+        "capture-id",
+        "source-url",
+        "source-name",
+        "source-version",
+        "retrieved-at",
+        "published-at",
+        "expect-source-hash",
+        "recorded-http-status",
+      ] as const;
+      const missing = requiredFlags.filter((flag) => {
+        const value = values[flag];
+        return typeof value !== "string" || value.trim() === "";
+      });
+      if (missing.length > 0) {
+        throw new Error(
+          `build-publication-aps-csv missing required flags: ${missing.map((flag) => `--${flag}`).join(", ")}`,
+        );
+      }
+      const inputPath = values.input as string;
+      const outPath = values.out as string;
+      const reviewPath = values["review-out"] as string;
+      const inputResolved = resolve(inputPath);
+      if (resolve(outPath) === inputResolved || resolve(reviewPath) === inputResolved || resolve(outPath) === resolve(reviewPath)) {
+        throw new Error("build-publication-aps-csv output paths must differ from each other and from the input artifact");
+      }
+      const bytes = new Uint8Array(await readFile(inputPath));
+      const aggregatesRaw = JSON.parse(await readFile(values.aggregates as string, "utf8")) as {
+        officialApplicationCount: number;
+        officialApplicantCount: number;
+        retrievedAt: string;
+        sourceUrl: string;
+        contentSha256: string;
+        lastPublishedAt?: string;
+        sourceName?: string;
+      };
+      const excludedRaw = JSON.parse(await readFile(values.excluded as string, "utf8")) as
+        | (KnownExcludedRecordV2 & { htmlSha256?: string })
+        | Array<KnownExcludedRecordV2 & { htmlSha256?: string }>;
+      const knownExcludedRecords = Array.isArray(excludedRaw) ? excludedRaw : [excludedRaw];
+      const officialAggregates: OfficialAggregatesV2 = {
+        officialApplicationCount: aggregatesRaw.officialApplicationCount,
+        officialApplicantCount: aggregatesRaw.officialApplicantCount,
+        provenance: {
+          sourceName: aggregatesRaw.sourceName ?? "ICANN APS Statistics",
+          sourceUrl: aggregatesRaw.sourceUrl,
+          retrievedAt: aggregatesRaw.retrievedAt,
+          contentSha256: aggregatesRaw.contentSha256,
+          ...(aggregatesRaw.lastPublishedAt ? { lastPublishedAt: aggregatesRaw.lastPublishedAt } : {}),
+        },
+      };
+      const sourceVersion = Number.parseInt(values["source-version"] as string, 10);
+      const recordedHttpStatus = Number.parseInt(values["recorded-http-status"] as string, 10);
+      const result = buildPublicationFromApsApplicationCsv({
+        bytes,
+        artifactId: values["artifact-id"] as string,
+        sourceVersion,
+        captureId: values["capture-id"] as string,
+        sourceUrl: values["source-url"] as string,
+        sourceName: values["source-name"] as string,
+        retrievedAt: values["retrieved-at"] as string,
+        publishedAt: values["published-at"] as string,
+        mediaType: (values["media-type"] as string | undefined) ?? APS_APPLICATION_CSV_MEDIA_TYPE,
+        artifactRole: APS_APPLICATION_CSV_ARTIFACT_ROLE,
+        evidenceClass: (values["evidence-class"] as string | undefined) ?? "icann-aps-application-csv",
+        snapshotId: values["snapshot-id"] as string,
+        recordedHttpStatus,
+        expectSourceHash: values["expect-source-hash"] as string,
+        officialAggregates,
+        knownExcludedRecords: knownExcludedRecords.map((row) => {
+          const evidenceSha256 = row.evidenceSha256 ?? row.htmlSha256;
+          return {
+            applicationId: row.applicationId,
+            primaryString: row.primaryString,
+            applicant: row.applicant,
+            location: row.location,
+            region: row.region,
+            applicationStatus: row.applicationStatus,
+            ...(row.applicationType ? { applicationType: row.applicationType } : {}),
+            ...(row.processingStage ? { processingStage: row.processingStage } : {}),
+            sourceUrl: row.sourceUrl,
+            retrievedAt: row.retrievedAt,
+            ...(evidenceSha256 ? { evidenceSha256 } : {}),
+            notes: row.notes,
+          };
+        }),
+        limitations: values.limitation,
+      });
+      if (result.ok && result.publication) {
+        await writePublicationV2Artifacts({
+          publicationPath: outPath,
+          reviewPath,
+          publication: result.publication,
+          review: result.review,
+        });
+      } else {
+        await rm(outPath, { force: true });
+        await writeFile(reviewPath, `${JSON.stringify(result.review, null, 2)}\n`, "utf8");
+      }
+      for (const line of result.review.qualityLines) console.log(line);
+      console.log(
+        JSON.stringify(
+          {
+            ok: result.ok,
+            schemaVersion: PUBLICATION_SCHEMA_VERSION_V20,
+            parserVersion: APS_APPLICATION_CSV_PARSER_VERSION,
+            normalizerVersion: APS_APPLICATION_CSV_NORMALIZER_VERSION,
+            artifactRole: APS_APPLICATION_CSV_ARTIFACT_ROLE,
+            review: result.review,
+          },
+          null,
+          2,
+        ),
+      );
       if (!result.ok) process.exitCode = 1;
       return;
     }

@@ -1,0 +1,8 @@
+﻿"Please note: The ""Label: In Contention"" field in this file will not reflect contention status until String Evaluations are completed. Until then, a value of ""false"" does not mean that an applied-for string is not in contention. Please consult the separately published contention set information to determine contention status."
+
+
+
+Priority,Primary String,Primary String Unicode Label,TLD Variants,TLD Type: Brand,TLD Type: Community,TLD Type: Geo (Self-Designated),TLD Type: Geo (String Review Confirmed),TLD Type: IDN,Application ID,Applicant Name,Application Type,Application Status,Application Processing Stage,Label: GAC Early Warning,Label: GAC Advice,Label: High Risk String,Label: Objection,Label: Safeguard,Label: In Contention,Label: Clarifying Questions,Label: Change Request,Label: Open Comment Period,Label: Comments,Label: RVC,Label: Applicant Support,Label: Variant Only (Existing TLD),Label: Variant Included,Label: CoC Exemption,Label: Reserved Name,Label: CPE,Label: Singular/Plural,Location,Region
+,alpha,,,FALSE,FALSE,FALSE,FALSE,FALSE,SYN1000T-T10001,Alpha Applicant LLC,New gTLD,Active,Pre-Evaluation Processing,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,US,NA
+,beta,,,FALSE,FALSE,FALSE,FALSE,FALSE,SYN1000T-T10001-R,Alpha Applicant LLC,Replacement String,Active,Pre-Evaluation Processing,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,US,NA
+,gamma,,,TRUE,FALSE,FALSE,FALSE,FALSE,SYN2000T-T20001,Beta Applicant Inc,New gTLD,Active,Pre-Evaluation Processing,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,DE,EUR
