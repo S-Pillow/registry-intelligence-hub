@@ -12,6 +12,7 @@ import { isRehearsalPublication } from "./validate";
 import type { Registry2026PublicationSnapshot } from "./types";
 import type { HumanApprovalResult } from "./human-approval";
 import { PUBLICATION_SCHEMA_VERSION_V11 } from "./types";
+import { PUBLICATION_SCHEMA_VERSION_V20 } from "./publication-v2-types";
 
 /**
  * Metrics whose 2026 claim readiness may advance with Application publication actuality.
@@ -158,6 +159,17 @@ export function evaluateApplicationActualityPromotion(
   }
   if (snapshot.publicationKind !== "immutable-publication") {
     errors.push(`publicationKind must be immutable-publication (got ${snapshot.publicationKind})`);
+  }
+  // 2.0.0 has a separate promotion CONTRACT (promotion-contract-2x). Do not convert to 1.1.
+  // Actual 2.0 promote-actuality write remains unauthorized in RIH-PROMOTION-2X-1.
+  if ((snapshot.schemaVersion as string) === PUBLICATION_SCHEMA_VERSION_V20) {
+    return {
+      ok: false,
+      errors: [
+        "RIH-PROMOTION-2X-1 implements the promotion CONTRACT only. Actual promote-actuality for registry-2026-publication/2.0.0 is not authorized in this ticket. Use dry-run-promotion-2x.",
+      ],
+      nextState: current,
+    };
   }
   if (snapshot.schemaVersion !== PUBLICATION_SCHEMA_VERSION_V11 || !snapshot.lineage) {
     errors.push(

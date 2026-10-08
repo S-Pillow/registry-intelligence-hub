@@ -56,6 +56,11 @@ import {
   APS_CONTENTION_CSV_PARSER_VERSION,
   CONTENTION_MEMBERSHIP_SCHEMA_VERSION,
 } from "./contention-membership-types";
+import {
+  loadContentionMembershipFromPath,
+  loadPublicationV2FromPath,
+  runRevealDayPromotion2xDryRun,
+} from "./promotion-contract-2x";
 import { contentHash } from "../normalization/hashes";
 import { readFile, rm, writeFile } from "node:fs/promises";
 
@@ -71,6 +76,7 @@ function usage(): string {
 
 Usage:
   npm run reveal-2026 -- dry-run [--snapshot <path>]
+  npm run reveal-2026 -- dry-run-promotion-2x --snapshot <path> [--contention-snapshot <path>] [--state <path>]
   npm run reveal-2026 -- validate [--snapshot <path>]
   npm run reveal-2026 -- intake-derive [--pipeline-root <dir>] [--out <path>] [--fetch]
   npm run reveal-2026 -- comparison-unlock [--state <path>]
@@ -85,6 +91,7 @@ Usage:
 build-publication reads a local NDJSON wire file only (1.1.0 rehearsal/drill). It does not fetch or promote.
 build-publication-aps-csv reads a local APS Application CSV + official aggregate/coverage JSON (2.0.0). Role-gated; not an unrestricted text/csv parser. Does not fetch, promote, or mutate claim actuality.
 build-contention-membership reads a local Reveal Day contention CSV + pinned Application 2.0.0 publication into registry-2026-contention-membership/1.0.0. Does not rewrite the Application publication, promote, or mutate claim actuality.
+dry-run-promotion-2x validates Application 2.0.0 (± contention sidecar) promotion candidates without writing claim actuality, promotion history, or browser payloads. Actual 2.0 promote-actuality is not authorized by this command.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -136,6 +143,7 @@ async function main(): Promise<void> {
       "expect-application-graph-hash": { type: "string" },
       "final-url": { type: "string" },
       "bundle-id": { type: "string" },
+      "contention-snapshot": { type: "string" },
     },
   });
 
@@ -242,9 +250,42 @@ async function main(): Promise<void> {
       return;
     }
 
+    case "dry-run-promotion-2x": {
+      if (!values.snapshot) {
+        throw new Error("dry-run-promotion-2x requires --snapshot pointing at a registry-2026-publication/2.0.0 artifact");
+      }
+      const beforeState = await readClaimActualityState(statePath);
+      const publication = await loadPublicationV2FromPath(resolve(snapshotPath));
+      const contention = values["contention-snapshot"]
+        ? await loadContentionMembershipFromPath(resolve(values["contention-snapshot"]))
+        : null;
+      const report = runRevealDayPromotion2xDryRun({
+        publication,
+        contention,
+        applicationOnly: !contention,
+      });
+      const afterState = await readClaimActualityState(statePath);
+      if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+        throw new Error("dry-run-promotion-2x mutated claim actuality state — abort");
+      }
+      console.log(JSON.stringify(report, null, 2));
+      if (report.application.status !== "PROMOTABLE") process.exitCode = 1;
+      if (contention && report.contention?.status !== "PROMOTABLE") process.exitCode = 1;
+      return;
+    }
+
     case "promote-actuality": {
       if (!values.snapshot) {
         throw new Error("promote-actuality requires --snapshot pointing at an immutable publication (not the default rehearsal fixture)");
+      }
+      // Schema dispatch: refuse 2.0.0 actual writes (contract-only ticket). Keep 1.1 path intact.
+      const peek = JSON.parse(await readFile(resolve(snapshotPath), "utf8")) as { schemaVersion?: string };
+      if (peek.schemaVersion === PUBLICATION_SCHEMA_VERSION_V20) {
+        console.error(
+          "RIH-PROMOTION-2X-1: actual promote-actuality for registry-2026-publication/2.0.0 is not authorized. Use dry-run-promotion-2x.",
+        );
+        process.exitCode = 1;
+        return;
       }
       const humanApproval = evaluateHumanApprovals({
         stewardApprovalId: values["steward-approval"],
