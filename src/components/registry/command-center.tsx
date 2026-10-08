@@ -151,7 +151,6 @@ import {
 import { useHubRegistryData, useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { ActiveSourceFailClosed } from "@/components/registry/active-source-fail-closed";
 import { ExploreContentV2 } from "@/components/registry/explore-content-v2";
-import { SearchContentV2 } from "@/components/registry/search-content-v2";
 import { CommandCenterOrientationV2 } from "@/components/registry/command-center-orientation-v2";
 import { hubPath } from "@/lib/hub-paths";
 import {
@@ -2262,10 +2261,7 @@ function CommandCenterActiveV2({
         ) : view === "data-health" ? (
           <DataHealthContent state={state} />
         ) : (
-          <div className="space-y-8">
-            <CommandCenterOrientationV2 document={document} claimActuality={claimActuality} />
-            <SearchContentV2 document={document} />
-          </div>
+          <CommandCenterOrientationV2 document={document} claimActuality={claimActuality} />
         )}
       </main>
     </div>

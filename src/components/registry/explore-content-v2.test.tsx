@@ -56,7 +56,11 @@ describe("active 2.x Search/Explore/Command Center surfaces", () => {
     ).nextState;
     render(<CommandCenterOrientationV2 document={document} claimActuality={claim} />);
     expect(screen.getByTestId("cc-v2-official-apps")).toHaveTextContent("1615");
-    expect(screen.getByTestId("cc-v2-unique-blocked")).toBeInTheDocument();
+    expect(screen.getByTestId("cc-v2-coverage-observed")).toHaveTextContent("1614");
+    expect(screen.queryByTestId("cc-v2-unique-blocked")).not.toBeInTheDocument();
+    expect(screen.getByTestId("cc-v2-omitted-blocked-cross-round")).toHaveTextContent(
+      "unique-applied-strings",
+    );
   });
 
   it("31 — Command Center does not crash on active 2.x", async () => {
@@ -99,6 +103,7 @@ describe("active 2.x Search/Explore/Command Center surfaces", () => {
       </HubClaimActualityProvider>,
     );
     expect(screen.getByTestId("command-center-active-v2")).toBeInTheDocument();
-    expect(screen.getAllByTestId("coverage-disclosure-v2").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("cc-v2-coverage-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("cc-v2-official-apps")).toHaveTextContent("1615");
   });
 });

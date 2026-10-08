@@ -2,7 +2,7 @@
 
 Phase 0 foundation for a source-backed ICANN application intelligence experience. The runnable browser experience includes a frozen v1 Command Center, a composable Explore research backbone, deterministic fixture metrics, evidence drill-down, and responsive loading, empty, and error states.
 
-**Production (srv766238, 2026-10-08):** Reveal Day Application + contention are promoted (`REAL_SOURCE_READY`) on deployed commit `e66c57945826e22e390c666053a637ef500e4447` with active Browser 2.x. Canonical handoff — live hashes, eligibility, rollback, and next product sequence: [`docs/2026-reveal-day-production-closeout.md`](docs/2026-reveal-day-production-closeout.md).
+**Production (srv766238, 2026-10-08):** Reveal Day Application + contention are promoted (`REAL_SOURCE_READY`) on deployed commit `e66c57945826e22e390c666053a637ef500e4447` with active Browser 2.x. Canonical handoff — live hashes, eligibility, rollback, and next product sequence: [`docs/2026-reveal-day-production-closeout.md`](docs/2026-reveal-day-production-closeout.md). Command Center product IA (intelligence-first, not APS-browser clone): [`docs/2026-command-center-intelligence.md`](docs/2026-command-center-intelligence.md).
 
 Local/dev default without claim actuality remains the synthetic 12-application rehearsal fixture. That fixture must not be treated as the official 2026 Reveal Day publication.
 
