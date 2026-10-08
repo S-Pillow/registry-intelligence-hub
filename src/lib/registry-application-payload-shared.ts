@@ -6,7 +6,9 @@ import {
 } from "@/reveal-day-2026/claim-actuality";
 import { REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION } from "@/reveal-day-2026/browser-payload-types";
 import { PUBLICATION_SCHEMA_VERSION_V11, type Registry2026PublicationSnapshot } from "@/reveal-day-2026/types";
+import { PUBLICATION_SCHEMA_VERSION_V20 } from "@/reveal-day-2026/publication-v2-types";
 import type { RegistryApplicationsDocument } from "@/lib/registry-applications-document";
+import { isBrowserApplicationPayloadDocumentV2 } from "@/lib/registry-applications-document-v2";
 
 export type { RegistryApplicationsDocument } from "@/lib/registry-applications-document";
 export { REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION } from "@/reveal-day-2026/browser-payload-types";
@@ -22,6 +24,7 @@ export type HubRegistryDataResolution = {
     | "payload-not-configured"
     | "snapshot-id-mismatch"
     | "content-hash-mismatch"
+    | "payload-version-unsupported-for-active"
     | "promoted-active";
 };
 
@@ -67,16 +70,35 @@ export function isPublicationSnapshotDocument(value: unknown): value is Registry
   );
 }
 
+export function isPublicationV2SnapshotDocument(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    record.schemaVersion === PUBLICATION_SCHEMA_VERSION_V20
+    && record.publicationKind === "immutable-publication"
+    && Array.isArray(record.applications)
+  );
+}
+
 export function resolveActiveRegistryApplicationsDocument(
   claimActualityState: ClaimActualityState,
-  configuredPayload: RegistryApplicationsDocument | null,
+  configuredPayload: RegistryApplicationsDocument | null | unknown,
 ): HubRegistryDataResolution {
   const rehearsal = rehearsalRegistryApplicationsDocument();
+
+  // 2.x documents are never the active Command Center / Explore / Search source in this ticket.
+  if (isBrowserApplicationPayloadDocumentV2(configuredPayload)) {
+    return {
+      document: rehearsal,
+      mode: "rehearsal",
+      selectionReason: "payload-version-unsupported-for-active",
+    };
+  }
 
   if (claimActualityState.round2026ApplicationActuality !== "REAL_SOURCE_READY") {
     return { document: rehearsal, mode: "rehearsal", selectionReason: "claim-not-promoted" };
   }
-  if (!configuredPayload) {
+  if (!configuredPayload || !isBrowserApplicationPayloadDocument(configuredPayload)) {
     return { document: rehearsal, mode: "rehearsal", selectionReason: "payload-not-configured" };
   }
   if (configuredPayload.snapshotId !== claimActualityState.snapshotId) {

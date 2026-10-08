@@ -61,6 +61,7 @@ import {
   loadPublicationV2FromPath,
   runRevealDayPromotion2xDryRun,
 } from "./promotion-contract-2x";
+import { buildBrowserApplicationPayloadFromPublicationV2 } from "../lib/registry-application-payload-v2";
 import { contentHash } from "../normalization/hashes";
 import { readFile, rm, writeFile } from "node:fs/promises";
 
@@ -84,6 +85,7 @@ Usage:
   npm run reveal-2026 -- promotion-history [--history <path>]
   npm run reveal-2026 -- verify-reveal-day [--snapshot <path>] [--state <path>] [--workspace <dir>] [--expected-application-count <n>]
   npm run reveal-2026 -- build-browser-payload --snapshot <path> [--out <path>]
+  npm run reveal-2026 -- build-browser-payload-2x --snapshot <path> [--contention-snapshot <path>] [--out <path>]
   npm run reveal-2026 -- build-publication --input <file> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --media-type application/x-ndjson --round 2026 --evidence-class <id> --expected-row-count <n> --expect-source-hash <sha256> --recorded-http-status <n> --parser-version <version> --normalizer-version <version> --schema-version registry-2026-publication/1.1.0 [--fixture-id <id>] [--limitation <text>]
   npm run reveal-2026 -- build-publication-aps-csv --input <csv> --aggregates <json> --excluded <json> --out <file> --review-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --recorded-http-status <n> [--evidence-class <id>] [--limitation <text>]
   npm run reveal-2026 -- build-contention-membership --input <csv> --application-publication <json> --out <file> --review-out <file> --bundle-out <file> --snapshot-id <id> --artifact-id <id> --capture-id <id> --source-url <url> --source-name <name> --source-version <n> --retrieved-at <utc> --published-at <utc> --expect-source-hash <sha256> --expect-application-graph-hash <sha256> --recorded-http-status <n> [--final-url <url>] [--evidence-class <id>] [--limitation <text>]
@@ -92,6 +94,7 @@ build-publication reads a local NDJSON wire file only (1.1.0 rehearsal/drill). I
 build-publication-aps-csv reads a local APS Application CSV + official aggregate/coverage JSON (2.0.0). Role-gated; not an unrestricted text/csv parser. Does not fetch, promote, or mutate claim actuality.
 build-contention-membership reads a local Reveal Day contention CSV + pinned Application 2.0.0 publication into registry-2026-contention-membership/1.0.0. Does not rewrite the Application publication, promote, or mutate claim actuality.
 dry-run-promotion-2x validates Application 2.0.0 (± contention sidecar) promotion candidates without writing claim actuality, promotion history, or browser payloads. Actual 2.0 promote-actuality is not authorized by this command.
+build-browser-payload-2x writes an inactive registry-browser-applications/2.0.0 projection (no fabricated 1.1 fields). Does not change active source configuration or claim actuality.
 
 Defaults:
   --snapshot  ${DEFAULT_REHEARSAL_SNAPSHOT} (rehearsal-for-pipeline-only)
@@ -159,6 +162,12 @@ async function main(): Promise<void> {
       if (!values.snapshot) {
         throw new Error("build-browser-payload requires --snapshot");
       }
+      const peek = JSON.parse(await readFile(resolve(snapshotPath), "utf8")) as { schemaVersion?: string };
+      if (peek.schemaVersion === PUBLICATION_SCHEMA_VERSION_V20) {
+        throw new Error(
+          "build-browser-payload is the 1.1 path. For registry-2026-publication/2.0.0 use build-browser-payload-2x (inactive 2.x projection).",
+        );
+      }
       const snapshot = await loadPublicationSnapshotFromPath(snapshotPath);
       const payload = buildBrowserApplicationPayloadFromPublication(snapshot);
       const outPath = values.out ?? join(workspaceRoot, "src/data/fixtures/drill-2026-registry-applications.payload.json");
@@ -171,6 +180,47 @@ async function main(): Promise<void> {
             snapshotId: payload.snapshotId,
             snapshotContentHash: payload.snapshotContentHash,
             applicationCount: payload.applications.length,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    case "build-browser-payload-2x": {
+      if (!values.snapshot) {
+        throw new Error("build-browser-payload-2x requires --snapshot pointing at registry-2026-publication/2.0.0");
+      }
+      const beforeState = await readClaimActualityState(statePath);
+      const publication = await loadPublicationV2FromPath(resolve(snapshotPath));
+      const contention = values["contention-snapshot"]
+        ? await loadContentionMembershipFromPath(resolve(values["contention-snapshot"]))
+        : null;
+      const payload = buildBrowserApplicationPayloadFromPublicationV2(publication, { contention });
+      const outPath = values.out
+        ? resolve(values.out)
+        : join(workspaceRoot, ".data/reveal-2026/publications/aps-applications-2.0.0.browser-inactive.json");
+      await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`);
+      const afterState = await readClaimActualityState(statePath);
+      if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+        throw new Error("build-browser-payload-2x mutated claim actuality state — abort");
+      }
+      console.log(
+        JSON.stringify(
+          {
+            outPath,
+            payloadVersion: payload.payloadVersion,
+            payloadMode: payload.payloadMode,
+            snapshotId: payload.snapshotId,
+            snapshotContentHash: payload.snapshotContentHash,
+            observedApplicationRecords: payload.observedApplicationRecords,
+            officialApplications: payload.officialApplications,
+            officialApplicants: payload.officialApplicants,
+            contentionOverlay: payload.contentionOverlay.status,
+            activeSourceChanged: false,
+            claimActualityWritten: false,
+            serializedBytes: Buffer.byteLength(JSON.stringify(payload), "utf8"),
           },
           null,
           2,

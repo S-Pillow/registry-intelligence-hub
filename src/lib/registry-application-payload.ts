@@ -4,8 +4,21 @@ import type { Registry2026PublicationSnapshot } from "@/reveal-day-2026/types";
 import { REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION } from "@/reveal-day-2026/browser-payload-types";
 import type { Application, HistoricalContext } from "@/lib/registry-data";
 import type { RegistryApplicationsDocument } from "@/lib/registry-applications-document";
+import { PUBLICATION_SCHEMA_VERSION_V20 } from "@/reveal-day-2026/publication-v2-types";
 
 export * from "@/lib/registry-application-payload-shared";
+export {
+  buildBrowserApplicationPayloadFromPublicationV2,
+  buildBrowserApplicationPayloadByPublicationSchema,
+  isBrowserApplicationPayloadDocumentV2,
+  filterBrowserApplicationsV2,
+  localResultCountV2,
+  coverageDisclosureForDocumentV2,
+  assertDocumentCompatibleWithBriefingsOrSaved,
+  metricEligibilityProbeForBrowserV2,
+  dataHealthMetadataFromBrowserV2,
+  UNSUPPORTED_EXPLORE_FACETS_V2,
+} from "@/lib/registry-application-payload-v2";
 
 export function snapshotContentHashForPublication(snapshot: Registry2026PublicationSnapshot): string {
   return contentHash({
@@ -14,10 +27,18 @@ export function snapshotContentHashForPublication(snapshot: Registry2026Publicat
   });
 }
 
-/** Immutable browser document from a validated 2026 publication snapshot (server/CLI). */
+/**
+ * Immutable 1.1-shaped browser document from a validated 1.1 publication snapshot.
+ * Do not pass Publication 2.0.0 here — use buildBrowserApplicationPayloadFromPublicationV2.
+ */
 export function buildBrowserApplicationPayloadFromPublication(
   snapshot: Registry2026PublicationSnapshot,
 ): RegistryApplicationsDocument {
+  if ((snapshot.schemaVersion as string) === PUBLICATION_SCHEMA_VERSION_V20) {
+    throw new Error(
+      "registry-2026-publication/2.0.0 cannot be projected through the 1.1 browser builder (would require fabricated organization/category/returning/confidence). Use buildBrowserApplicationPayloadFromPublicationV2.",
+    );
+  }
   const snapshotContentHash = snapshotContentHashForPublication(snapshot);
   const applications = snapshot.applications.map((row) => ({
     id: row.id,
