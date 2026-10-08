@@ -18,8 +18,9 @@ This record resolves the APS-CONTRACT-2 Decision Request for normalization grain
 | String model | Separate AppliedString / ReplacementString (and VariantString when present) entities/relationships under the Application |
 | `organization` / `category` / `returning` | Not source fields; omit from source application schema (derived / later enrichment only) |
 | Official contention | Separate supplemental artifact + normalized membership sidecar (Case E); never fill from app-CSV `Label: In Contention` |
-| WDO | **Option A** — do not invent a 1615th normalized application; coverage 1614/1615 + separate admin-check evidence record |
-| Official aggregates (1615 / 481 / …) | Snapshot/bundle **metadata** (official channel), never row-calculated masquerading as Statistics |
+| WDO | **Option A** — do not invent a full normalized WDO Application; keep partial record coverage + separate admin-check evidence descriptor |
+| Official aggregates vs observed records | Keep **separate channels**: official Statistics/announcement aggregates ≠ `len(normalizedApplications)` (observed coverage). Never collapse 1614 into 1615 |
+| Promotion vs metric eligibility | **Separate.** Promoting a partial-coverage snapshot does **not** authorize round-wide calculated metrics as complete |
 | Publication schema version | **`registry-2026-publication/2.0.0`** (breaking grain + field disposition) |
 | Wire / browser | New wire `registry-2026-intake-wire/2.0.0`; browser payload bump coordinated (`registry-browser-applications/2.0.0` or equivalent) |
 | NDJSON drill `1.1.0` | Remains offline rehearsal/drill only until migrated; not production APS path |
@@ -30,8 +31,8 @@ This record resolves the APS-CONTRACT-2 Decision Request for normalization grain
 
 | Concept | Definition |
 | --- | --- |
-| **Raw APS row** | One Applications-tab / CSV export record (2783 in current capture), including `-R` rows |
-| **Normalized Application** | One logical submitted application in the 2026 round, identified by the non-`-R` APS Application ID |
+| **Raw APS row** | One Applications-tab / CSV export record (`source_row_count` = **2783** in current capture), including `-R` rows |
+| **Normalized Application (observed)** | One logical application record normalized from the ordinary export, identified by the non-`-R` APS Application ID. Current capture: `normalized_application_records_observed` = **1614**. This is **coverage/observed-record** truth, **not** the official round application total |
 | **AppliedString** | Primary applied-for string evidence for that Application (source row without `-R`) |
 | **ReplacementString** | Replacement applied-for string evidence linked by `applicationId + "-R"` (source row with `-R`) |
 | **VariantString** | Variant label evidence from APS fields (`TLD Variants`, variant application types / labels) — separate from primary/replacement |
@@ -39,7 +40,10 @@ This record resolves the APS-CONTRACT-2 Decision Request for normalization grain
 | **Organization** | Broader evidence-backed resolved entity — **never** inferred from Applicant Name during APS normalize |
 | **ContentionSet (official)** | Membership from Reveal Day contention CSV (set id `#`, member Application ID) |
 | **Exact-string group** | RIH calculated layer only (`exact-applied-string-grouping/1.0.0`) |
-| **Official aggregate** | APS Statistics / announcement channel facts stored as metadata, not derived from normalized row length |
+| **Official aggregate** | APS Statistics / announcement channel facts stored as metadata (`official_application_count` = **1615**, `official_applicant_count` = **481**, …). **Never** derived from, or replaced by, `len(normalizedApplications)` |
+
+**Hard separation (APS-SCHEMA-GRAIN-1A):**  
+`1614` normalized observed records **≠** official `1615` applications. Any headline or cross-round “application count” must use an approved official-aggregate contract when comparable, otherwise mark comparison unavailable/blocked — never substitute the incomplete normalized count.
 
 ---
 
@@ -68,29 +72,83 @@ This record resolves the APS-CONTRACT-2 Decision Request for normalization grain
 | Item | Decision |
 | --- | --- |
 | Recommended option | **A** |
-| Why | Ordinary export has 1614 non-replacement applications; WDO is absent from export/list/contention CSV; HTML admin-check page states related information is “not currently available”; inventing flags/FALSE values or a full Application to force 1615 would fabricate source facts |
-| Coverage representation | Publication metadata: `coverage.normalizedApplicationsFromOrdinaryExport = 1614`, `coverage.officialStatisticsApplications = 1615`, `coverage.knownExcludedRecords[]` including WDO admin-check descriptor (id, string, applicant, region/location, status text, source URL) without claiming full CSV-equivalent field coverage |
-| Promotion implication | May promote a hash-pinned 1614-application snapshot with explicit coverage limitations; must **not** claim normalized `applications.length === 1615`; official 1615 remains metadata |
+| Why | Ordinary export yields **1614** normalized application records; WDO is absent from export/list/contention CSV; HTML admin-check page states related information is “not currently available”; inventing a full Application (or fabricating flags) to force **1615** would fabricate source facts |
+| Coverage representation | See explicit `application_record_coverage` below |
+| Pre-Reveal 1616 vs Reveal Day 1615 | Remains **OPEN**. WDO explains export vs Statistics consistency (**1614 + WDO ≈ 1615**) as observed consistency only; **do not** claim WDO proves why pre-Reveal **1616** became Reveal Day **1615** |
+| Promotion implication | A later authorized gate **may** promote a hash-pinned snapshot containing **1614** normalized application records **plus** explicit partial coverage metadata. **Promotion ≠ complete metric eligibility.** Partial row coverage must not be treated as complete round-wide metric coverage |
+
+### Required coverage fields (names normative for implementers)
+
+```text
+source_row_count = 2783
+normalized_application_records_observed = 1614
+official_application_count = 1615
+official_applicant_count = 481
+
+application_record_coverage:
+  observed = 1614
+  official = 1615
+  completeness = partial
+  known_excluded_records = [ WDO descriptor … ]
+```
+
+WDO descriptor (coverage / separate evidence only): application id, string, applicant, region/location, status text, source URL — **not** a fabricated full normalized Application.
 
 Option B (normalize WDO from supplemental HTML/API) is deferred until a machine-complete official row appears in the ordinary export or a field-complete official artifact is contracted.
 
 ---
 
-## Official counts
+## Official counts vs observed records
 
-Store under publication/bundle metadata, e.g. `officialAggregates` (name illustrative):
+Store under publication/bundle metadata. Channels must stay distinct:
 
-| Fact | Channel | Stored as |
-| --- | --- | --- |
-| Applications 1615 | APS Statistics | official aggregate |
-| Applicants 481 | APS Statistics | official aggregate |
-| Applicants-by-region | APS Statistics | official aggregate |
-| Designation announcement counts | Reveal Day press (optional supporting) | labeled supporting aggregate — not row-derived unless explicitly computed and labeled from non-replacement flags |
-| Source-row count 2783 | Application CSV | artifact observation |
-| Normalized application count | Count of normalized Applications | **calculated** |
-| Contention members/sets | Contention CSV | supplemental artifact observation / normalized membership counts |
+| Fact | Value (current Reveal Day observation) | Channel | Role |
+| --- | --- | --- | --- |
+| `source_row_count` | **2783** | Application CSV | Artifact observation |
+| `normalized_application_records_observed` | **1614** | Count of normalized Applications from ordinary export | **Coverage / observed-record metric only** |
+| `official_application_count` | **1615** | APS Statistics | **Authoritative official aggregate** |
+| `official_applicant_count` | **481** | APS Statistics | **Authoritative official aggregate** |
+| Observed ordinary-export distinct applicant names | **480** | Application CSV (derived) | Source-record coverage observation — **not** the official applicant total |
+| Applicants-by-region | APS Statistics values | APS Statistics | Official aggregate |
+| Designation announcement counts | Press (optional supporting) | Announcement | Labeled supporting aggregate — not silently row-derived |
+| Contention members/sets | 891 / 263 | Contention CSV | Supplemental artifact observation |
 
-Reconciliation report (review/quality): compare calculated vs official; record WDO gap; never overwrite official with calculated.
+**Forbidden collapse:** never present `normalized_application_records_observed` (1614) as `official_application_count` (1615).
+
+Reconciliation report (review/quality): compare observed vs official; record WDO under `known_excluded_records`; never overwrite official aggregates with row-derived counts.
+
+---
+
+## Metric eligibility (promotion is separate)
+
+Snapshot promotion and metric eligibility are **separate gates**.
+
+A promoted application snapshot with disclosed **partial** `application_record_coverage` does **not** automatically authorize round-wide calculated metrics.
+
+Eligibility classes:
+
+| Class | Meaning |
+| --- | --- |
+| **OFFICIAL_AGGREGATE** | May use a separately sourced authoritative aggregate when grain and comparability with the historical metric are established |
+| **ROW_DERIVED_COMPLETE_REQUIRED** | Remains blocked/partial while missing source records could change the metric |
+| **ROW_DERIVED_UNAFFECTED_PROVEN** | Eligible only when evidence **proves** the coverage gap cannot change the metric (equality of two numbers alone is **not** proof) |
+
+### Headline / cross-round application count
+
+- Authoritative figure while coverage is partial: **`official_application_count` = 1615** under an **OFFICIAL_AGGREGATE** contract **if** that aggregate’s semantic definition is approved as comparable with the historical metric.
+- Otherwise mark comparison **unavailable/blocked**.
+- **`len(normalizedApplications)` / 1614** is a coverage/observed-record metric only. It **MUST NOT** be presented as the official 2026 round application count while coverage is 1614/1615.
+
+### Metric applications
+
+| Metric | Class / rule |
+| --- | --- |
+| **Application count** | Official **1615** = authoritative aggregate. Observed normalized records = **1614**. Never collapse. Headline/cross-round uses OFFICIAL_AGGREGATE when comparable; else blocked. Row-derived 1614 is coverage only |
+| **Unique applied strings** | **ROW_DERIVED_COMPLETE_REQUIRED** while ordinary export coverage is partial — do not treat a 1614-record calculation as complete round-wide truth; blocked/partial until complete evidence or an approved official aggregate exists |
+| **IDN applications** | Announcement reports **21**; ordinary-export non-replacement CSV also shows **21**. **Do not** infer from equality alone that the missing record cannot affect future source-derived calculations. Official **21** may be used only under an explicitly defined **OFFICIAL_AGGREGATE** metric contract; otherwise keep row-derived IDN blocked/partial |
+| **Applicant count** | Official Statistics = **481**. Observed ordinary-export distinct names = **480**. Distinguish aggregate from source-record coverage; do not present 480 as official 481 |
+
+Org/category/returning remain blocked as before (not APS source fields).
 
 ---
 
@@ -161,16 +219,26 @@ Missing ≠ zero. Unavailable ≠ false unless APS explicitly publishes false.
 
 ## Content hash / promotion
 
-| Hash | Inputs | Must exclude |
+Preserve fail-closed pinning. Do **not** design a second promotion system.
+
+| Hash / pin | Inputs | Must exclude |
 | --- | --- | --- |
-| Application publication content hash | Canonical normalized Application graph for the snapshot (ids, applicants, source flags, string relationships, coverage descriptors that are part of the pinned claim set — exact key list fixed in implementation) + `snapshotId` | `retrievedAt`, local paths, org/category/returning enrichment, exact-string calculations, browser-only projections |
-| Raw application artifact | `lineage.rawSha256` of immutable CSV bytes | — |
-| Contention raw artifact | Separate `rawSha256` | — |
-| Contention sidecar content hash | Canonical membership rows + pin to application `snapshotContentHash` | Retrieval time / paths |
+| **Normalized application content hash** | Canonical normalized Application graph (`applications[]` / string relationships / source flags as fixed by implementation) + `snapshotId` | `retrievedAt`, local paths, org/category/returning enrichment, exact-string calculations, browser-only projections |
+| **Coverage metadata** | Stored on the publication/bundle; pin/version with the promoted snapshot (see below) | Must not be silently dropped on promote |
+| **Official aggregate provenance** | Statistics (and any approved announcement aggregates) with source URL/retrieved-at/raw digest as available | Must not be invented from row counts |
+| **Raw application artifact** | `lineage.rawSha256` of immutable CSV bytes | — |
+| **Contention raw + sidecar** | Separate `rawSha256` + sidecar content hash pinned to application `snapshotContentHash` | Retrieval time / paths |
 
-Claim actuality continues to pin `snapshotId` + application `snapshotContentHash` (+ raw sha). Org metrics remain gated. Application-count method = count(normalized Applications) with disclosed coverage; must not silently report Statistics 1615 as the calculated metric.
+### Official aggregates vs application content hash
 
-Comparison gates: no weakening. Incomplete org/category/returning stays blocked.
+**Preferred principle:**
+
+- Official aggregate values may be **outside** the normalized application graph hash (so changing only a retrieved-at on Stats does not rewrite application-row identity).
+- A change in the authoritative official aggregate **relevant to the promoted snapshot** must still be **detectably versioned/pinned somewhere in the publication bundle/manifest** (e.g. aggregate provenance digest / bundle manifest hash referenced by claim actuality), even when excluded from the normalized application graph hash.
+
+Claim actuality continues to pin `snapshotId` + application `snapshotContentHash` (+ raw sha) and must retain linkage to coverage + official-aggregate pins. Org metrics remain gated.
+
+**Promotion ≠ metric eligibility:** promoting a partial-coverage 1614-record snapshot does not unlock row-derived round-wide metrics as complete, and does not authorize presenting 1614 as official 1615.
 
 ---
 
@@ -212,7 +280,7 @@ Comparison gates: no weakening. Incomplete org/category/returning stays blocked.
 3. Build publication review with officialAggregates + coverage (Stats JSON optional supporting capture).
 4. Contention CSV → separate raw store + `registry-2026-contention-membership/1.0.0` sidecar builder pinned to app snapshot.
 5. Browser converter 2.x: map logical Applications without inventing org/category/returning; contention join optional/labeled.
-6. Migrate tests: grain counts, `-R` linkage, quarantine, coverage, hash stability, promotion pin, gate retention.
+6. Migrate tests: grain counts, `-R` linkage, quarantine, coverage vs official aggregates, metric eligibility classes, hash/bundle pins, promotion≠eligibility, gate retention.
 7. Keep `1.1.0` NDJSON path marked rehearsal/drill until explicitly retired.
 
 **Likely files (later tickets):** `src/reveal-day-2026/types.ts`, `validate.ts`, `intake-adapter.ts`, `build-publication.ts`, `normalize.ts`, `claim-actuality.ts`, `src/lib/registry-application-payload*.ts`, `registry-data.ts` / Explore consumers, fixtures/tests, docs cross-links.
@@ -223,6 +291,6 @@ Comparison gates: no weakening. Incomplete org/category/returning stays blocked.
 
 ## Decision status
 
-**READY_FOR_IMPLEMENTATION** for schema/grain design.
+**READY_FOR_IMPLEMENTATION** for schema/grain design, as corrected by **APS-SCHEMA-GRAIN-1A** (official aggregate ≠ observed record coverage; promotion ≠ complete metric eligibility).
 
-No remaining owner decision is required to begin schema typing and offline CSV normalization design work under Option A. Product may later choose to **delay promotion** until WDO appears in the ordinary export; that is an operations timing choice, not a schema blocker.
+No remaining owner decision is required to begin schema typing and offline CSV normalization design work under Option A with partial coverage metadata. Whether/when to **promote** a partial-coverage snapshot remains an authorized quality/promotion-gate timing choice — and even after promotion, metric eligibility stays separately gated.
