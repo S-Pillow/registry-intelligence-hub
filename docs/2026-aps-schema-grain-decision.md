@@ -51,17 +51,17 @@ This record resolves the APS-CONTRACT-2 Decision Request for normalization grain
 
 **Source relationship (deterministic):**
 
-1. If `Application Type == "Replacement String"` XOR `Application ID` ends with `-R` → fail closed (inconsistent source).
-2. Otherwise if ID ends with `-R`:
+1. A valid replacement source row requires **both** indicators: Application ID ends with `-R` **and** `Application Type == "Replacement String"`. A base/normal row has neither. If the indicators disagree (exactly one true), fail closed — do not treat disagreement as a classification rule for “replacement.”
+2. When both indicators are true:
    - `replacementSourceId = Application ID`
    - `baseApplicationId = Application ID` without the final `-R` suffix
    - Require `baseApplicationId` present as a non-replacement row in the same artifact
    - Require same `Applicant Name` as base (integrity check; observed 1169/1169)
    - Attach as `ReplacementString` under Application `baseApplicationId`
    - Preserve full `-R` id, primary-string column value (this is the replacement string label), status, stage, flags, row provenance
-3. Non-`-R` rows become Applications; their `Primary String` becomes `AppliedString`.
+3. Non-`-R` rows with a normal application type become Applications; their `Primary String` becomes `AppliedString`.
 
-**Failure behavior:** unmatched `-R`, double-`-R`, type/id mismatch, or applicant mismatch → quarantine row; do not silently drop; do not create orphan Applications from `-R` alone.
+**Failure behavior:** unmatched `-R`, double-`-R`, indicator disagreement, or applicant mismatch → quarantine row; do not silently drop; do not create orphan Applications from `-R` alone.
 
 **Ordering:** linkage is by identifier, not CSV order.
 

@@ -51,7 +51,7 @@ If `--expect-source-hash` does not match local bytes → fail with SOURCE_CHANGE
 
 - **Raw APS row** ≠ **normalized Application**.
 - One Application is keyed by the non-`-R` Application ID.
-- `-R` / `Replacement String` rows normalize to `replacementString` on the base Application (fail-closed if unmatched or applicant mismatch).
+- A replacement source row requires **both** `-R` ID suffix and `Application Type == "Replacement String"`; indicator disagreement fails closed. Matched pairs normalize to `replacementString` on the base Application (also fail-closed if unmatched or applicant mismatch).
 - Keep source-backed fields: applicant, location/country, region, status, stage, APS application type, designation/label booleans, AppliedString, optional ReplacementString, source-row IDs.
 - Do **not** fabricate: `organization`, `category`, `returning`, `confidence`, or official contention membership.
 - Official aggregates and coverage live as separate publication channels from `applications[]`.
@@ -91,7 +91,7 @@ Rejects:
 - missing/mismatched Application headers
 - malformed preamble/header structure
 - duplicate source Application IDs
-- unmatched / inconsistent `-R` replacements
+- unmatched `-R` / applicant mismatch / indicator disagreement (`-R` vs `Replacement String`)
 
 Existing NDJSON path (`registry-2026-publication/1.1.0`, `build-publication`) remains for rehearsal/drill.
 

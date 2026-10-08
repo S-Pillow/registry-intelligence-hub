@@ -87,6 +87,35 @@ describe("APS Application CSV parser / publication 2.0.0", () => {
     expect(alpha!.appliedString.sourceRowId).toBe("SYN1000T-T10001");
   });
 
+  it("accepts -R + Replacement String as replacement and no -R + normal type as base", () => {
+    const parsed = parseAndNormalizeApsApplicationCsv(withBom(loadFixture("minimal-applications.csv")));
+    const alpha = parsed.applications.find((a) => a.applicationId === "SYN1000T-T10001")!;
+    const gamma = parsed.applications.find((a) => a.applicationId === "SYN2000T-T20001")!;
+    expect(alpha.replacementString?.sourceRowId.endsWith("-R")).toBe(true);
+    expect(alpha.replacementString?.applicationType).toBe("Replacement String");
+    expect(gamma.applicationId.endsWith("-R")).toBe(false);
+    expect(gamma.applicationType).toBe("New gTLD");
+    expect(gamma.replacementString).toBeUndefined();
+  });
+
+  it("rejects -R with non-replacement application type", () => {
+    const bytes = mutateCsv(loadFixture("minimal-applications.csv"), (text) =>
+      text.replace(
+        ",SYN1000T-T10001-R,Alpha Applicant LLC,Replacement String,",
+        ",SYN1000T-T10001-R,Alpha Applicant LLC,New gTLD,",
+      ));
+    expect(() => parseAndNormalizeApsApplicationCsv(withBom(bytes))).toThrow(/replacement indicators disagree/i);
+  });
+
+  it("rejects Replacement String without -R suffix", () => {
+    const bytes = mutateCsv(loadFixture("minimal-applications.csv"), (text) =>
+      text.replace(
+        ",SYN1000T-T10001-R,Alpha Applicant LLC,Replacement String,",
+        ",SYN1000T-T10001-X,Alpha Applicant LLC,Replacement String,",
+      ));
+    expect(() => parseAndNormalizeApsApplicationCsv(withBom(bytes))).toThrow(/replacement indicators disagree/i);
+  });
+
   it("links replacement when -R row appears before base", () => {
     const parsed = parseAndNormalizeApsApplicationCsv(withBom(loadFixture("replacement-before-base.csv")));
     expect(parsed.applications).toHaveLength(1);
@@ -392,9 +421,17 @@ describe("APS Application CSV real-source Reveal Day capture", () => {
     expect(result.review.sourceRowCount).toBe(2783);
     expect(result.review.normalizedApplicationRecordsObserved).toBe(1614);
     expect(result.review.replacementCount).toBe(1169);
+    expect(result.publication?.applications.filter((a) => a.replacementString).length).toBe(1169);
     expect(result.review.officialApplicationCount).toBe(1615);
     expect(result.review.officialApplicantCount).toBe(481);
     expect(result.review.observedDistinctApplicantNames).toBe(480);
+    // Indicator agreement: every attached replacement has both -R id and Replacement String type.
+    for (const app of result.publication!.applications) {
+      if (!app.replacementString) continue;
+      expect(app.replacementString.sourceRowId.endsWith("-R")).toBe(true);
+      expect(app.replacementString.applicationType).toBe("Replacement String");
+      expect(app.applicationId.endsWith("-R")).toBe(false);
+    }
     expect(result.review.observedDistinctApplicantNames).not.toBe(result.review.officialApplicantCount);
     expect(result.review.normalizedApplicationRecordsObserved).not.toBe(result.review.officialApplicationCount);
     expect(result.review.applicationCoverageCompleteness).toBe("partial");

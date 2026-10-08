@@ -133,13 +133,15 @@ function rowToSource(headers: string[], cells: string[]): ApsCsvSourceRow {
   const sourceRowId = get("Application ID").trim();
   if (!sourceRowId) throw new Error("APS CSV row missing Application ID");
   const applicationType = get("Application Type").trim();
-  const endsWithR = sourceRowId.endsWith("-R");
-  const isReplacementType = applicationType === "Replacement String";
-  if (endsWithR !== isReplacementType) {
+  // Replacement requires BOTH indicators; disagreement fails closed.
+  const idEndsWithR = sourceRowId.endsWith("-R");
+  const sourceTypeIsReplacement = applicationType === "Replacement String";
+  if (idEndsWithR !== sourceTypeIsReplacement) {
     throw new Error(
-      `APS CSV row ${sourceRowId}: Replacement String type XOR -R suffix mismatch (type=${JSON.stringify(applicationType)})`,
+      `APS CSV row ${sourceRowId}: replacement indicators disagree (idEndsWithR=${idEndsWithR}, applicationType=${JSON.stringify(applicationType)}); both -R suffix and Replacement String are required together`,
     );
   }
+  const isReplacement = idEndsWithR && sourceTypeIsReplacement;
   const designations: ApplicationDesignationsV2 = {
     brand: parseApsBoolean(get("TLD Type: Brand"), "TLD Type: Brand", sourceRowId),
     community: parseApsBoolean(get("TLD Type: Community"), "TLD Type: Community", sourceRowId),
@@ -197,7 +199,7 @@ function rowToSource(headers: string[], cells: string[]): ApsCsvSourceRow {
     region: get("Region").trim(),
     designations,
     labels,
-    isReplacement: isReplacementType,
+    isReplacement,
   };
 }
 
