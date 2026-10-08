@@ -1,6 +1,8 @@
 # Publication 2.x activation contract (RIH-ACTIVATION-2X-1)
 
-Activation-capable source path. **This ticket does not execute real Reveal Day promotion.**
+**Ticket scope (historical):** RIH-ACTIVATION-2X-1 delivered the activation-capable source path; that ticket itself did not execute production promotion.
+
+**Current production state (2026-10-08):** Application and contention are promoted on `srv766238` at deployed commit `e66c57945826e22e390c666053a637ef500e4447`. Canonical closeout: [`docs/2026-reveal-day-production-closeout.md`](./2026-reveal-day-production-closeout.md).
 
 ## Explicit Application 2.0 write
 
@@ -87,12 +89,17 @@ Immutable Reveal Day evidence under `.data/reveal-2026/publications/` is retaine
 
 ## VPS Agent handoff
 
-1. Deploy activation-capable build (this source)
+**Production promotion completed 2026-10-08** — see [`docs/2026-reveal-day-production-closeout.md`](./2026-reveal-day-production-closeout.md) for live paths, hashes, backups, and rollback.
+
+Procedure retained for re-install / disaster recovery:
+
+1. Deploy activation-capable build (`e66c579…` or successor authorized commit)
 2. Install browser 2.x artifact at `.data/reveal-2026/browser/applications-browser-v2.json` (or absolute path)
-3. Optionally install contention sidecar + contention actuality
+3. Install contention sidecar under `.data/reveal-2026/publications/`
 4. On explicit operator authorization only:
-   - write claim actuality via `promote-actuality` (or deploy pre-written state file)
-   - set `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH` + `REGISTRY_HUB_APPLICATION_PAYLOAD_PATH`
+   - write claim actuality via `promote-actuality` (default path `.data/reveal-2026/claim-actuality-state.json`)
+   - set `REGISTRY_HUB_APPLICATION_PAYLOAD_PATH` to the browser 2.x artifact
+   - **Do not** set `REGISTRY_HUB_CLAIM_ACTUALITY_STATE_PATH` / `REGISTRY_HUB_CONTENTION_ACTUALITY_STATE_PATH` to nonexistent files (hard-fails the app). Prefer default paths when files live under `.data/reveal-2026/`.
 5. Smoke: Data Health shows 2.x metadata; Search/Explore show disclosure; bad payload fails closed
 6. Rollback via actuality → then payload path (ordering above)
 

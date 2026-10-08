@@ -57,15 +57,13 @@ Application actuality alone never unlocks contention metrics.
 
 Semantic hash excludes incidental CSV `sourceRowIndex` / row order (APS-CONTENTION-HASH-1). Promotion validates the recomputed sidecar semantic hash.
 
-## Actual promotion NOT performed
+## Ticket scope vs production (historical)
 
-This ticket implements the **contract** and `dry-run-promotion-2x` only.
+**RIH-PROMOTION-2X-1** implemented the **contract** and `dry-run-promotion-2x` only (no production write in that ticket).
 
-- Does not write claim actuality / promotion history
-- Does not activate browser datasets
-- `promote-actuality` refuses `registry-2026-publication/2.0.0` writes until a later explicit authorization
+Later authorization completed production promotion on **2026-10-08**. Live state, hashes, and rollback: [`docs/2026-reveal-day-production-closeout.md`](./2026-reveal-day-production-closeout.md). Activation write path: [`docs/2026-publication-2x-activation.md`](./2026-publication-2x-activation.md).
 
-CLI:
+Dry-run CLI (still valid; never mutates actuality):
 
 ```bash
 npm run reveal-2026 -- dry-run-promotion-2x \
@@ -73,11 +71,11 @@ npm run reveal-2026 -- dry-run-promotion-2x \
   --contention-snapshot .data/reveal-2026/publications/aps-contention-1.0.0.snapshot.json
 ```
 
-## Browser 2.x still required
+## Browser 2.x (delivered)
 
-Honest browser projection (`registry-browser-applications` 2.x) with mandatory partial-coverage disclosures is **out of scope** here (RIH-BROWSER-2X-1).
+Honest browser projection (`registry-browser-applications` 2.x) with mandatory partial-coverage disclosures was delivered in RIH-BROWSER-2X-1 (`docs/2026-browser-publication-2x-payload.md`) and is live in production after Phase B.
 
-Promotion validation is already separate from `build-browser-payload` (1.1 path).
+Promotion validation remains separate from `build-browser-payload` / `build-browser-payload-2x`.
 
 ## 1.1 compatibility
 

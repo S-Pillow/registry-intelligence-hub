@@ -61,7 +61,8 @@ Official contention membership is joined as a separate overlay (`officialContent
 
 ## Activation
 
-See `docs/2026-publication-2x-activation.md` (RIH-ACTIVATION-2X-1).
+See `docs/2026-publication-2x-activation.md` (RIH-ACTIVATION-2X-1).  
+**Live production identities / closeout:** `docs/2026-reveal-day-production-closeout.md`.
 
 - Generate: `build-browser-payload-2x` → `.data/reveal-2026/browser/applications-browser-v2.json`
 - Activate only when claim actuality is `REAL_SOURCE_READY` **and** pins match

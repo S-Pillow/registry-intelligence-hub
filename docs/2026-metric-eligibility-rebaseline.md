@@ -2,6 +2,8 @@
 
 Catalog version: `metric-eligibility-catalog/2.0.0`
 
+Live production ready/partial/blocked summary after Reveal Day promotion: [`docs/2026-reveal-day-production-closeout.md`](./2026-reveal-day-production-closeout.md).
+
 ## Publication actuality ≠ metric eligibility
 
 | Concept | Answers |
