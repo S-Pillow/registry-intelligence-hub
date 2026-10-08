@@ -154,7 +154,7 @@ describe("promoted 2026 application snapshot consumption", () => {
     });
   });
 
-  it("6-8 — application, unique-string, and IDN counts recompute from loaded rows", () => {
+  it("6-8 — application and IDN cross-round counts recompute; unique strings stay blocked under partial coverage", () => {
     const claim = matchingClaim();
     const resolution = resolveActiveRegistryApplicationsDocument(claim, SYNTHETIC);
     const asserted = claimActualityAssertedForBrowser(claim, resolution);
@@ -173,8 +173,8 @@ describe("promoted 2026 application snapshot consumption", () => {
     });
     expect(applications?.active2026).toBe(3);
     expect(applications?.baseline2012).toBe(1930);
-    expect(strings?.active2026).toBe(2);
-    expect(strings?.baseline2012).toBe(1409);
+    expect(strings).toBeNull();
+    expect(resolveHubMetricEligibility("unique-applied-strings", asserted)?.comparisonAllowed).toBe(false);
     expect(idn?.active2026).toBe(1);
     expect(idn?.baseline2012).toBe(116);
     expect(applications?.numericDelta).toBe(true);
@@ -220,7 +220,7 @@ describe("promoted 2026 application snapshot consumption", () => {
       expect(resolved?.comparisonAllowed).toBe(false);
     }
     expect(resolveHubMetricEligibility("application-count", asserted)?.comparisonAllowed).toBe(true);
-    expect(resolveHubMetricEligibility("unique-applied-strings", asserted)?.comparisonAllowed).toBe(true);
+    expect(resolveHubMetricEligibility("unique-applied-strings", asserted)?.comparisonAllowed).toBe(false);
     expect(resolveHubMetricEligibility("idn-applications", asserted)?.comparisonAllowed).toBe(true);
   });
 
@@ -266,7 +266,8 @@ describe("promoted 2026 application snapshot consumption", () => {
     const serialized = edition.sections.flatMap((section) => section.claims.map((claimRow) => claimRow.text)).join("\n");
     expect(serialized).not.toMatch(/what you should know/i);
     expect(serialized).toContain("Applications: 3");
-    expect(serialized).toContain("Unique strings: 2");
+    expect(serialized).toMatch(/Unique strings: 1409/);
+    expect(serialized).not.toMatch(/Unique strings: 2/);
     expect(serialized).toContain("IDN applications: 1");
     expect(serialized).not.toContain("APP-26001");
     expect(describeBriefingScope({ kind: "round-wide" }, resolution.document)).toMatch(/active promoted application snapshot/);

@@ -6,18 +6,19 @@ import {
 } from "@/lib/hub-metric-eligibility";
 
 /**
- * Cross-round count presentation for the three metrics the eligibility contract
- * can unlock (`application-count`, `unique-applied-strings`, `idn-applications`).
+ * Cross-round count presentation helpers for application-count / unique-applied-strings / idn-applications.
  *
- * Grain, matching the approved 2012 Reveal Day baseline and 2026 normalize:
- * - application count is a publication row count, not a later withdrawn or proceeding subset
- * - unique strings are distinct `string` / `stringUlabel` values, including empty string, with no trim or case fold
+ * Eligibility (catalog/2.0.0):
+ * - application-count and idn-applications may unlock via official-aggregate channel + Application actuality
+ * - unique-applied-strings remains BLOCKED_COVERAGE under partial Application coverage (presentation returns null)
+ *
+ * Grain helpers still document:
+ * - application count row grain (runtime binding to official 1615 is a later ticket)
+ * - unique strings are distinct `string` values, including empty string, with no trim or case fold
  * - IDN is an application-flag count, not a distinct-string count
- * Replacement, aLabel, contention-set id, and applicant are not keys.
  *
  * A numeric difference is emitted only when comparison is allowed and the active
  * payload mode is the promoted snapshot. A missing field is unavailable, not zero.
- * No percentage: the count strip has no percentage pattern.
  */
 export const CROSS_ROUND_COUNT_METRIC_IDS = [
   "application-count",

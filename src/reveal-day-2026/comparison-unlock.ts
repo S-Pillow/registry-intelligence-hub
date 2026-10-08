@@ -46,6 +46,12 @@ function gateReasonFor(metricId: string, state: ClaimActualityState): string | u
     return `Method ${resolved.methodReadiness}`;
   }
   if (resolved.claimReadiness.round2026 !== "REAL_SOURCE_READY") {
+    if (entry.advancesWithContentionActuality) {
+      return "Awaiting 2026 contention sidecar actuality + Application publication pin";
+    }
+    if (entry.coverageRequirement === "COMPLETE_ROW_COVERAGE_REQUIRED") {
+      return "Blocked: complete Application row coverage required (publication actuality insufficient)";
+    }
     if ((APPLICATION_ACTUALITY_METRIC_IDS as readonly string[]).includes(metricId)) {
       return "Awaiting 2026 application actuality promotion";
     }

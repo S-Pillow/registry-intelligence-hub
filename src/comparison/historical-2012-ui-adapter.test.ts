@@ -67,7 +67,7 @@ describe("historical-2012-ui-adapter", () => {
   it("does not present organization round count as comparable", () => {
     const pulse = buildCommandCenterRoundPulse(fixture.applications);
     const orgs = pulse.find((m) => m.metricId === "organization-round-count");
-    expect(orgs?.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(orgs?.methodReadiness).toBe("BLOCKED_SOURCE");
     expect(orgs?.deltaLabel).toMatch(/not approved/i);
   });
 

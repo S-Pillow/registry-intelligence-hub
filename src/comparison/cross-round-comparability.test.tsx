@@ -114,7 +114,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
       payloadMode: "rehearsal",
       snapshotId: fixture.snapshotId,
     });
-    for (const metricId of ["application-count", "unique-applied-strings", "idn-applications"] as const) {
+    for (const metricId of ["application-count", "idn-applications"] as const) {
       const metric = pulse.find((item) => item.metricId === metricId)!;
       expect(metric.comparisonAllowed).toBe(true);
       expect(metric.crossRound).toBeNull();
@@ -122,6 +122,10 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
       expect(metric.deltaLabel).toMatch(/withheld until the active payload is the promoted snapshot/);
       expect(metric.deltaLabel).not.toMatch(/Difference/);
     }
+    const strings = pulse.find((item) => item.metricId === "unique-applied-strings")!;
+    expect(strings.comparisonAllowed).toBe(false);
+    expect(strings.crossRound).toBeNull();
+    expect(strings.deltaLabel).not.toMatch(/Difference/);
   });
 
   it("5 — a promoted payload without publication claim keeps the 2012 baseline and no difference", () => {
@@ -143,26 +147,24 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(presented.statement).toBe("2012 baseline 1930. Loaded snapshot 3. Difference -1927.");
   });
 
-  it("7 — unique strings use the applied-for string, not aLabel", () => {
+  it("7 — unique strings use the applied-for string, not aLabel (grain; comparison blocked under partial coverage)", () => {
     const applications = [row({ id: "p1", string: "atlas", aLabel: "xn--not-the-string", idn: true })];
-    const presented = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
-    expect(presented.active2026).toBe(1);
-    expect(presented.statement).not.toContain("xn--not-the-string");
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
+    expect(countDistinctAppliedForStrings(applications)).toBe(1);
   });
 
-  it("8 — unique strings do not use replacement", () => {
+  it("8 — unique strings do not use replacement (grain; comparison blocked under partial coverage)", () => {
     const applications = [row({ id: "p1", string: "atlas", replacement: "atlasnet" })];
-    const presented = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
-    expect(presented.active2026).toBe(1);
-    expect(presented.statement).not.toContain("atlasnet");
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
+    expect(countDistinctAppliedForStrings(applications)).toBe(1);
   });
 
   it("9 — duplicate applied-for strings count once while each application row still counts", () => {
     const applications = [row({ id: "p1", string: "Alpha" }), row({ id: "p2", string: "Alpha" })];
     const apps = presentPromotedCrossRoundCount("application-count", applications, promotedClaim(), promotedPayload)!;
-    const strings = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
     expect(apps.active2026).toBe(2);
-    expect(strings.active2026).toBe(1);
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
+    expect(countDistinctAppliedForStrings(applications)).toBe(1);
   });
 
   it("10 — IDN count is an application flag count, not a distinct IDN string count", () => {
@@ -171,9 +173,9 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
       row({ id: "p2", string: "信頼", idn: true }),
     ];
     const idn = presentPromotedCrossRoundCount("idn-applications", applications, promotedClaim(), promotedPayload)!;
-    const strings = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
     expect(idn.active2026).toBe(2);
-    expect(strings.active2026).toBe(1);
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
+    expect(countDistinctAppliedForStrings(applications)).toBe(1);
   });
 
   it("11 — applied-for string comparison does not fold case", () => {
@@ -191,14 +193,10 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(countDistinctAppliedForStrings([row({ id: "p1", string: "" }), row({ id: "p2", string: "a" })])).toBe(2);
   });
 
-  it("14 — a missing string field makes the unique-string delta unavailable, not zero", () => {
+  it("14 — unique-string cross-round presentation stays blocked under partial coverage", () => {
     const applications: CountableApplicationRow[] = [{ string: "Alpha", idn: false }, { idn: false }];
-    const presented = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
-    expect(presented.numericDelta).toBe(false);
-    expect(presented.active2026).toBeNull();
-    expect(presented.difference).toBeNull();
-    expect(presented.statement).toBe("2026 value unavailable. No difference is shown.");
-    expect(presented.statement).not.toMatch(/Difference 0|Loaded snapshot 0/);
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
+    expect(countDistinctAppliedForStrings(applications)).toBeNull();
   });
 
   it("15 — a missing IDN flag makes the IDN delta unavailable, not zero", () => {
@@ -237,15 +235,16 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
 
   it("19 — difference language stays arithmetic", () => {
     const applications = [row({ id: "p1", string: "Alpha", idn: true }), row({ id: "p2", string: "Beta", idn: false })];
-    for (const metricId of ["application-count", "unique-applied-strings", "idn-applications"] as const) {
+    for (const metricId of ["application-count", "idn-applications"] as const) {
       const presented = presentPromotedCrossRoundCount(metricId, applications, promotedClaim(), promotedPayload)!;
       expect(presented.statement).not.toMatch(evaluative);
     }
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
   });
 
   it("20 — category mix stays blocked after application promotion", () => {
     const resolved = resolveHubMetricEligibility("category-mix", promotedClaim())!;
-    expect(resolved.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(resolved.methodReadiness).toBe("BLOCKED_SOURCE");
     expect(resolved.comparisonAllowed).toBe(false);
     expect(resolved.claimReadiness.round2026).not.toBe("REAL_SOURCE_READY");
   });
@@ -321,12 +320,12 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(orgs.crossRound).toBeNull();
     expect(orgs.deltaLabel).toMatch(/not approved/i);
     expect(orgs.deltaLabel).not.toMatch(/Difference/);
-    expect(resolveHubMetricEligibility("organization-round-count", promotedClaim())?.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(resolveHubMetricEligibility("organization-round-count", promotedClaim())?.methodReadiness).toBe("BLOCKED_SOURCE");
   });
 
   it("29 — round-wide portfolio concentration stays blocked after promotion", () => {
     const resolved = resolveHubMetricEligibility("portfolio-concentration-round-wide", promotedClaim())!;
-    expect(resolved.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(resolved.methodReadiness).toBe("BLOCKED_SOURCE");
     expect(resolved.comparisonAllowed).toBe(false);
     expect(resolveHubMetricEligibility("confirmed-portfolio-facts", promotedClaim())?.comparisonAllowed).toBe(false);
   });
@@ -384,12 +383,12 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /View intelligence for Applications: 2012 baseline 1930/ }));
     const provenance = await screen.findByTestId("cross-round-provenance-applications");
-    expect(provenance).toHaveTextContent("Method count(application)");
+    expect(provenance).toHaveTextContent("Method official-aggregate(application-count)");
     expect(provenance).toHaveTextContent("Historical source");
     expect(provenance).toHaveTextContent("snap-2012-reveal-day-csv-v1");
     expect(provenance).toHaveTextContent("Active snapshot snap-compare-promoted");
     expect(screen.getByTestId("cross-round-delta-applications")).toHaveTextContent("2012 baseline 1930. Loaded snapshot 2. Difference -1928.");
-    expect(screen.getByTestId("cross-round-delta-strings")).toHaveTextContent("2012 baseline 1409. Loaded snapshot 2. Difference -1407.");
+    expect(screen.queryByTestId("cross-round-delta-strings")).not.toBeInTheDocument();
     expect(screen.getByTestId("cross-round-delta-idn")).toHaveTextContent("2012 baseline 116. Loaded snapshot 1. Difference -115.");
     expect(screen.getByTestId("orientation-count-basis")).toHaveTextContent(/loaded snapshot minus 2012 baseline/i);
     expect(screen.getByTestId("round-pulse-section")).not.toHaveTextContent(evaluative);
@@ -452,7 +451,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(headlines).toContain("not an approved cross-round comparison");
   });
 
-  it("37 — promoted briefing differences are limited to the three eligible counts", () => {
+  it("37 — promoted briefing differences are limited to official-aggregate eligible counts", () => {
     const claim = promotedClaim();
     const edition = generateEditionContent({
       scope: { kind: "round-wide" },
@@ -469,10 +468,10 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     });
     const claims = edition.sections.find((section) => section.id === "headline-metrics")!.claims.map((claim) => claim.text);
     const withDifference = claims.filter((text) => text.includes("Difference"));
-    expect(withDifference).toHaveLength(3);
+    expect(withDifference).toHaveLength(2);
     expect(withDifference.join("\n")).toMatch(/Applications:/);
-    expect(withDifference.join("\n")).toMatch(/Unique strings:/);
     expect(withDifference.join("\n")).toMatch(/IDN applications:/);
+    expect(claims.find((text) => text.startsWith("Unique strings:"))).not.toMatch(/Difference/);
     expect(claims.find((text) => text.startsWith("Organizations:"))).not.toMatch(/Difference/);
     expect(claims.find((text) => text.startsWith("Regions:"))).not.toMatch(/Difference/);
     expect(claims.find((text) => text.startsWith("Applications in initial contention:"))).not.toMatch(/Difference/);
@@ -589,9 +588,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
       row({ id: "p3", string: "secure", replacement: "trusted" }),
     ];
     expect(countDistinctAppliedForStrings(applications)).toBe(2);
-    const presented = presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)!;
-    expect(presented.active2026).toBe(2);
-    expect(presented.statement).not.toMatch(/atlasnet|trusted|other/);
+    expect(presentPromotedCrossRoundCount("unique-applied-strings", applications, promotedClaim(), promotedPayload)).toBeNull();
   });
 
   it("45 — no RSP or provider comparison is unlocked", () => {
@@ -603,24 +600,18 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(APPLICATION_ACTUALITY_METRIC_IDS).not.toContain("returning-delegated-operator");
   });
 
-  it("46 — promotion still unlocks only the existing three count metrics and no new readiness state", () => {
-    expect([...APPLICATION_ACTUALITY_METRIC_IDS]).toEqual([
-      "application-count",
-      "unique-applied-strings",
-      "idn-applications",
-    ]);
+  it("46 — promotion unlocks official-aggregate comparable metrics; unique strings stay coverage-blocked", () => {
+    expect(APPLICATION_ACTUALITY_METRIC_IDS).toContain("application-count");
+    expect(APPLICATION_ACTUALITY_METRIC_IDS).toContain("idn-applications");
+    expect(APPLICATION_ACTUALITY_METRIC_IDS).not.toContain("unique-applied-strings");
     const readiness = [...new Set(METRIC_ELIGIBILITY_CATALOG.map((entry) => entry.methodReadiness))].sort();
     expect(readiness).toEqual(["BLOCKED_COVERAGE", "BLOCKED_METHOD", "BLOCKED_SOURCE", "COMPARABLE", "PARTIAL"]);
     const claimReadiness = [...new Set(METRIC_ELIGIBILITY_CATALOG.flatMap((entry) => [entry.claimReadiness.round2012, entry.claimReadiness.round2026]))].sort();
     expect(claimReadiness).toEqual(["HISTORICAL_ONLY", "NOT_PUBLISHED", "REAL_SOURCE_READY", "REHEARSAL_ONLY"]);
-    for (const metricId of APPLICATION_ACTUALITY_METRIC_IDS) {
-      expect(resolveHubMetricEligibility(metricId, promotedClaim())?.comparisonAllowed).toBe(true);
-    }
-    const stillBlocked = METRIC_ELIGIBILITY_CATALOG
-      .map((entry) => entry.metricId)
-      .filter((metricId) => !(APPLICATION_ACTUALITY_METRIC_IDS as readonly string[]).includes(metricId));
-    for (const metricId of stillBlocked) {
-      expect(resolveHubMetricEligibility(metricId, promotedClaim())?.comparisonAllowed).toBe(false);
-    }
+    expect(resolveHubMetricEligibility("application-count", promotedClaim())?.comparisonAllowed).toBe(true);
+    expect(resolveHubMetricEligibility("idn-applications", promotedClaim())?.comparisonAllowed).toBe(true);
+    expect(resolveHubMetricEligibility("unique-applied-strings", promotedClaim())?.comparisonAllowed).toBe(false);
+    expect(resolveHubMetricEligibility("organization-round-count", promotedClaim())?.comparisonAllowed).toBe(false);
+    expect(resolveHubMetricEligibility("initial-contention-sets", promotedClaim())?.comparisonAllowed).toBe(false);
   });
 });

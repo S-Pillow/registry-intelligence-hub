@@ -72,17 +72,23 @@ describe("claim actuality browser wiring (acceptance)", () => {
     expect(getExploreHistoricalIntelligencePolicy(rehearsalAttempt).allMetricsDenyReal2026Identity).toBe(true);
   });
 
-  it("3 — approved real snapshot promotion unlocks only the three application count metrics", () => {
+  it("3 — approved real snapshot promotion unlocks official-aggregate comparable metrics, not unique strings", () => {
     const promoted = approvedApplicationActualityPromotionFixture();
     for (const metricId of APPLICATION_ACTUALITY_METRIC_IDS) {
       const resolved = resolveHubMetricEligibility(metricId, promoted);
       expect(resolved?.claimReadiness.round2026).toBe("REAL_SOURCE_READY");
-      expect(resolved?.comparisonAllowed).toBe(true);
-      expect(() => assertHubCrossRoundDeltaAllowed(metricId, promoted)).not.toThrow();
     }
+    expect(resolveHubMetricEligibility("application-count", promoted)?.comparisonAllowed).toBe(true);
+    expect(resolveHubMetricEligibility("idn-applications", promoted)?.comparisonAllowed).toBe(true);
+    expect(() => assertHubCrossRoundDeltaAllowed("application-count", promoted)).not.toThrow();
+    expect(() => assertHubCrossRoundDeltaAllowed("idn-applications", promoted)).not.toThrow();
     expect(exploreCrossRoundComparisonAllowed("application-count", promoted)).toBe(true);
-    expect(exploreCrossRoundComparisonAllowed("unique-applied-strings", promoted)).toBe(true);
     expect(exploreCrossRoundComparisonAllowed("idn-applications", promoted)).toBe(true);
+    expect(exploreCrossRoundComparisonAllowed("unique-applied-strings", promoted)).toBe(false);
+    expect(resolveHubMetricEligibility("unique-applied-strings", promoted)?.claimReadiness.round2026).toBe(
+      "NOT_PUBLISHED",
+    );
+    expect(APPLICATION_ACTUALITY_METRIC_IDS).not.toContain("unique-applied-strings");
   });
 
   it("4 — org, portfolio, returning identity, categories, post-Reveal metrics stay gated after application promotion", () => {

@@ -1,5 +1,10 @@
 import type { ClaimReadiness } from "../comparison/claim-readiness";
-import { METRIC_ELIGIBILITY_CATALOG } from "../comparison/metric-eligibility-catalog";
+import {
+  METRIC_ELIGIBILITY_CATALOG,
+  applicationActualityAdvanceMetricIds,
+  contentionActualityAdvanceMetricIds,
+  getMetricEligibility,
+} from "../comparison/metric-eligibility-catalog";
 import { resolveMetricEligibility } from "../comparison/metric-eligibility";
 import type { DryRunDiagnostics } from "./types";
 import { CLAIM_ACTUALITY_STATE_VERSION } from "./types";
@@ -8,14 +13,17 @@ import type { Registry2026PublicationSnapshot } from "./types";
 import type { HumanApprovalResult } from "./human-approval";
 import { PUBLICATION_SCHEMA_VERSION_V11 } from "./types";
 
-/** Metrics whose 2026 claim readiness may advance with immutable application publication only. */
-export const APPLICATION_ACTUALITY_METRIC_IDS = [
-  "application-count",
-  "unique-applied-strings",
-  "idn-applications",
-] as const;
+/**
+ * Metrics whose 2026 claim readiness may advance with Application publication actuality.
+ * Derived from catalog `advancesWithApplicationActuality` — must NOT include unique-strings
+ * or other COMPLETE_ROW_COVERAGE_REQUIRED metrics.
+ */
+export const APPLICATION_ACTUALITY_METRIC_IDS = applicationActualityAdvanceMetricIds();
 
-export type ApplicationActualityPromotion = typeof APPLICATION_ACTUALITY_METRIC_IDS[number];
+export type ApplicationActualityPromotion = (typeof APPLICATION_ACTUALITY_METRIC_IDS)[number];
+
+/** Metrics that require Contention sidecar actuality (never Application alone). */
+export const CONTENTION_ACTUALITY_METRIC_IDS = contentionActualityAdvanceMetricIds();
 
 export type ClaimActualityState = {
   version: typeof CLAIM_ACTUALITY_STATE_VERSION;
@@ -34,6 +42,19 @@ export type ClaimActualityState = {
     validationPassed: boolean;
     contaminationClear: boolean;
   };
+};
+
+/**
+ * Minimum contention actuality contract for later promotion binding.
+ * Not a second independent promotion framework — pin fields only.
+ * Application actuality alone must never unlock contention metrics.
+ */
+export type ContentionActualityState = {
+  round2026ContentionActuality: "NOT_PUBLISHED" | "REAL_SOURCE_READY";
+  snapshotId: string | null;
+  sidecarContentHash: string | null;
+  rawSha256: string | null;
+  applicationPublicationPinHash: string | null;
 };
 
 export const DEFAULT_CLAIM_ACTUALITY_STATE: ClaimActualityState = {
@@ -55,27 +76,55 @@ export const DEFAULT_CLAIM_ACTUALITY_STATE: ClaimActualityState = {
   },
 };
 
+export const DEFAULT_CONTENTION_ACTUALITY_STATE: ContentionActualityState = {
+  round2026ContentionActuality: "NOT_PUBLISHED",
+  snapshotId: null,
+  sidecarContentHash: null,
+  rawSha256: null,
+  applicationPublicationPinHash: null,
+};
+
 export function effectiveRound2026ClaimReadiness(
   metricId: string,
   catalogDefault: ClaimReadiness,
   state: ClaimActualityState,
+  contentionState: ContentionActualityState = DEFAULT_CONTENTION_ACTUALITY_STATE,
 ): ClaimReadiness {
+  const entry = getMetricEligibility(metricId);
+  if (!entry) return catalogDefault;
+
   if (
-    state.round2026ApplicationActuality === "REAL_SOURCE_READY"
-    && (APPLICATION_ACTUALITY_METRIC_IDS as readonly string[]).includes(metricId)
+    entry.advancesWithContentionActuality
+    && contentionState.round2026ContentionActuality === "REAL_SOURCE_READY"
+    && contentionState.sidecarContentHash
+    && contentionState.applicationPublicationPinHash
   ) {
     return "REAL_SOURCE_READY";
   }
+
+  if (
+    entry.advancesWithApplicationActuality
+    && state.round2026ApplicationActuality === "REAL_SOURCE_READY"
+  ) {
+    return "REAL_SOURCE_READY";
+  }
+
   return catalogDefault;
 }
 
 export function resolveMetricEligibilityWithActuality(
   metricId: string,
   state: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+  contentionState: ContentionActualityState = DEFAULT_CONTENTION_ACTUALITY_STATE,
 ) {
   const base = resolveMetricEligibility(metricId);
   if (!base) return undefined;
-  const round2026 = effectiveRound2026ClaimReadiness(metricId, base.claimReadiness.round2026, state);
+  const round2026 = effectiveRound2026ClaimReadiness(
+    metricId,
+    base.claimReadiness.round2026,
+    state,
+    contentionState,
+  );
   const comparisonAllowed =
     base.methodReadiness === "COMPARABLE"
     && base.claimReadiness.round2012 === "REAL_SOURCE_READY"

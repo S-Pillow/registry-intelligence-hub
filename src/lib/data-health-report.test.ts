@@ -71,8 +71,8 @@ describe("data-health-report", () => {
 
     expect(contention?.methodReadiness).toBe("BLOCKED_METHOD");
     expect(contention?.comparisonAllowed).toBe(false);
-    expect(categoryMix?.methodReadiness).toBe("BLOCKED_COVERAGE");
-    expect(orgCount?.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(categoryMix?.methodReadiness).toBe("BLOCKED_SOURCE");
+    expect(orgCount?.methodReadiness).toBe("BLOCKED_SOURCE");
 
     const comparable = snapshot.intelligenceReadiness.filter((r) => r.methodReadiness === "COMPARABLE");
     expect(comparable.every((r) => r.comparisonAllowed === false)).toBe(true);

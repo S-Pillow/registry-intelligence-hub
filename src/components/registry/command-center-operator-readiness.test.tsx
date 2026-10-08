@@ -110,7 +110,7 @@ describe("CC-OR-1 operator readiness", () => {
     render(<CommandCenter presentation="rehearsal" />);
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
     const drawer = await screen.findByTestId("technical-provenance");
-    expect(drawer).toHaveTextContent("count(application)");
+    expect(drawer).toHaveTextContent("official-aggregate(application-count)");
     expect(drawer).toHaveTextContent(/archived copy/i);
     expect(drawer).toHaveTextContent("snap-2012-reveal-day-csv-v1");
     expect(drawer).toHaveTextContent("Not eligible");
@@ -241,7 +241,7 @@ describe("CC-OR-1 operator readiness", () => {
     expect(gate).toHaveTextContent("not an approved portfolio comparison");
     const org = buildRoundPulse(rehearsalRegistryApplicationsDocument().applications).find((metric) => metric.metricId === "organization-round-count");
     expect(org?.comparisonAllowed).toBe(false);
-    expect(org?.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(org?.methodReadiness).toBe("BLOCKED_SOURCE");
   });
 
   it("24 — legal-name concentration and organization labels stay separate modules", () => {
@@ -381,14 +381,14 @@ describe("CC-OR-1 operator readiness", () => {
     expect(screen.getByRole("button", { name: "Instant Briefing" })).toBeInTheDocument();
   });
 
-  it("39 — promoted eligible comparisons still show loaded-row differences", () => {
+  it("39 — promoted eligible comparisons still show loaded-row differences for application and IDN only", () => {
     const base = rehearsalRegistryApplicationsDocument().applications[0];
     renderPromoted([
       { ...base, id: "p1", string: "Alpha", idn: false },
       { ...base, id: "p2", string: "Beta", idn: true },
     ] as Application[]);
     expect(screen.getByTestId("cross-round-delta-applications")).toHaveTextContent("2012 baseline 1930. Loaded snapshot 2. Difference -1928.");
-    expect(screen.getByTestId("cross-round-delta-strings")).toHaveTextContent("2012 baseline 1409. Loaded snapshot 2. Difference -1407.");
+    expect(screen.queryByTestId("cross-round-delta-strings")).not.toBeInTheDocument();
     expect(screen.getByTestId("cross-round-delta-idn")).toHaveTextContent("2012 baseline 116. Loaded snapshot 1. Difference -115.");
   });
 

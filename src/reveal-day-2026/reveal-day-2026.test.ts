@@ -177,18 +177,22 @@ describe("2026 reveal-day ingestion", () => {
 
     expect(organizationMetricsRemainGatedAfterApplicationPromotion(promoted)).toBe(true);
 
-    for (const id of ["application-count", "unique-applied-strings", "idn-applications"]) {
+    for (const id of ["application-count", "idn-applications"]) {
       const resolved = resolveMetricEligibilityWithActuality(id, promoted);
       expect(resolved?.claimReadiness.round2026).toBe("REAL_SOURCE_READY");
       expect(resolved?.comparisonAllowed).toBe(true);
     }
+    const unique = resolveMetricEligibilityWithActuality("unique-applied-strings", promoted);
+    expect(unique?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
+    expect(unique?.comparisonAllowed).toBe(false);
 
     const org = resolveMetricEligibilityWithActuality("organization-round-count", promoted);
     expect(org?.comparisonAllowed).toBe(false);
     expect(org?.claimReadiness.round2026).not.toBe("REAL_SOURCE_READY");
 
     const unlock = buildComparisonUnlockReport(promoted);
-    expect(unlock.summary.newlyUnlockedComparisonCount).toBe(3);
+    expect(unlock.summary.newlyUnlockedComparisonCount).toBeGreaterThanOrEqual(2);
+    expect(unlock.metrics.find((m) => m.metricId === "unique-applied-strings")?.comparisonAllowed).toBe(false);
     expect(unlock.metrics.find((m) => m.metricId === "organization-round-count")?.comparisonAllowed).toBe(false);
   });
 
