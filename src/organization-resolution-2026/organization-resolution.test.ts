@@ -517,6 +517,7 @@ describe("organization-resolution-2026 real 1614 first pass", () => {
     const { snapshot, inventory } = await runFirstPassOrganizationResolution({
       workspaceRoot,
       writeArtifacts: false,
+      applyResearch: false,
     });
 
     expect(inventory.applications).toBe(1614);

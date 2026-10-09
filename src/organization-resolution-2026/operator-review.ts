@@ -53,13 +53,66 @@ export function operatorReviewTsv(snapshot: OrganizationResolutionSnapshot): str
   return `${lines.join("\n")}\n`;
 }
 
+export function stewardReviewQueueTsv(snapshot: OrganizationResolutionSnapshot): string {
+  const dossiers = snapshot.stewardReviewDossiers ?? [];
+  const evidenceById = new Map(snapshot.evidence.map((e) => [e.evidenceId, e]));
+  const headers = [
+    "applicantLegalName",
+    "observedApplications",
+    "officialContentionMemberships",
+    "candidateOrganization",
+    "organizationId",
+    "currentState",
+    "recommendation",
+    "evidenceStrength",
+    "evidenceSummary",
+    "evidenceUrls",
+    "temporalNote",
+    "historicalCandidateMatch",
+    "stewardDecision",
+    "requiredStewardAction",
+  ] as const;
+  const lines = [headers.join("\t")];
+  for (const d of [...dossiers].sort(
+    (a, b) =>
+      b.observedApplicationCount - a.observedApplicationCount ||
+      a.applicantLegalName.localeCompare(b.applicantLegalName),
+  )) {
+    const summaries = d.evidenceIds.map((id) => evidenceById.get(id)?.summary ?? "").filter(Boolean);
+    const urls = d.evidenceIds.map((id) => evidenceById.get(id)?.sourceIdentifier ?? "").filter(Boolean);
+    const row = {
+      applicantLegalName: d.applicantLegalName,
+      observedApplications: String(d.observedApplicationCount),
+      officialContentionMemberships: String(d.officialContentionMemberships),
+      candidateOrganization: d.candidateCanonicalName ?? "",
+      organizationId: d.candidateOrganizationId ?? "",
+      currentState: d.resolutionState,
+      recommendation: d.reviewRecommendation,
+      evidenceStrength: d.strongestEvidenceStrength ?? "",
+      evidenceSummary: summaries.join(" | "),
+      evidenceUrls: urls.join(" | "),
+      temporalNote: d.temporalNote,
+      historicalCandidateMatch: d.possible2012OrganizationKey ?? "",
+      stewardDecision: d.stewardDecision,
+      requiredStewardAction: d.requiredStewardAction,
+    };
+    lines.push(headers.map((h) => escapeTsv(row[h])).join("\t"));
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 export function operatorReviewMarkdownSummary(snapshot: OrganizationResolutionSnapshot): string {
   const q = snapshot.quality;
   const topConfirmed = snapshot.organizations
     .filter((o) => o.status === "CONFIRMED")
     .sort((a, b) => b.memberApplicationIds.length - a.memberApplicationIds.length)
     .slice(0, 20);
-  const candidates = snapshot.organizations.filter((o) => o.status === "CANDIDATE");
+  const dossiers = [...(snapshot.stewardReviewDossiers ?? [])].sort(
+    (a, b) =>
+      b.observedApplicationCount - a.observedApplicationCount ||
+      a.applicantLegalName.localeCompare(b.applicantLegalName),
+  );
+  const confirmRecs = dossiers.filter((d) => d.reviewRecommendation === "CONFIRM");
   const lines = [
     `# 2026 Organization resolution — steward review`,
     ``,
@@ -74,39 +127,58 @@ export function operatorReviewMarkdownSummary(snapshot: OrganizationResolutionSn
     `| Observed Applications | ${q.observedApplications} |`,
     `| Observed Applicant legal names | ${q.observedApplicantLegalNames} |`,
     `| Multi-Application legal names | ${q.applicantLegalNamesWithMultipleApplications} |`,
-    `| Confirmed Organizations | ${q.confirmedOrganizationCount} |`,
-    `| Confirmed Applicant mappings | ${q.confirmedOrganizationMappings} |`,
+    `| Confirmed Organizations (actual) | ${q.confirmedOrganizationCount} |`,
     `| Confirmed Applications covered | ${q.applicationsCoveredByConfirmedOrganizations} |`,
     `| Candidate Organizations | ${q.candidateOrganizationCount} |`,
     `| Ambiguous Organizations | ${q.ambiguousOrganizationCount} |`,
     `| Unresolved legal names | ${q.unresolvedApplicantLegalNames} |`,
-    `| Candidate name clusters | ${q.candidateClusterCount} |`,
+    `| Dossiers researched | ${q.dossiersResearched ?? 0} |`,
+    `| Recommend CONFIRM | ${q.recommendConfirm ?? 0} |`,
+    `| Recommend KEEP_CANDIDATE | ${q.recommendKeepCandidate ?? 0} |`,
+    `| Recommend AMBIGUOUS | ${q.recommendAmbiguous ?? 0} |`,
+    `| Recommend REJECT | ${q.recommendReject ?? 0} |`,
+    `| No evidence | ${q.recommendNoEvidence ?? 0} |`,
     `| Product-eligible Organizations | ${q.productEligibleOrganizationCount} |`,
     `| Returning/new classifications | ${q.returningNewClassificationsCreated} |`,
     `| Cross-round identities | ${q.crossRoundIdentitiesCreated} |`,
     ``,
-    `## Top confirmed portfolios`,
+    `> Recommendations are **not** confirmations. Organization product metrics remain blocked while confirmed count is 0.`,
+    ``,
+    `## Proposed steward APPROVE queue (recommendation=CONFIRM)`,
     ``,
   ];
+  if (confirmRecs.length === 0) {
+    lines.push(`_None._`, ``);
+  } else {
+    lines.push(
+      `| Applicant | Candidate Organization | Apps | Contention | Evidence | Action |`,
+      `| --- | --- | ---: | ---: | --- | --- |`,
+    );
+    for (const d of confirmRecs) {
+      lines.push(
+        `| ${d.applicantLegalName} | ${d.candidateCanonicalName ?? ""} (\`${d.candidateOrganizationKey ?? ""}\`) | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.strongestEvidenceStrength ?? ""} | ${d.requiredStewardAction.replace(/\|/g, "/")} |`,
+      );
+    }
+    lines.push(``);
+  }
+  lines.push(`## Top-impact researched dossiers`, ``);
+  lines.push(
+    `| Applicant | Apps | Contention | State | Recommendation | Candidate |`,
+    `| --- | ---: | ---: | --- | --- | --- |`,
+  );
+  for (const d of dossiers.slice(0, 25)) {
+    lines.push(
+      `| ${d.applicantLegalName} | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.resolutionState} | ${d.reviewRecommendation} | ${(d.candidateCanonicalName ?? "").replace(/\|/g, "/")} |`,
+    );
+  }
+  lines.push(``, `## Top confirmed portfolios`, ``);
   if (topConfirmed.length === 0) {
-    lines.push(`_None — first-pass has no steward-confirmed Organizations (A/B evidence required)._`, ``);
+    lines.push(`_None — no steward-approved CONFIRMED Organizations._`, ``);
   } else {
     lines.push(`| Organization | Applications | Applicant legal names |`, `| --- | ---: | --- |`);
     for (const org of topConfirmed) {
       lines.push(
         `| ${org.canonicalName} (\`${org.organizationKey}\`) | ${org.memberApplicationIds.length} | ${org.applicantLegalNames.join("; ")} |`,
-      );
-    }
-    lines.push(``);
-  }
-  lines.push(`## Candidate historical / discovery (not product-eligible)`, ``);
-  if (candidates.length === 0) {
-    lines.push(`_None._`, ``);
-  } else {
-    lines.push(`| Candidate | Apps | possible2012 | Reason |`, `| --- | ---: | --- | --- |`);
-    for (const org of candidates.slice(0, 50)) {
-      lines.push(
-        `| ${org.canonicalName} | ${org.memberApplicationIds.length} | ${org.possible2012OrganizationKey ?? ""} | ${(org.notes ?? "").replace(/\|/g, "/")} |`,
       );
     }
     lines.push(``);

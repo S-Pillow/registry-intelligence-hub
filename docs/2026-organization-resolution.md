@@ -85,16 +85,61 @@ Writes under `.data/reveal-2026/organization-resolution/` (gitignored):
 - `organization-resolution-1.0.0.snapshot.json`
 - `organization-resolution-steward-review.tsv`
 - `organization-resolution-steward-review.md`
+- `organization-resolution-steward-queue.tsv` (ORG-RES-2026-2 research queue)
+
+## ORG-RES-2026-2 — evidence expansion + steward review queue
+
+**Goal:** expand public evidence for highest-impact Applicant legal names and produce recommendations — **not** steward approvals.
+
+### Research queue (deterministic)
+
+Union of:
+
+1. Existing CANDIDATE mappings  
+2. Top 20 unresolved by observed Application count  
+3. Top 10 unresolved by official initial contention memberships  
+
+De-duplicate; **cap 30**; do not pad. Priority uses Applicant/application facts only — never inferred Organizations.
+
+### Source hierarchy
+
+| Strength | Examples |
+| --- | --- |
+| **A** | SEC/regulatory filings, corporate registry, authoritative ownership filings |
+| **B** | Explicit first-party / APS application-response ownership or self-operator statements |
+| **C** | Strong corroboration (e.g. affiliate without named parent) |
+| **D** | Name similarity only |
+
+Unacceptable as primary confirmation: Wikipedia, Crunchbase, SEO directories, RSP-sharing, logos, AI summaries.
+
+### Temporal rule
+
+Prefer identity/control evidence at application time, Reveal Day, or clearly covering the application period. Record `asOf` / temporal limitations. If continuity is unclear → KEEP_CANDIDATE or MARK_AMBIGUOUS.
+
+### Recommendation vs confirmation
+
+| Field | Role |
+| --- | --- |
+| `reviewRecommendation` | CONFIRM / KEEP_CANDIDATE / MARK_AMBIGUOUS / REJECT_RELATIONSHIP / NO_EVIDENCE |
+| Mapping `resolutionState` | Remains CANDIDATE / AMBIGUOUS / UNRESOLVED for new research |
+| **CONFIRMED** | Only via steward-approved registry ops (ORG-RES-2026-2A) — **never** agent self-approval |
+
+`reviewRecommendation=CONFIRM` requires A **or** explicit B ownership/self-identity evidence. C/D cannot recommend CONFIRM. Recommendations **do not** unlock Organization product metrics.
+
+### Evidence coverage (first research pass)
+
+See steward review artifacts after `npm run normalize -- organization-resolution-2026 --write`. Actual CONFIRMED remains **0** until operator approval.
 
 ## Deferred
 
-- **CROSS-ROUND-ID-1** — 2012↔2026 participant identity / returning-new
-- **ORG-RES-2026-2** — steward A/B evidence expansion for meaningful confirmed coverage
-- Command Center Organization metrics UI
-- Sector/category taxonomy
+- **ORG-RES-2026-2A** — apply steward-approved CONFIRMED mappings  
+- **CROSS-ROUND-ID-1** — 2012↔2026 participant identity / returning-new  
+- Command Center Organization metrics UI  
+- Sector/category taxonomy  
 
 ## Implementation
 
-- `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, review, tests
-- Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture
-- Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)
+- `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, review, tests  
+- Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
+- Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
+- Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`

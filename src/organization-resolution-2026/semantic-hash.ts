@@ -70,8 +70,34 @@ export function organizationResolutionSemanticHashInput(
         asOf: e.asOf,
         summary: e.summary,
         supportsClaim: e.supportsClaim,
+        title: e.title ?? null,
+        temporalRelevance: e.temporalRelevance ?? null,
+        limitations: e.limitations ?? null,
+        // retrievedAt excluded — incidental retrieval timestamp
       }))
       .sort((a, b) => a.evidenceId.localeCompare(b.evidenceId)),
+    stewardReviewDossiers: [...(snapshot.stewardReviewDossiers ?? [])]
+      .map((d) => ({
+        dossierId: d.dossierId,
+        applicantLegalName: d.applicantLegalName,
+        observedApplicationCount: d.observedApplicationCount,
+        officialContentionMemberships: d.officialContentionMemberships,
+        queueReasons: [...d.queueReasons].sort(),
+        resolutionState: d.resolutionState,
+        candidateOrganizationKey: d.candidateOrganizationKey,
+        candidateOrganizationId: d.candidateOrganizationId,
+        candidateCanonicalName: d.candidateCanonicalName,
+        possible2012OrganizationKey: d.possible2012OrganizationKey,
+        reviewRecommendation: d.reviewRecommendation,
+        recommendationReason: d.recommendationReason,
+        requiredStewardAction: d.requiredStewardAction,
+        strongestEvidenceStrength: d.strongestEvidenceStrength,
+        evidenceIds: [...d.evidenceIds].sort(),
+        temporalNote: d.temporalNote,
+        // stewardDecision blank until operator acts — included when set
+        stewardDecision: d.stewardDecision || "",
+      }))
+      .sort((a, b) => a.applicantLegalName.localeCompare(b.applicantLegalName)),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };

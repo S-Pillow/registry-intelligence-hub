@@ -1,3 +1,5 @@
+import type { StewardReviewDossier } from "./review-types";
+
 /** Shared with 2012 organization-promotion states. */
 export type OrganizationResolutionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
 
@@ -31,6 +33,11 @@ export type OrganizationEvidenceRef = {
   summary: string;
   /** Exact identity claim this source supports. */
   supportsClaim: string;
+  /** Optional ORG-RES-2026-2 research metadata (additive). */
+  title?: string;
+  retrievedAt?: string;
+  temporalRelevance?: string;
+  limitations?: string;
 };
 
 export type OrganizationReviewState = "steward-approved" | "pending-steward" | "rejected";
@@ -110,6 +117,13 @@ export type OrganizationResolutionQuality = {
   returningNewClassificationsCreated: 0;
   crossRoundIdentitiesCreated: 0;
   categoryInferencesCreated: 0;
+  /** ORG-RES-2026-2 research summary — recommendations never count as confirmed. */
+  dossiersResearched?: number;
+  recommendConfirm?: number;
+  recommendKeepCandidate?: number;
+  recommendAmbiguous?: number;
+  recommendReject?: number;
+  recommendNoEvidence?: number;
 };
 
 export type OrganizationResolutionSnapshot = {
@@ -121,6 +135,8 @@ export type OrganizationResolutionSnapshot = {
   applicantIdentityMappings: ApplicantIdentityMapping[];
   candidateClusters: CandidateNameCluster[];
   evidence: OrganizationEvidenceRef[];
+  /** Additive steward-review queue from ORG-RES-2026-2 research. */
+  stewardReviewDossiers?: StewardReviewDossier[];
   quality: OrganizationResolutionQuality;
   semanticContentSha256: string;
   generatedAt: string;
