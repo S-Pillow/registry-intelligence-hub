@@ -9,6 +9,7 @@ import { summarizeStates, totalEntities } from "./report";
 import { buildContentionReconciliationForBundle, buildTaxonomyCoverageForBundle } from "./offline-reports";
 import { buildOrganizationPromotionReportForBundle } from "./organization-promotion-report";
 import { crossRoundIdentityCliReport } from "../cross-round-identity/load-registry";
+import { runFirstPassOrganizationResolution } from "../organization-resolution-2026/run-first-pass";
 
 const DEFAULT_ROOT = "./.data/normalization";
 const DEFAULT_BUNDLE = "icann2012-representative-v1";
@@ -25,6 +26,7 @@ Usage:
   npm run normalize -- taxonomy-coverage [--bundle <id>] [--workspace <dir>]
   npm run normalize -- organization-promotion [--bundle <id>] [--workspace <dir>]
   npm run normalize -- cross-round-identity [--workspace <dir>]
+  npm run normalize -- organization-resolution-2026 [--workspace <dir>] [--write]
   npm run normalize -- trace <entityKind> <entityId> [--build <buildId>] [--root <dir>]
   npm run normalize -- verify [--build <buildId>] [--root <dir>]
 
@@ -51,6 +53,7 @@ async function main(): Promise<void> {
       workspace: { type: "string" },
       bundle: { type: "string" },
       build: { type: "string" },
+      write: { type: "boolean", default: false },
     },
   });
 
@@ -100,6 +103,28 @@ async function main(): Promise<void> {
     case "cross-round-identity": {
       const report = await crossRoundIdentityCliReport(workspaceRoot);
       console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+
+    case "organization-resolution-2026": {
+      const result = await runFirstPassOrganizationResolution({
+        workspaceRoot,
+        writeArtifacts: Boolean(values.write),
+      });
+      console.log(
+        JSON.stringify(
+          {
+            inventory: result.inventory,
+            quality: result.snapshot.quality,
+            semanticContentSha256: result.snapshot.semanticContentSha256,
+            applicationPublicationPin: result.snapshot.applicationPublicationPin,
+            artifacts: result.artifacts ?? null,
+            productEligible: result.inventory.productEligible,
+          },
+          null,
+          2,
+        ),
+      );
       return;
     }
 

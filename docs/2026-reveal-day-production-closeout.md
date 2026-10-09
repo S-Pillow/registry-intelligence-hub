@@ -299,7 +299,7 @@ The Reveal Day **source / ingestion / publication / promotion** program is **CLO
 ## Next product sequence
 
 1. **CC-IA-REBASE-1** — Intelligence-first Command Center.
-2. **ORG-RES-2026-1** — Evidence-backed 2026 Organization resolution.
+2. **ORG-RES-2026-1** — Evidence-backed 2026 Organization resolution (`docs/2026-organization-resolution.md`; confirmed product metrics still gated).
 3. **CROSS-ROUND-ID-1** — Defensible 2012↔2026 participant identity.
 4. **CONTENTION-INTEL-1** — Organization-/applicant-aware contention concentration once identity evidence supports it.
 5. **Compare / Briefing rework** — only after differentiated cross-round intelligence becomes eligible.

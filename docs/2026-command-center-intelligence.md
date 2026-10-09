@@ -34,7 +34,7 @@
 
 ## Next dependencies
 
-1. **ORG-RES-2026-1** — evidence-backed 2026 Organization resolution  
+1. **ORG-RES-2026-1** — evidence-backed 2026 Organization resolution (layer present; confirmed-only product still gated — see `docs/2026-organization-resolution.md`)  
 2. **CROSS-ROUND-ID-1** — defensible 2012↔2026 participant identity  
 3. Then CONTENTION-INTEL-1 / Compare–Briefing rework as eligibility permits  
 
