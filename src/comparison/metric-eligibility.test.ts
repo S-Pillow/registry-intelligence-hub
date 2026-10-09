@@ -46,11 +46,18 @@ describe("metric-eligibility catalog (two-axis)", () => {
     expect(isCrossRoundComparisonAllowed("PARTIAL", "REAL_SOURCE_READY", "REAL_SOURCE_READY")).toBe(false);
   });
 
-  it("keeps returning-participant identity blocked until cross-round identity exists", () => {
-    const entry = getMetricEligibility("returning-participant-identity");
-    expect(entry?.methodReadiness).toBe("BLOCKED_SOURCE");
-    expect(entry?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
-    expect(entry?.method).toBe("cross-round-organization-identity/1.0.0");
+  it("keeps complete returning blocked; confirmed-subset returning is limitation-qualified", () => {
+    const complete = getMetricEligibility("returning-participant-identity");
+    expect(complete?.methodReadiness).toBe("BLOCKED_SOURCE");
+    expect(complete?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
+    expect(complete?.method).toBe("cross-round-participation-intelligence/1.0.0");
+
+    const subset = getMetricEligibility("confirmed-returning-organizations");
+    expect(subset?.methodReadiness).toBe("PARTIAL");
+    expect(subset?.crossRoundStatus).toBe("READY_WITH_LIMITATION");
+
+    const newOrgs = getMetricEligibility("new-organizations");
+    expect(newOrgs?.methodReadiness).toBe("BLOCKED_SOURCE");
   });
 
   it("blocks round-wide portfolio, category mix, and 2012 contention set entity count", () => {

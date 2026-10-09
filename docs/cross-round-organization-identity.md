@@ -122,9 +122,9 @@ Applies steward approvals by default. Writes under `.data/reveal-2026/cross-roun
 - `cross-round-organization-identity-steward-review.tsv`
 - `cross-round-organization-identity-steward-review.md`
 
-## Next
+## Next / derived layer
 
-**RETURNING-NEW-1** — returning/new and portfolio-change intelligence over steward-approved identities only, with confirmed-subset coverage disclosure.
+**RETURNING-NEW-1** — see `docs/returning-new-participation-intelligence.md` (confirmed-subset returning + portfolio-change; complete new remains blocked).
 
 ## Implementation
 

@@ -11,6 +11,7 @@ import { buildOrganizationPromotionReportForBundle } from "./organization-promot
 import { crossRoundIdentityCliReport } from "../cross-round-identity/load-registry";
 import { runFirstPassOrganizationResolution } from "../organization-resolution-2026/run-first-pass";
 import { runCrossRoundOrganizationIdentityPass } from "../cross-round-organization-identity/run-pass";
+import { runParticipationIntelligencePass } from "../cross-round-participation-intelligence/run-pass";
 
 const DEFAULT_ROOT = "./.data/normalization";
 const DEFAULT_BUNDLE = "icann2012-representative-v1";
@@ -29,6 +30,7 @@ Usage:
   npm run normalize -- cross-round-identity [--workspace <dir>]
   npm run normalize -- organization-resolution-2026 [--workspace <dir>] [--write]
   npm run normalize -- cross-round-organization-identity [--workspace <dir>] [--write]
+  npm run normalize -- cross-round-participation-intelligence [--workspace <dir>] [--write]
   npm run normalize -- trace <entityKind> <entityId> [--build <buildId>] [--root <dir>]
   npm run normalize -- verify [--build <buildId>] [--root <dir>]
 
@@ -142,6 +144,27 @@ async function main(): Promise<void> {
             quality: result.snapshot.quality,
             semanticContentSha256: result.snapshot.semanticContentSha256,
             discoveryCount: result.discoveryCount,
+            artifacts: result.artifacts ?? null,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    case "cross-round-participation-intelligence": {
+      const result = await runParticipationIntelligencePass({
+        workspaceRoot,
+        writeArtifacts: Boolean(values.write),
+      });
+      console.log(
+        JSON.stringify(
+          {
+            inventory: result.inventory,
+            summary: result.snapshot.summary,
+            coverage: result.snapshot.coverage,
+            semanticContentSha256: result.snapshot.semanticContentSha256,
             artifacts: result.artifacts ?? null,
           },
           null,
