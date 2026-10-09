@@ -1,4 +1,5 @@
 import type { StewardReviewDossier } from "./review-types";
+import type { StewardDecisionProvenance } from "./steward-decision";
 
 /** Shared with 2012 organization-promotion states. */
 export type OrganizationResolutionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
@@ -124,6 +125,10 @@ export type OrganizationResolutionQuality = {
   recommendAmbiguous?: number;
   recommendReject?: number;
   recommendNoEvidence?: number;
+  /** Confirmed-subset official initial contention memberships (derived; not source mutation). */
+  confirmedContentionMemberships?: number;
+  officialContentionMemberships?: number;
+  confirmedContentionMembershipCoverageRatio?: number;
 };
 
 export type OrganizationResolutionSnapshot = {
@@ -137,6 +142,8 @@ export type OrganizationResolutionSnapshot = {
   evidence: OrganizationEvidenceRef[];
   /** Additive steward-review queue from ORG-RES-2026-2 research. */
   stewardReviewDossiers?: StewardReviewDossier[];
+  /** ORG-RES-2026-2A operator steward approval provenance (not Build Agent). */
+  stewardDecisionProvenance?: StewardDecisionProvenance;
   quality: OrganizationResolutionQuality;
   semanticContentSha256: string;
   generatedAt: string;

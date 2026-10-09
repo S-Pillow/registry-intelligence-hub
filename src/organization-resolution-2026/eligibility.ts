@@ -45,6 +45,6 @@ export function confirmedResolutionCoverageDisclosure(snapshot: OrganizationReso
     disclosure:
       confirmedOrganizations === 0
         ? "No steward-confirmed 2026 Organizations — Organization metrics remain blocked; Applicant Name is not Organization."
-        : `Confirmed Organization coverage ${confirmedApplications}/${observedApplications} observed Applications (${(coverageRatio * 100).toFixed(1)}%); not official Applicants ${snapshot.quality.officialApplicants}.`,
+        : `Confirmed-subset Organization coverage ${confirmedApplications}/${observedApplications} observed Applications (${(coverageRatio * 100).toFixed(1)}%); ${confirmedOrganizations} confirmed Organizations is a resolved subset — not the complete 2026 Organization round count. Unresolved Applications are not Unknown Organization.`,
   };
 }

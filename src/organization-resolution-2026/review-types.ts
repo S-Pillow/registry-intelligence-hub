@@ -57,6 +57,11 @@ export type StewardReviewDossier = {
   evidenceIds: string[];
   temporalNote: string;
   stewardDecision: "" | "APPROVE" | "REJECT" | "KEEP_CANDIDATE" | "DEFER";
+  /** Present after steward application — durable history: recommendation → approval → CONFIRMED. */
+  stewardDecisionId?: string;
+  stewardDecisionAuthority?: string;
+  stewardDecidedAt?: string;
+  priorResolutionState?: OrganizationResolutionState;
 };
 
 export type ResearchPackage = {

@@ -127,8 +127,12 @@ export function operatorReviewMarkdownSummary(snapshot: OrganizationResolutionSn
     `| Observed Applications | ${q.observedApplications} |`,
     `| Observed Applicant legal names | ${q.observedApplicantLegalNames} |`,
     `| Multi-Application legal names | ${q.applicantLegalNamesWithMultipleApplications} |`,
-    `| Confirmed Organizations (actual) | ${q.confirmedOrganizationCount} |`,
+    `| Confirmed Organizations (resolved subset) | ${q.confirmedOrganizationCount} |`,
+    `| Confirmed Applicant legal names | ${q.confirmedOrganizationMappings} |`,
     `| Confirmed Applications covered | ${q.applicationsCoveredByConfirmedOrganizations} |`,
+    `| Confirmed Application coverage | ${(q.confirmedApplicationCoverageRatio * 100).toFixed(2)}% |`,
+    `| Confirmed contention memberships | ${q.confirmedContentionMemberships ?? 0} |`,
+    `| Contention membership coverage | ${(((q.confirmedContentionMembershipCoverageRatio ?? 0) * 100)).toFixed(2)}% |`,
     `| Candidate Organizations | ${q.candidateOrganizationCount} |`,
     `| Ambiguous Organizations | ${q.ambiguousOrganizationCount} |`,
     `| Unresolved legal names | ${q.unresolvedApplicantLegalNames} |`,
@@ -138,29 +142,98 @@ export function operatorReviewMarkdownSummary(snapshot: OrganizationResolutionSn
     `| Recommend AMBIGUOUS | ${q.recommendAmbiguous ?? 0} |`,
     `| Recommend REJECT | ${q.recommendReject ?? 0} |`,
     `| No evidence | ${q.recommendNoEvidence ?? 0} |`,
-    `| Product-eligible Organizations | ${q.productEligibleOrganizationCount} |`,
+    `| Product-eligible Organizations (confirmed subset) | ${q.productEligibleOrganizationCount} |`,
     `| Returning/new classifications | ${q.returningNewClassificationsCreated} |`,
     `| Cross-round identities | ${q.crossRoundIdentitiesCreated} |`,
     ``,
-    `> Recommendations are **not** confirmations. Organization product metrics remain blocked while confirmed count is 0.`,
-    ``,
-    `## Proposed steward APPROVE queue (recommendation=CONFIRM)`,
-    ``,
   ];
+  if (snapshot.stewardDecisionProvenance) {
+    const p = snapshot.stewardDecisionProvenance;
+    lines.push(
+      `## Steward decision`,
+      ``,
+      `- Decision ID: \`${p.decisionId}\``,
+      `- Authority: ${p.authority} (not Build Agent)`,
+      `- Decided: ${p.decidedAt}`,
+      `- Scope: ${p.scope}`,
+      `- Source package hash: \`${p.sourceEvidencePackageSemanticHash}\``,
+      ``,
+      `> Confirmed Organizations are a **resolved subset**, not the complete 2026 Organization round count.`,
+      ``,
+      `## APPROVED / CONFIRMED`,
+      ``,
+    );
+  } else {
+    lines.push(
+      `> Recommendations are **not** confirmations until steward APPROVE.`,
+      ``,
+      `## Proposed steward APPROVE queue (recommendation=CONFIRM)`,
+      ``,
+    );
+  }
   if (confirmRecs.length === 0) {
     lines.push(`_None._`, ``);
   } else {
     lines.push(
-      `| Applicant | Candidate Organization | Apps | Contention | Evidence | Action |`,
-      `| --- | --- | ---: | ---: | --- | --- |`,
+      `| Applicant | Organization | State | Apps | Contention | Evidence | Steward |`,
+      `| --- | --- | --- | ---: | ---: | --- | --- |`,
     );
     for (const d of confirmRecs) {
       lines.push(
-        `| ${d.applicantLegalName} | ${d.candidateCanonicalName ?? ""} (\`${d.candidateOrganizationKey ?? ""}\`) | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.strongestEvidenceStrength ?? ""} | ${d.requiredStewardAction.replace(/\|/g, "/")} |`,
+        `| ${d.applicantLegalName} | ${d.candidateCanonicalName ?? ""} (\`${d.candidateOrganizationKey ?? ""}\`) | ${d.resolutionState} | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.strongestEvidenceStrength ?? ""} | ${d.stewardDecision || "pending"} |`,
       );
     }
     lines.push(``);
   }
+  const remainsCandidate = dossiers.filter(
+    (d) => d.resolutionState === "CANDIDATE" && d.reviewRecommendation !== "CONFIRM",
+  );
+  const remainsAmbiguous = dossiers.filter((d) => d.resolutionState === "AMBIGUOUS");
+  const noEvidence = dossiers.filter((d) => d.reviewRecommendation === "NO_EVIDENCE");
+
+  lines.push(`## REMAINS CANDIDATE`, ``);
+  if (remainsCandidate.length === 0) {
+    lines.push(`_None._`, ``);
+  } else {
+    lines.push(`| Applicant | Apps | Contention | Recommendation |`, `| --- | ---: | ---: | --- |`);
+    for (const d of remainsCandidate) {
+      lines.push(
+        `| ${d.applicantLegalName} | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.reviewRecommendation} |`,
+      );
+    }
+    lines.push(``);
+  }
+
+  lines.push(`## AMBIGUOUS`, ``);
+  if (remainsAmbiguous.length === 0) {
+    lines.push(`_None._`, ``);
+  } else {
+    lines.push(`| Applicant | Apps | Contention | Recommendation |`, `| --- | ---: | ---: | --- |`);
+    for (const d of remainsAmbiguous) {
+      lines.push(
+        `| ${d.applicantLegalName} | ${d.observedApplicationCount} | ${d.officialContentionMemberships} | ${d.reviewRecommendation} |`,
+      );
+    }
+    lines.push(``);
+  }
+
+  lines.push(`## UNRESOLVED / NO EVIDENCE (researched)`, ``);
+  if (noEvidence.length === 0) {
+    lines.push(`_None in research queue._`, ``);
+  } else {
+    lines.push(`| Applicant | Apps | Contention |`, `| --- | ---: | ---: |`);
+    for (const d of noEvidence) {
+      lines.push(
+        `| ${d.applicantLegalName} | ${d.observedApplicationCount} | ${d.officialContentionMemberships} |`,
+      );
+    }
+    lines.push(``);
+  }
+  lines.push(
+    `All other unresolved Applicant legal names remain unresolved outside the research queue (${q.unresolvedApplicantLegalNames} total UNRESOLVED mappings).`,
+    ``,
+  );
+
   lines.push(`## Top-impact researched dossiers`, ``);
   lines.push(
     `| Applicant | Apps | Contention | State | Recommendation | Candidate |`,

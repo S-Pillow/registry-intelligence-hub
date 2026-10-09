@@ -476,14 +476,14 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
     claimReadiness: { round2012: "HISTORICAL_ONLY", round2026: "NOT_PUBLISHED" },
     claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0 (26% promoted)",
-    source2026: "organization-resolution-2026/1.0.0 (confirmed-only; first-pass may be 0)",
+    source2026: "organization-resolution-2026/1.0.0 confirmed subset (not round-wide total)",
     method: "count(distinct organization)",
     sourceChannel: "DERIVED_REVIEWED",
     coverageRequirement: "NOT_APPLICABLE",
     crossRoundStatus: "BLOCKED_SOURCE",
     advancesWithApplicationActuality: false,
     notes:
-      "Sidecar exists; product still blocked until steward-confirmed mappings. Do not use Applicant Name or contention Org Name as RIH Organization.",
+      "Round-wide Organization count remains blocked. Confirmed-subset portfolios may exist in the resolution sidecar with coverage disclosure — never present confirmed count as total Organizations. Do not use Applicant Name or contention Org Name as RIH Organization.",
   },
   {
     metricId: "portfolio-concentration-round-wide",
@@ -506,13 +506,14 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
     claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
     claimsReal2026Identity: false,
     source2012: "organization-promotion/1.0.0 (steward ops)",
-    source2026: "organization-resolution-2026/1.0.0 confirmed-only (first-pass 0)",
+    source2026: "organization-resolution-2026/1.0.0 confirmed subset with coverage disclosure",
     method: "organization-promotion/1.0.0",
     sourceChannel: "DERIVED_REVIEWED",
     coverageRequirement: "NOT_APPLICABLE",
     crossRoundStatus: "BLOCKED_SOURCE",
     advancesWithApplicationActuality: false,
-    notes: "Offline promoted keys only; UI round-wide charts remain gated.",
+    notes:
+      "2012: offline promoted keys. 2026: confirmed-subset portfolios only (CONFIRMED_SUBSET_READY_WITH_LIMITATION) — not COMPLETE_ROUND_READY; UI round-wide charts remain gated.",
   },
   {
     metricId: "returning-participant-identity",

@@ -88,6 +88,7 @@ describe("ORG-RES-2026-2 recommendations vs confirmation", () => {
       workspaceRoot,
       writeArtifacts: false,
       applyResearch: true,
+      applyStewardApprovals: false,
     });
     const msft = snapshot.stewardReviewDossiers?.find((d) => d.applicantLegalName === "Microsoft Corporation");
     expect(msft?.reviewRecommendation).toBe("CONFIRM");
@@ -98,16 +99,24 @@ describe("ORG-RES-2026-2 recommendations vs confirmation", () => {
     expect(organizationMetricsProductEligible(snapshot)).toBe(false);
   });
 
-  it("keeps Squarespace B-evidence as CANDIDATE with CONFIRM recommendation", async () => {
-    const { snapshot } = await runFirstPassOrganizationResolution({ workspaceRoot, writeArtifacts: false });
+  it("keeps Squarespace B-evidence as CANDIDATE with CONFIRM recommendation before steward", async () => {
+    const { snapshot } = await runFirstPassOrganizationResolution({
+      workspaceRoot,
+      writeArtifacts: false,
+      applyStewardApprovals: false,
+    });
     const row = snapshot.stewardReviewDossiers?.find((d) => d.applicantLegalName === "Squarespace Registry LLC");
     expect(row?.reviewRecommendation).toBe("CONFIRM");
     expect(row?.strongestEvidenceStrength).toBe("B");
     expect(row?.resolutionState).toBe("CANDIDATE");
   });
 
-  it("does not auto-confirm from 2012 alias; no returning/new", async () => {
-    const { snapshot } = await runFirstPassOrganizationResolution({ workspaceRoot, writeArtifacts: false });
+  it("does not auto-confirm from 2012 alias alone; no returning/new", async () => {
+    const { snapshot } = await runFirstPassOrganizationResolution({
+      workspaceRoot,
+      writeArtifacts: false,
+      applyStewardApprovals: false,
+    });
     const crr = snapshot.applicantIdentityMappings.find(
       (m) => m.applicantLegalName === "Charleston Road Registry Inc.",
     );
@@ -148,7 +157,11 @@ describe("ORG-RES-2026-2 recommendations vs confirmation", () => {
   });
 
   it("recommendations do not count in confirmed coverage; pin remains fail-closed", async () => {
-    const { snapshot } = await runFirstPassOrganizationResolution({ workspaceRoot, writeArtifacts: false });
+    const { snapshot } = await runFirstPassOrganizationResolution({
+      workspaceRoot,
+      writeArtifacts: false,
+      applyStewardApprovals: false,
+    });
     expect(snapshot.quality.applicationsCoveredByConfirmedOrganizations).toBe(0);
     expect(snapshot.applicationPublicationPin.applicationGraphContentSha256).toBe(
       PINNED_APPLICATION_GRAPH_CONTENT_SHA256,
@@ -322,7 +335,11 @@ describe("ORG-RES-2026-2 integration guards", () => {
     expect(contention.contentionSets).toHaveLength(263);
     expect(contention.contentionSets.reduce((n, s) => n + s.members.length, 0)).toBe(891);
 
-    await runFirstPassOrganizationResolution({ workspaceRoot, writeArtifacts: false });
+    await runFirstPassOrganizationResolution({
+      workspaceRoot,
+      writeArtifacts: false,
+      applyStewardApprovals: false,
+    });
 
     expect(await readFile(pubPath, "utf8")).toBe(beforePub);
     expect(await readFile(contPath, "utf8")).toBe(beforeCont);

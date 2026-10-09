@@ -9,6 +9,8 @@ export * from "./eligibility";
 export * from "./build-resolution";
 export * from "./research-queue";
 export * from "./apply-research";
+export * from "./apply-steward-approvals";
+export * from "./steward-decision";
 export * from "./operator-review";
 export * from "./load-2012-confirmed-aliases";
 export * from "./run-first-pass";

@@ -71,8 +71,8 @@ Steward ops live in:
 
 ## Product eligibility
 
-Only **CONFIRMED** mappings contribute to Organization counts, confirmed portfolio sizes, and later org-aware contention / cross-round identity.  
-If confirmed count is 0, Organization metrics remain **blocked** (catalog unchanged readiness). Coverage disclosure must not claim `481 applicants = N organizations`.
+Only **CONFIRMED** mappings contribute to confirmed Organization counts, confirmed portfolio sizes, and confirmed-subset contention exposure.  
+Round-wide Organization count / complete portfolio concentration remain **blocked**. Confirmed-subset readiness requires coverage disclosure (confirmed ≠ round total). Coverage disclosure must not claim `481 applicants = N organizations` or treat unresolved Applications as Unknown Organization.
 
 ## Operator review
 
@@ -128,18 +128,95 @@ Prefer identity/control evidence at application time, Reveal Day, or clearly cov
 
 ### Evidence coverage (first research pass)
 
-See steward review artifacts after `npm run normalize -- organization-resolution-2026 --write`. Actual CONFIRMED remains **0** until operator approval.
+See steward review artifacts after `npm run normalize -- organization-resolution-2026 --write`. Pre-steward package semantic hash:
+
+`04316e1c52c94970f9f7a9c2afd83374ad3a6c4ceadd42b975f10d03f5f0b49b`
+
+(14 `recommendation=CONFIRM`, actual CONFIRMED **0** until ORG-RES-2026-2A.)
+
+## ORG-RES-2026-2A — steward-approved confirmations
+
+**Decision ID:** `RIH-ORG-RES-2026-2-ALL14-20261009`  
+**Authority:** operator / product steward (not Build Agent)  
+**Decided:** 2026-10-09  
+**Scope:** 2026 Organization resolution confirmations only  
+
+Operator decision: **Approve all 14** `recommendation=CONFIRM` dossiers from the accepted ORG-RES-2026-2 package at `c80d4041d38c8579cd85fcaf53c737121a90cc2e`.
+
+| Role | Rule |
+| --- | --- |
+| Research `reviewRecommendation` | Retained on dossiers (history: recommend → approve → CONFIRMED) |
+| Steward `APPROVE` | Required to transition mapping/org `CANDIDATE` → `CONFIRMED` |
+| Exact identity | Uses dossier `organizationId` / canonical / aliases / evidenceRefs — no invented IDs |
+
+### Approved mappings (14)
+
+Exact Applicant legal names transitioned (organization identity from accepted dossiers):
+
+1. Link Freedom Group Ltd  
+2. XYZ.COM LLC  
+3. Registry Services, LLC  
+4. Intercap Registry Inc.  
+5. Radix Technologies Inc SEZC  
+6. ShortDot (Ireland) Limited  
+7. Charleston Road Registry Inc.  
+8. Aruba PEC S.P.A.  
+9. Meta Registry Holdings LLC  
+10. Knock Knock WHOIS There, LLC  
+11. OPENAI OPCO, LLC  
+12. Squarespace Registry LLC  
+13. ECHO Domain Co L.L.C.  
+14. Microsoft Corporation  
+
+### Non-approved (preserved)
+
+| State | Applicants |
+| --- | --- |
+| KEEP_CANDIDATE | Oinkadot Inc; XRegistry Incorporated; 101130013 Saskatchewan Ltd. |
+| AMBIGUOUS | Toddler Logic, LLC; Pirin Tablet, LLC; Hair Apparent, LLC |
+| NO_EVIDENCE / unresolved | Suffix Inc.; NextGEN TLDs GmbH (+ all other unresolved legal names) |
+
+### Confirmed-subset coverage (recomputed)
+
+Pinned Application graph unchanged:
+
+`09e75b1c83baa2a7466033de991332f396b108dc3d8c0775d3c17d99ec6b45d2`
+
+Acceptance expectations (recomputed from mappings — not hardcoded product facts):
+
+| Metric | Value |
+| --- | --- |
+| Confirmed Organizations (resolved subset) | 14 |
+| Confirmed Applicant legal names | 14 |
+| Confirmed Applications | 669 / 1614 observed (~41.45%) |
+| Confirmed initial contention memberships | 483 / 891 (~54.21%) |
+| Candidate / Ambiguous / Unresolved remaining | 3 / 3 / 460 |
+| Post-steward semantic hash | `d19b5773dc72a95ba624441b1961762a15e76624ca3dff37bc4646ec4c1d0cdd` |
+
+**Confirmed subset ≠ complete round.** Do not present 14 as the total 2026 Organization count, or confirmed portfolio concentration as round-wide concentration. Unresolved Applications are not “Unknown Organization.”
+
+Product posture: **CONFIRMED_SUBSET_READY_WITH_LIMITATION** for confirmed portfolios / confirmed contention exposure; round-wide Organization metrics remain blocked (`organization-round-count` NOT_PUBLISHED).
+
+### Explicitly not authorized here
+
+- Cross-round identity approvals (including CRR→Google / Microsoft historical candidates)  
+- Returning/new / expanded/contracted  
+- Category/sector inference  
+- Application or contention publication mutation  
+- Deployment / production actuality  
+
+**CROSS-ROUND-ID-1** remains a separate ticket.
 
 ## Deferred
 
-- **ORG-RES-2026-2A** — apply steward-approved CONFIRMED mappings  
 - **CROSS-ROUND-ID-1** — 2012↔2026 participant identity / returning-new  
-- Command Center Organization metrics UI  
+- Command Center confirmed-subset portfolio UI (with coverage disclosure)  
 - Sector/category taxonomy  
 
 ## Implementation
 
-- `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, review, tests  
+- `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, steward apply, review, tests  
 - Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
 - Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
-- Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`
+- Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`  
+- Steward decision: `src/organization-resolution-2026/steward-decision.ts`

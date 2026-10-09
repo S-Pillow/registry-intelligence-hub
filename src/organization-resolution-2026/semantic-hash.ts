@@ -77,27 +77,58 @@ export function organizationResolutionSemanticHashInput(
       }))
       .sort((a, b) => a.evidenceId.localeCompare(b.evidenceId)),
     stewardReviewDossiers: [...(snapshot.stewardReviewDossiers ?? [])]
-      .map((d) => ({
-        dossierId: d.dossierId,
-        applicantLegalName: d.applicantLegalName,
-        observedApplicationCount: d.observedApplicationCount,
-        officialContentionMemberships: d.officialContentionMemberships,
-        queueReasons: [...d.queueReasons].sort(),
-        resolutionState: d.resolutionState,
-        candidateOrganizationKey: d.candidateOrganizationKey,
-        candidateOrganizationId: d.candidateOrganizationId,
-        candidateCanonicalName: d.candidateCanonicalName,
-        possible2012OrganizationKey: d.possible2012OrganizationKey,
-        reviewRecommendation: d.reviewRecommendation,
-        recommendationReason: d.recommendationReason,
-        requiredStewardAction: d.requiredStewardAction,
-        strongestEvidenceStrength: d.strongestEvidenceStrength,
-        evidenceIds: [...d.evidenceIds].sort(),
-        temporalNote: d.temporalNote,
-        // stewardDecision blank until operator acts — included when set
-        stewardDecision: d.stewardDecision || "",
-      }))
+      .map((d) => {
+        const base = {
+          dossierId: d.dossierId,
+          applicantLegalName: d.applicantLegalName,
+          observedApplicationCount: d.observedApplicationCount,
+          officialContentionMemberships: d.officialContentionMemberships,
+          queueReasons: [...d.queueReasons].sort(),
+          resolutionState: d.resolutionState,
+          candidateOrganizationKey: d.candidateOrganizationKey,
+          candidateOrganizationId: d.candidateOrganizationId,
+          candidateCanonicalName: d.candidateCanonicalName,
+          possible2012OrganizationKey: d.possible2012OrganizationKey,
+          reviewRecommendation: d.reviewRecommendation,
+          recommendationReason: d.recommendationReason,
+          requiredStewardAction: d.requiredStewardAction,
+          strongestEvidenceStrength: d.strongestEvidenceStrength,
+          evidenceIds: [...d.evidenceIds].sort(),
+          temporalNote: d.temporalNote,
+          // stewardDecision blank until operator acts — included when set
+          stewardDecision: d.stewardDecision || "",
+        };
+        // Optional steward-application fields omitted when absent so pre-steward
+        // ORG-RES-2026-2 hash (04316e1c…) remains stable.
+        if (d.stewardDecisionId || d.priorResolutionState) {
+          return {
+            ...base,
+            stewardDecisionId: d.stewardDecisionId ?? null,
+            stewardDecisionAuthority: d.stewardDecisionAuthority ?? null,
+            stewardDecidedAt: d.stewardDecidedAt ?? null,
+            priorResolutionState: d.priorResolutionState ?? null,
+          };
+        }
+        return base;
+      })
       .sort((a, b) => a.applicantLegalName.localeCompare(b.applicantLegalName)),
+    ...(snapshot.stewardDecisionProvenance
+      ? {
+          stewardDecisionProvenance: {
+            decisionId: snapshot.stewardDecisionProvenance.decisionId,
+            authority: snapshot.stewardDecisionProvenance.authority,
+            decidedAt: snapshot.stewardDecisionProvenance.decidedAt,
+            scope: snapshot.stewardDecisionProvenance.scope,
+            approvedApplicantLegalNames: [
+              ...snapshot.stewardDecisionProvenance.approvedApplicantLegalNames,
+            ].sort(),
+            sourceEvidencePackageCommit: snapshot.stewardDecisionProvenance.sourceEvidencePackageCommit,
+            sourceEvidencePackageSemanticHash:
+              snapshot.stewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            notes: snapshot.stewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };

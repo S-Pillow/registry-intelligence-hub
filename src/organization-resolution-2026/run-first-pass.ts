@@ -23,6 +23,7 @@ import {
   RESEARCH_QUEUE_METHOD,
 } from "./research-queue";
 import { applyResearchPackageToSnapshot } from "./apply-research";
+import { applyStewardApprovalsToSnapshot } from "./apply-steward-approvals";
 import { RESEARCH_PACKAGE_2026_2 } from "./fixtures/research-package-2026-2";
 import type { ResearchPackage } from "./review-types";
 
@@ -62,6 +63,8 @@ export async function runFirstPassOrganizationResolution(input: {
   writeArtifacts?: boolean;
   researchPackage?: ResearchPackage;
   applyResearch?: boolean;
+  /** ORG-RES-2026-2A: apply operator steward approvals (requires research first). Default true. */
+  applyStewardApprovals?: boolean;
 }): Promise<{
   snapshot: OrganizationResolutionSnapshot;
   inventory: ReturnType<typeof inventoryFromSnapshot>;
@@ -94,6 +97,21 @@ export async function runFirstPassOrganizationResolution(input: {
       snapshot,
       queue,
       research: input.researchPackage ?? RESEARCH_PACKAGE_2026_2,
+    });
+  }
+
+  // Default: apply steward after research. Skip when research is off (ORG-RES-2026-1 inventory).
+  const applySteward =
+    input.applyStewardApprovals === true ||
+    (input.applyStewardApprovals !== false && applyResearch);
+  if (applySteward) {
+    if (!applyResearch) {
+      throw new Error("applyStewardApprovals requires applyResearch (evidence package must be present)");
+    }
+    snapshot = applyStewardApprovalsToSnapshot({
+      snapshot,
+      publication,
+      contention,
     });
   }
 
@@ -165,7 +183,13 @@ export function inventoryFromSnapshot(snapshot: OrganizationResolutionSnapshot) 
     recommendAmbiguous: snapshot.quality.recommendAmbiguous ?? 0,
     recommendReject: snapshot.quality.recommendReject ?? 0,
     recommendNoEvidence: snapshot.quality.recommendNoEvidence ?? 0,
+    confirmedContentionMemberships: snapshot.quality.confirmedContentionMemberships ?? 0,
+    officialContentionMemberships: snapshot.quality.officialContentionMemberships ?? 0,
+    confirmedContentionMembershipCoverageRatio:
+      snapshot.quality.confirmedContentionMembershipCoverageRatio ?? 0,
+    stewardDecisionId: snapshot.stewardDecisionProvenance?.decisionId ?? null,
     productEligible: organizationMetricsProductEligible(snapshot),
+    confirmedSubsetReadyWithLimitation: snapshot.quality.confirmedOrganizationCount > 0,
     semanticHash: snapshot.semanticContentSha256,
     applicationPin: snapshot.applicationPublicationPin.applicationGraphContentSha256,
   };
