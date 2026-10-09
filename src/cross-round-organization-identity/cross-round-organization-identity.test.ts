@@ -53,6 +53,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
     const { snapshot } = await runCrossRoundOrganizationIdentityPass({
       workspaceRoot,
       writeArtifacts: false,
+      applyStewardApprovals: false,
     });
     expect(snapshot.quality.examined2026ConfirmedOrganizations).toBe(14);
     expect(snapshot.pin2026Resolution.contentSha256).toBe(PINNED_2026_ORG_RESOLUTION_SEMANTIC_SHA256);
@@ -78,7 +79,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
     });
     expect(discovery.some((d) => d.organization2012Key === "microsoft")).toBe(true);
     expect(discovery.some((d) => d.organization2012Key === "google-charleston-road")).toBe(true);
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     const msft = snapshot.mappings.find((m) => m.organization2026Key === "hist-2012-microsoft");
     expect(msft?.reviewRecommendation).toBe("CONFIRM");
     expect(msft?.state).toBe("CANDIDATE");
@@ -121,7 +122,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
       }),
     ).toThrow(/A\/B evidence|D-only/);
 
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     const godaddy = snapshot.mappings.find((m) => m.organization2026Key === "godaddy-registry-services");
     expect(godaddy?.relationshipType).toBe("ACQUIRED_AFTER_2012");
     expect(godaddy?.reviewRecommendation).toBe("REJECT");
@@ -130,7 +131,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
   });
 
   it("rename continuity may be represented; related entities can be REJECTED; multi-plausible → AMBIGUOUS", async () => {
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     expect(snapshot.mappings.some((m) => m.relationshipType === "RENAMED_ENTITY")).toBe(false);
     expect(
       snapshot.mappings.some(
@@ -145,7 +146,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
   });
 
   it("no candidate does not imply NEW; recommendation ≠ steward approval; returning/new blocked", async () => {
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     expect(snapshot.quality.noPlausibleConfirmed2012Match).toBe(10);
     expect(snapshot.quality.newClassificationsFinalized).toBe(0);
     expect(snapshot.quality.returningClassificationsFinalized).toBe(0);
@@ -179,7 +180,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
     const beforeContention = await readFile(contentionPath, "utf8");
     const beforePromo = await readFile(promoPath, "utf8");
 
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     expect(await readFile(pubPath, "utf8")).toBe(beforePub);
     expect(await readFile(contentionPath, "utf8")).toBe(beforeContention);
     expect(await readFile(promoPath, "utf8")).toBe(beforePromo);
@@ -220,8 +221,8 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
   });
 
   it("deterministic and order-invariant semantic hash; identity change alters hash", async () => {
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
-    const again = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
+    const again = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     expect(again.snapshot.semanticContentSha256).toBe(snapshot.semanticContentSha256);
 
     const reordered = {
@@ -247,7 +248,7 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
   });
 
   it("quality summary and research results match expected research package", async () => {
-    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot });
+    const { snapshot } = await runCrossRoundOrganizationIdentityPass({ workspaceRoot, applyStewardApprovals: false });
     expect(snapshot.quality.recommendConfirm).toBe(2);
     expect(snapshot.quality.recommendReject).toBe(1);
     expect(snapshot.quality.recommendAmbiguous).toBe(1);

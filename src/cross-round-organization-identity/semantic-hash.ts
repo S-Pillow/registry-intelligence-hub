@@ -56,6 +56,32 @@ export function crossRoundIdentitySemanticHashInput(
         notes: m.notes,
       }))
       .sort((a, b) => a.crossRoundIdentityId.localeCompare(b.crossRoundIdentityId)),
+    // Omit absent provenance so pre-steward hash stays bit-identical to CROSS-ROUND-ID-1.
+    ...(snapshot.stewardDecisionProvenance
+      ? {
+          stewardDecisionProvenance: {
+            decisionId: snapshot.stewardDecisionProvenance.decisionId,
+            authority: snapshot.stewardDecisionProvenance.authority,
+            decidedAt: snapshot.stewardDecisionProvenance.decidedAt,
+            scope: snapshot.stewardDecisionProvenance.scope,
+            approvedPairs: [...snapshot.stewardDecisionProvenance.approvedPairs]
+              .map((p) => ({
+                organization2026Id: p.organization2026Id,
+                organization2012Id: p.organization2012Id,
+                relationshipType: p.relationshipType,
+              }))
+              .sort(
+                (a, b) =>
+                  a.organization2026Id.localeCompare(b.organization2026Id) ||
+                  a.organization2012Id.localeCompare(b.organization2012Id),
+              ),
+            sourceEvidencePackageCommit: snapshot.stewardDecisionProvenance.sourceEvidencePackageCommit,
+            sourceEvidencePackageSemanticHash:
+              snapshot.stewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            notes: snapshot.stewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };

@@ -58,7 +58,9 @@ export function crossRoundOperatorReviewTsv(snapshot: CrossRoundOrganizationIden
         m.temporalAssessment.acquisitionAfter2012,
         m.evidenceRefIds.join("|"),
         m.recommendationReason,
-        m.stewardDecision,
+        m.stewardDecision
+          ? `${m.stewardDecision.decision}:${m.stewardDecision.decisionId}`
+          : "",
         m.crossRoundIdentityId,
       ]
         .map(escapeTsv)
@@ -96,12 +98,47 @@ export function crossRoundOperatorReviewMarkdown(snapshot: CrossRoundOrganizatio
     `| cross-round CONFIRMED (steward) | ${q.crossRoundConfirmed} |`,
     `| returning/new/expanded/contracted finalized | ${q.returningClassificationsFinalized}/${q.newClassificationsFinalized}/${q.expandedClassificationsFinalized}/${q.contractedClassificationsFinalized} |`,
     `| Applications in recommend-CONFIRM mappings | ${q.applicationsInRecommendConfirmMappings} |`,
-    ``,
-    `> Unmatched ≠ NEW. Returning/new remain blocked until steward-approved CONFIRMED cross-round mappings exist.`,
-    ``,
-    `## Dossiers`,
+    `| 2026 Applications represented by CONFIRMED identities | ${q.applicationsRepresentedByConfirmedCrossRound2026 ?? 0} |`,
+    `| 2012 Applications represented by CONFIRMED identities | ${q.applicationsRepresentedByConfirmedCrossRound2012 ?? 0} |`,
     ``,
   ];
+
+  if (snapshot.stewardDecisionProvenance) {
+    const p = snapshot.stewardDecisionProvenance;
+    lines.push(`## Steward decision`);
+    lines.push(``);
+    lines.push(`| Field | Value |`);
+    lines.push(`| --- | --- |`);
+    lines.push(`| Decision ID | \`${p.decisionId}\` |`);
+    lines.push(`| Authority | ${p.authority} |`);
+    lines.push(`| Decided | ${p.decidedAt} |`);
+    lines.push(`| Scope | ${p.scope} |`);
+    lines.push(`| Source package | \`${p.sourceEvidencePackageCommit}\` / \`${p.sourceEvidencePackageSemanticHash}\` |`);
+    lines.push(``);
+    lines.push(`### CONFIRMED`);
+    for (const m of snapshot.mappings.filter((x) => x.state === "CONFIRMED")) {
+      lines.push(`- ${m.organization2026CanonicalName} ↔ ${m.organization2012CanonicalName}`);
+    }
+    lines.push(``);
+    lines.push(`### REJECTED`);
+    for (const m of snapshot.mappings.filter((x) => x.state === "REJECTED")) {
+      lines.push(`- ${m.organization2026CanonicalName} ↔ ${m.organization2012CanonicalName} (${m.relationshipType})`);
+    }
+    lines.push(``);
+    lines.push(`### AMBIGUOUS`);
+    for (const m of snapshot.mappings.filter((x) => x.state === "AMBIGUOUS")) {
+      lines.push(`- ${m.organization2026CanonicalName} ↔ ${m.organization2012CanonicalName} (${m.relationshipType})`);
+    }
+    lines.push(``);
+    lines.push(`### UNMATCHED`);
+    lines.push(`- ${q.unmatched2026Organizations} remaining 2026 Organizations (not NEW)`);
+    lines.push(``);
+  }
+
+  lines.push(`> Unmatched ≠ NEW. Returning/new remain blocked until RETURNING-NEW-1.`);
+  lines.push(``);
+  lines.push(`## Dossiers`);
+  lines.push(``);
 
   for (const m of [...snapshot.mappings].sort((a, b) =>
     a.organization2026Key.localeCompare(b.organization2026Key),
@@ -119,7 +156,9 @@ export function crossRoundOperatorReviewMarkdown(snapshot: CrossRoundOrganizatio
     lines.push(`| Relationship | ${m.relationshipType} |`);
     lines.push(`| State | ${m.state} |`);
     lines.push(`| Recommendation | **${m.reviewRecommendation}** |`);
-    lines.push(`| Steward decision | ${m.stewardDecision ?? "*(pending)*"} |`);
+    lines.push(
+      `| Steward decision | ${m.stewardDecision ? `${m.stewardDecision.decision} (\`${m.stewardDecision.decisionId}\`)` : "*(pending)*"} |`,
+    );
     lines.push(`| Temporal | ${m.temporalAssessment.continuityClaim} |`);
     lines.push(`| Acquisition after 2012 | ${m.temporalAssessment.acquisitionAfter2012} |`);
     lines.push(`| Evidence | ${m.evidenceRefIds.map((id) => `\`${id}\``).join(", ")} |`);
@@ -150,7 +189,10 @@ export function inventoryFromCrossRoundSnapshot(snapshot: CrossRoundOrganization
         organization2026Id: m.organization2026Id,
         organization2012Id: m.organization2012Id,
         relationshipType: m.relationshipType,
+        state: m.state,
       })),
+    stewardDecisionId: snapshot.stewardDecisionProvenance?.decisionId ?? null,
+    confirmedSubsetCrossRoundIdentityReady: snapshot.quality.crossRoundConfirmed > 0,
     returningNewEligible: false,
   };
 }

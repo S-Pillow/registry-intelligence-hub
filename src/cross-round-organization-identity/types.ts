@@ -1,3 +1,8 @@
+import type {
+  CrossRoundMappingStewardDecision,
+  CrossRoundStewardDecisionProvenance,
+} from "./steward-decision";
+
 /** Mapping lifecycle — only steward-approved CONFIRMED may later drive returning/new. */
 export type CrossRoundIdentityState =
   | "CONFIRMED"
@@ -74,8 +79,8 @@ export type CrossRoundIdentityMapping = {
   temporalAssessment: TemporalAssessment;
   reviewRecommendation: CrossRoundReviewRecommendation;
   recommendationReason: string;
-  /** Always null in CROSS-ROUND-ID-1 — steward gate is a later ticket. */
-  stewardDecision: null;
+  /** null until CROSS-ROUND-ID-1A steward APPROVE. */
+  stewardDecision: CrossRoundMappingStewardDecision | null;
   notes: string;
 };
 
@@ -107,12 +112,15 @@ export type CrossRoundIdentityQuality = {
   recommendReject: number;
   recommendAmbiguous: number;
   noPlausibleConfirmed2012Match: number;
-  crossRoundConfirmed: 0;
+  crossRoundConfirmed: number;
   crossRoundCandidate: number;
   crossRoundAmbiguous: number;
   crossRoundRejected: number;
   unmatched2026Organizations: number;
   applicationsInRecommendConfirmMappings: number;
+  /** Present after steward application; 0 before. */
+  applicationsRepresentedByConfirmedCrossRound2026?: number;
+  applicationsRepresentedByConfirmedCrossRound2012?: number;
   returningClassificationsFinalized: 0;
   newClassificationsFinalized: 0;
   expandedClassificationsFinalized: 0;
@@ -133,6 +141,7 @@ export type CrossRoundOrganizationIdentitySnapshot = {
   evidence: CrossRoundEvidenceRef[];
   mappings: CrossRoundIdentityMapping[];
   quality: CrossRoundIdentityQuality;
+  stewardDecisionProvenance?: CrossRoundStewardDecisionProvenance;
   limitations: string[];
 };
 

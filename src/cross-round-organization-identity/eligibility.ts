@@ -1,8 +1,8 @@
 import type { CrossRoundOrganizationIdentitySnapshot } from "./types";
 
 /**
- * CROSS-ROUND-ID-1 alone never unlocks returning/new/expanded/contracted product metrics.
- * Only later steward-approved CONFIRMED mappings may unlock confirmed-subset claims.
+ * Count steward-approved CONFIRMED cross-round mappings.
+ * Does NOT unlock returning/new product metrics (RETURNING-NEW-1 is separate).
  */
 export function stewardApprovedCrossRoundIdentityCount(
   snapshot: CrossRoundOrganizationIdentitySnapshot,
@@ -10,20 +10,36 @@ export function stewardApprovedCrossRoundIdentityCount(
   return snapshot.mappings.filter((m) => m.state === "CONFIRMED" && m.stewardDecision !== null).length;
 }
 
-export function returningNewProductEligible(snapshot: CrossRoundOrganizationIdentitySnapshot): boolean {
+/**
+ * Confirmed-subset cross-round identity readiness (post CROSS-ROUND-ID-1A).
+ * Supports later RETURNING-NEW-1 — does not publish returning/new counts.
+ */
+export function confirmedSubsetCrossRoundIdentityReady(
+  snapshot: CrossRoundOrganizationIdentitySnapshot,
+): boolean {
   return stewardApprovedCrossRoundIdentityCount(snapshot) > 0;
+}
+
+/** Returning/new product metrics stay blocked until RETURNING-NEW-1. */
+export function returningNewProductEligible(
+  snapshot: CrossRoundOrganizationIdentitySnapshot,
+): boolean {
+  void snapshot;
+  return false;
 }
 
 export function expandedContractedProductEligible(
   snapshot: CrossRoundOrganizationIdentitySnapshot,
 ): boolean {
-  return returningNewProductEligible(snapshot);
+  void snapshot;
+  return false;
 }
 
 export function crossRoundPortfolioConcentrationEligible(
   snapshot: CrossRoundOrganizationIdentitySnapshot,
 ): boolean {
-  return returningNewProductEligible(snapshot);
+  void snapshot;
+  return false;
 }
 
 export function unmatchedDoesNotImplyNewDisclosure(): string {
