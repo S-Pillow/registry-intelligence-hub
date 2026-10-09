@@ -209,7 +209,9 @@ Product posture: **CONFIRMED_SUBSET_READY_WITH_LIMITATION** for confirmed portfo
 
 ## Deferred
 
-- **CROSS-ROUND-ID-1** — 2012↔2026 participant identity / returning-new  
+- **CROSS-ROUND-ID-1** — see `docs/cross-round-organization-identity.md` (evidence/candidates; returning-new still blocked until steward)  
+- **CROSS-ROUND-ID-1A** — apply steward-approved cross-round mappings  
+- **RETURNING-NEW-1** — returning/new / portfolio-change after approved identities  
 - Command Center confirmed-subset portfolio UI (with coverage disclosure)  
 - Sector/category taxonomy  
 

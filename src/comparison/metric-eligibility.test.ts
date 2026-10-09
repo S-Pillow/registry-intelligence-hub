@@ -49,7 +49,8 @@ describe("metric-eligibility catalog (two-axis)", () => {
   it("keeps returning-participant identity blocked until cross-round identity exists", () => {
     const entry = getMetricEligibility("returning-participant-identity");
     expect(entry?.methodReadiness).toBe("BLOCKED_SOURCE");
-    expect(entry?.method).toContain("cross-round-identity");
+    expect(entry?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
+    expect(entry?.method).toBe("cross-round-organization-identity/1.0.0");
   });
 
   it("blocks round-wide portfolio, category mix, and 2012 contention set entity count", () => {

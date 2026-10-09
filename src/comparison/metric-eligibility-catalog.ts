@@ -521,14 +521,16 @@ export const METRIC_ELIGIBILITY_CATALOG: MetricEligibilityEntry[] = [
     methodReadiness: "BLOCKED_SOURCE",
     claimReadiness: { round2012: "REAL_SOURCE_READY", round2026: "NOT_PUBLISHED" },
     claimsReal2026Identity: false,
-    source2012: "organization-promotion/1.0.0 + cross-round-identity/1.0.0",
-    source2026: "requires CROSS-ROUND-ID-1 after confirmed 2026 Organizations",
-    method: "cross-round-identity/1.0.0",
+    source2012: "organization-promotion/1.0.0 confirmed subset",
+    source2026:
+      "cross-round-organization-identity/1.0.0 — candidates only until steward-approved CONFIRMED mappings (CROSS-ROUND-ID-1A)",
+    method: "cross-round-organization-identity/1.0.0",
     sourceChannel: "DERIVED_REVIEWED",
     coverageRequirement: "NOT_APPLICABLE",
     crossRoundStatus: "BLOCKED_SOURCE",
     advancesWithApplicationActuality: false,
-    notes: "Requires cross-round identity — not real for 2026 yet.",
+    notes:
+      "CROSS-ROUND-ID-1 produces evidence/candidates only. Returning/new remain BLOCKED until steward-approved CONFIRMED cross-round mappings; unmatched ≠ NEW; confirmed-subset only thereafter.",
     compareDimensionId: "participation-status-identity",
   },
   {
