@@ -1,0 +1,17 @@
+{
+  "mappingVersion": "registry-2012-rsp-mapping/1.0.0",
+  "artifactPurpose": "TEST_ONLY",
+  "approvalState": "DRAFT",
+  "bundleId": "icann2012-rsp-public-portions-v1",
+  "scope": "pilot-25",
+  "entries": [
+    {
+      "applicationId": "1-1945-29108",
+      "gtldresultAcId": 170,
+      "mappingSourceClass": "PROBE_VERIFIED",
+      "evidenceSnapshotId": null,
+      "sourceUrl": "",
+      "notes": "BOSCH probe sample — TEST_ONLY artifact; not steward-approved live evidence"
+    }
+  ]
+}

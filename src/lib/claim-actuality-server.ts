@@ -33,12 +33,22 @@ export async function loadPromotedClaimActualityState(): Promise<ClaimActualityS
   const fromEnv = loadClaimActualityStateFromEnv();
   if (fromEnv) return fromEnv;
 
-  const configuredPath = process.env[CLAIM_ACTUALITY_STATE_PATH_ENV];
-  const statePath = configuredPath
-    ? configuredPath.startsWith("/")
+  const configuredPath = process.env[CLAIM_ACTUALITY_STATE_PATH_ENV]?.trim();
+  if (configuredPath) {
+    const statePath = configuredPath.startsWith("/")
       ? configuredPath
-      : join(process.cwd(), configuredPath)
-    : join(process.cwd(), DEFAULT_CLAIM_ACTUALITY_STATE_PATH);
+      : join(process.cwd(), configuredPath);
+    try {
+      return await readClaimActualityState(statePath, { allowMissing: false });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        throw new Error(
+          `${CLAIM_ACTUALITY_STATE_PATH_ENV} is set but the claim actuality state file could not be read`,
+        );
+      }
+      throw error;
+    }
+  }
 
-  return readClaimActualityState(statePath);
+  return readClaimActualityState(join(process.cwd(), DEFAULT_CLAIM_ACTUALITY_STATE_PATH));
 }

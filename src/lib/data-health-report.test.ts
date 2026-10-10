@@ -37,7 +37,7 @@ describe("data-health-report", () => {
       idnApplications: 116,
     });
     expect(snapshot.browserDataState.entityLevel2012InBrowser).toBe(false);
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
     expect(snapshot.publicationReadiness.round2026ApplicationActuality).toBe("NOT_PUBLISHED");
     expect(snapshot.browserDataState.real2026Publication).toMatch(/Not published/i);
     expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
@@ -71,8 +71,8 @@ describe("data-health-report", () => {
 
     expect(contention?.methodReadiness).toBe("BLOCKED_METHOD");
     expect(contention?.comparisonAllowed).toBe(false);
-    expect(categoryMix?.methodReadiness).toBe("BLOCKED_COVERAGE");
-    expect(orgCount?.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(categoryMix?.methodReadiness).toBe("BLOCKED_SOURCE");
+    expect(orgCount?.methodReadiness).toBe("BLOCKED_SOURCE");
 
     const comparable = snapshot.intelligenceReadiness.filter((r) => r.methodReadiness === "COMPARABLE");
     expect(comparable.every((r) => r.comparisonAllowed === false)).toBe(true);
@@ -150,16 +150,19 @@ describe("data-health-report", () => {
       { ...promoted, snapshotContentHash: "wrong-hash" },
       payload,
     );
-    expect(hashMismatch.mode).toBe("rehearsal");
+    expect(hashMismatch.status).toBe("fail-closed");
+    expect(hashMismatch.mode).toBe("unavailable");
     expect(hashMismatch.selectionReason).toBe("content-hash-mismatch");
-    expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed/i);
+    expect(humanizePayloadSelectionReason(hashMismatch.selectionReason)).toMatch(/fail-closed \(no rehearsal\)/i);
 
     const snapshot = buildDataHealthSnapshot(promoted, hashMismatch);
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/fail-closed/i);
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "browser-payload")?.status).toBe(
       "warning",
     );
-    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(/Rehearsal/i);
+    expect(snapshot.currentStateSummary.find((r) => r.id === "browser-mode")?.primary).toMatch(
+      /unavailable|fail-closed/i,
+    );
   });
 
   it("marks 2012 entity browser loaded when historical payload resolves", async () => {
@@ -187,6 +190,6 @@ describe("data-health-report", () => {
     expect(snapshot.browserDataState.historical2012CorpusHash).toBe(APPROVED_2012_BROWSER_CORPUS_CONTENT_HASH);
     expect(snapshot.currentStateSummary.find((r) => r.id === "2012-entity-browser")?.badgeLabel).toBe("Loaded");
     expect(snapshot.publicationReadiness.checklist.find((c) => c.id === "entity-2012")?.status).toBe("complete");
-    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/12-record/);
+    expect(snapshot.browserDataState.browserEntityDataset).toMatch(/withheld from the default product surface/i);
   });
 });

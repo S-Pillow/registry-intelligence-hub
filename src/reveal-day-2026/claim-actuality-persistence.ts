@@ -6,7 +6,10 @@ import {
 } from "./claim-actuality";
 import { CLAIM_ACTUALITY_STATE_VERSION } from "./types";
 
-export async function readClaimActualityState(statePath: string): Promise<ClaimActualityState> {
+export async function readClaimActualityState(
+  statePath: string,
+  options?: { allowMissing?: boolean },
+): Promise<ClaimActualityState> {
   try {
     const text = await readFile(statePath, "utf8");
     const parsed = JSON.parse(text) as ClaimActualityState;
@@ -15,7 +18,7 @@ export async function readClaimActualityState(statePath: string): Promise<ClaimA
     }
     return parsed;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    if (options?.allowMissing !== false && (error as NodeJS.ErrnoException).code === "ENOENT") {
       return { ...DEFAULT_CLAIM_ACTUALITY_STATE };
     }
     throw error;

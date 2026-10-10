@@ -4,7 +4,10 @@ import {
   getMetricEligibility,
   METRIC_ELIGIBILITY_CATALOG,
   METRIC_ELIGIBILITY_CATALOG_VERSION,
+  type CrossRoundEligibilityStatus,
+  type MetricCoverageRequirement,
   type MetricEligibilityEntry,
+  type MetricSourceChannel,
 } from "./metric-eligibility-catalog";
 import { isReadinessComparable, type MetricReadiness } from "./readiness";
 
@@ -14,6 +17,9 @@ export {
   getMetricEligibility,
   getCompareDimensionEligibility,
   type MetricEligibilityEntry,
+  type MetricSourceChannel,
+  type MetricCoverageRequirement,
+  type CrossRoundEligibilityStatus,
 };
 
 export type ResolvedMetricEligibility = MetricEligibilityEntry & { comparisonAllowed: boolean };

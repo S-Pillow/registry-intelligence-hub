@@ -55,10 +55,11 @@ describe("DataHealthContent", () => {
     expect(screen.getByRole("heading", { name: "2026 browser entities" })).toBeInTheDocument();
 
     expect(screen.getByText(/1930 applications · 1409 unique strings · 116 IDN applications/i)).toBeInTheDocument();
-    expect(screen.getByText(/12-record/i)).toBeInTheDocument();
+    expect(screen.getByText(/withheld from the default product surface/i)).toBeInTheDocument();
     expect(screen.getByText(/Not published — rehearsal identity only/i)).toBeInTheDocument();
     expect(screen.getByText(/Synthetic rehearsal only/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Atlas Digital, Kizuna/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/not 2012 Reveal Day applicants/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Atlas Digital/)).not.toBeInTheDocument();
     expect(screen.getAllByText(/Comparable method/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Blocked by method/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Prerequisite checklist/i)).toBeInTheDocument();
@@ -95,7 +96,7 @@ describe("DataHealthContent", () => {
     expect(screen.getByLabelText(/Hash-matched browser application payload: Complete/i)).toBeInTheDocument();
   });
 
-  it("shows fail-closed rehearsal fallback when promotion pins mismatch", async () => {
+  it("shows fail-closed (no rehearsal) when promotion pins mismatch under REAL", async () => {
     const publication = await loadPublicationSnapshotFromPath(DRILL_PUBLICATION);
     const payload = buildBrowserApplicationPayloadFromPublication(publication);
     const promoted = {
@@ -110,11 +111,10 @@ describe("DataHealthContent", () => {
     renderDataHealth(promoted, resolution);
 
     expect(
-      screen.getAllByText(/Content hash pin mismatch — fail-closed to rehearsal/i).length,
+      screen.getAllByText(/Content hash pin mismatch — fail-closed \(no rehearsal\)/i).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByLabelText(/Hash-matched browser application payload: Fail-closed fallback/i),
+      screen.getByLabelText(/Hash-matched browser application payload: Fail-closed \(no rehearsal\)/i),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/12-record/i).length).toBeGreaterThan(0);
   });
 });

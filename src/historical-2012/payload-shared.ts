@@ -20,6 +20,8 @@ export type Historical2012PayloadResolution =
       status: "loaded";
       reason: "loaded-active";
       document: Registry2012ApplicationsDocument;
+      /** Corpus size. Stays set when application rows are omitted from a shared layout transfer. */
+      applicationCount: number;
     };
 
 export function isRegistry2012BrowserPayloadDocument(
@@ -48,7 +50,7 @@ export function resolveHistorical2012BrowserPayload(
       status: "not-loaded",
       reason: "not-configured",
       errorMessage:
-        "2012 historical application payload is not configured. Set REGISTRY_HUB_2012_APPLICATION_PAYLOAD_PATH or REGISTRY_HUB_2012_APPLICATION_PAYLOAD_JSON.",
+        "No 2012 historical application document was supplied. An explicit override that fails is not replaced with another corpus.",
     };
   }
 
@@ -88,5 +90,26 @@ export function resolveHistorical2012BrowserPayload(
     status: "loaded",
     reason: "loaded-active",
     document: configured,
+    applicationCount: configured.applications.length,
+  };
+}
+
+/** Corpus size for labels. Uses the pinned count when application rows were omitted from a shared layout transfer. */
+export function historical2012CorpusApplicationCount(resolution: Historical2012PayloadResolution): number {
+  return resolution.status === "loaded" ? resolution.applicationCount : 0;
+}
+
+/**
+ * Shared layout transfer: keep provenance and the corpus count, drop the 1,930 rows.
+ * Historical Explore loads the full document on that route only.
+ */
+export function omitHistoricalApplicationsForSharedLayout(
+  resolution: Historical2012PayloadResolution,
+): Historical2012PayloadResolution {
+  if (resolution.status !== "loaded") return resolution;
+  return {
+    ...resolution,
+    applicationCount: resolution.applicationCount,
+    document: { ...resolution.document, applications: [] },
   };
 }

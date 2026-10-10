@@ -40,6 +40,7 @@ import type { SavedResearch, Watchlist, WatchlistItem } from "@/lib/saved-storag
 import { useInvestigation } from "@/components/registry/investigation-context";
 import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
 import { BriefThisButton } from "@/components/registry/briefing-content";
+import { retainPresentationParam, withRehearsalPresentation, withholdSyntheticPresentation, type ProductPresentation } from "@/lib/presentation-mode";
 
 type ViewState = "ready" | "loading" | "empty" | "error";
 
@@ -54,17 +55,17 @@ function formatDateTime(iso: string) {
   return `${dateTimeFormatter.format(new Date(iso))} UTC`;
 }
 
-function buildExploreHrefForEntity(entityType: EntityType, entityKey: string) {
+function buildExploreHrefForEntity(entityType: EntityType, entityKey: string, presentation: ProductPresentation) {
   const params = new URLSearchParams({ entity: entityType });
   if (entityType === "applications") params.set("ids", entityKey);
   else if (entityType === "categories") params.set("category", entityKey);
   else params.set("q", entityKey);
-  return `/explore?${params.toString()}`;
+  return withRehearsalPresentation(`/explore?${params.toString()}`, presentation);
 }
 
-function buildCompareHref(entityType: EntityType, keys: string[], origin: string) {
+function buildCompareHref(entityType: EntityType, keys: string[], origin: string, presentation: ProductPresentation) {
   const params = new URLSearchParams({ type: entityType, ids: keys.join(","), origin });
-  return `/compare?${params.toString()}`;
+  return withRehearsalPresentation(`/compare?${params.toString()}`, presentation);
 }
 
 function recordedCountForWatchlist(items: WatchlistItem[]) {
@@ -79,10 +80,10 @@ function currentCountForSavedResearch(entry: SavedResearch, applications: Return
   return recordsForParams(entry.kind, entry.params, applications).length;
 }
 
-function openHrefForSavedResearch(entry: SavedResearch) {
+function openHrefForSavedResearch(entry: SavedResearch, presentation: ProductPresentation) {
   const base = entry.kind === "explore-view" ? "/explore" : "/compare";
   const search = new URLSearchParams(entry.params).toString();
-  return search ? `${base}?${search}` : base;
+  return withRehearsalPresentation(search ? `${base}?${search}` : base, presentation);
 }
 
 function RenameControl({ name, entityLabel, onRename }: { name: string; entityLabel: string; onRename: (next: string) => void }) {
@@ -209,7 +210,7 @@ function WatchlistReviewPanel({ list, change }: { list: Watchlist; change: Chang
  * changes are planned; management controls remain limited to
  * Duplicate/Rename/Delete.
  */
-function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; expanded: boolean; onToggleExpand: () => void }) {
+function WatchlistCard({ list, expanded, onToggleExpand, presentation }: { list: Watchlist; expanded: boolean; onToggleExpand: () => void; presentation: ProductPresentation }) {
   const { savedWork, investigate } = useInvestigation();
   const registryFixture = useHubRegistryDocument();
   const applications = registryFixture.applications;
@@ -304,7 +305,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
                             records,
                             entityType: item.entityType,
                             entityKey: item.entityKey,
-                            exploreFullHref: buildExploreHrefForEntity(item.entityType, item.entityKey),
+                            exploreFullHref: buildExploreHrefForEntity(item.entityType, item.entityKey, presentation),
                           })}
                           className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50"
                         >
@@ -328,7 +329,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
             {groupedByType.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {groupedByType.map(([entityType, keys]) => (
-                  <Link key={entityType} href={buildCompareHref(entityType, keys.slice(0, 4), `Watchlist: ${list.name}`)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#007d65] px-3 text-sm font-bold text-white hover:bg-[#006a56]">
+                  <Link key={entityType} href={buildCompareHref(entityType, keys.slice(0, 4), `Watchlist: ${list.name}`, presentation)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#007d65] px-3 text-sm font-bold text-white hover:bg-[#006a56]">
                     <GitCompareArrows className="size-4" />Compare {Math.min(keys.length, 4)} {entityType}
                   </Link>
                 ))}
@@ -367,7 +368,7 @@ function WatchlistCard({ list, expanded, onToggleExpand }: { list: Watchlist; ex
   );
 }
 
-function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
+function WatchlistsTab({ initialOpenId, presentation }: { initialOpenId?: string; presentation: ProductPresentation }) {
   const { savedWork } = useInvestigation();
   const [expandedId, setExpandedId] = useState<string | null>(initialOpenId ?? null);
   const [creating, setCreating] = useState(false);
@@ -406,13 +407,13 @@ function WatchlistsTab({ initialOpenId }: { initialOpenId?: string }) {
           <CardContent>
             <Star className="mx-auto mb-4 size-9 text-slate-500" />
             <h3 className="text-lg font-bold">No watchlists yet</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href="/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href="/compare" className="font-semibold text-[#006a56] underline">Compare</Link>. That one-click action always creates and adds to a <strong>Quick Watchlist</strong> automatically — create a named list above first if you want to choose a different destination deliberately.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Create one above, or use the star “Watch” action on any organization, application, or category in <Link href={withRehearsalPresentation("/explore", presentation)} className="font-semibold text-[#006a56] underline">Explore</Link> or <Link href={withRehearsalPresentation("/compare", presentation)} className="font-semibold text-[#006a56] underline">Compare</Link>. That one-click action always creates and adds to a <strong>Quick Watchlist</strong> automatically — create a named list above first if you want to choose a different destination deliberately.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
           {savedWork.watchlists.map((list) => (
-            <WatchlistCard key={list.id} list={list} expanded={expandedId === list.id} onToggleExpand={() => setExpandedId((current) => current === list.id ? null : list.id)} />
+            <WatchlistCard key={list.id} list={list} presentation={presentation} expanded={expandedId === list.id} onToggleExpand={() => setExpandedId((current) => current === list.id ? null : list.id)} />
           ))}
         </div>
       )}
@@ -437,7 +438,7 @@ function compareReproducibilityLine(entry: SavedResearch, snapshotId: string): s
   return `Snapshot ${snapshot} · Time basis: ${timeBasisLabel} · Dimensions ${dimensions} · ${origin}`;
 }
 
-function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
+function SavedResearchPromotionActions({ entry, presentation }: { entry: SavedResearch; presentation: ProductPresentation }) {
   const applications = useHubRegistryDocument().applications;
   const comparePromotion = useMemo(() => savedResearchComparePromotion(entry, applications), [entry, applications]);
   const briefingEligible = useMemo(() => savedResearchBriefingEligible(entry, applications), [entry, applications]);
@@ -446,7 +447,7 @@ function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
     <div className="flex flex-wrap items-center gap-2">
       {comparePromotion.eligible ? (
         <Link
-          href={comparePromotion.href}
+          href={withRehearsalPresentation(comparePromotion.href, presentation)}
           className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] hover:bg-emerald-50"
         >
           <GitCompareArrows className="size-3.5" />Compare selected
@@ -480,7 +481,7 @@ function SavedResearchPromotionActions({ entry }: { entry: SavedResearch }) {
  * and material-change status can genuinely move even though the underlying
  * definition never silently changes.
  */
-function SavedResearchCard({ entry }: { entry: SavedResearch }) {
+function SavedResearchCard({ entry, presentation }: { entry: SavedResearch; presentation: ProductPresentation }) {
   const { savedWork } = useInvestigation();
   const registryFixture = useHubRegistryDocument();
   const applications = registryFixture.applications;
@@ -510,7 +511,7 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
           {entry.kind === "compare-config" && <p className="mt-1 text-xs text-slate-500">{compareReproducibilityLine(entry, registryFixture.snapshotId)}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Link href={openHrefForSavedResearch(entry)} onClick={() => savedWork.markSavedResearchOpened(entry.id)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]">
+          <Link href={openHrefForSavedResearch(entry, presentation)} onClick={() => savedWork.markSavedResearchOpened(entry.id)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56]">
             <FolderOpen className="size-3.5" />Open research
           </Link>
           <Button size="sm" variant="ghost" onClick={() => savedWork.duplicateSavedResearch(entry.id)}><Copy />Duplicate</Button>
@@ -520,13 +521,13 @@ function SavedResearchCard({ entry }: { entry: SavedResearch }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <MaterialChangeStatus change={change} />
-        <SavedResearchPromotionActions entry={entry} />
+        <SavedResearchPromotionActions entry={entry} presentation={presentation} />
       </CardContent>
     </Card>
   );
 }
 
-function SavedResearchTab() {
+function SavedResearchTab({ presentation }: { presentation: ProductPresentation }) {
   const { savedWork } = useInvestigation();
 
   if (!savedWork.hydrated) {
@@ -541,25 +542,57 @@ function SavedResearchTab() {
           <CardContent>
             <Database className="mx-auto mb-4 size-9 text-slate-500" />
             <h3 className="text-lg font-bold">No saved research yet</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Compose filters in <Link href="/explore" className="font-semibold text-[#006a56] underline">Explore</Link> or a comparison in <Link href="/compare" className="font-semibold text-[#006a56] underline">Compare</Link>, then use “Save this view” or “Save this comparison.”</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-slate-700">Compose filters in <Link href={withRehearsalPresentation("/explore", presentation)} className="font-semibold text-[#006a56] underline">Explore</Link> or a comparison in <Link href={withRehearsalPresentation("/compare", presentation)} className="font-semibold text-[#006a56] underline">Compare</Link>, then use “Save this view” or “Save this comparison.”</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">{savedWork.savedResearch.map((entry) => <SavedResearchCard key={entry.id} entry={entry} />)}</div>
+        <div className="space-y-4">{savedWork.savedResearch.map((entry) => <SavedResearchCard key={entry.id} entry={entry} presentation={presentation} />)}</div>
       )}
     </div>
   );
 }
 
-export function SavedContent({ state, initial }: { state: ViewState; initial: SavedParams }) {
+function SavedPreRevealState({
+  savedWorkHydrated,
+  watchlists,
+  savedResearch,
+}: {
+  savedWorkHydrated: boolean;
+  watchlists: Watchlist[];
+  savedResearch: SavedResearch[];
+}) {
+  const watchItemCount = savedWorkHydrated ? watchlists.reduce((sum, list) => sum + (Array.isArray(list.items) ? list.items.length : 0), 0) : 0;
+  const researchCount = savedWorkHydrated ? savedResearch.length : 0;
+  return (
+    <div className="space-y-4">
+      <Card className="border-slate-300 bg-white shadow-sm" data-testid="pre-reveal-waiting">
+        <CardContent className="py-8">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#006a56]">Pre-Reveal</p>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">Saved 2026 entities are waiting for publication</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Watch and saved research for 2026 applications open after Reveal Day data is promoted. This is not an error. Open Demo / Rehearsal if you need the synthetic cohort for testing.</p>
+        </CardContent>
+      </Card>
+      {savedWorkHydrated && watchItemCount + researchCount > 0 ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" data-testid="saved-rehearsal-quarantine">
+          {watchItemCount} watchlist item{watchItemCount === 1 ? "" : "s"} and {researchCount} saved research entr{researchCount === 1 ? "y" : "ies"} stored in this browser are withheld. They are not shown as 2026 applications.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function SavedContent({ state, initial, presentation = "pre-reveal" }: { state: ViewState; initial: SavedParams; presentation?: ProductPresentation }) {
   const registryFixture = useHubRegistryDocument();
+  const { savedWork } = useInvestigation();
+  const withhold = withholdSyntheticPresentation(presentation, registryFixture.payloadMode);
   const [tab, setTab] = useState(initial.tab === "research" ? "research" : "watchlists");
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (tab !== "watchlists") params.set("tab", tab);
+    retainPresentationParam(params, presentation);
     window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
-  }, [tab]);
+  }, [tab, presentation]);
 
   return (
     <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
@@ -567,29 +600,31 @@ export function SavedContent({ state, initial }: { state: ViewState; initial: Sa
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Saved hub</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Saved Research and Watchlists</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">Watchlists track entities. Saved Research tracks questions, cohorts, and filter states. Both reopen straight into Explore or Compare.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{withhold ? "2026 entities are not offered until Reveal Day data is promoted. Anything already saved in this browser stays here and is not shown as a real application." : "Watchlists track entities. Saved Research tracks questions, cohorts, and filter states. Both reopen straight into Explore or Compare."}</p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4" />Rehearsal fixture · local browser storage only</div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950"><ShieldCheck className="size-4 shrink-0" />{registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId} · local browser storage only` : presentation === "rehearsal" ? "Demo / Rehearsal — synthetic data, not an ICANN publication" : "Pre-Reveal — 2026 public application data has not been promoted"}</div>
       </div>
 
       {state === "loading" ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-xl" />)}</div>
       ) : state === "error" ? (
-        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Saved is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Locally stored watchlists and saved research were not affected.</p><Link href="/saved" className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+        <Card className="border-red-200 py-14 text-center"><CardContent><CircleAlert className="mx-auto mb-4 size-9 text-red-700" /><h2 className="text-lg font-bold">Saved is temporarily unavailable</h2><p className="mt-2 text-sm text-slate-700">Locally stored watchlists and saved research were not affected.</p><Link href={withRehearsalPresentation("/saved", presentation)} className="mt-5 inline-flex h-9 items-center rounded-lg bg-[#007d65] px-4 text-sm font-semibold text-white">Try again</Link></CardContent></Card>
+      ) : withhold ? (
+        <SavedPreRevealState savedWorkHydrated={savedWork.hydrated} watchlists={savedWork.watchlists} savedResearch={savedWork.savedResearch} />
       ) : (
         <Tabs value={tab} onValueChange={(value) => setTab(typeof value === "string" ? value : "watchlists")}>
           <TabsList aria-label="Saved sections">
             <TabsTrigger value="watchlists">Watchlists</TabsTrigger>
             <TabsTrigger value="research">Saved Research</TabsTrigger>
           </TabsList>
-          <TabsContent value="watchlists"><WatchlistsTab initialOpenId={initial.open} /></TabsContent>
-          <TabsContent value="research"><SavedResearchTab /></TabsContent>
+          <TabsContent value="watchlists"><WatchlistsTab initialOpenId={initial.open} presentation={presentation} /></TabsContent>
+          <TabsContent value="research"><SavedResearchTab presentation={presentation} /></TabsContent>
         </Tabs>
       )}
 
       <footer className="mt-8 flex flex-col gap-2 border-t py-5 text-xs font-medium text-slate-600 sm:flex-row sm:justify-between">
-        <span>Fixture snapshot {registryFixture.snapshotId} · fixture last changed {formatDateTime(registryFixture.changedAt)}</span>
-        <span>Storage: browser-local fixture prototype · not yet identity-backed</span>
+        <span>{withhold ? "No 2026 snapshot promoted" : registryFixture.payloadMode === "promoted-2026" ? `Promoted snapshot ${registryFixture.snapshotId}` : `Demo / Rehearsal snapshot ${registryFixture.snapshotId}`}</span>
+        <span>Storage: browser-local only · not yet identity-backed</span>
       </footer>
     </main>
   );

@@ -3,7 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { CommandCenter } from "@/components/registry/command-center";
@@ -34,12 +34,15 @@ const historical2012Loaded = resolveHistorical2012BrowserPayload(
 
 const registryResolution = resolveActiveRegistryApplicationsDocument(DEFAULT_CLAIM_ACTUALITY_STATE, null);
 
-function renderCommandCenter(historicalResolution: typeof historical2012Loaded) {
+function renderCommandCenter(
+  historicalResolution: typeof historical2012Loaded,
+  presentation: "pre-reveal" | "rehearsal" = "pre-reveal",
+) {
   return render(
     <HubClaimActualityProvider claimActualityState={DEFAULT_CLAIM_ACTUALITY_STATE}>
       <HubRegistryDataProvider resolution={registryResolution}>
         <HubHistorical2012Provider applicationPayload={historicalResolution} confirmedPortfolios={{ status: "not-loaded", reason: "not-configured", errorMessage: "not configured" }}>
-          <CommandCenter />
+          <CommandCenter presentation={presentation} />
         </HubHistorical2012Provider>
       </HubRegistryDataProvider>
     </HubClaimActualityProvider>,
@@ -98,7 +101,7 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(idnLink.getAttribute("href")).toContain("entity=applications");
     expect(idnLink.getAttribute("href")).toContain("idn=idn");
 
-    const contentionLink = screen.getByRole("link", { name: /Open 2012 contention applications/i });
+    const contentionLink = within(screen.getByTestId("initial-string-competition")).getByRole("link", { name: /Open 2012 contention applications/i });
     expect(contentionLink.getAttribute("href")).toBe(exploreHistorical2012ContentionApplicationsHref());
     expect(contentionLink.getAttribute("href")).toContain("entity=applications");
     expect(contentionLink.getAttribute("href")).toContain("contention=in");
@@ -158,11 +161,14 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     }
   });
 
-  it("leaves rehearsal Round Pulse drill-down on default 2026 Explore", () => {
+  it("keeps rehearsal Round Pulse drill-down off the default page and inside Demo / Rehearsal", () => {
     renderCommandCenter(historical2012Loaded);
+    expect(screen.queryByRole("link", { name: "Open Organizations in 2026 rehearsal Explore" })).not.toBeInTheDocument();
+    cleanup();
 
+    renderCommandCenter(historical2012Loaded, "rehearsal");
     const orgLink = screen.getByRole("link", { name: "Open Organizations in 2026 rehearsal Explore" });
-    expect(orgLink.getAttribute("href")).toBe("/explore?entity=organizations");
+    expect(orgLink.getAttribute("href")).toBe("/explore?entity=organizations&presentation=rehearsal");
     expect(orgLink.getAttribute("href")).not.toContain("dataset=2012-historical");
   });
 });

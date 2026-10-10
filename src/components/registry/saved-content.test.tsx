@@ -17,7 +17,7 @@ afterEach(() => {
 
 describe("Saved hub — empty states", () => {
   it("shows guidance to Explore/Compare when there are no watchlists yet", async () => {
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     expect(await screen.findByText("No watchlists yet")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Explore" }).length).toBeGreaterThan(0);
@@ -25,7 +25,7 @@ describe("Saved hub — empty states", () => {
 
   it("shows guidance to save research when there is none yet", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     await user.click(await screen.findByRole("tab", { name: "Saved Research" }));
 
@@ -36,7 +36,7 @@ describe("Saved hub — empty states", () => {
 describe("Saved hub — Watchlist CRUD", () => {
   it("creates, renames, duplicates, and deletes a watchlist with a two-step delete confirmation", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     await screen.findByText("No watchlists yet");
     await user.click(screen.getByRole("button", { name: "New watchlist" }));
@@ -69,7 +69,7 @@ describe("Saved hub — Watchlist CRUD", () => {
 
   it("adds and removes entities from a watchlist and links back into Investigate via an accessible Expand/Collapse toggle", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     await user.click(await screen.findByRole("button", { name: "New watchlist" }));
     await user.type(screen.getByRole("textbox", { name: "Watchlist name" }), "My List");
@@ -97,12 +97,12 @@ describe("Saved hub — Watchlist CRUD", () => {
 
   it("shows deterministic watchlist-level intelligence and communicates the Quick Watchlist default", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ entity: "organizations" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ entity: "organizations" }} />);
 
     await user.click(screen.getAllByRole("button", { name: "Watch Atlas Digital" })[0]);
 
     cleanup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     expect(await screen.findAllByText("Quick Watchlist")).toHaveLength(2);
     expect(screen.getByText(/Automatic default for the star .Watch. action/)).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("Saved hub — Watchlist CRUD", () => {
 describe("Saved hub — persistence across mounts", () => {
   it("persists a watchlist created in one mount to a freshly mounted Saved view", async () => {
     const user = userEvent.setup();
-    const first = render(<CommandCenter view="saved" />);
+    const first = render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     await user.click(await screen.findByRole("button", { name: "New watchlist" }));
     await user.type(screen.getByRole("textbox", { name: "Watchlist name" }), "Durable List");
@@ -124,7 +124,7 @@ describe("Saved hub — persistence across mounts", () => {
     await screen.findByText("Durable List");
     first.unmount();
 
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
     expect(await screen.findByText("Durable List")).toBeInTheDocument();
   });
 });
@@ -132,19 +132,19 @@ describe("Saved hub — persistence across mounts", () => {
 describe("Saved hub — Saved Research", () => {
   it("saves an Explore view, reopens it with restored filters, and supports duplicate/rename/delete", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="explore" exploreParams={{ idn: "idn" }} />);
+    render(<CommandCenter presentation="rehearsal" view="explore" exploreParams={{ idn: "idn" }} />);
 
     await user.click(screen.getByRole("button", { name: "Save this view" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText(/Saved “/)).toBeInTheDocument();
     const viewInSaved = screen.getByRole("link", { name: "View in Saved" });
-    expect(viewInSaved).toHaveAttribute("href", "/saved?tab=research");
+    expect(viewInSaved).toHaveAttribute("href", "/saved?tab=research&presentation=rehearsal");
   });
 
   it("manages a saved Compare configuration end-to-end from the Saved hub", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     await user.click(screen.getByRole("button", { name: "Save this comparison" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -152,7 +152,7 @@ describe("Saved hub — Saved Research", () => {
 
     cleanup();
     const user2 = userEvent.setup();
-    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
 
     expect(await screen.findByText("Compare configuration")).toBeInTheDocument();
     expect(screen.getByText(/Compare 2 organizations: Atlas Digital, Northstar Group/)).toBeInTheDocument();
@@ -182,14 +182,14 @@ describe("Saved hub — Saved Research", () => {
 
   it("persists entity type, selection, snapshot, time basis, dimensions version, and originating context for a saved comparison", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group", origin: "Watchlist: Quick Watchlist" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group", origin: "Watchlist: Quick Watchlist" }} />);
 
     await user.click(screen.getByRole("button", { name: "Save this comparison" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText(/Saved “/);
 
     cleanup();
-    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
 
     expect(await screen.findByText("Compare configuration")).toBeInTheDocument();
     expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
@@ -219,7 +219,7 @@ describe("Saved hub — Saved Research", () => {
       ]),
     );
 
-    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
 
     expect(await screen.findByText("Pre-metadata comparison")).toBeInTheDocument();
     expect(screen.getByText(/Snapshot snap-rehearsal-2026-09-16/)).toBeInTheDocument();
@@ -230,14 +230,14 @@ describe("Saved hub — Saved Research", () => {
 
   it("enables Compare selected and Create briefing for a valid saved comparison and disables them for an invalid one", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
+    render(<CommandCenter presentation="rehearsal" view="compare" compareParams={{ type: "organizations", ids: "Atlas Digital,Northstar Group" }} />);
 
     await user.click(screen.getByRole("button", { name: "Save this comparison" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText(/Saved “/);
 
     cleanup();
-    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
 
     expect(await screen.findByRole("link", { name: "Compare selected" })).toHaveAttribute(
       "href",
@@ -263,7 +263,7 @@ describe("Saved hub — Saved Research", () => {
     );
 
     cleanup();
-    render(<CommandCenter view="saved" savedParams={{ tab: "research" }} />);
+    render(<CommandCenter presentation="rehearsal" view="saved" savedParams={{ tab: "research" }} />);
 
     const compareButtons = await screen.findAllByRole("button", { name: "Compare selected" });
     const disabledCompare = compareButtons.find((button) => button.hasAttribute("disabled"));
@@ -275,7 +275,7 @@ describe("Saved hub — Saved Research", () => {
 describe("Saved hub — changes since last visit", () => {
   it("discloses that the comparison is against the recorded fixture snapshot, not live monitoring", async () => {
     const user = userEvent.setup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     await user.click(await screen.findByRole("button", { name: "New watchlist" }));
     await user.type(screen.getByRole("textbox", { name: "Watchlist name" }), "Tracked");
@@ -308,7 +308,7 @@ describe("Saved hub — changes since last visit", () => {
     );
 
     const user = userEvent.setup();
-    render(<CommandCenter view="saved" />);
+    render(<CommandCenter presentation="rehearsal" view="saved" />);
 
     expect(await screen.findByText(/Last material change: Sep 16, 2026/)).toBeInTheDocument();
     expect(screen.getByText("New since last visit")).toBeInTheDocument();

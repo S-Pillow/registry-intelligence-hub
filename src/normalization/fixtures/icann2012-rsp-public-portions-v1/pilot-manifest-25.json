@@ -1,0 +1,138 @@
+{
+  "manifestVersion": "icann2012-rsp-pilot-manifest/1.0.0",
+  "bundleId": "icann2012-rsp-public-portions-v1",
+  "pilotBatchSize": 25,
+  "revealDayCsvSnapshotId": "snap-2012-reveal-day-csv-v1",
+  "entries": [
+    {
+      "applicationId": "1-863-45071",
+      "selectionReason": "NeuStar, Inc. applicant for .NEUSTAR — applicant/control case; applicant name is not RSP evidence (D2.4A).",
+      "validationLeadProviderLabel": "Neustar external reconciliation lead (358) — validation only, not a gate",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1945-29108",
+      "selectionReason": "BOSCH — probe-verified public portion with Verisign backend phrasing in Q23 (D2.5A probe ac=170).",
+      "validationLeadProviderLabel": "Verisign (from Q23 probe excerpt — steward citation required for promotion)",
+      "gtldresultAcId": 170
+    },
+    {
+      "applicationId": "1-1099-17190",
+      "selectionReason": "Charleston Road Registry / Google confirmed portfolio member; official contention-set membership from committed PDF extract.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1311-58570",
+      "selectionReason": "IDN (.天主教) Europe — Application ID cited on live grid page 1 in D2.5A probe notes.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-868-39920",
+      "selectionReason": "Afilias Limited legal-name variant; confirmed steward portfolio; contention member.",
+      "validationLeadProviderLabel": "Afilias applicant entity (not asserted backend RSP)",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-868-82489",
+      "selectionReason": "Afilias Limited IDN (.移动); confirmed portfolio coverage exercise.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-868-7047",
+      "selectionReason": "Afilias IDN duplicate string (.信息) with contention-set membership.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1254-25640",
+      "selectionReason": "VeriSign Sarl applicant — legal-name variant; confirmed portfolio; exercises Verisign-family validation lead labeling only.",
+      "validationLeadProviderLabel": "VeriSign Sarl applicant label — not RSP fact without Q23 citation",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1318-5591",
+      "selectionReason": "Amazon EU confirmed portfolio IDN (.亚马逊).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1249-87712",
+      "selectionReason": "Contention set ICS-2012-similarity-1 (committed contention-sets.json).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1016-75482",
+      "selectionReason": "Contention pair to 1-1249-87712; non-IDN contention exercise.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1386-27446",
+      "selectionReason": "North America (NA) non-IDN brand string (.AAA).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1765-99580",
+      "selectionReason": "North America non-IDN corporate applicant (Abbott Laboratories / .ABBOTT).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1013-56131",
+      "selectionReason": "Latin America/Caribbean (LAC) non-IDN (.AVIANCA).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-901-17807",
+      "selectionReason": "Asia/Pacific (AP) non-IDN (.ABLE).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1346-36518",
+      "selectionReason": "Africa (AF) IDN (.عرب) geographic/community flags from Reveal Day CSV.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1925-2822",
+      "selectionReason": "AP IDN (.ابوظبي) with geographic flag — IDN/non-IDN mix for pilot.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-996-99850",
+      "selectionReason": "Contention set ICS-2012-similarity-2 member (committed sidecar).",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1771-82835",
+      "selectionReason": "Contention pair to 1-996-99850.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1417-16218",
+      "selectionReason": "Additional Charleston Road Registry confirmed portfolio member.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1129-14280",
+      "selectionReason": "Microsoft Corporation confirmed portfolio — multi-region org coverage.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1145-38018",
+      "selectionReason": "VeriSign, Inc. confirmed portfolio member (distinct from VeriSign Sarl entity).",
+      "validationLeadProviderLabel": "VeriSign, Inc. applicant — not RSP without portion citation",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-995-44061",
+      "selectionReason": "AP IDN duplicate string (.信息) in contention — cross-check Afilias/Beijing operator narrative in Q23 when portions exist.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-1678-13168",
+      "selectionReason": "Google confirmed portfolio — additional NA application for portfolio density QA.",
+      "gtldresultAcId": null
+    },
+    {
+      "applicationId": "1-845-11060",
+      "selectionReason": "Uniregistry, Corp. confirmed portfolio member — exercises registry-operator promotion cluster.",
+      "gtldresultAcId": null
+    }
+  ]
+}

@@ -94,7 +94,17 @@ describe("Explore 2012 historical — application table columns (D1)", () => {
     expect(within(table).getByText(".AAA")).toBeInTheDocument();
     expect(within(table).getByText("1-1386-27446")).toBeInTheDocument();
     expect(within(table).getByText(/American Automobile Association, Inc\./)).toBeInTheDocument();
+    expect(within(table).getByText("US")).toBeInTheDocument();
+    expect(within(table).getByText("NA")).toBeInTheDocument();
     expect(within(table).getByText("2012 CSV")).toBeInTheDocument();
+    expect(screen.getByTestId("historical-applicant-field-disclosure")).toHaveTextContent(/not resolved organization ownership/i);
+    expect(within(table).queryByRole("columnheader", { name: "Organization" })).not.toBeInTheDocument();
+    expect(within(table).queryByRole("columnheader", { name: "Type" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Confidence: 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("New only")).not.toBeInTheDocument();
+    const category = screen.getByLabelText("Filter by category");
+    expect(category).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Unclassified — not a market sector" })).toBeInTheDocument();
   });
 
   it("keeps one row per application when the same applied string repeats (.APP)", () => {
@@ -109,5 +119,18 @@ describe("Explore 2012 historical — application table columns (D1)", () => {
     expect(within(table).getAllByText(".APP")).toHaveLength(2);
     expect(within(table).getByText("1-1013-7451")).toBeInTheDocument();
     expect(within(table).getByText("1-1138-33325")).toBeInTheDocument();
+  });
+
+  it("shows an IDN A-label without a derived geographic count or confidence score", () => {
+    renderHistoricalExplore({
+      dataset: "2012-historical",
+      entity: "applications",
+      ids: "1-1011-2710",
+    });
+
+    expect(screen.getAllByText("A-label xn--estv75g").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Geographic")).not.toBeInTheDocument();
+    expect(screen.queryByText("55")).not.toBeInTheDocument();
+    expect(screen.queryByText("Confidence: 1")).not.toBeInTheDocument();
   });
 });

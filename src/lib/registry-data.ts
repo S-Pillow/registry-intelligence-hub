@@ -1,6 +1,6 @@
 import fixture from "@/data/fixtures/registry-applications.json";
 import { hubPath } from "@/lib/hub-paths";
-import { buildCommandCenterRoundPulse } from "@/comparison/historical-2012-ui-adapter";
+import { buildCommandCenterRoundPulse, type RoundPulsePayloadContext } from "@/comparison/historical-2012-ui-adapter";
 import {
   DEFAULT_CLAIM_ACTUALITY_STATE,
   type ClaimActualityState,
@@ -331,9 +331,9 @@ export function exploreSavedResearchParams(
  * can reuse the identical text rather than a parallel copy of it.
  */
 export const lensInterpretations: Record<Lens, string> = {
-  all: "The rehearsal fixture points to concentrated portfolios, increased IDN representation, and two initial contention clusters worth coordinated review.",
+  all: "The rehearsal fixture is the loaded cohort. Numeric cross-round deltas stay withheld until a promoted snapshot is active.",
   commercial: "Portfolio concentration and contention expose where account research may be most efficient; they are investigation priorities, not sales recommendations.",
-  strategy: "Category movement, IDN participation, and initial contention show where round composition differs from the normalized 2012 fixture cohort.",
+  strategy: "This view emphasizes composition, IDN participation, and contention on the loaded snapshot. Category mix versus 2012 is not an approved comparison.",
   marketing: "Cross-region IDN participation and multi-category organizations offer evidence-backed themes without implying market demand or future success.",
 };
 
@@ -366,9 +366,8 @@ export const lensRoundPulseFraming: Record<Lens, { eyebrow: string; subtitle: st
   },
 };
 
-/** Round Pulse section — explicit split between 2026 rehearsal drill-down and approved 2012 aggregates. */
-export const roundPulseDatasetSplitLine =
-  "2026 rehearsal signals with approved 2012 historical baselines.";
+/** Primary orientation strip — approved 2012 baseline only, until a promoted comparison is shown. */
+export const roundPulseDatasetSplitLine = "Approved 2012 historical baseline.";
 
 /** Visible footer on Round Pulse / entity cards whose Explore handoff targets the default 2026 rehearsal dataset. */
 export const rehearsalExploreFooterLabel = "Open 2026 rehearsal Explore";
@@ -716,11 +715,33 @@ export function uniqueCount<T>(values: T[]) {
   return new Set(values).size;
 }
 
+const PRIMARY_ORIENTATION_BASELINE_IDS = new Set([
+  "application-count",
+  "unique-applied-strings",
+  "idn-applications",
+]);
+
+/**
+ * Primary orientation peers are the approved historical baselines.
+ * Organization and region counts join that row only when the eligibility
+ * contract already permits a real 2026 claim or comparison.
+ */
+export function orientationMetricIsPrimaryPeer(metric: {
+  metricId?: string;
+  claimReadiness2026: string;
+  comparisonAllowed: boolean;
+  displayTier: string;
+}): boolean {
+  if (metric.metricId && PRIMARY_ORIENTATION_BASELINE_IDS.has(metric.metricId)) return true;
+  return metric.claimReadiness2026 === "REAL_SOURCE_READY" || metric.comparisonAllowed || metric.displayTier === "production-ready";
+}
+
 export function buildRoundPulse(
   applications: Application[],
   claimActualityState: ClaimActualityState = DEFAULT_CLAIM_ACTUALITY_STATE,
+  payloadContext: RoundPulsePayloadContext = {},
 ) {
-  return buildCommandCenterRoundPulse(applications, claimActualityState).map((metric) => ({
+  return buildCommandCenterRoundPulse(applications, claimActualityState, payloadContext).map((metric) => ({
     id: metric.id,
     label: metric.label,
     value: metric.value,
@@ -735,7 +756,109 @@ export function buildRoundPulse(
     method: metric.method,
     metricId: metric.metricId,
     historicalFact: metric.historicalFact,
+    crossRound: metric.crossRound,
   }));
+}
+
+/** Exact applicant legal-name grouping. Whitespace trim matches reveal-day-2026 normalize; no fuzzy identity match. */
+export const APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD = "applicant-legal-name-count/1.0.0";
+export const APPLICANT_LEGAL_NAME_CONCENTRATION_LIMIT = 5;
+
+export type ApplicantLegalNameConcentration = {
+  datasetApplicationCount: number;
+  eligibleApplicationCount: number;
+  distinctApplicantLegalNames: number;
+  method: typeof APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD;
+  ranked: Array<{
+    applicantLegalName: string;
+    count: number;
+    shareDenominator: number;
+  }>;
+};
+
+export function buildApplicantLegalNameConcentration(applications: Application[]): ApplicantLegalNameConcentration {
+  const grouped = new Map<string, number>();
+  for (const item of applications) {
+    const applicantLegalName = item.applicant.trim();
+    if (!applicantLegalName) continue;
+    grouped.set(applicantLegalName, (grouped.get(applicantLegalName) ?? 0) + 1);
+  }
+  const eligibleApplicationCount = [...grouped.values()].reduce((sum, count) => sum + count, 0);
+  const ranked = [...grouped.entries()]
+    .map(([applicantLegalName, count]) => ({
+      applicantLegalName,
+      count,
+      shareDenominator: eligibleApplicationCount,
+    }))
+    .sort((a, b) => b.count - a.count || a.applicantLegalName.localeCompare(b.applicantLegalName));
+  return {
+    datasetApplicationCount: applications.length,
+    eligibleApplicationCount,
+    distinctApplicantLegalNames: ranked.length,
+    method: APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD,
+    ranked,
+  };
+}
+
+/**
+ * Local grouping by the canonical applied-for string (`Application.string`).
+ * Same grain as 2026 `stringUlabel` and 2012 string rows: exact field equality.
+ * Not a contention-set id, similarity class, or approved set-count.
+ */
+export const EXACT_APPLIED_STRING_COMPETITION_METHOD = "exact-applied-string-grouping/1.0.0";
+export const EXACT_APPLIED_STRING_COMPETITION_GRAIN = "exact-applied-for-string";
+export const EXACT_APPLIED_STRING_COMPETITION_LIMIT = 5;
+
+export type ExactAppliedStringGroup = {
+  appliedForString: string;
+  applicationCount: number;
+  applicationIds: string[];
+};
+
+export type ExactAppliedStringCompetition = {
+  datasetApplicationCount: number;
+  eligibleApplicationCount: number;
+  competingGroupCount: number;
+  applicationsInCompetingGroups: number;
+  method: typeof EXACT_APPLIED_STRING_COMPETITION_METHOD;
+  grain: typeof EXACT_APPLIED_STRING_COMPETITION_GRAIN;
+  competingGroups: ExactAppliedStringGroup[];
+};
+
+/** Canonical applied-for string. Empty is not a string. No trim, case fold, or IDN fold. */
+export function exactAppliedForStringKey(application: { string: string }): string | null {
+  if (application.string.length === 0) return null;
+  return application.string;
+}
+
+export function buildExactAppliedStringCompetition(applications: readonly Application[]): ExactAppliedStringCompetition {
+  const grouped = new Map<string, string[]>();
+  let eligibleApplicationCount = 0;
+  for (const item of applications) {
+    const appliedForString = exactAppliedForStringKey(item);
+    if (appliedForString === null) continue;
+    eligibleApplicationCount += 1;
+    const applicationIds = grouped.get(appliedForString) ?? [];
+    applicationIds.push(item.id);
+    grouped.set(appliedForString, applicationIds);
+  }
+  const competingGroups = [...grouped.entries()]
+    .filter(([, applicationIds]) => applicationIds.length >= 2)
+    .map(([appliedForString, applicationIds]) => ({
+      appliedForString,
+      applicationCount: applicationIds.length,
+      applicationIds: [...applicationIds].sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => b.applicationCount - a.applicationCount || a.appliedForString.localeCompare(b.appliedForString));
+  return {
+    datasetApplicationCount: applications.length,
+    eligibleApplicationCount,
+    competingGroupCount: competingGroups.length,
+    applicationsInCompetingGroups: competingGroups.reduce((sum, group) => sum + group.applicationCount, 0),
+    method: EXACT_APPLIED_STRING_COMPETITION_METHOD,
+    grain: EXACT_APPLIED_STRING_COMPETITION_GRAIN,
+    competingGroups,
+  };
 }
 
 export function buildPortfolioRanking(applications: Application[]) {
@@ -761,6 +884,7 @@ export function buildCategoryMix(applications: Application[]) {
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
 }
 
+/** Fixture-cohort arithmetic only. Not an approved category comparison. Command Center does not render it. */
 export function buildBiggestChanges(applications: Application[], historical: HistoricalContext = fixture.historicalContext) {
   const current = Object.fromEntries(buildCategoryMix(applications).map((item) => [item.category, item.count]));
   return Object.entries(historical.categoryCounts)
@@ -780,11 +904,11 @@ export function buildApplicantsToWatch(applications: Application[]) {
     const contention = records.filter((item) => item.contentionSet).length;
     const idn = records.filter((item) => item.idn).length;
     const reasons = [
-      organization.count > 1 ? `${organization.count}-application portfolio` : null,
-      categories > 1 ? `${categories} categories` : null,
-      contention ? `${contention} application${contention > 1 ? "s" : ""} in initial contention` : null,
-      idn ? `${idn} IDN application${idn > 1 ? "s" : ""}` : null,
-      organization.returning ? "returning participant" : "new participant",
+      `${organization.count} loaded application${organization.count === 1 ? "" : "s"}`,
+      categories > 1 ? `${categories} category labels on the loaded snapshot` : null,
+      contention ? `${contention} application${contention === 1 ? "" : "s"} with a contention-set label` : null,
+      idn ? `${idn} IDN application${idn === 1 ? "" : "s"}` : null,
+      organization.returning ? "returning flag on the loaded snapshot" : "returning flag is not set",
     ].filter((reason): reason is string => Boolean(reason));
     return { ...organization, records, reasons };
   });
@@ -796,94 +920,11 @@ export const categoryMix = buildCategoryMix(fixture.applications);
 export const biggestChanges = buildBiggestChanges(fixture.applications);
 export const applicantsToWatch = buildApplicantsToWatch(fixture.applications);
 
-export const standoutInsights = [
-  {
-    id: "portfolio-concentration",
-    eyebrow: "PORTFOLIO CONCENTRATION",
-    title: "Atlas Digital holds the rehearsal fixture’s largest portfolio",
-    body: "Three applications span technology and media, making it the only organization represented in more than one category.",
-    confidence: "High",
-    coverage: "12 of 12 applications",
-    method: "portfolio-ranking/1.0.0",
-    records: fixture.applications.filter((item) => item.organization === "Atlas Digital")
-  },
-  {
-    id: "idn-shift",
-    eyebrow: "LANGUAGE & SCRIPT",
-    title: "IDN interest reaches two regions and two scripts",
-    body: "Arabic and Japanese rehearsal records account for 17% of applications. This is an observation, not a forecast.",
-    confidence: "High",
-    coverage: "12 of 12 applications",
-    method: "idn-share/1.0.0",
-    records: fixture.applications.filter((item) => item.idn)
-  },
-  {
-    id: "contention-concentration",
-    eyebrow: "INITIAL CONTENTION",
-    title: "Identity and technology each contain an identical-string set",
-    body: "Four applications are grouped into two initial identical-string contention sets; later contention may differ.",
-    confidence: "High",
-    coverage: "12 of 12 applications",
-    method: "initial-contention/1.0.0",
-    records: fixture.applications.filter((item) => item.contentionSet)
-  }
-] as const;
-
-/**
- * The exact lens-to-insight mapping Command Center's lens switcher already
- * uses to filter `standoutInsights`, promoted here so a round-wide Briefing's
- * "what stands out" section (briefings-design.md §6/§12) can reuse the
- * identical deterministic selection rather than a parallel one.
- */
-const standoutInsightIdsByLens: Record<Lens, string[]> = {
-  all: standoutInsights.map((insight) => insight.id),
-  commercial: ["portfolio-concentration", "contention-concentration"],
-  strategy: ["contention-concentration", "idn-shift"],
-  marketing: ["idn-shift", "portfolio-concentration"],
-};
-
-export function standoutInsightsForLens(lens: Lens) {
-  const ids = standoutInsightIdsByLens[lens];
-  return ids
-    .map((id) => standoutInsights.find((insight) => insight.id === id))
-    .filter((insight): insight is (typeof standoutInsights)[number] => insight !== undefined);
-}
-
-/** Short subtitle under “What You Should Know” — changes with the active View. */
-export const lensIntelligenceSubtitles: Record<Lens, string> = {
-  all: "All Intelligence view · ranked by materiality and evidence coverage",
-  commercial: "Commercial view · portfolio depth and contention exposure surfaced first",
-  strategy: "Product & Strategy view · category movement, IDN share, and contention structure first",
-  marketing: "Marketing view · cross-region IDN participation and portfolio themes first",
-};
-
-/** Per-insight View callout shown on insight cards (same facts, lens-specific emphasis). */
-export const lensInsightEmphasis: Record<Lens, Partial<Record<(typeof standoutInsights)[number]["id"], string>>> = {
-  all: {},
-  commercial: {
-    "portfolio-concentration": "Account research priority",
-    "contention-concentration": "Contention timing watch",
-  },
-  strategy: {
-    "contention-concentration": "Round-structure signal",
-    "idn-shift": "Composition shift",
-  },
-  marketing: {
-    "idn-shift": "Cross-region narrative",
-    "portfolio-concentration": "Multi-category brand story",
-  },
-};
-
-export function insightEmphasisForLens(lens: Lens, insightId: string) {
-  const emphasis = lensInsightEmphasis[lens] as Record<string, string | undefined>;
-  return emphasis[insightId];
-}
-
 /** Round Pulse metric `filter` keys emphasized for the active View (border/tint + VIEW FOCUS marker; values unchanged). */
 export const roundPulseEmphasisByLens: Record<Lens, string[]> = {
   all: [],
-  commercial: ["organizations", "contention"],
-  strategy: ["regions", "idn", "contention"],
+  commercial: ["organizations"],
+  strategy: ["regions", "idn"],
   marketing: ["idn", "regions"],
 };
 
@@ -892,12 +933,10 @@ export const roundPulseViewFocusByLens: Record<Lens, Partial<Record<string, stri
   all: {},
   commercial: {
     organizations: "Portfolio depth signal",
-    contention: "Contention timing watch",
   },
   strategy: {
     regions: "Composition geography",
     idn: "Composition shift",
-    contention: "Round-structure signal",
   },
   marketing: {
     idn: "Cross-region narrative",
@@ -916,7 +955,7 @@ const investigationOrganizationOrderByLens: Record<Lens, string[]> = {
   marketing: ["Kizuna Registry", "Atlas Digital", "Northstar Group"],
 };
 
-/** Investigation queue ordering — same three organizations, lens-prioritized ranking. */
+/** Investigation queue ordering — same three organizations, fixed fixture display order per View. */
 export function applicantsInvestigationQueueForLens(lens: Lens, applications: Application[] = fixture.applications) {
   const order = investigationOrganizationOrderByLens[lens];
   const watchlist = buildApplicantsToWatch(applications);
@@ -928,13 +967,10 @@ export function applicantsInvestigationQueueForLens(lens: Lens, applications: Ap
 }
 
 export const investigationQueueLensNote: Record<Lens, string> = {
-  all: "portfolio size, category breadth, contention exposure, IDN participation, and returning status are transparent fixture rules.",
-  commercial:
-    "this View ranks by portfolio depth and contention exposure first — efficient account-research starting points, not sales recommendations.",
-  strategy:
-    "this View ranks by category span, IDN participation, and contention patterns that shape round composition versus the 2012 fixture cohort.",
-  marketing:
-    "this View ranks by cross-region IDN participation and multi-category organizations — evidence-backed themes only, not demand forecasts.",
+  all: "Fixed rehearsal display order: Atlas Digital, Northstar Group, Kizuna Registry. Not a ranking.",
+  commercial: "Fixed rehearsal display order: Atlas Digital, Northstar Group, Kizuna Registry. Not a ranking.",
+  strategy: "Fixed rehearsal display order: Kizuna Registry, Atlas Digital, Northstar Group. Not a ranking.",
+  marketing: "Fixed rehearsal display order: Kizuna Registry, Atlas Digital, Northstar Group. Not a ranking.",
 };
 
 /**

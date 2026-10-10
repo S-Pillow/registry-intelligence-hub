@@ -1,4 +1,5 @@
 import { CommandCenter } from "@/components/registry/command-center";
+import { presentationFromSearchParam } from "@/lib/presentation-mode";
 
 const allowedStates = new Set(["ready", "loading", "empty", "error"]);
 
@@ -14,5 +15,5 @@ export default async function BriefingWorkspacePage({
   const stateValue = typeof query.state === "string" ? query.state : "ready";
   const state = allowedStates.has(stateValue) ? stateValue : "ready";
 
-  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="briefings" briefingId={id} />;
+  return <CommandCenter state={state as "ready" | "loading" | "empty" | "error"} view="briefings" briefingId={id} presentation={presentationFromSearchParam(query.presentation)} />;
 }

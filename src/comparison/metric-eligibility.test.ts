@@ -24,8 +24,8 @@ describe("metric-eligibility catalog (two-axis)", () => {
     expect(METRIC_ELIGIBILITY_CATALOG.every((entry) => entry.claimsReal2026Identity === false)).toBe(true);
   });
 
-  it("sets approved count metrics: method COMPARABLE, 2012 REAL_SOURCE_READY, 2026 NOT_PUBLISHED, comparisonAllowed false", () => {
-    for (const id of ["application-count", "unique-applied-strings", "idn-applications"] as const) {
+  it("keeps application/idn comparable for official-aggregate channel while unique strings stay coverage-blocked", () => {
+    for (const id of ["application-count", "idn-applications"] as const) {
       const resolved = resolveMetricEligibility(id)!;
       expect(resolved.methodReadiness).toBe("COMPARABLE");
       expect(resolved.claimReadiness.round2012).toBe("REAL_SOURCE_READY");
@@ -34,6 +34,10 @@ describe("metric-eligibility catalog (two-axis)", () => {
       expect(() => assertMetricComparable(id)).not.toThrow();
       expect(() => assertCrossRoundDeltaAllowed(id)).toThrow();
     }
+    const unique = resolveMetricEligibility("unique-applied-strings")!;
+    expect(unique.methodReadiness).toBe("BLOCKED_COVERAGE");
+    expect(unique.comparisonAllowed).toBe(false);
+    expect(() => assertMetricComparable("unique-applied-strings")).toThrow();
   });
 
   it("allows cross-round delta only when method COMPARABLE and both rounds REAL_SOURCE_READY", () => {
@@ -42,16 +46,25 @@ describe("metric-eligibility catalog (two-axis)", () => {
     expect(isCrossRoundComparisonAllowed("PARTIAL", "REAL_SOURCE_READY", "REAL_SOURCE_READY")).toBe(false);
   });
 
-  it("treats identity-only returning participant as PARTIAL with cross-round method", () => {
-    const entry = getMetricEligibility("returning-participant-identity");
-    expect(entry?.methodReadiness).toBe("PARTIAL");
-    expect(entry?.method).toContain("cross-round-identity");
+  it("keeps complete returning blocked; confirmed-subset returning is limitation-qualified", () => {
+    const complete = getMetricEligibility("returning-participant-identity");
+    expect(complete?.methodReadiness).toBe("BLOCKED_SOURCE");
+    expect(complete?.claimReadiness.round2026).toBe("NOT_PUBLISHED");
+    expect(complete?.method).toBe("cross-round-participation-intelligence/1.0.0");
+
+    const subset = getMetricEligibility("confirmed-returning-organizations");
+    expect(subset?.methodReadiness).toBe("PARTIAL");
+    expect(subset?.crossRoundStatus).toBe("READY_WITH_LIMITATION");
+
+    const newOrgs = getMetricEligibility("new-organizations");
+    expect(newOrgs?.methodReadiness).toBe("BLOCKED_SOURCE");
   });
 
-  it("blocks round-wide portfolio and category mix from COMPARABLE method readiness", () => {
-    expect(getMetricEligibility("portfolio-concentration-round-wide")?.methodReadiness).toBe("BLOCKED_COVERAGE");
-    expect(getMetricEligibility("category-mix")?.methodReadiness).toBe("BLOCKED_COVERAGE");
+  it("blocks round-wide portfolio, category mix, and 2012 contention set entity count", () => {
+    expect(getMetricEligibility("portfolio-concentration-round-wide")?.methodReadiness).toBe("BLOCKED_SOURCE");
+    expect(getMetricEligibility("category-mix")?.methodReadiness).toBe("BLOCKED_SOURCE");
     expect(getMetricEligibility("contention-set-count")?.methodReadiness).toBe("BLOCKED_METHOD");
+    expect(getMetricEligibility("organization-round-count")?.methodReadiness).toBe("BLOCKED_SOURCE");
   });
 
   it("has unique metric ids", () => {

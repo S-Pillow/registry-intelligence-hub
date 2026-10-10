@@ -4,7 +4,7 @@ import type { Application, ExploreFilterState } from "@/lib/registry-data";
 export const HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS = [
   "Applied string",
   "Application ID",
-  "Applicant",
+  "Applicant legal name",
   "Region",
   "Contention membership",
   "IDN",
@@ -73,6 +73,12 @@ export const HISTORICAL_2012_CONTENTION_FIELD_PROVENANCE =
 
 export const HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE =
   "Internal deterministic Hub set id (evidence metadata only — not an ICANN-published set identifier).";
+
+/** A-label is present on IDN rows in the committed corpus. It is not part of the shared 2026 application schema. */
+export function historical2012ALabel(record: { aLabel?: string | null }): string | null {
+  const value = record.aLabel;
+  return typeof value === "string" && value.trim() ? value : null;
+}
 
 /** User-facing contention label — never raw `ICS-2012-*` ids in table cells. */
 export function historical2012ContentionMembershipLabel(
@@ -189,19 +195,16 @@ export function assertHistorical2012StringCorpusIntegrity(
 /** Explore filter bar value when participation (new/returning) is not present on 2012 payload rows. */
 export const HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED = "unsupported" as const;
 
-/** Category taxonomy is not exported in the 2012 browser payload (139/1930 offline). */
+/** Category is Unclassified on every 2012 browser row — not a market-sector filter. */
 export const HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED = "unsupported" as const;
 
-/** Strip 2026-only or unsupported filters before querying the 2012 corpus. */
+/** Strip 2026-only participation and the unclassified category filter before querying the 2012 corpus. */
 export function exploreFiltersFor2012Historical<T extends { status: string; category?: string }>(
   filters: T,
   options?: { browseEntity?: string },
 ): T {
-  const category =
-    options?.browseEntity === "strings" || options?.browseEntity === "confirmed-portfolios"
-      ? "all"
-      : filters.category;
-  return { ...filters, status: "all", category };
+  void options;
+  return { ...filters, status: "all", category: "all" };
 }
 
 /** Normalize applied-string search tokens (`.APP`, `APP`, case) for aggregate predicates. */

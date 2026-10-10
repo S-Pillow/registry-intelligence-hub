@@ -3,6 +3,7 @@
 import { createContext, useContext } from "react";
 import type { HistoricalMetricFact } from "@/comparison/historical-2012-ui-adapter";
 import type { Application, EntityType } from "@/lib/registry-data";
+import type { ProductPresentation } from "@/lib/presentation-mode";
 import type { SavedWork } from "@/lib/use-saved-work";
 
 export type CompareEntityType = EntityType;
@@ -47,6 +48,20 @@ export type InvestigationItem = {
   exploreDataset?: InvestigationExploreDataset;
   /** Steward-confirmed portfolio promotion metadata (D2.4). */
   confirmedPortfolio?: ConfirmedPortfolioInvestigationMeta;
+  /** Method, snapshot, and limitation detail kept off the card face. */
+  technicalProvenance?: TechnicalProvenance;
+};
+
+export type TechnicalProvenance = {
+  method?: string;
+  readiness?: string;
+  comparison?: string;
+  snapshotId?: string;
+  historicalSource?: string;
+  limitations?: string[];
+  archivedCopy?: string;
+  crossRoundTestId?: string;
+  crossRoundLine?: string;
 };
 
 export type InvestigationContextValue = {
@@ -57,6 +72,7 @@ export type InvestigationContextValue = {
   compareItems: InvestigationItem[];
   watchedIds: Set<string>;
   savedWork: SavedWork;
+  presentation: ProductPresentation;
 };
 
 export const InvestigationContext = createContext<InvestigationContextValue | null>(null);

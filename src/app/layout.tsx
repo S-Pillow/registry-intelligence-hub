@@ -6,7 +6,9 @@ import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
 import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-2012/confirmed-portfolios-server";
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
+import { prepareHistorical2012SharedLayout } from "@/historical-2012/structural-summary";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
+import { claimActualityAssertedForBrowser } from "@/lib/registry-application-payload-shared";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
     default: "Registry Intelligence Hub",
     template: "%s · Registry Intelligence Hub",
   },
-  description: "A fixture-backed, source-provenance command center for ICANN application intelligence.",
+  description: "Historical 2012 evidence for ICANN application intelligence. 2026 Reveal Day data is shown only after it is promoted.",
 };
 
 export default async function RootLayout({
@@ -32,23 +34,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const claimActualityState = await loadPromotedClaimActualityState();
-  const [registryData, historical2012, confirmedPortfolios] = await Promise.all([
-    loadHubRegistryData(claimActualityState),
+  const configuredClaimActuality = await loadPromotedClaimActualityState();
+  const [registryData, historical2012Full, confirmedPortfolios] = await Promise.all([
+    loadHubRegistryData(configuredClaimActuality),
     loadHistorical2012PayloadResolution(),
     loadHistorical2012ConfirmedPortfoliosResolution(),
   ]);
+  const { applicationPayload: historical2012, structuralSummary } = prepareHistorical2012SharedLayout(historical2012Full);
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <HubClaimActualityProvider claimActualityState={claimActualityState}>
+        <HubClaimActualityProvider claimActualityState={claimActualityAssertedForBrowser(configuredClaimActuality, registryData)}>
           <HubRegistryDataProvider resolution={registryData}>
             <HubHistorical2012Provider
               applicationPayload={historical2012}
               confirmedPortfolios={confirmedPortfolios}
+              structuralSummary={structuralSummary}
             >
               {children}
             </HubHistorical2012Provider>
