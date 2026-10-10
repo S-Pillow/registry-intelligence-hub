@@ -2,7 +2,7 @@
 
 **Role:** Command Center is an evidence-backed **intelligence layer** for the 2026 round — not an APS browser clone.
 
-**Drilldown:** Search / Explore remain evidence surfaces. Command Center links into them; it does not recreate listing/filter tables.
+**Drilldown:** Search / Explore remain evidence surfaces. Command Center links into them; it does not recreate listing/filter tables. Applicant competitive intelligence lives on **Competitive Landscape** (`/competitive-landscape`) — see `docs/participant-competitive-intelligence.md`.
 
 ## Active 2.x hierarchy
 

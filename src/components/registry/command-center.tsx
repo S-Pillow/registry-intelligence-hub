@@ -140,6 +140,7 @@ import {
 import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
+import { CompetitiveLandscapeContent } from "@/components/registry/competitive-landscape-content";
 import { DataHealthContent } from "@/components/registry/data-health-content";
 import { Historical2012StructureSection } from "@/components/registry/historical-2012-structure-section";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
@@ -153,6 +154,7 @@ import { ActiveSourceFailClosed } from "@/components/registry/active-source-fail
 import { ExploreContentV2 } from "@/components/registry/explore-content-v2";
 import { CommandCenterOrientationV2 } from "@/components/registry/command-center-orientation-v2";
 import { hubPath } from "@/lib/hub-paths";
+import type { ParticipantOverlays } from "@/lib/participant-intelligence";
 import {
   isHttpSourceUrl,
   retainPresentationParam,
@@ -177,11 +179,38 @@ import {
 type ViewState = "ready" | "loading" | "empty" | "error";
 export type { CompareEntityType };
 
-const navItems = ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"];
+const navItems = [
+  "Command Center",
+  "Explore",
+  "Compare",
+  "Saved",
+  "Briefings",
+  "Competitive Landscape",
+  "Data Health",
+];
+
+type HubView =
+  | "command"
+  | "explore"
+  | "compare"
+  | "saved"
+  | "briefings"
+  | "competitive-landscape"
+  | "data-health";
 
 function hubNavHref(item: string, index: number): string {
   if (index === 0) return "/";
   return `/${item.toLowerCase().replace(/ /g, "-")}`;
+}
+
+function hubNavActiveLabel(view: HubView): string {
+  if (view === "explore") return "Explore";
+  if (view === "compare") return "Compare";
+  if (view === "saved") return "Saved";
+  if (view === "briefings") return "Briefings";
+  if (view === "competitive-landscape") return "Competitive Landscape";
+  if (view === "data-health") return "Data Health";
+  return "Command Center";
 }
 
 function presentationHref(href: string, presentation: ProductPresentation) {
@@ -2167,31 +2196,26 @@ function CommandCenterFailClosedShell({
   view,
   presentation,
   resolution,
+  overlays,
 }: {
-  view: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  view: HubView;
   presentation: ProductPresentation;
   resolution: HubRegistryDataResolution;
+  overlays?: ParticipantOverlays;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
-      <HubNav
-        presentation={presentation}
-        active={
-          view === "explore"
-            ? "Explore"
-            : view === "compare"
-              ? "Compare"
-              : view === "saved"
-                ? "Saved"
-                : view === "briefings"
-                  ? "Briefings"
-                  : view === "data-health"
-                    ? "Data Health"
-                    : "Command Center"
-        }
-      />
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        {view === "data-health" ? <DataHealthContent state="ready" /> : <ActiveSourceFailClosed resolution={resolution} />}
+      <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+      <main
+        className={`mx-auto px-4 py-8 ${view === "competitive-landscape" ? "max-w-[1480px]" : "max-w-6xl"}`}
+      >
+        {view === "data-health" ? (
+          <DataHealthContent state="ready" />
+        ) : view === "competitive-landscape" ? (
+          <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
+        ) : (
+          <ActiveSourceFailClosed resolution={resolution} />
+        )}
       </main>
     </div>
   );
@@ -2203,9 +2227,11 @@ function CommandCenterActiveV2({
   presentation = "pre-reveal",
   document,
   claimActuality,
+  exploreParams = {},
+  overlays,
 }: {
   state?: ViewState;
-  view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  view?: HubView;
   exploreParams?: ExploreParams;
   compareParams?: CompareParams;
   savedParams?: SavedParams;
@@ -2213,28 +2239,16 @@ function CommandCenterActiveV2({
   presentation?: ProductPresentation;
   document: RegistryApplicationsDocumentV2;
   claimActuality: ClaimActualityState;
+  overlays?: ParticipantOverlays;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
-      <HubNav
-        presentation={presentation}
-        active={
-          view === "explore"
-            ? "Explore"
-            : view === "compare"
-              ? "Compare"
-              : view === "saved"
-                ? "Saved"
-                : view === "briefings"
-                  ? "Briefings"
-                  : view === "data-health"
-                    ? "Data Health"
-                    : "Command Center"
-        }
-      />
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+      <main
+        className={`mx-auto px-4 py-8 ${view === "competitive-landscape" ? "max-w-[1480px]" : "max-w-6xl"}`}
+      >
         {view === "explore" ? (
-          <ExploreContentV2 document={document} />
+          <ExploreContentV2 document={document} initial={exploreParams} />
         ) : view === "compare" ? (
           <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
             <h1 className="text-xl font-bold">Compare remains eligibility-gated for Publication 2.x</h1>
@@ -2258,6 +2272,8 @@ function CommandCenterActiveV2({
               Briefings require 1.1-shaped Application fields. Do not fabricate compatibility for 2.x.
             </p>
           </section>
+        ) : view === "competitive-landscape" ? (
+          <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
         ) : view === "data-health" ? (
           <DataHealthContent state={state} />
         ) : (
@@ -2270,12 +2286,13 @@ function CommandCenterActiveV2({
 
 export function CommandCenter(props: {
   state?: ViewState;
-  view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health";
+  view?: HubView;
   exploreParams?: ExploreParams;
   compareParams?: CompareParams;
   savedParams?: SavedParams;
   briefingId?: string;
   presentation?: ProductPresentation;
+  overlays?: ParticipantOverlays;
 }) {
   const resolution = useHubRegistryData();
   const claimActualityState = useHubClaimActualityState();
@@ -2285,6 +2302,7 @@ export function CommandCenter(props: {
         view={props.view ?? "command"}
         presentation={props.presentation ?? "pre-reveal"}
         resolution={resolution}
+        overlays={props.overlays}
       />
     );
   }
@@ -2300,7 +2318,25 @@ export function CommandCenter(props: {
   return <CommandCenterV1 {...props} />;
 }
 
-function CommandCenterV1({ state = "ready", view = "command", exploreParams = {}, compareParams = {}, savedParams = {}, briefingId, presentation = "pre-reveal" }: { state?: ViewState; view?: "command" | "explore" | "compare" | "saved" | "briefings" | "data-health"; exploreParams?: ExploreParams; compareParams?: CompareParams; savedParams?: SavedParams; briefingId?: string; presentation?: ProductPresentation }) {
+function CommandCenterV1({
+  state = "ready",
+  view = "command",
+  exploreParams = {},
+  compareParams = {},
+  savedParams = {},
+  briefingId,
+  presentation = "pre-reveal",
+  overlays,
+}: {
+  state?: ViewState;
+  view?: HubView;
+  exploreParams?: ExploreParams;
+  compareParams?: CompareParams;
+  savedParams?: SavedParams;
+  briefingId?: string;
+  presentation?: ProductPresentation;
+  overlays?: ParticipantOverlays;
+}) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
   const historical2012 = useHistorical2012Payload();
@@ -2422,8 +2458,8 @@ function CommandCenterV1({ state = "ready", view = "command", exploreParams = {}
     <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
       <ShellHeader presentation={presentation} />
       <PresentationModeBanner presentation={presentation} promoted={publicationIsPromoted} />
-      <HubNav presentation={presentation} active={view === "explore" ? "Explore" : view === "compare" ? "Compare" : view === "saved" ? "Saved" : view === "briefings" ? "Briefings" : view === "data-health" ? "Data Health" : "Command Center"} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} presentation={presentation} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
+      <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} presentation={presentation} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
         <section data-testid="publication-state" aria-label="Publication state" className="mb-6 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center gap-2">

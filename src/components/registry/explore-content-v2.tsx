@@ -11,8 +11,20 @@ import {
 import type { RegistryApplicationsDocumentV2 } from "@/lib/registry-applications-document-v2";
 import { CoverageDisclosureV2 } from "@/components/registry/coverage-disclosure-v2";
 
-export function ExploreContentV2({ document }: { document: RegistryApplicationsDocumentV2 }) {
-  const [filters, setFilters] = useState<ExploreFilterStateV2>(DEFAULT_EXPLORE_FILTERS_V2);
+export function ExploreContentV2({
+  document,
+  initial,
+}: {
+  document: RegistryApplicationsDocumentV2;
+  initial?: { q?: string; ids?: string; region?: string; idn?: string };
+}) {
+  const [filters, setFilters] = useState<ExploreFilterStateV2>(() => ({
+    ...DEFAULT_EXPLORE_FILTERS_V2,
+    q: initial?.q ?? "",
+    ids: initial?.ids ?? "",
+    region: initial?.region && initial.region !== "all" ? initial.region : "all",
+    idn: initial?.idn && initial.idn !== "all" ? initial.idn : "all",
+  }));
   const matches = useMemo(
     () => filterBrowserApplicationsV2(document.applications, filters),
     [document.applications, filters],

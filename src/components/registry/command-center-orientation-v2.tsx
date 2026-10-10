@@ -366,8 +366,15 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
           data-testid="cc-v2-drilldown"
         >
           <Link
-            href={drilldown.exploreApplicationsHref}
+            href="/competitive-landscape"
             className="inline-flex items-center rounded-lg bg-[#007d65] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#006a56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
+            data-testid="cc-v2-competitive-landscape-cta"
+          >
+            Open Competitive Landscape
+          </Link>
+          <Link
+            href={drilldown.exploreApplicationsHref}
+            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
           >
             Explore applications
           </Link>

@@ -286,6 +286,10 @@ describe("Command Center intelligence-first 2.x IA", () => {
 
   it("exposes drilldown CTAs without embedding Explore tables", () => {
     renderCc(makeDocument());
+    expect(screen.getByRole("link", { name: "Open Competitive Landscape" })).toHaveAttribute(
+      "href",
+      "/competitive-landscape",
+    );
     expect(screen.getByRole("link", { name: "Explore applications" })).toHaveAttribute(
       "href",
       "/explore",
