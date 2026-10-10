@@ -17,6 +17,7 @@
     "reveal-2026": "tsx src/reveal-day-2026/cli.ts",
     "historical-2012": "tsx src/historical-2012/cli.ts",
     "acquire-rsp-portions": "tsx src/icann2012-rsp-acquisition/cli.ts",
+    "acquire-evaluated-rsp": "node scripts/acquire-icann-evaluated-rsp.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "verify:project-docs": "tsx scripts/verify-project-docs.ts",
     "smoke": "npm run build && node scripts/production-smoke.mjs",

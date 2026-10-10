@@ -1,0 +1,789 @@
+{
+  "schemaVersion": "icann-evaluated-main-rsp/1.0.0",
+  "source": {
+    "publisher": "ICANN",
+    "title": "List of Evaluated MAIN, DNS, DNSSEC, PROXY, and IDN Support Level Applications",
+    "url": "https://newgtldprogram-2026-documents.icann.org/rsp-documents/rsp-applications.html",
+    "sourceLastUpdated": "2026-10-06",
+    "retrievedAt": "2026-10-10T23:19:10Z",
+    "contentSha256": "79d66002b8eb3353fb647ae5d3b54b9854ebb70b11505a1f5b7ae26a472627b3",
+    "contentBytes": 77964
+  },
+  "records": [
+    {
+      "rspLegalName": "AFNIC",
+      "doingBusinessAs": "AFNIC",
+      "countryCode": "FR",
+      "businessUrl": "https://www.afnic.fr",
+      "recordLastUpdated": "2026-03-04",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Alibaba Cloud (Beijing) Technology Co., Ltd.",
+      "doingBusinessAs": "Alibaba Cloud",
+      "countryCode": "CN",
+      "businessUrl": "https://www.aliyun.com/",
+      "recordLastUpdated": "2026-08-06",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "Beijing Tele-info Technology Co., Ltd.",
+      "doingBusinessAs": null,
+      "countryCode": "CN",
+      "businessUrl": "https://www.teleinfo.cn/",
+      "recordLastUpdated": "2026-08-20",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "Canadian Internet Registration Authority",
+      "doingBusinessAs": "Hello Registry – CIRA",
+      "countryCode": "CA",
+      "businessUrl": "https://cira.ca",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "CentralNic LTD",
+      "doingBusinessAs": "CentralNic Registry",
+      "countryCode": "GB",
+      "businessUrl": "https://centralnicregistry.com/",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Charleston Road Registry Inc.",
+      "doingBusinessAs": "Google Registry",
+      "countryCode": "US",
+      "businessUrl": "https://registry.google",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "CORE Association",
+      "doingBusinessAs": "CORE",
+      "countryCode": "CH",
+      "businessUrl": "https://corenic.org",
+      "recordLastUpdated": "2026-07-24",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "CZ.NIC, z. s. p. o.",
+      "doingBusinessAs": "CZ.NIC",
+      "countryCode": "CZ",
+      "businessUrl": "https://www.nic.cz",
+      "recordLastUpdated": "2026-09-23",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "DENIC Services GmbH & Co. KG",
+      "doingBusinessAs": "DENIC Services",
+      "countryCode": "DE",
+      "businessUrl": "https://www.denic-services.de",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "DigiCert, Inc.",
+      "doingBusinessAs": "DigiCert UltraDNS",
+      "countryCode": "US",
+      "businessUrl": "https://vercara.digicert.com/top-level-domain-dns",
+      "recordLastUpdated": "2026-07-29",
+      "main": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "Dotbrand Limited",
+      "doingBusinessAs": "Com Laude & Markmonitor (Markmonitor Group)",
+      "countryCode": "GB",
+      "businessUrl": "https://dotbrand.limited",
+      "recordLastUpdated": "2026-06-08",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "GMO Registry, Inc.",
+      "doingBusinessAs": null,
+      "countryCode": "JP",
+      "businessUrl": "https://www.gmoregistry.com/en/",
+      "recordLastUpdated": "2026-05-22",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "Identity Digital Limited",
+      "doingBusinessAs": null,
+      "countryCode": "IE",
+      "businessUrl": "https://www.identity.digital/",
+      "recordLastUpdated": "2026-03-09",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "Internet Domain Name System Beijing Engineering Research Center Ltd. (ZDNS)",
+      "doingBusinessAs": "ZDNS",
+      "countryCode": "CN",
+      "businessUrl": "https://www.zdns.cn/",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "IT.COM DOMAINS LTD",
+      "doingBusinessAs": null,
+      "countryCode": "GB",
+      "businessUrl": "https://rsp.it.com/",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "Japan Registry Services Co., Ltd.(JPRS)",
+      "doingBusinessAs": "JPRS",
+      "countryCode": "JP",
+      "businessUrl": "https://jprs.co.jp/",
+      "recordLastUpdated": "2026-04-01",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Knipp Medien und Kommunikation GmbH",
+      "doingBusinessAs": "TANGO Registry Services",
+      "countryCode": "DE",
+      "businessUrl": "https://www.knipp.de",
+      "recordLastUpdated": "2026-02-09",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "LEMARIT GmbH",
+      "doingBusinessAs": null,
+      "countryCode": "DE",
+      "businessUrl": "https://www.lemarit.com/en/",
+      "recordLastUpdated": "2026-02-13",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Netnod AB",
+      "doingBusinessAs": null,
+      "countryCode": "SE",
+      "businessUrl": "https://www.netnod.se/",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "Nominet UK",
+      "doingBusinessAs": "Nominet UK",
+      "countryCode": "GB",
+      "businessUrl": "https://www.nominet.uk",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "Núcleo de Informação e Coordenação do Ponto BR - NIC.br",
+      "doingBusinessAs": "NIC.br",
+      "countryCode": "BR",
+      "businessUrl": "https://nic.br",
+      "recordLastUpdated": "2026-09-23",
+      "main": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dnssec": {
+        "status": "NOT_CLEARED",
+        "rawText": "Technical screening: cleared/Technical testing: in-progress"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "PT AIDI DIGITAL GLOBAL",
+      "doingBusinessAs": "PT ADG",
+      "countryCode": "ID",
+      "businessUrl": "https://www.adg.id",
+      "recordLastUpdated": "2026-02-11",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "Registry Services, LLC",
+      "doingBusinessAs": "GoDaddy Registry",
+      "countryCode": "US",
+      "businessUrl": "https://registry.godaddy/",
+      "recordLastUpdated": "2026-04-06",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "RyCE GmbH",
+      "doingBusinessAs": "RyCE",
+      "countryCode": "AT",
+      "businessUrl": "https://ryce.at",
+      "recordLastUpdated": "2026-05-20",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "Saiyu Technology (Beijing) LLC",
+      "doingBusinessAs": null,
+      "countryCode": "CN",
+      "businessUrl": "https://www.saiyutech.cn",
+      "recordLastUpdated": "2026-07-31",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "idnSupportLevel": 3
+    },
+    {
+      "rspLegalName": "SIDN Business B.V.",
+      "doingBusinessAs": "Hello Registry – SIDN",
+      "countryCode": "NL",
+      "businessUrl": "https://www.sidn.nl",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Thai Name Server Co., Ltd.",
+      "doingBusinessAs": null,
+      "countryCode": "TH",
+      "businessUrl": "https://www.thains.co.th",
+      "recordLastUpdated": "2026-01-28",
+      "main": {
+        "status": "NOT_CLEARED",
+        "rawText": "Technical screening: cleared/Technical testing: in-progress"
+      },
+      "dnssec": {
+        "status": "NOT_CLEARED",
+        "rawText": "Technical screening: cleared/Technical testing: in-progress"
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "tldbox GmbH",
+      "doingBusinessAs": null,
+      "countryCode": "AT",
+      "businessUrl": "http://www.tldbox.at",
+      "recordLastUpdated": "2026-03-30",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": 1
+    },
+    {
+      "rspLegalName": "TLDTR DANIŞMANLIK YAZILIM ANONİM ŞİRKETİ",
+      "doingBusinessAs": null,
+      "countryCode": "TR",
+      "businessUrl": "https://tldtr.com",
+      "recordLastUpdated": "2026-09-07",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "Tucows.com Co",
+      "doingBusinessAs": "Tucows Registry Services",
+      "countryCode": "CA",
+      "businessUrl": "https://www.tucowsregistry.com/",
+      "recordLastUpdated": "2026-08-07",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "idnSupportLevel": 2
+    },
+    {
+      "rspLegalName": "Unstoppable Domains Inc",
+      "doingBusinessAs": "Unstoppable Domains",
+      "countryCode": "US",
+      "businessUrl": "https://unstoppabledomains.com",
+      "recordLastUpdated": "2026-05-11",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    },
+    {
+      "rspLegalName": "YANDEX LLC",
+      "doingBusinessAs": null,
+      "countryCode": "RU",
+      "businessUrl": "https://ya.ru",
+      "recordLastUpdated": "2026-03-09",
+      "main": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dnssec": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "dns": {
+        "status": "SUCCESSFULLY_CLEARED",
+        "rawText": "Successfully cleared RSP evaluation"
+      },
+      "proxy": {
+        "status": "BLANK",
+        "rawText": ""
+      },
+      "idnSupportLevel": null
+    }
+  ],
+  "counts": {
+    "records": 32,
+    "mainSuccessfullyCleared": 27,
+    "dnsSuccessfullyCleared": 24,
+    "dnssecSuccessfullyCleared": 26,
+    "proxySuccessfullyCleared": 5
+  }
+}

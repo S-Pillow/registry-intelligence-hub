@@ -220,16 +220,23 @@ function renderLandscape(document = makeDocument()) {
 }
 
 describe("CompetitiveLandscapeContent", () => {
-  it("renders orientation, GoDaddy position, counterparts, and full participant landscape", () => {
+  it("renders orientation, dual GoDaddy roles, counterparts, and full participant landscape", () => {
     renderLandscape();
     expect(screen.getByTestId("competitive-landscape")).toBeInTheDocument();
     expect(screen.getByTestId("landscape-orientation")).toHaveTextContent("1,615");
     expect(screen.getByTestId("landscape-orientation")).toHaveTextContent("481");
-    expect(screen.getByTestId("godaddy-competitive-position")).toHaveTextContent(GODADDY_FOCAL_APPLICANT_LEGAL_NAME);
+    expect(screen.getByTestId("godaddy-as-applicant")).toHaveTextContent(GODADDY_FOCAL_APPLICANT_LEGAL_NAME);
+    expect(screen.getByTestId("godaddy-as-applicant")).toHaveTextContent(/prospective Registry Operator/i);
     expect(screen.getByTestId("focal-applications")).toHaveTextContent("2");
-    expect(within(screen.getByTestId("godaddy-competitive-position")).getByTestId("org-confirmed-badge")).toHaveTextContent(
+    expect(within(screen.getByTestId("godaddy-as-applicant")).getByTestId("org-confirmed-badge")).toHaveTextContent(
       /GoDaddy/,
     );
+    expect(screen.getByTestId("godaddy-as-rsp")).toHaveTextContent(/GoDaddy Registry/);
+    expect(screen.getByTestId("godaddy-as-rsp")).toHaveTextContent(/Evaluated/);
+    expect(screen.getByTestId("selected-rsp-limitation")).toHaveTextContent(
+      /does not disclose which RSP an Applicant selected/i,
+    );
+    expect(screen.getByTestId("rsp-source-freshness")).toHaveTextContent(/ICANN/);
     expect(screen.getByTestId("godaddy-contention-counterparts")).toHaveTextContent("Alpha Registry LLC");
     expect(screen.getByTestId("godaddy-contention-counterparts")).toHaveTextContent("Beta Names Inc");
     expect(screen.getByTestId("participant-table")).toBeInTheDocument();
@@ -237,7 +244,11 @@ describe("CompetitiveLandscapeContent", () => {
     expect(screen.getByTestId("returning-badge")).toHaveTextContent(/Returning/);
     expect(screen.queryByText(/new participant/i)).not.toBeInTheDocument();
     expect(screen.getByText("Unresolved Applicant GmbH")).toBeInTheDocument();
-    expect(screen.getAllByText(/Not resolved/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/No organization mapping/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Not resolved$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Not confirmed$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/available customer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unassigned RSP/i)).not.toBeInTheDocument();
   });
 
   it("supports search and confirmed-Organization filter", async () => {
@@ -254,5 +265,20 @@ describe("CompetitiveLandscapeContent", () => {
     renderLandscape();
     const link = screen.getAllByRole("link", { name: GODADDY_FOCAL_APPLICANT_LEGAL_NAME })[0];
     expect(link).toHaveAttribute("href", expect.stringContaining("/explore?q="));
+  });
+
+  it("switches to RSP prospects surface with limitation copy and prospect table", async () => {
+    const user = userEvent.setup();
+    renderLandscape();
+    await user.click(screen.getByTestId("cta-explore-rsp-prospects"));
+    expect(screen.getByTestId("rsp-prospects-surface")).toBeInTheDocument();
+    expect(screen.getByTestId("rsp-prospects-surface")).toHaveTextContent(
+      /does not mean “no RSP selected/i,
+    );
+    expect(screen.getByTestId("rsp-prospect-table")).toBeInTheDocument();
+    expect(screen.getByTestId("org-mapping-explainer")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("rsp-prospect-table")).queryByText(GODADDY_FOCAL_APPLICANT_LEGAL_NAME),
+    ).not.toBeInTheDocument();
   });
 });
