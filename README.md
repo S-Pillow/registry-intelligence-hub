@@ -4,22 +4,12 @@ Registry Intelligence Hub (RIH) is a source-backed research and intelligence app
 
 ## Repository status
 
-- **Main branch:** stable, production-accepted application state plus documentation.
-- **Current production application commit:** `774665486d1cd62a9276caf2e76b6af4c66310bb`.
-- **Production URL prefix:** `/tools/registry-intelligence-hub`.
-- **Production process:** Next.js on loopback port `43123`.
-- **2012 historical baseline:** 1,930 applications, 1,409 unique strings, 116 IDN applications.
-- **Confirmed 2012 portfolios:** 16 steward-confirmed portfolios covering 466 applications.
-- **2026 Reveal Day:** remains gated until an official per-application publication is available and passes the promotion contract.
-- **RSP work:** active on separate checkpoint/feature branches. Live acquisition tooling and sanitized fixtures are intentionally not merged into `main` until the evidence and parser remediation cycle is accepted.
-
-The current RSP work is building an auditable path from a 2012 Application ID to the ICANN application record and, later, to Q23-Q25 Registry Service Provider evidence. A mapping or crawler result never becomes an approved fact automatically; source evidence, integrity checks, and steward review remain separate gates.
-
-## Product overview
-
-The runnable browser experience includes a Command Center, Explore research backbone, deterministic metrics, evidence drill-down, historical 2012 browsing, confirmed portfolio views, and responsive loading, empty, and error states.
-
-**Production (srv766238, 2026-10-08):** Reveal Day Application + contention are promoted (`REAL_SOURCE_READY`) on deployed commit `e66c57945826e22e390c666053a637ef500e4447` with active Browser 2.x. Canonical handoff — live hashes, eligibility, rollback, and next product sequence: [`docs/2026-reveal-day-production-closeout.md`](docs/2026-reveal-day-production-closeout.md). Command Center product IA (intelligence-first, not APS-browser clone): [`docs/2026-command-center-intelligence.md`](docs/2026-command-center-intelligence.md).
+- **Production (srv766238):** Reveal Day Application + contention are promoted (`REAL_SOURCE_READY`) on deployed commit `e66c57945826e22e390c666053a637ef500e4447` with active Browser 2.x. Canonical handoff — live hashes, eligibility, rollback, and next product sequence: [`docs/2026-reveal-day-production-closeout.md`](docs/2026-reveal-day-production-closeout.md).
+- **Production URL prefix:** `/tools/registry-intelligence-hub` (Next.js on loopback port `43123`).
+- **Command Center IA:** intelligence-first (not an APS browser clone) — [`docs/2026-command-center-intelligence.md`](docs/2026-command-center-intelligence.md).
+- **PARTICIPANT-INTEL-1 (Competitive Landscape):** built and accepted as an integration candidate (`539a255` lineage); **not deployed to production yet**. Product notes: [`docs/participant-competitive-intelligence.md`](docs/participant-competitive-intelligence.md).
+- **2012 historical baseline:** 1,930 applications, 1,409 unique strings, 116 IDN applications; 16 steward-confirmed portfolios covering 466 applications.
+- **RSP work:** acquisition tooling and sanitized fixtures exist in-tree; a mapping or crawler result never becomes an approved fact automatically.
 
 Local/dev default without claim actuality remains the synthetic 12-application rehearsal fixture. That fixture must not be treated as the official 2026 Reveal Day publication.
 
