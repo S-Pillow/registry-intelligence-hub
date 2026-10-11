@@ -267,15 +267,23 @@ describe("CompetitiveLandscapeContent", () => {
     expect(link).toHaveAttribute("href", expect.stringContaining("/explore?q="));
   });
 
-  it("switches to RSP prospects surface with limitation copy and prospect table", async () => {
+  it("switches to RSP research surface with factual posture labels and limitation copy", async () => {
     const user = userEvent.setup();
     renderLandscape();
     await user.click(screen.getByTestId("cta-explore-rsp-prospects"));
     expect(screen.getByTestId("rsp-prospects-surface")).toBeInTheDocument();
+    expect(screen.getByTestId("rsp-prospects-surface")).toHaveTextContent(/public RSP posture/i);
     expect(screen.getByTestId("rsp-prospects-surface")).toHaveTextContent(
-      /does not mean “no RSP selected/i,
+      /No public Main-RSP capability found/i,
+    );
+    expect(screen.getByTestId("rsp-prospects-surface")).toHaveTextContent(
+      /does not imply commercial availability/i,
+    );
+    expect(screen.getByTestId("largest-no-public-main-rsp")).toHaveTextContent(
+      /Largest Applicants without a public Main-RSP capability match/i,
     );
     expect(screen.getByTestId("rsp-prospect-table")).toBeInTheDocument();
+    expect(screen.queryByText(/Potential RSP prospect/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("org-mapping-explainer")).toBeInTheDocument();
     expect(
       within(screen.getByTestId("rsp-prospect-table")).queryByText(GODADDY_FOCAL_APPLICANT_LEGAL_NAME),

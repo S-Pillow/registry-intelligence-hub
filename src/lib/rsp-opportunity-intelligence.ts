@@ -30,7 +30,7 @@ export type EvaluatedMainRspStatus = "CLEARED" | "NOT_MATCHED";
 
 export type RspProspectingPosture =
   | "GODADDY_OWN_APPLICANT_PORTFOLIO"
-  | "POTENTIAL_RSP_PROSPECT"
+  | "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND"
   | "PUBLIC_MAIN_RSP_CAPABILITY_FOUND"
   | "MAIN_RSP_CAPABILITY_VIA_CONFIRMED_ORGANIZATION"
   | "IDENTITY_REVIEW_NEEDED";
@@ -67,7 +67,7 @@ export type RspOpportunityCoverage = {
   observedApplicants: number;
   godaddyExcluded: number;
   externalApplicants: number;
-  potentialRspProspects: number;
+  noPublicMainRspCapability: number;
   publicMainRspCapable: number;
   viaConfirmedOrganization: number;
   identityReview: number;
@@ -219,7 +219,7 @@ function postureFor(
   if (godaddyOwn) {
     rspProspectingPosture = "GODADDY_OWN_APPLICANT_PORTFOLIO";
     rspProspectingReason =
-      "Registry Services, LLC applications are GoDaddy's own Applicant / prospective Registry Operator portfolio, not an external RSP prospect.";
+      "Registry Services, LLC applications are GoDaddy's own Applicant / prospective Registry Operator portfolio — excluded from the external RSP research universe.";
   } else if (evaluatedMainRspStatus === "CLEARED" && basis === "CONFIRMED_ORGANIZATION") {
     rspProspectingPosture = "MAIN_RSP_CAPABILITY_VIA_CONFIRMED_ORGANIZATION";
     rspProspectingReason = `Confirmed Organization mapping links this Applicant to evaluated Main-RSP identity ${rsp!.rspLegalName}. Public APS data still does not disclose which RSP the Applicant selected.`;
@@ -227,9 +227,9 @@ function postureFor(
     rspProspectingPosture = "PUBLIC_MAIN_RSP_CAPABILITY_FOUND";
     rspProspectingReason = `Public ICANN evaluated-RSP list matches this Applicant (${basis.replaceAll("_", " ").toLowerCase()}) with Main successfully cleared. The Applicant may self-provide, use an affiliate, or choose another provider — selected RSP is not public.`;
   } else {
-    rspProspectingPosture = "POTENTIAL_RSP_PROSPECT";
+    rspProspectingPosture = "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND";
     rspProspectingReason =
-      "No public evaluated Main-RSP capability was matched under RIH's current evidence rules. This does not mean the Applicant has no RSP or has not selected one.";
+      "RIH found no public evaluated Main-RSP capability for this Applicant under current evidence and matching rules. Public posture is factual only — selected RSP and contract openness are unknown.";
   }
 
   return {
@@ -255,7 +255,7 @@ function postureFor(
 
 function postureRank(p: RspProspectingPosture): number {
   switch (p) {
-    case "POTENTIAL_RSP_PROSPECT":
+    case "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND":
       return 0;
     case "IDENTITY_REVIEW_NEEDED":
       return 1;
@@ -412,8 +412,9 @@ export function buildRspOpportunityIntelligence(
       observedApplicants: postures.length,
       godaddyExcluded: postures.filter((p) => p.godaddyOwnApplicant).length,
       externalApplicants: prospects.length,
-      potentialRspProspects: prospects.filter((p) => p.rspProspectingPosture === "POTENTIAL_RSP_PROSPECT")
-        .length,
+      noPublicMainRspCapability: prospects.filter(
+        (p) => p.rspProspectingPosture === "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND",
+      ).length,
       publicMainRspCapable: prospects.filter(
         (p) => p.rspProspectingPosture === "PUBLIC_MAIN_RSP_CAPABILITY_FOUND",
       ).length,
@@ -455,12 +456,12 @@ export function prospectingPostureLabel(posture: RspProspectingPosture): string 
   switch (posture) {
     case "GODADDY_OWN_APPLICANT_PORTFOLIO":
       return "GoDaddy own Applicant portfolio";
-    case "POTENTIAL_RSP_PROSPECT":
-      return "Potential RSP prospect";
+    case "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND":
+      return "No public Main-RSP capability found";
     case "PUBLIC_MAIN_RSP_CAPABILITY_FOUND":
       return "Public Main-RSP capability found";
     case "MAIN_RSP_CAPABILITY_VIA_CONFIRMED_ORGANIZATION":
-      return "Main-RSP via confirmed organization";
+      return "Main-RSP capability via confirmed organization";
     case "IDENTITY_REVIEW_NEEDED":
       return "Identity review needed";
     default:
@@ -487,9 +488,11 @@ export const FORBIDDEN_RSP_CLAIM_PHRASES = [
   "unassigned rsp",
   "no rsp selected",
   "needs an rsp",
+  "needs a rsp",
   "available customer",
   "open customer",
   "competitor customer",
+  "potential rsp prospect",
 ] as const;
 
 export function assertNoForbiddenRspClaims(text: string): void {

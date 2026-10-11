@@ -219,25 +219,33 @@ describe("RSP opportunity intelligence", () => {
     expect(affiliate.evaluatedMainRspMatchBasis).toBe("CONFIRMED_ORGANIZATION");
 
     const candidate = built.prospects.find((p) => p.applicantLegalName === "Candidate Only Ltd")!;
-    expect(candidate.rspProspectingPosture).toBe("POTENTIAL_RSP_PROSPECT");
+    expect(candidate.rspProspectingPosture).toBe("NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
     expect(candidate.evaluatedMainRspStatus).toBe("NOT_MATCHED");
 
     const ambiguous = built.prospects.find((p) => p.applicantLegalName === "Ambiguous Corp")!;
-    expect(ambiguous.rspProspectingPosture).toBe("POTENTIAL_RSP_PROSPECT");
+    expect(ambiguous.rspProspectingPosture).toBe("NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
     expect(ambiguous.evaluatedMainRspStatus).toBe("NOT_MATCHED");
   });
 
-  it("treats in-progress Main as no public Main-RSP match / potential prospect", () => {
+  it("treats in-progress Main as no public Main-RSP capability found", () => {
     const pending = built.prospects.find((p) => p.applicantLegalName === "Pending Only RSP LLC")!;
-    expect(pending.rspProspectingPosture).toBe("POTENTIAL_RSP_PROSPECT");
+    expect(pending.rspProspectingPosture).toBe("NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
     expect(pending.evaluatedMainRspStatus).toBe("NOT_MATCHED");
   });
 
-  it("ranks potential prospects first by application portfolio size", () => {
+  it("ranks no-public-Main-RSP rows first by application portfolio size", () => {
     const sorted = [...built.prospects].sort(sortProspectsDefault);
     expect(sorted[0].applicantLegalName).toBe("Large Prospect Inc");
-    expect(sorted[0].rspProspectingPosture).toBe("POTENTIAL_RSP_PROSPECT");
-    expect(built.coverage.potentialRspProspects).toBeGreaterThan(0);
+    expect(sorted[0].rspProspectingPosture).toBe("NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
+    expect(built.coverage.noPublicMainRspCapability).toBeGreaterThan(0);
+  });
+
+  it("never classifies a row as Potential RSP prospect", () => {
+    for (const p of built.postures) {
+      expect(String(p.rspProspectingPosture)).not.toBe("POTENTIAL_RSP_PROSPECT");
+      expect(prospectingPostureLabel(p.rspProspectingPosture)).not.toMatch(/Potential RSP prospect/i);
+      expect(prospectingPostureLabel(p.rspProspectingPosture)).not.toMatch(/available customer|unassigned/i);
+    }
   });
 
   it("filters by Main-RSP signal and organization mapping", () => {
@@ -290,7 +298,13 @@ describe("RSP opportunity intelligence (live APS + tracked RSP source)", () => {
     expect(rsp.coverage.observedApplicants).toBe(480);
     expect(rsp.coverage.godaddyExcluded).toBe(1);
     expect(rsp.coverage.externalApplicants).toBe(479);
-    expect(rsp.coverage.potentialRspProspects + rsp.coverage.publicMainRspCapable + rsp.coverage.viaConfirmedOrganization + rsp.coverage.identityReview).toBe(479);
+    expect(
+      rsp.coverage.noPublicMainRspCapability +
+        rsp.coverage.publicMainRspCapable +
+        rsp.coverage.viaConfirmedOrganization +
+        rsp.coverage.identityReview,
+    ).toBe(479);
+    expect(rsp.coverage.noPublicMainRspCapability).toBe(476);
 
     expect(rsp.godaddyRsp?.applicationCount).toBe(77);
     expect(rsp.godaddyRsp?.contestedApplications).toBe(66);
@@ -302,8 +316,15 @@ describe("RSP opportunity intelligence (live APS + tracked RSP source)", () => {
     expect(charleston?.rspProspectingPosture).toBe("PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
     expect(charleston?.evaluatedRspDba).toBe("Google Registry");
 
-    expect(rsp.prospects[0]?.rspProspectingPosture).toBe("POTENTIAL_RSP_PROSPECT");
+    expect(rsp.prospects[0]?.rspProspectingPosture).toBe("NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND");
+    expect(rsp.prospects[0]?.applicantLegalName).toBe("Link Freedom Group Ltd");
     expect(rsp.prospects.some((p) => p.applicantLegalName === GODADDY_FOCAL_APPLICANT_LEGAL_NAME)).toBe(false);
-    for (const p of rsp.postures) assertNoForbiddenRspClaims(p.rspProspectingReason);
+    expect(rsp.postures.every((p) => String(p.rspProspectingPosture) !== "POTENTIAL_RSP_PROSPECT")).toBe(
+      true,
+    );
+    for (const p of rsp.postures) {
+      assertNoForbiddenRspClaims(p.rspProspectingReason);
+      assertNoForbiddenRspClaims(prospectingPostureLabel(p.rspProspectingPosture));
+    }
   });
 });

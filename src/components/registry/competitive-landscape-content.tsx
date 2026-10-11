@@ -203,8 +203,8 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Applicant competitive intelligence</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
           Full-coverage view of observed Applicant legal names. Applicant is the ICANN-source analytical grain;
-          Organization mapping is optional enrichment. Use RSP prospects to investigate public-signal backend
-          Registry Service Provider opportunities — not selected-RSP facts.{" "}
+          Organization mapping is optional enrichment. Use RSP prospecting research to investigate public-signal
+          backend Registry Service Provider questions — not selected-RSP facts.{" "}
           <Link href="/data-health" className="font-semibold text-[#006a56] underline">
             Coverage detail in Data Health
           </Link>
@@ -240,7 +240,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
           onClick={() => setSurface("rsp-prospects")}
           data-testid="tab-rsp-prospects"
         >
-          RSP prospects
+          RSP research
         </button>
       </div>
 
@@ -397,7 +397,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                 onClick={() => setSurface("rsp-prospects")}
                 data-testid="cta-explore-rsp-prospects"
               >
-                Explore potential RSP prospects
+                Explore RSP prospecting research
               </button>
             </CardContent>
           </Card>
@@ -408,18 +408,21 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
         <section aria-labelledby="rsp-prospects-heading" data-testid="rsp-prospects-surface" className="space-y-4">
           <div>
             <h2 id="rsp-prospects-heading" className="text-lg font-bold text-slate-950">
-              RSP prospecting
+              RSP prospecting research
             </h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-700">
-              Public-signal view of which other Applicants may be worth investigating for GoDaddy Registry backend
-              services. Application portfolio size is not revenue or deal size.{" "}
+              Public-signal research view for GoDaddy Registry backend services. Rows are classified by{" "}
+              <strong className="font-semibold text-slate-900">public RSP posture</strong> (factual matching
+              against ICANN evaluated-RSP evidence), not by assumed sales status. Application portfolio size is
+              not revenue or deal size.{" "}
               <strong className="font-semibold text-slate-900">
-                “No public Main-RSP match” does not mean “no RSP selected.”
+                “No public Main-RSP capability found” does not mean an RSP was not selected, and does not imply
+                commercial availability.
               </strong>
             </p>
             <p className="mt-2 text-xs text-slate-600" data-testid="rsp-prospect-universe">
               {rspCoverage.externalApplicants.toLocaleString()} non-GoDaddy Applicants ·{" "}
-              {rspCoverage.potentialRspProspects.toLocaleString()} potential RSP prospects ·{" "}
+              {rspCoverage.noPublicMainRspCapability.toLocaleString()} no public Main-RSP capability ·{" "}
               {rspCoverage.publicMainRspCapable.toLocaleString()} public Main-RSP capable ·{" "}
               {rspCoverage.viaConfirmedOrganization.toLocaleString()} via confirmed organization
             </p>
@@ -441,7 +444,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
               />
             </label>
             <label className="text-sm text-slate-700">
-              Posture{" "}
+              Public RSP posture{" "}
               <select
                 value={prospectPosture}
                 onChange={(e) => setProspectPosture(e.target.value as RspProspectingPosture | "")}
@@ -449,10 +452,12 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                 data-testid="filter-prospect-posture"
               >
                 <option value="">All</option>
-                <option value="POTENTIAL_RSP_PROSPECT">Potential RSP prospect</option>
+                <option value="NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND">
+                  No public Main-RSP capability found
+                </option>
                 <option value="PUBLIC_MAIN_RSP_CAPABILITY_FOUND">Public Main-RSP capability found</option>
                 <option value="MAIN_RSP_CAPABILITY_VIA_CONFIRMED_ORGANIZATION">
-                  Main-RSP via confirmed organization
+                  Main-RSP capability via confirmed organization
                 </option>
                 <option value="IDENTITY_REVIEW_NEEDED">Identity review needed</option>
               </select>
@@ -517,7 +522,15 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
 
           <p className="text-xs text-slate-600" data-testid="visible-prospect-count">
             Showing {visibleProspects.length.toLocaleString()} / {rspIntel.prospects.length.toLocaleString()} ·
-            default order: Potential RSP prospect first, then Application portfolio size
+            Research priority based on public portfolio size and contention context (Applicants with no public
+            Main-RSP capability match first, then Application count, then contested Applications)
+          </p>
+
+          <p className="text-sm font-semibold text-slate-900" data-testid="largest-no-public-main-rsp">
+            Largest Applicants without a public Main-RSP capability match
+          </p>
+          <p className="text-xs text-slate-600">
+            Worth investigating from public signals only — not known to be commercially available.
           </p>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -530,7 +543,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                   <th className="px-3 py-2 font-semibold">Region</th>
                   <th className="px-3 py-2 font-semibold">Organization mapping</th>
                   <th className="px-3 py-2 font-semibold">Public Main-RSP signal</th>
-                  <th className="px-3 py-2 font-semibold">Prospecting posture</th>
+                  <th className="px-3 py-2 font-semibold">Public RSP posture</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -599,7 +612,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase text-slate-500">Prospecting posture</dt>
+                  <dt className="text-xs uppercase text-slate-500">Public RSP posture</dt>
                   <dd className="font-semibold">
                     {prospectingPostureLabel(selectedProspectRow.rspProspectingPosture)}
                   </dd>

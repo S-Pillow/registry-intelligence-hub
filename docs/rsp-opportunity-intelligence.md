@@ -1,6 +1,6 @@
 # RSP opportunity intelligence (RSP-INTEL-1)
 
-Public-signal prospecting enrichment on Competitive Landscape. Does not infer selected RSP or commercial availability.
+Public-signal RSP research enrichment on Competitive Landscape. Does not infer selected RSP or commercial availability.
 
 ## Applicant vs Registry Operator
 
@@ -48,14 +48,20 @@ The 2026 Applicant Guidebook selected-RSP question is not publicly posted. Publi
 
 RIH must not claim: available opportunity, unassigned RSP, no RSP selected, needs an RSP, available/open/competitor customer.
 
-## Prospecting postures
+## Public RSP posture vs research priority
 
-| Posture | Meaning |
+**Public RSP posture** = factual classification from official evaluated-RSP matching.
+
+**Research priority** = GoDaddy-oriented analytical ordering of the external Applicant universe (no public Main-RSP capability match first, then Application portfolio size, then contested Applications, then name).
+
+**Commercial availability** = unknown. Ranking is not opportunity likelihood, sales probability, or deal score.
+
+| Public RSP posture | Meaning |
 | --- | --- |
-| GoDaddy own Applicant portfolio | Registry Services, LLC — not an external prospect |
-| Potential RSP prospect | No public evaluated Main-RSP match under current evidence rules (**≠** “no RSP”) |
+| GoDaddy own Applicant portfolio | Registry Services, LLC — excluded from external research universe |
+| No public Main-RSP capability found | No public evaluated Main-RSP match under current evidence rules (**≠** “no RSP selected” / available customer) |
 | Public Main-RSP capability found | Exact legal name or unambiguous official DBA match to Main-cleared RSP |
-| Main-RSP via confirmed organization | Deterministic link via steward-CONFIRMED Organization only |
+| Main-RSP capability via confirmed organization | Deterministic link via steward-CONFIRMED Organization only |
 | Identity review needed | Reserved for material match uncertainty |
 
 Self-RSP-capable Applicants remain visible; they may self-provide, use an affiliate, or choose another provider.

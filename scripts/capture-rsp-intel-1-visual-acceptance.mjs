@@ -35,22 +35,39 @@ async function run(viewport, tag) {
   await page.getByTestId("cta-explore-rsp-prospects").click();
   await page.getByTestId("rsp-prospects-surface").waitFor();
   const body = await page.getByTestId("rsp-prospects-surface").innerText();
-  if (!/does not mean/i.test(body) || !/no RSP selected/i.test(body)) {
-    throw new Error(`${tag}: Main-RSP match ≠ selected RSP limitation missing`);
+  if (!/No public Main-RSP capability found/i.test(body)) {
+    throw new Error(`${tag}: factual no-public-Main-RSP posture missing`);
+  }
+  if (!/commercial availability/i.test(body)) {
+    throw new Error(`${tag}: commercial-availability disclaimer missing`);
+  }
+  if (/Potential RSP prospect/i.test(body)) {
+    throw new Error(`${tag}: obsolete Potential RSP prospect label still visible`);
   }
   if (/available customer|unassigned RSP|needs an RSP/i.test(body)) {
     throw new Error(`${tag}: forbidden commercial claim visible`);
   }
+  const largest = await page.getByTestId("largest-no-public-main-rsp").innerText();
+  if (!/Largest Applicants without a public Main-RSP capability match/i.test(largest)) {
+    throw new Error(`${tag}: preferred largest-Applicants heading missing`);
+  }
 
-  // Largest potential prospect path: filter to no public Main-RSP match
+  // Largest research targets: filter to no public Main-RSP match
   await page.getByTestId("filter-main-rsp-signal").selectOption("none");
   await page.waitForTimeout(200);
   const firstRow = page.locator('[data-testid="rsp-prospect-table"] tbody tr').first();
+  const firstName = await firstRow.getByTestId("prospect-row-select").innerText();
+  if (!/Link Freedom|XYZ\.COM/i.test(firstName)) {
+    console.warn(`${tag}: top research row was ${firstName} (expected Link Freedom or XYZ among top)`);
+  }
   await firstRow.getByTestId("prospect-row-select").click();
   await page.getByTestId("prospect-evidence-panel").waitFor();
   const evidence = await page.getByTestId("prospect-evidence-panel").innerText();
-  if (!/Potential RSP prospect|No public Main-RSP match/i.test(evidence)) {
-    throw new Error(`${tag}: prospect evidence unclear`);
+  if (!/No public Main-RSP capability found/i.test(evidence)) {
+    throw new Error(`${tag}: prospect evidence posture unclear`);
+  }
+  if (/Potential RSP prospect|available customer|unassigned/i.test(evidence)) {
+    throw new Error(`${tag}: commercial-availability implication in evidence`);
   }
   await page.getByTestId("prospect-explore-applications").waitFor();
 
