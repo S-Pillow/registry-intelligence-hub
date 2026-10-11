@@ -25,6 +25,7 @@ import {
   type RspProspectingPosture,
 } from "@/lib/rsp-opportunity-intelligence";
 import {
+  ApplicantIdentityEvidencePanel,
   OrganizationMappingBadge,
   OrganizationMappingExplainer,
 } from "@/components/registry/organization-mapping-display";
@@ -575,6 +576,26 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                   </p>
                 </div>
               ) : null}
+              {(() => {
+                const participant = intelligence.participants.find(
+                  (p) => p.applicantLegalName === selectedProspectRow.applicantLegalName,
+                );
+                const evidence = participant?.identityEvidence;
+                if (!evidence && selectedProspectRow.organizationMappingStatus === "UNRESOLVED") return null;
+                return (
+                  <ApplicantIdentityEvidencePanel
+                    applicantLegalName={selectedProspectRow.applicantLegalName}
+                    organizationStatus={selectedProspectRow.organizationMappingStatus}
+                    confirmedOrganizationName={selectedProspectRow.confirmedOrganizationName}
+                    applicantWebsiteHost={evidence?.applicantWebsiteHost ?? null}
+                    applicantWebsiteUrl={evidence?.applicantWebsiteUrl ?? null}
+                    directParentLegalName={evidence?.directParentLegalName ?? null}
+                    ultimateParentLegalName={evidence?.ultimateParentLegalName ?? null}
+                    ultimateControlLegalName={evidence?.ultimateControlLegalName ?? null}
+                    evidenceExplanationLines={evidence?.evidenceExplanationLines ?? []}
+                  />
+                );
+              })()}
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 <Link
                   href={exploreApplicantHref(selectedProspectRow.applicantLegalName)}

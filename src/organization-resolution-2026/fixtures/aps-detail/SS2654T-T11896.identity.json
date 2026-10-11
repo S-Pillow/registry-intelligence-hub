@@ -1,0 +1,67 @@
+{
+  "applicationId": "SS2654T-T11896",
+  "applicantLegalName": "Hair Apparent, LLC",
+  "fields": {
+    "Q10": {
+      "questionText": "AGB Q10. Website URL",
+      "responseText": "https://www.identity.digital",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q11": {
+      "questionText": "AGB Q11. Is the applying entity an existing registry operator, ICANN accredited registrar, or an Affiliate of either?",
+      "responseText": "true",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q12": {
+      "questionText": "AGB Q12. If \"Yes\", explain.",
+      "responseText": "Applicant is an affiliate of the following existing Registry Operator entities: Binky Moon, LLC; Dog Beach, LLC; Jolly Host, LLC; Identity Digital Domains Limited; Monolith Registry, LLC; HOTEL Top-Level-Domain S.a.r.l. Applicant is also an affiliate of the following ICANN-accredited registrars: Name.com, Inc. (IANA 625); Domainsite, Inc. (IANA 466); Name.net, Inc. (IANA 826); Name105, Inc. (IANA 452); Name106, Inc. (IANA 1040); Name117, Inc. (IANA 1547). ",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q13": {
+      "questionText": "AGB Q13. Is the applying entity a back-end registry service provider (RSP), an ICANN-approved data escrow agent, an emergency back-end registry operator, a Uniform Rapid Suspension (URS) service provider, an ICANN dispute resolution service provider, a Privacy or Proxy Service Provider, or a Reseller?",
+      "responseText": "false",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q14": {
+      "questionText": "AGB Q14. If the applying entity is an Affiliate of any of the entities listed in Question 13, explain.",
+      "responseText": "Applicant is an affiliate of Identity Digital Limited, an ICANN pre-approved back-end registry service provider (RSP), and Domain Protection Services, Inc., a privacy service provider.",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q19": {
+      "questionText": "AGB Q19. Primary Business Email Address",
+      "responseText": "nextroundapplications@identity.digital",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q26": {
+      "questionText": "AGB Q26. Full Legal Name",
+      "responseText": "Slow Rider, LLC",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q36": {
+      "questionText": "AGB Q36. Full Legal Name",
+      "responseText": "Ethos Capital Digital Infrastructure UGP LLC",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q108": {
+      "questionText": "AGB 108. Disclose Ultimate Control of applying entity",
+      "responseText": "Ethos Capital Digital Infrastructure UGP LLC",
+      "sectionTitle": "Applying Entity Background and Organization"
+    },
+    "Q199": {
+      "questionText": "AGB Q199. Q2.2-1 - Provide the applying entity\u2019s self-certification document, signed by the CEO, President, CFO, and/or equivalent officer of the applying entity. If financial statements are provided by a Qualified Parent Entity (QPE) of the applying entity, the CEO, President, CFO, and/or equivalent officer of the QPE must co-sign the certification document. The self-certification document must represent and warrant:\nSC2.2-1.1 - As of the submission date of the application, the applying entity is a current registry operator or an affiliated entity of a current registry operator with one or more active Registry Agreements (RA). \nSC2.2-1.2 - The applying entity and/or a QPE will fund the startup and long-term operation of all of the applying entity\u2019s current gTLDs and applied-for gTLD strings.\nSC2.2-1.3 - The applying entity and/or its officers are bound by law in its jurisdiction to represent financial statements accurately and the applying entity is in good standing in that jurisdiction.",
+      "responseText": "",
+      "sectionTitle": "Self-Certification"
+    },
+    "Q200": {
+      "questionText": "AGB Q200. Q2.3-1 - Provide a document with a list of all of the applying entity\u2019s current gTLDs and a list of all gTLDs for entities affiliated with the applying entity (if applicable).",
+      "responseText": "",
+      "sectionTitle": "Operational/Planning"
+    },
+    "Q121": {
+      "questionText": "AGB Q121. As per Section 3(d) of Specification 11 of the Base Registry Agreement, a registry operator of a \u201cgeneric string\u201d may not impose eligibility criteria for registering names in the TLD that limit registrations exclusively to a single person or entity and/or that person\u2019s or entity\u2019s \u201cAffiliates\u201d (as defined in Section 2.9(c) of the Registry Agreement). \u201cGeneric String\u201d means a string consisting of a word or term that denominates or describes a general class of goods, services, groups, organizations or things, as opposed to distinguishing a specific brand of goods, services, groups, organizations or things from those of others. Confirm that the applied-for string is not a \u201cgeneric string\u201d in which the applying entity intends to limit registrations exclusively to a single person or entity.",
+      "responseText": "true",
+      "sectionTitle": "Primary String"
+    }
+  },
+  "extractorVersion": "aps-responses-identity/1.0.0"
+}

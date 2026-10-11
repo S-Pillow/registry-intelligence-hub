@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHubRegistryData } from "@/components/registry/hub-registry-data-provider";
 import {
+  ApplicantIdentityEvidencePanel,
   OrganizationMappingBadge,
   OrganizationMappingExplainer,
 } from "@/components/registry/organization-mapping-display";
@@ -183,6 +184,17 @@ function SetDetailPanel({
                     />
                     <span className="text-xs text-slate-600">{m.rspPublicPostureLabel}</span>
                   </div>
+                  <ApplicantIdentityEvidencePanel
+                    applicantLegalName={m.applicantLegalName}
+                    organizationStatus={m.organizationResolutionStatus}
+                    confirmedOrganizationName={m.confirmedOrganizationName}
+                    applicantWebsiteHost={m.applicantWebsiteHost}
+                    applicantWebsiteUrl={m.applicantWebsiteUrl}
+                    directParentLegalName={m.directParentLegalName}
+                    ultimateParentLegalName={m.ultimateParentLegalName}
+                    ultimateControlLegalName={m.ultimateControlLegalName}
+                    evidenceExplanationLines={m.evidenceExplanationLines}
+                  />
                   <p className="mt-2 flex flex-wrap gap-3 text-xs">
                     <Link href={m.exploreApplicationHref} className="font-semibold text-[#006a56] underline">
                       Explore Application

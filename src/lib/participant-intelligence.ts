@@ -9,12 +9,23 @@ export const GODADDY_FOCAL_APPLICANT_LEGAL_NAME = "Registry Services, LLC";
 
 export type OrganizationResolutionOverlayStatus = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
 
+export type ParticipantIdentityEvidenceOverlay = {
+  applicantWebsiteHost: string | null;
+  applicantWebsiteUrl: string | null;
+  directParentLegalName: string | null;
+  ultimateParentLegalName: string | null;
+  ultimateControlLegalName: string | null;
+  evidenceExplanationLines: string[];
+};
+
 export type ParticipantOrganizationOverlay = {
   applicantLegalName: string;
   resolutionStatus: OrganizationResolutionOverlayStatus;
   /** Set only when CONFIRMED. */
   confirmedOrganizationId: string | null;
   confirmedOrganizationName: string | null;
+  /** ORG-RES-WEB-1 first-party ICANN identity context (optional). */
+  identityEvidence?: ParticipantIdentityEvidenceOverlay | null;
 };
 
 export type ParticipantReturningOverlay = {
@@ -53,6 +64,7 @@ export type ParticipantRow = {
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
   confirmedOrganizationId: string | null;
   confirmedOrganizationName: string | null;
+  identityEvidence: ParticipantIdentityEvidenceOverlay | null;
   confirmedReturning: ParticipantReturningOverlay | null;
   rankByApplications: number;
   rankByContentionExposure: number;
@@ -64,6 +76,7 @@ export type ContentionCounterpart = {
   sharedSetApplications: number;
   confirmedOrganizationName: string | null;
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
+  applicantWebsiteHost: string | null;
 };
 
 export type ParticipantIntelligenceCoverage = {
@@ -224,6 +237,7 @@ export function buildParticipantIntelligence(
       organizationResolutionStatus: resolutionStatus,
       confirmedOrganizationId: confirmed.confirmedOrganizationId,
       confirmedOrganizationName: confirmed.confirmedOrganizationName,
+      identityEvidence: org?.identityEvidence ?? null,
       confirmedReturning: returning,
     });
   }
@@ -318,6 +332,7 @@ export function buildParticipantIntelligence(
         sharedSetApplications: entry.apps,
         confirmedOrganizationName: status === "CONFIRMED" ? (org?.confirmedOrganizationName ?? null) : null,
         organizationResolutionStatus: status,
+        applicantWebsiteHost: org?.identityEvidence?.applicantWebsiteHost ?? null,
       };
     })
     .sort(

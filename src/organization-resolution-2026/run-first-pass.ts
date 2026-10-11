@@ -24,6 +24,7 @@ import {
 } from "./research-queue";
 import { applyResearchPackageToSnapshot } from "./apply-research";
 import { applyStewardApprovalsToSnapshot } from "./apply-steward-approvals";
+import { applyWeb1StewardToSnapshot } from "./applicant-identity/apply-web1-steward";
 import { RESEARCH_PACKAGE_2026_2 } from "./fixtures/research-package-2026-2";
 import type { ResearchPackage } from "./review-types";
 
@@ -65,6 +66,8 @@ export async function runFirstPassOrganizationResolution(input: {
   applyResearch?: boolean;
   /** ORG-RES-2026-2A: apply operator steward approvals (requires research first). Default true. */
   applyStewardApprovals?: boolean;
+  /** ORG-RES-WEB-1: apply Applicant Website identity evidence + steward batch after ALL14. Default true when steward applies. */
+  applyWeb1Identity?: boolean;
 }): Promise<{
   snapshot: OrganizationResolutionSnapshot;
   inventory: ReturnType<typeof inventoryFromSnapshot>;
@@ -109,6 +112,18 @@ export async function runFirstPassOrganizationResolution(input: {
       throw new Error("applyStewardApprovals requires applyResearch (evidence package must be present)");
     }
     snapshot = applyStewardApprovalsToSnapshot({
+      snapshot,
+      publication,
+      contention,
+    });
+  }
+
+  // WEB-1 is opt-in at the call site (product/CLI) so ALL14 + cross-round tests stay stable.
+  if (input.applyWeb1Identity) {
+    if (!applySteward) {
+      throw new Error("applyWeb1Identity requires applyStewardApprovals (ALL14 base)");
+    }
+    snapshot = applyWeb1StewardToSnapshot({
       snapshot,
       publication,
       contention,

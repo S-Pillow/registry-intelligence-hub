@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "shared-applicant-website-clusters/1.0.0",
+  "clusters": [
+    {
+      "registrableWebsiteDomain": "identity.digital",
+      "applicantLegalNames": [
+        "Acid Medal, LLC",
+        "Agador Slip, LLC",
+        "Arctic Tan, LLC",
+        "Berth Order, LLC",
+        "Bird Pepper, LLC",
+        "Coffee Danger, LLC",
+        "Cold Fleet, LLC",
+        "Duel Meaning, LLC",
+        "Empty Hand, LLC",
+        "Femoral Express, LLC",
+        "Ferry Tale, LLC",
+        "Fore Course, LLC",
+        "Glass Emotion, LLC",
+        "Hair Apparent, LLC",
+        "Heir Superiority, LLC",
+        "Mystic Hammer, LLC",
+        "Mythic Link, LLC",
+        "Neigh Sayer, LLC",
+        "Oyster Dream, LLC",
+        "Paws Button, LLC",
+        "Pirin Tablet, LLC",
+        "Rein Check, LLC",
+        "Tidal Case, LLC",
+        "Toddler Logic, LLC",
+        "Vanity Check, LLC",
+        "Velvet Taupe, LLC",
+        "Vinyl Strings, LLC",
+        "Vocal Strange, LLC"
+      ],
+      "representativeApplicationIds": [
+        "A2619T-T45080",
+        "AM2619T-T27105",
+        "ASL2693T-T13404",
+        "AT2680T-T16295",
+        "BPL2623T-T12779",
+        "CD2694T-T10513",
+        "CFL2645T-T67079",
+        "DM2627T-T34270",
+        "FCL2632T-T17678",
+        "FE2653T-T89703",
+        "FT2631T-T52999",
+        "GEL2647T-T15541",
+        "HS2699T-T16924",
+        "MH2645T-T12650",
+        "MLL2689T-T58656",
+        "NS2662T-T21198",
+        "OD2692T-T13279",
+        "PB2674T-T11142",
+        "PTL2645T-T10388",
+        "RC2677T-T15416",
+        "SL2641T-T21323",
+        "SS2654T-T11896",
+        "TCL2632T-T11771",
+        "TT2652T-T12525",
+        "VC2665T-T32637",
+        "VSL2633T-T11017",
+        "VSL2635T-T54257",
+        "VTL2632T-T14662"
+      ],
+      "applicationCount": 216,
+      "contentionMemberships": 157,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 28,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 0,
+        "UNRESOLVED": 0
+      }
+    },
+    {
+      "registrableWebsiteDomain": "namecheap.com",
+      "applicantLegalNames": [
+        "Adhara Exploration, Inc.",
+        "Aldebaran Exploration, Inc.",
+        "Bellatrix Exploration, Inc.",
+        "Canopus Exploration, Inc.",
+        "Capella Exploration, Inc.",
+        "Castor Exploration, Inc.",
+        "Deneb Exploration, Inc.",
+        "Elnath Exploration, Inc.",
+        "Fomalhaut Exploration, Inc.",
+        "Gacrux Exploration, Inc",
+        "Hadar Exploration, Inc",
+        "Menkalinan Exploration, Inc.",
+        "Miaplacidus Exploration, Inc.",
+        "Mirfak Exploration, Inc.",
+        "Polaris Exploration, Inc.",
+        "Pollux Exploration, Inc.",
+        "Procyon Exploration, Inc.",
+        "Regulus Exploration, Inc.",
+        "Rigel Exploration, Inc.",
+        "Wezen Exploration, Inc."
+      ],
+      "representativeApplicationIds": [
+        "AEI2676T-T44959",
+        "AEI2688T-T61051",
+        "BEI2691T-T83300",
+        "CEI2644T-T72490",
+        "CEI2647T-T14166",
+        "CEI2660T-T22085",
+        "DEI2680T-T53761",
+        "EEI2686T-T16303",
+        "FEI2676T-T21331",
+        "GEI2639T-T18440",
+        "HEI2661T-T42197",
+        "MEI2627T-T58035",
+        "MEI2662T-T81792",
+        "MEI2699T-T15549",
+        "PEI2617T-T23468",
+        "PEI2628T-T39306",
+        "PEI2685T-T63063",
+        "REI2616T-T78901",
+        "REI2641T-T12658",
+        "WEI2642T-T36415"
+      ],
+      "applicationCount": 40,
+      "contentionMemberships": 21,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 20,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 0,
+        "UNRESOLVED": 0
+      }
+    },
+    {
+      "registrableWebsiteDomain": "redrock.foundation",
+      "applicantLegalNames": [
+        "Ana Naming Limited",
+        "Ape Naming Limited",
+        "Avax Naming Limited",
+        "Gate Naming Limited",
+        "Hype Naming Limited",
+        "Mask Naming Limited",
+        "Sol Naming Limited",
+        "Sui Naming Limited"
+      ],
+      "representativeApplicationIds": [
+        "ANL2619T-T13025",
+        "ANL2694T-T74365",
+        "ANL2699T-T95106",
+        "GNL2631T-T74115",
+        "HNL2668T-T33262",
+        "MNL2641T-T20944",
+        "SNL2655T-T14154",
+        "SNL2668T-T28863"
+      ],
+      "applicationCount": 8,
+      "contentionMemberships": 2,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 8,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 0,
+        "UNRESOLVED": 0
+      }
+    },
+    {
+      "registrableWebsiteDomain": "xserver.co.jp",
+      "applicantLegalNames": [
+        "XRegistry Incorporated",
+        "XServer Cloud Incorporated",
+        "XServer Incorporated"
+      ],
+      "representativeApplicationIds": [
+        "XCI2688T-T22077",
+        "XI2624T-T10134",
+        "XI2694T-T10138"
+      ],
+      "applicationCount": 20,
+      "contentionMemberships": 16,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 3,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 0,
+        "UNRESOLVED": 0
+      }
+    },
+    {
+      "registrableWebsiteDomain": "alibabacloud.com",
+      "applicantLegalNames": [
+        "CLOUD INTELLIGENCE ASSETS HOLDING (SINGAPORE) PRIVATE LIMITED",
+        "Elegant Leader Limited"
+      ],
+      "representativeApplicationIds": [
+        "BABA2643T-T84292",
+        "ELL2677T-T16553"
+      ],
+      "applicationCount": 5,
+      "contentionMemberships": 4,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 2,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 0,
+        "UNRESOLVED": 0
+      }
+    },
+    {
+      "registrableWebsiteDomain": "jt.com",
+      "applicantLegalNames": [
+        "Japan Business Systems, Inc.",
+        "Japan Tobacco Inc."
+      ],
+      "representativeApplicationIds": [
+        "29142619T-T58539",
+        "50362648T-T39052"
+      ],
+      "applicationCount": 2,
+      "contentionMemberships": 0,
+      "postWeb1MappingMix": {
+        "CONFIRMED": 0,
+        "CANDIDATE": 0,
+        "AMBIGUOUS": 2,
+        "UNRESOLVED": 0
+      }
+    }
+  ]
+}

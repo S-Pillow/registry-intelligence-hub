@@ -207,17 +207,92 @@ Product posture: **CONFIRMED_SUBSET_READY_WITH_LIMITATION** for confirmed portfo
 
 **CROSS-ROUND-ID-1** remains a separate ticket.
 
+## ORG-RES-WEB-1 — Applicant Website identity discovery
+
+**Decision batch:** `RIH-ORG-RES-WEB-1-20261012`  
+**Authority:** operator product steward (not Build Agent)
+
+### Entity layers (preserved)
+
+| Layer | Meaning |
+| --- | --- |
+| **Applicant** | Exact ICANN-published legal name (never renamed) |
+| **Organization** | Broader evidence-backed operating/corporate identity used by RIH |
+| **Direct parent** | Explicit Q26 disclosure where public |
+| **Ultimate parent / control** | Explicit Q36 / Q108 disclosures where public |
+
+Do not collapse these into one display name. Example: Applicant `Hair Apparent, LLC` → Organization **Identity Digital**; Direct parent `Slow Rider, LLC`; Ultimate parent/control `Ethos Capital Digital Infrastructure UGP LLC`.
+
+### Applicant Website — evidence semantics
+
+Applicant Website (`applicantDetails.organizationWebsite` on APS Application summary) is a **first-party discovery signal**.
+
+| Maturity | Use |
+| --- | --- |
+| Discovery | Same unusual corporate domain → investigate |
+| Corroborated Candidate | Shared domain + email domain + prior Candidate/Ambiguous alignment |
+| Confirmation-quality | Explicit affiliate / parent / control disclosures (Q11–Q14, Q26, Q36, Q108) |
+
+**Forbidden:** auto-CONFIRM from domain alone, or from shared-domain count alone.
+
+### Acquisition (first-party ICANN only)
+
+1. APS frontend config: `https://newgtldprogram-aps.icann.org/api/config` → `restBackendUrl`
+2. Summary: `GET {restBackendUrl}/applications/{applicationId}/summary` → `organizationWebsite`
+3. Responses: `GET {restBackendUrl}/applications/{applicationId}/responses` → sectioned Q&A
+4. Representative Application per Applicant: lexicographically first `applicationId`
+5. **No PDF dependency** for this ticket; no authentication; no external corporate-site crawling
+
+Artifacts (committed fixtures):
+
+- `src/organization-resolution-2026/fixtures/applicant-identity-web1/website-inventory.json`
+- `src/organization-resolution-2026/fixtures/applicant-identity-web1/website-clusters.json`
+- `src/organization-resolution-2026/fixtures/applicant-identity-web1/discovery-report.json`
+- `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-web1.json`
+- Hair Apparent proof: `src/organization-resolution-2026/fixtures/aps-detail/`
+
+Live re-fetch: `node scripts/acquire-applicant-identity-web1.mjs` (writes under `.data/applicant-identity-2026/`, gitignored).
+
+### Shared Applicant Website clusters
+
+Deterministic clusters by **registrable website domain** (not “corporate groups”).  
+Sort: distinct Applicant count ↓, Application count ↓, domain ↑.  
+`example.com` and peers are **INVALID_OR_UNUSABLE_WEBSITE**. Shared website without corroborating identity (e.g. `jt.com`) is **MAPPING_CONFLICT** → Ambiguous review, no auto-confirm.
+
+### Decision thresholds (WEB-1)
+
+Authorized transitions when first-party ICANN evidence supports them:
+
+- UNRESOLVED / AMBIGUOUS / CANDIDATE → **CANDIDATE** (website + partial corroboration)
+- UNRESOLVED / AMBIGUOUS / CANDIDATE → **CONFIRMED** when affiliate disclosure + consistent parent/control (or equivalent confirmation-quality set) unambiguously establishes the operating Organization
+- Existing **CONFIRMED** mappings: never auto-demote; conflicts flagged for review
+
+Canonical Organization keys reused (e.g. `identity-digital` → **Identity Digital**), not one org per legal affiliate name.
+
+### Identity Digital proof case
+
+Application `SS2654T-T11896` · Applicant `Hair Apparent, LLC` · Website `identity.digital` · Affiliate disclosures naming Identity Digital RO/RSP entities · Direct parent `Slow Rider, LLC` · Ultimate parent/control Ethos Capital Digital Infrastructure UGP LLC → **Confirmed · Identity Digital**.
+
+### Downstream
+
+- Competitive Landscape / Contention / Explore consume the shared Organization overlay + compact Applicant Website / parent / evidence panel
+- RSP Main capability via **CONFIRMED_ORGANIZATION** only (Candidate/Ambiguous never propagate)
+- Contention memberships remain Applicant-authoritative (263 / 891 unchanged by Organization enrichment)
+- Does **not** mutate `.data/reveal-2026` publication, Change Intelligence, or scheduler state
+
 ## Deferred
 
 - **CROSS-ROUND-ID-1 / 1A** — see `docs/cross-round-organization-identity.md` (2 steward-confirmed identity pairs; returning-new still blocked)  
 - **RETURNING-NEW-1** — returning/new / portfolio-change over approved cross-round identities  
 - Command Center confirmed-subset portfolio UI (with coverage disclosure)  
 - Sector/category taxonomy  
+- External (non-ICANN) corporate evidence for remaining Unresolved / Ambiguous Applicants  
 
 ## Implementation
 
 - `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, steward apply, review, tests  
+- `src/organization-resolution-2026/applicant-identity/` — website normalize/cluster, APS detail extract, WEB-1 evidence apply + steward  
 - Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
 - Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
 - Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`  
-- Steward decision: `src/organization-resolution-2026/steward-decision.ts`
+- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts`

@@ -30,6 +30,12 @@ export type ContentionMemberRow = {
   isGodaddyApplicant: boolean;
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
   confirmedOrganizationName: string | null;
+  applicantWebsiteHost: string | null;
+  applicantWebsiteUrl: string | null;
+  directParentLegalName: string | null;
+  ultimateParentLegalName: string | null;
+  ultimateControlLegalName: string | null;
+  evidenceExplanationLines: string[];
   rspPublicPostureLabel: string;
   exploreApplicationHref: string;
   exploreApplicantHref: string;
@@ -181,6 +187,7 @@ export function buildContentionIntelligence(
       const rspLabel = posture
         ? prospectingPostureLabel(posture.rspProspectingPosture)
         : "No public Main-RSP capability found";
+      const identity = org?.identityEvidence;
       return {
         applicationId: m.applicationId,
         appliedForString: m.appliedForString,
@@ -189,6 +196,12 @@ export function buildContentionIntelligence(
         isGodaddyApplicant: m.applicantLegalName === focalName,
         organizationResolutionStatus: status,
         confirmedOrganizationName: confirmedName,
+        applicantWebsiteHost: identity?.applicantWebsiteHost ?? null,
+        applicantWebsiteUrl: identity?.applicantWebsiteUrl ?? null,
+        directParentLegalName: identity?.directParentLegalName ?? null,
+        ultimateParentLegalName: identity?.ultimateParentLegalName ?? null,
+        ultimateControlLegalName: identity?.ultimateControlLegalName ?? null,
+        evidenceExplanationLines: identity?.evidenceExplanationLines ?? [],
         rspPublicPostureLabel: rspLabel,
         exploreApplicationHref: `/explore?q=${encodeURIComponent(m.applicationId)}`,
         exploreApplicantHref: exploreApplicantHref(m.applicantLegalName),

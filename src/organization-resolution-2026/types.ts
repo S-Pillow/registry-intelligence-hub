@@ -1,5 +1,17 @@
+import type { ApplicantIdentityContext } from "./applicant-identity/types";
 import type { StewardReviewDossier } from "./review-types";
 import type { StewardDecisionProvenance } from "./steward-decision";
+
+export type Web1StewardDecisionProvenance = {
+  decisionId: string;
+  authority: string;
+  decidedAt: string;
+  scope: string;
+  approvedApplicantLegalNames: readonly string[];
+  priorStewardDecisionId: string;
+  sourceEvidencePackageSemanticHash: string;
+  notes: string;
+};
 
 /** Shared with 2012 organization-promotion states. */
 export type OrganizationResolutionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
@@ -76,6 +88,8 @@ export type ApplicantIdentityMapping = {
   possible2012OrganizationKey: string | null;
   reason: string;
   ambiguityNotes?: string;
+  /** ORG-RES-WEB-1 first-party ICANN identity context (optional enrichment). */
+  identityContext?: ApplicantIdentityContext;
 };
 
 export type CandidateNameCluster = {
@@ -144,6 +158,8 @@ export type OrganizationResolutionSnapshot = {
   stewardReviewDossiers?: StewardReviewDossier[];
   /** ORG-RES-2026-2A operator steward approval provenance (not Build Agent). */
   stewardDecisionProvenance?: StewardDecisionProvenance;
+  /** ORG-RES-WEB-1 steward batch provenance (additive; does not replace ALL14). */
+  web1StewardDecisionProvenance?: Web1StewardDecisionProvenance;
   quality: OrganizationResolutionQuality;
   semanticContentSha256: string;
   generatedAt: string;

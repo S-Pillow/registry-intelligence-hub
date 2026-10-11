@@ -50,6 +50,21 @@ export function organizationResolutionSemanticHashInput(
         possible2012OrganizationKey: m.possible2012OrganizationKey,
         reason: m.reason,
         ambiguityNotes: m.ambiguityNotes ?? null,
+        // identityContext omitted when absent so pre-WEB-1 hashes remain stable
+        ...(m.identityContext
+          ? {
+              identityContext: {
+                representativeApplicationId: m.identityContext.representativeApplicationId,
+                applicantWebsiteHost: m.identityContext.applicantWebsiteHost,
+                applicantWebsiteUrl: m.identityContext.applicantWebsiteUrl,
+                directParentLegalName: m.identityContext.directParentLegalName,
+                ultimateParentLegalName: m.identityContext.ultimateParentLegalName,
+                ultimateControlLegalName: m.identityContext.ultimateControlLegalName,
+                evidenceExplanationLines: [...m.identityContext.evidenceExplanationLines],
+                relationshipTypes: [...m.identityContext.relationshipTypes].sort(),
+              },
+            }
+          : {}),
       }))
       .sort((a, b) => a.applicantLegalName.localeCompare(b.applicantLegalName)),
     candidateClusters: [...snapshot.candidateClusters]
@@ -126,6 +141,23 @@ export function organizationResolutionSemanticHashInput(
             sourceEvidencePackageSemanticHash:
               snapshot.stewardDecisionProvenance.sourceEvidencePackageSemanticHash,
             notes: snapshot.stewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
+    ...(snapshot.web1StewardDecisionProvenance
+      ? {
+          web1StewardDecisionProvenance: {
+            decisionId: snapshot.web1StewardDecisionProvenance.decisionId,
+            authority: snapshot.web1StewardDecisionProvenance.authority,
+            decidedAt: snapshot.web1StewardDecisionProvenance.decidedAt,
+            scope: snapshot.web1StewardDecisionProvenance.scope,
+            approvedApplicantLegalNames: [
+              ...snapshot.web1StewardDecisionProvenance.approvedApplicantLegalNames,
+            ].sort(),
+            priorStewardDecisionId: snapshot.web1StewardDecisionProvenance.priorStewardDecisionId,
+            sourceEvidencePackageSemanticHash:
+              snapshot.web1StewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            notes: snapshot.web1StewardDecisionProvenance.notes,
           },
         }
       : {}),

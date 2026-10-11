@@ -25,6 +25,16 @@ function organizationsFromSnapshot(snapshot: OrganizationResolutionSnapshot): Pa
       m.resolutionState === "CONFIRMED" && m.organizationId
         ? (orgNameById.get(m.organizationId) ?? null)
         : null,
+    identityEvidence: m.identityContext
+      ? {
+          applicantWebsiteHost: m.identityContext.applicantWebsiteHost,
+          applicantWebsiteUrl: m.identityContext.applicantWebsiteUrl,
+          directParentLegalName: m.identityContext.directParentLegalName,
+          ultimateParentLegalName: m.identityContext.ultimateParentLegalName,
+          ultimateControlLegalName: m.identityContext.ultimateControlLegalName,
+          evidenceExplanationLines: [...m.identityContext.evidenceExplanationLines],
+        }
+      : null,
   }));
 }
 
@@ -67,6 +77,7 @@ async function loadOrganizationSnapshot(workspaceRoot: string): Promise<Organiza
       writeArtifacts: false,
       applyResearch: true,
       applyStewardApprovals: true,
+      applyWeb1Identity: true,
     });
     return snapshot;
   }

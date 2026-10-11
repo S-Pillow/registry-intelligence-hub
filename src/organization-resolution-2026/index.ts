@@ -15,3 +15,9 @@ export * from "./operator-review";
 export * from "./load-2012-confirmed-aliases";
 export * from "./run-first-pass";
 export { RESEARCH_PACKAGE_2026_2 } from "./fixtures/research-package-2026-2";
+export { normalizeApplicantWebsite } from "./applicant-identity/website-normalize";
+export {
+  buildApplicantWebsiteInventory,
+  buildSharedApplicantWebsiteClusters,
+} from "./applicant-identity/website-clusters";
+export { WEB1_STEWARD_DECISION_ID, WEB1_IDENTITY_EVIDENCE_PACKAGE } from "./applicant-identity/steward-decision-web1";

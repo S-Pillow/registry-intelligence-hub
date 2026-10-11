@@ -114,6 +114,7 @@ async function main(): Promise<void> {
       const result = await runFirstPassOrganizationResolution({
         workspaceRoot,
         writeArtifacts: Boolean(values.write),
+        applyWeb1Identity: true,
       });
       console.log(
         JSON.stringify(
