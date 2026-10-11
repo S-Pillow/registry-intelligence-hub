@@ -1,4 +1,4 @@
-# Change Intelligence (CHANGE-INTEL-1)
+# Change Intelligence (CHANGE-INTEL-1 / 1B)
 
 Deterministic public-source change monitoring for the 2026 round, oriented to GoDaddy Registry impact.
 
@@ -6,10 +6,39 @@ Deterministic public-source change monitoring for the 2026 round, oriented to Go
 
 | Source | Role |
 | --- | --- |
-| ICANN APS Application CSV | Canonical Application universe (non-replacement rows) |
+| ICANN APS Application CSV (official Download CSV export) | Canonical Application universe (non-replacement rows) |
 | ICANN Reveal Day contention CSV | Official initial contention memberships (not exact-string grouping) |
 
-**Not monitored in v1:** evaluated-RSP list (used only as context), official APS Statistics HTML (deferred — no reusable fetch path).
+**Not monitored in v1:** evaluated-RSP list (used only as context), official APS Statistics HTML (deferred).
+
+## Current acquisition contract
+
+### Applications
+
+Public surface: [APS Applications](https://newgtldprogram-aps.icann.org/applications) (“Download CSV”).
+
+Change Intelligence does **not** scrape the HTML table. It uses the same official machine-readable export the UI calls:
+
+1. `GET https://newgtldprogram-aps.icann.org/api/config` → read `restBackendUrl`
+2. `POST {restBackendUrl}/applications/export/csv` with the empty-filter APS search body  
+   (`searchAndFilter: {}`, sort `primaryString ASC`, pagination defaults)
+3. Validate success, non-empty body, CSV (reject HTML/error JSON), then run the accepted APS Application CSV parser
+
+A legacy bare `GET /aps/applications/export/csv` is **not** authoritative (returns HTML 404).
+
+### Contention
+
+Public link published on the APS Applications page / program materials:
+
+`https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv`
+
+Acquisition follows redirects to the durable file URL, requires a non-empty CSV body, and runs the accepted contention CSV parser. An unfollowed 301 with an empty body is treated as failure (not a zero-row CSV).
+
+### Validation / hashes
+
+- Raw `contentSha256` = SHA-256 of downloaded bytes
+- Per-source `semanticHash` = canonical Application / contention membership hashes (not the raw bytes)
+- Observation-level semantic hashes remain the diff pins
 
 ## Runtime state
 
@@ -49,7 +78,9 @@ npm run change-intel:refresh
 
 After merge/deploy of application code, operators must explicitly:
 
-1. bootstrap production monitoring;
+1. bootstrap production monitoring (once);
 2. run one bounded live refresh;
 3. verify `/changes`;
 4. only then authorize scheduling (outside Next.js).
+
+Acquisition-only repairs (CHANGE-INTEL-1B) must not re-bootstrap an already-initialized production monitor.

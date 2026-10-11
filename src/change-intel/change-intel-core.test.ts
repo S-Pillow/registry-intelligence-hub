@@ -103,7 +103,7 @@ describe("CHANGE-INTEL-1 state / bootstrap / refresh", () => {
         applicationPathOrUrl: join(cwd, "missing-apps.csv"),
         contentionPathOrUrl: join(process.cwd(), ".data/reveal-2026/aps-capture/reveal-day-contention-sets.csv"),
       }),
-    ).rejects.toThrow(/APPLICATION_ACQUISITION_FAILED|ENOENT|no such file/i);
+    ).rejects.toThrow(/APPLICATION_FETCH_FAILED|ENOENT|no such file/i);
     const afterFail = await readIndex(cwd);
     expect(afterFail?.currentObservationId).toBe(beforeIndex?.currentObservationId);
   });

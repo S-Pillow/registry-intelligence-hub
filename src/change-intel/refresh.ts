@@ -5,11 +5,7 @@ import {
   browserDocumentFromNormalized,
   buildRspPostureMap,
 } from "@/change-intel/rsp-context";
-import {
-  acquireNormalizedSources,
-  APS_APPLICATION_CSV_URL,
-  APS_CONTENTION_CSV_URL,
-} from "@/change-intel/sources";
+import { acquireNormalizedSources } from "@/change-intel/sources";
 import {
   persistRefresh,
   readIndex,
@@ -55,14 +51,15 @@ export async function refreshChangeIntel(input?: {
     input?.applicationPathOrUrl
     ?? (mode === "file"
       ? join(cwd, ".data/reveal-2026/aps-capture/applications.csv")
-      : APS_APPLICATION_CSV_URL);
+      : undefined);
   const contentionPathOrUrl =
     input?.contentionPathOrUrl
     ?? (mode === "file"
       ? join(cwd, ".data/reveal-2026/aps-capture/reveal-day-contention-sets.csv")
-      : APS_CONTENTION_CSV_URL);
+      : undefined);
 
   // Acquisition/validation — on failure throw before any write.
+  // Fetch mode locates the current APS POST export via /api/config when no override URL is given.
   const acquired = await acquireNormalizedSources({
     applicationPathOrUrl,
     contentionPathOrUrl,
