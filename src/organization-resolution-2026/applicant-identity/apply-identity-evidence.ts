@@ -55,9 +55,12 @@ export function applyIdentityEvidencePackageToSnapshot(input: {
   snapshot: OrganizationResolutionSnapshot;
   package: IdentityEvidencePackage;
   generatedAt?: string;
+  /** Provenance label in mapping reasons / org notes (default ORG-RES-WEB-1). */
+  passLabel?: string;
 }): OrganizationResolutionSnapshot {
   const { snapshot } = input;
   const research = input.package;
+  const passLabel = input.passLabel ?? "ORG-RES-WEB-1";
   const mappings = new Map(snapshot.applicantIdentityMappings.map((m) => [m.applicantLegalName, { ...m }]));
   const organizations = snapshot.organizations.map((o) => ({
     ...o,
@@ -93,7 +96,7 @@ export function applyIdentityEvidencePackageToSnapshot(input: {
       if (conflict) {
         mapping.ambiguityNotes = [
           mapping.ambiguityNotes,
-          `ORG-RES-WEB-1 CONFIRMED_CONFLICT vs ${dossier.candidateCanonicalName}: ${dossier.recommendationReason}`,
+          `${passLabel} CONFIRMED_MAPPING_CONFLICT vs ${dossier.candidateCanonicalName}: ${dossier.recommendationReason}`,
         ]
           .filter(Boolean)
           .join(" | ");
@@ -172,7 +175,7 @@ export function applyIdentityEvidencePackageToSnapshot(input: {
           resolutionMethod: ORGANIZATION_RESOLUTION_METHOD_VERSION,
           confidence: dossier.reviewRecommendation === "CONFIRM" ? "medium" : "low",
           reviewState: "pending-steward",
-          notes: `ORG-RES-WEB-1 identity evidence: ${dossier.reviewRecommendation}`,
+          notes: `${passLabel} identity evidence: ${dossier.reviewRecommendation}`,
         };
         organizations.push(org);
       }
@@ -183,7 +186,7 @@ export function applyIdentityEvidencePackageToSnapshot(input: {
       mapping.organizationId = organizationId;
     }
     mapping.evidenceRefIds = normalizeEvidenceIds([...mapping.evidenceRefIds, ...evidenceIds]);
-    mapping.reason = `ORG-RES-WEB-1: ${dossier.recommendationReason}`;
+    mapping.reason = `${passLabel}: ${dossier.recommendationReason}`;
     if (dossier.resolutionState === "AMBIGUOUS") {
       mapping.ambiguityNotes = dossier.recommendationReason;
     }
@@ -257,8 +260,8 @@ export function applyIdentityEvidencePackageToSnapshot(input: {
       recommendNoEvidence: dossiers.filter((d) => d.reviewRecommendation === "NO_EVIDENCE").length,
     },
     limitations: [
-      ...snapshot.limitations.filter((l) => !l.includes("ORG-RES-WEB-1 identity evidence")),
-      "ORG-RES-WEB-1 identity evidence recommendations are not steward approvals and never auto-CONFIRM from website alone.",
+      ...snapshot.limitations.filter((l) => !l.includes(`${passLabel} identity evidence`)),
+      `${passLabel} identity evidence recommendations are not steward approvals and never auto-CONFIRM from Brand or website alone.`,
     ],
   };
 

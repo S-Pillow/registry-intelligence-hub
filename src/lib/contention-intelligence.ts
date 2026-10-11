@@ -36,6 +36,8 @@ export type ContentionMemberRow = {
   ultimateParentLegalName: string | null;
   ultimateControlLegalName: string | null;
   evidenceExplanationLines: string[];
+  brandApplicationCount: number;
+  applicationCount: number;
   rspPublicPostureLabel: string;
   exploreApplicationHref: string;
   exploreApplicantHref: string;
@@ -140,6 +142,9 @@ export function buildContentionIntelligence(
   const orgByName = new Map(
     (overlays?.organizations ?? []).map((o) => [o.applicantLegalName, o] as const),
   );
+  const participantByName = new Map(
+    participantIntelligence.participants.map((p) => [p.applicantLegalName, p] as const),
+  );
 
   type AccMember = {
     applicationId: string;
@@ -188,6 +193,7 @@ export function buildContentionIntelligence(
         ? prospectingPostureLabel(posture.rspProspectingPosture)
         : "No public Main-RSP capability found";
       const identity = org?.identityEvidence;
+      const participant = participantByName.get(m.applicantLegalName);
       return {
         applicationId: m.applicationId,
         appliedForString: m.appliedForString,
@@ -202,6 +208,8 @@ export function buildContentionIntelligence(
         ultimateParentLegalName: identity?.ultimateParentLegalName ?? null,
         ultimateControlLegalName: identity?.ultimateControlLegalName ?? null,
         evidenceExplanationLines: identity?.evidenceExplanationLines ?? [],
+        brandApplicationCount: participant?.designationCounts.brand ?? 0,
+        applicationCount: participant?.applicationCount ?? 0,
         rspPublicPostureLabel: rspLabel,
         exploreApplicationHref: `/explore?q=${encodeURIComponent(m.applicationId)}`,
         exploreApplicantHref: exploreApplicantHref(m.applicantLegalName),

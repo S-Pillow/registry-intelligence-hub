@@ -194,6 +194,8 @@ function SetDetailPanel({
                     ultimateParentLegalName={m.ultimateParentLegalName}
                     ultimateControlLegalName={m.ultimateControlLegalName}
                     evidenceExplanationLines={m.evidenceExplanationLines}
+                    brandApplicationCount={m.brandApplicationCount}
+                    applicationCount={m.applicationCount}
                   />
                   <p className="mt-2 flex flex-wrap gap-3 text-xs">
                     <Link href={m.exploreApplicationHref} className="font-semibold text-[#006a56] underline">

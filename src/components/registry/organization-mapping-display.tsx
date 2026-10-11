@@ -86,6 +86,9 @@ export type ApplicantIdentityEvidenceProps = {
   ultimateParentLegalName: string | null;
   ultimateControlLegalName: string | null;
   evidenceExplanationLines: string[];
+  /** Supporting Brand context only — not proof of Organization ownership. */
+  brandApplicationCount?: number | null;
+  applicationCount?: number | null;
 };
 
 /**
@@ -102,11 +105,24 @@ export function ApplicantIdentityEvidencePanel(props: ApplicantIdentityEvidenceP
     ultimateParentLegalName,
     ultimateControlLegalName,
     evidenceExplanationLines,
+    brandApplicationCount,
+    applicationCount,
   } = props;
   const hasWebsite = Boolean(applicantWebsiteHost);
   const hasParents = Boolean(directParentLegalName || ultimateParentLegalName || ultimateControlLegalName);
   const hasExplanation = evidenceExplanationLines.length > 0;
-  if (!hasWebsite && !hasParents && !hasExplanation && organizationStatus === "UNRESOLVED") {
+  const hasBrandContext =
+    typeof brandApplicationCount === "number" &&
+    brandApplicationCount > 0 &&
+    typeof applicationCount === "number" &&
+    applicationCount > 0;
+  if (
+    !hasWebsite &&
+    !hasParents &&
+    !hasExplanation &&
+    !hasBrandContext &&
+    organizationStatus === "UNRESOLVED"
+  ) {
     return null;
   }
 
@@ -143,6 +159,14 @@ export function ApplicantIdentityEvidencePanel(props: ApplicantIdentityEvidenceP
               ) : (
                 <span className="font-medium text-slate-900">{applicantWebsiteHost}</span>
               )}
+            </dd>
+          </div>
+        ) : null}
+        {hasBrandContext ? (
+          <div className="flex flex-wrap gap-x-2" data-testid="brand-applications-context">
+            <dt className="text-slate-500">Brand applications</dt>
+            <dd className="font-medium text-slate-900">
+              {brandApplicationCount} of {applicationCount}
             </dd>
           </div>
         ) : null}

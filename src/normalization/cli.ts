@@ -115,6 +115,7 @@ async function main(): Promise<void> {
         workspaceRoot,
         writeArtifacts: Boolean(values.write),
         applyWeb1Identity: true,
+        applyBrand1Identity: true,
       });
       console.log(
         JSON.stringify(

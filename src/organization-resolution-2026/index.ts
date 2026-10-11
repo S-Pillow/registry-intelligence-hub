@@ -21,3 +21,12 @@ export {
   buildSharedApplicantWebsiteClusters,
 } from "./applicant-identity/website-clusters";
 export { WEB1_STEWARD_DECISION_ID, WEB1_IDENTITY_EVIDENCE_PACKAGE } from "./applicant-identity/steward-decision-web1";
+export {
+  BRAND1_STEWARD_DECISION_ID,
+  BRAND1_IDENTITY_EVIDENCE_PACKAGE,
+} from "./applicant-identity/steward-decision-brand1";
+export { buildBrandApplicantInventory } from "./applicant-identity/brand-inventory";
+export {
+  isStrictSelfIdentityMatch,
+  canonicalOrganizationNameFromLegalName,
+} from "./applicant-identity/identity-match";

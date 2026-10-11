@@ -1,0 +1,37 @@
+{
+  "applicationId": "AP2691T-T42689",
+  "applicantLegalName": "Anthropic, PBC",
+  "fields": {
+    "Q10": {
+      "questionId": "Q10",
+      "questionText": "AGB Q10. Website URL",
+      "responseText": "https://www.anthropic.com",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q11": {
+      "questionId": "Q11",
+      "questionText": "AGB Q11. Is the applying entity an existing registry operator, ICANN accredited registrar, or an Affiliate of either?",
+      "responseText": "false",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q13": {
+      "questionId": "Q13",
+      "questionText": "AGB Q13. Is the applying entity a back-end registry service provider (RSP), an ICANN-approved data escrow agent, an emergency back-end registry operator, a Uniform Rapid Suspension (URS) service provider, an ICANN dispute resolution service provider, a Privacy or Proxy Service Provider, or a Reseller?",
+      "responseText": "false",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q19": {
+      "questionId": "Q19",
+      "questionText": "AGB Q19. Primary Business Email Address",
+      "responseText": "legal-corporate@anthropic.com",
+      "sectionTitle": "Applying Entity Information"
+    },
+    "Q179": {
+      "questionId": "Q179",
+      "questionText": "AGB Q179. Are you applying for a Brand TLD?",
+      "responseText": "Yes",
+      "sectionTitle": "Brand & Code of Conduct Exemptions"
+    }
+  },
+  "extractorVersion": "aps-application-detail/1.0.0"
+}

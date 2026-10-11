@@ -78,6 +78,7 @@ async function loadOrganizationSnapshot(workspaceRoot: string): Promise<Organiza
       applyResearch: true,
       applyStewardApprovals: true,
       applyWeb1Identity: true,
+      applyBrand1Identity: true,
     });
     return snapshot;
   }

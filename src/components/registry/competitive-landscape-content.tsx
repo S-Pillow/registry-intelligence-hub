@@ -593,6 +593,8 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                     ultimateParentLegalName={evidence?.ultimateParentLegalName ?? null}
                     ultimateControlLegalName={evidence?.ultimateControlLegalName ?? null}
                     evidenceExplanationLines={evidence?.evidenceExplanationLines ?? []}
+                    brandApplicationCount={participant?.designationCounts.brand ?? null}
+                    applicationCount={participant?.applicationCount ?? null}
                   />
                 );
               })()}

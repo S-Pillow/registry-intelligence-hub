@@ -13,6 +13,17 @@ export type Web1StewardDecisionProvenance = {
   notes: string;
 };
 
+export type Brand1StewardDecisionProvenance = {
+  decisionId: string;
+  authority: string;
+  decidedAt: string;
+  scope: string;
+  approvedApplicantLegalNames: readonly string[];
+  priorStewardDecisionId: string;
+  sourceEvidencePackageSemanticHash: string;
+  notes: string;
+};
+
 /** Shared with 2012 organization-promotion states. */
 export type OrganizationResolutionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
 
@@ -160,6 +171,8 @@ export type OrganizationResolutionSnapshot = {
   stewardDecisionProvenance?: StewardDecisionProvenance;
   /** ORG-RES-WEB-1 steward batch provenance (additive; does not replace ALL14). */
   web1StewardDecisionProvenance?: Web1StewardDecisionProvenance;
+  /** ORG-RES-BRAND-1 steward batch provenance (additive; does not replace WEB-1). */
+  brand1StewardDecisionProvenance?: Brand1StewardDecisionProvenance;
   quality: OrganizationResolutionQuality;
   semanticContentSha256: string;
   generatedAt: string;

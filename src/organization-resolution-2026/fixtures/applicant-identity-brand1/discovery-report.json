@@ -1,0 +1,647 @@
+{
+  "schemaVersion": "brand-discovery-report/1.0.0",
+  "decisionId": "RIH-ORG-RES-BRAND-1-20261012",
+  "representedApplicants": 480,
+  "currentConfirmed": 75,
+  "currentCandidate": 2,
+  "currentAmbiguous": 2,
+  "currentUnresolved": 401,
+  "nonConfirmedUniverse": 405,
+  "applicantsWithBrandApplications": 247,
+  "nonConfirmedBrandApplicants": 237,
+  "brandApplicationsRepresented": 333,
+  "discovery": {
+    "selfIdentity": 70,
+    "parentBrand": 167,
+    "affiliate": 0,
+    "conflicts": 0,
+    "insufficient": 0
+  },
+  "confirmDossiers": 70,
+  "topCandidates": [
+    {
+      "applicantLegalName": "Amazon Registry Services, Inc.",
+      "website": "registry.amazon",
+      "applications": 8,
+      "brandApplications": 8,
+      "strings": [
+        "alexa",
+        "echo",
+        "eero",
+        "kgs",
+        "kuiper",
+        "leo",
+        "ring",
+        "twitch"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Industria de Dise\u00f1o Textil S.A.",
+      "website": "inditex.com",
+      "applications": 6,
+      "brandApplications": 6,
+      "strings": [
+        "bershka",
+        "inditex",
+        "lefties",
+        "oysho",
+        "pullandbear",
+        "zarahome"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "ML 35 LLC",
+      "website": "bankofamerica.com",
+      "applications": 5,
+      "brandApplications": 5,
+      "strings": [
+        "bankofamerica",
+        "cashpro",
+        "erica",
+        "flagscape",
+        "merrill"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Salesforce, Inc.",
+      "website": "salesforce.com",
+      "applications": 4,
+      "brandApplications": 4,
+      "strings": [
+        "force",
+        "salesforce",
+        "slack",
+        "tableau"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Salesforce",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "Beijing Zitiao Network Technology Co., Ltd.",
+      "website": "douyin.com;https",
+      "applications": 3,
+      "brandApplications": 3,
+      "strings": [
+        "doubao",
+        "douyin",
+        "xn--pruv10j"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Dine Brands Global, Inc.",
+      "website": "dinebrands.com",
+      "applications": 3,
+      "brandApplications": 3,
+      "strings": [
+        "applebees",
+        "dinebrands",
+        "ihop"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Douyin Vision Co., Ltd.",
+      "website": "fanqienovel.com",
+      "applications": 3,
+      "brandApplications": 3,
+      "strings": [
+        "hongguo",
+        "xn--fpy230a",
+        "xn--gtv852c"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Taisho Pharmaceutical Co., Ltd.",
+      "website": "taisho.co.jp",
+      "applications": 3,
+      "brandApplications": 3,
+      "strings": [
+        "lipovitan",
+        "taisho",
+        "upsa"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "ALIBABA INNOVATION PRIVATE LIMITED",
+      "website": "qwencloud.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "qwen",
+        "wan"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "AT&T Services, Inc.",
+      "website": "att.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "att",
+        "attbusiness"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "American Lebanese Syrian Associated Charities, Inc.",
+      "website": "stjude.org",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "alsac",
+        "stjude"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Anthropic, PBC",
+      "website": "anthropic.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "anthropic",
+        "claude"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Anthropic",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "Axon Enterprise, Inc.",
+      "website": "axon.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "axon",
+        "taser"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Canadian Imperial Bank of Commerce",
+      "website": "cibc.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "cibc",
+        "simplii"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "CareCredit LLC",
+      "website": "synchrony.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "carecredit",
+        "synchrony"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Corporation Service Company",
+      "website": "cscglobal.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "csc",
+        "cscglobal"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Epic systems corporation",
+      "website": "epic.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "epic",
+        "mychart"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Freedom Holding Corp.",
+      "website": "freedomholdingcorp.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "freedom",
+        "frhc"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Hims, Inc.",
+      "website": "hims.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "hers",
+        "hims"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Hims",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "KRAFTON, Inc.",
+      "website": "krafton.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "krafton",
+        "pubg"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "KRAFTON",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "Luckin Coffee Group Co., Ltd.",
+      "website": "lkcoffee.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "luckin",
+        "xn--lwt700c"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Novo Nordisk A/S",
+      "website": "novonordisk.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "novo",
+        "novocare"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Palantir Technologies Inc.",
+      "website": "palantir.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "palantir",
+        "pltr"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Qingdao Haishang Zhicai Management Consulting Co., Ltd.",
+      "website": "haier.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "haier",
+        "xn--3et971b"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Qingdao Hisense Technology Service Co., Ltd.",
+      "website": "hisense.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "hisense",
+        "xn--vuq143e"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Roblox Corporation",
+      "website": "roblox.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "rblx",
+        "roblox"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Roblox",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "Tether Operations, Sociedad Anonima de Capital Variable",
+      "website": "tether.io",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "tether",
+        "usdt"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "ZOHO CORPORATION PRIVATE LIMITED",
+      "website": "zoho.com",
+      "applications": 2,
+      "brandApplications": 2,
+      "strings": [
+        "zia",
+        "zoho"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Meditative Mind Pty Ltd",
+      "website": "meditativemind.org",
+      "applications": 2,
+      "brandApplications": 1,
+      "strings": [
+        "meditative",
+        "meditativemind"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Meditative Mind",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "RENNPFERD, LLC",
+      "website": "uber.com",
+      "applications": 2,
+      "brandApplications": 1,
+      "strings": [
+        "robotaxi",
+        "uber"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Wiz & Associates, S.A. de C.V.",
+      "website": "wiz.biz",
+      "applications": 2,
+      "brandApplications": 1,
+      "strings": [
+        "bitcoin",
+        "wiz"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Xingyin Information Technology (Shanghai) Co., Ltd.",
+      "website": "xiaohongshu.com",
+      "applications": 2,
+      "brandApplications": 1,
+      "strings": [
+        "note",
+        "rednote"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "ADEKA Corporation",
+      "website": "adeka.co.jp",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "adeka"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "ADEKA",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "AGC Inc.",
+      "website": "agc.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "agc"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "AGC",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "ALSOK CO., LTD.",
+      "website": "alsok.co.jp",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "alsok"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "ALSOK",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "ASSA ABLOY AB",
+      "website": "assaabloy.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "hid"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "ASSA ABLOY",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    },
+    {
+      "applicantLegalName": "ASUSTeK COMPUTER INCORPORATION",
+      "website": "asus.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "asus"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "ATOS GROUP SE",
+      "website": "atosgroup.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "atos"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "AXIS COMMUNICATIONS AKTIEBOLAG",
+      "website": "axis.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "axis"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": null,
+      "discoveryClass": "PARENT_BRAND_SIGNAL",
+      "evidenceBasis": "PARENT_BRAND_SIGNAL",
+      "decision": "NO_CHANGE"
+    },
+    {
+      "applicantLegalName": "Abion AB",
+      "website": "abion.com",
+      "applications": 1,
+      "brandApplications": 1,
+      "strings": [
+        "abion"
+      ],
+      "currentState": "UNRESOLVED",
+      "proposedOrganization": "Abion",
+      "discoveryClass": "SELF_IDENTITY_SIGNAL",
+      "evidenceBasis": "Brand + Website + legal-name self-identity",
+      "decision": "CONFIRM"
+    }
+  ],
+  "decisions": {
+    "newConfirmed": 70,
+    "newCandidate": 0,
+    "newAmbiguous": 0,
+    "noChange": 167,
+    "confirmedConflicts": 0,
+    "priorConfirmed": 75,
+    "postConfirmed": 145,
+    "priorOrganizations": 19,
+    "postOrganizations": 89,
+    "decisionId": "RIH-ORG-RES-BRAND-1-20261012",
+    "semanticHash": "4837173224fc89ae617de3620396950e18c8da99a5333459a8782e032ce3bb87"
+  }
+}

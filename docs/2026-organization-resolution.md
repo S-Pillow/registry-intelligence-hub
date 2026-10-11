@@ -280,6 +280,63 @@ Application `SS2654T-T11896` · Applicant `Hair Apparent, LLC` · Website `ident
 - Contention memberships remain Applicant-authoritative (263 / 891 unchanged by Organization enrichment)
 - Does **not** mutate `.data/reveal-2026` publication, Change Intelligence, or scheduler state
 
+## ORG-RES-BRAND-1 — Brand & self-identity Applicant resolution
+
+**Decision batch:** `RIH-ORG-RES-BRAND-1-20261012`  
+**Authority:** operator product steward (not Build Agent)  
+**Prior WEB-1 semantic hash:** `6dbbe567816c0afb2091eb5fb6eb8b0da5c8a32dbf00d461806ae70e84851199`
+
+### Brand designation (discovery / corroboration only)
+
+Application `designations.brand` helps prioritize Applicants whose applied-for strings align with corporate or product identity.  
+**Forbidden:** Brand → automatic CONFIRMED.  
+**Forbidden:** applied-for string resemblance → automatic CONFIRMED or separate Organization (e.g. `.slack` / `.tableau` do not create Slack/Tableau Organizations when the Applicant is Salesforce, Inc.).
+
+### Self-identity resolution
+
+A straightforward self-identifying Applicant may be steward-confirmed when first-party ICANN evidence consistently shows the Applicant and proposed Organization are the same business identity:
+
+1. Exact Applicant legal name  
+2. Applicant Website supplied to ICANN  
+3. Brand designation (corroboration)  
+4. Optional business email domain  
+5. Explicit parent/affiliate disclosures preserved separately when present  
+6. No contradictory first-party evidence  
+
+Conservative discovery matching (lowercase, legal-suffix removal, punctuation/whitespace, www/host stem) is **queue-building only**. Steward evidence still controls CONFIRMED.
+
+### Parent vs Organization
+
+If ICANN discloses Direct Parent / Ultimate Parent / Ultimate Control, those facts are stored separately. They do **not** automatically become the product Organization. Example: Applicant `Converse Inc.` → Organization **Converse**; Direct/Ultimate parent `NIKE, Inc.` retained as relationship context.
+
+### Salesforce proof case
+
+Applicant `Salesforce, Inc.` · Website `salesforce.com` · Brand Applications for `salesforce`, `force`, `slack`, `tableau` → **Confirmed · Salesforce**.  
+Applications remain Salesforce, Inc. Applications. Slack/Tableau are not Organizations.
+
+### Discovery / decision counts (this batch)
+
+| Metric | Value |
+| --- | --- |
+| Represented Applicants | 480 |
+| Non-Confirmed universe (pre-batch) | 405 |
+| Applicants with ≥1 Brand Application | 247 |
+| Non-Confirmed Brand Applicants | 237 |
+| Brand Applications represented | 333 |
+| Self-identity discovery signals | 70 |
+| Parent-brand discovery signals | 167 |
+| New steward Confirmed Applicants | 70 |
+| Post-batch Confirmed Applicants / Organizations | 145 / 89 |
+| Post-batch semantic hash | `4837173224fc89ae617de3620396950e18c8da99a5333459a8782e032ce3bb87` |
+
+Artifacts:
+
+- `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-brand1.json`
+- `src/organization-resolution-2026/fixtures/applicant-identity-brand1/`
+- Salesforce APS fixtures under `src/organization-resolution-2026/fixtures/aps-detail/CRM2628T-*`
+
+Identity panel shows Brand applications as supporting context (e.g. `4 of 4`) — not as proof of brand ownership.
+
 ## Deferred
 
 - **CROSS-ROUND-ID-1 / 1A** — see `docs/cross-round-organization-identity.md` (2 steward-confirmed identity pairs; returning-new still blocked)  
@@ -291,8 +348,8 @@ Application `SS2654T-T11896` · Applicant `Hair Apparent, LLC` · Website `ident
 ## Implementation
 
 - `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, steward apply, review, tests  
-- `src/organization-resolution-2026/applicant-identity/` — website normalize/cluster, APS detail extract, WEB-1 evidence apply + steward  
+- `src/organization-resolution-2026/applicant-identity/` — website normalize/cluster, Brand inventory/match/discovery, APS detail extract, WEB-1 + BRAND-1 evidence apply + steward  
 - Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
 - Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
 - Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`  
-- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts`
+- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts` + `applicant-identity/steward-decision-brand1.ts`

@@ -25,6 +25,7 @@ import {
 import { applyResearchPackageToSnapshot } from "./apply-research";
 import { applyStewardApprovalsToSnapshot } from "./apply-steward-approvals";
 import { applyWeb1StewardToSnapshot } from "./applicant-identity/apply-web1-steward";
+import { applyBrand1StewardToSnapshot } from "./applicant-identity/apply-brand1-steward";
 import { RESEARCH_PACKAGE_2026_2 } from "./fixtures/research-package-2026-2";
 import type { ResearchPackage } from "./review-types";
 
@@ -68,6 +69,8 @@ export async function runFirstPassOrganizationResolution(input: {
   applyStewardApprovals?: boolean;
   /** ORG-RES-WEB-1: apply Applicant Website identity evidence + steward batch after ALL14. Default true when steward applies. */
   applyWeb1Identity?: boolean;
+  /** ORG-RES-BRAND-1: apply Brand self-identity evidence + steward batch after WEB-1. */
+  applyBrand1Identity?: boolean;
 }): Promise<{
   snapshot: OrganizationResolutionSnapshot;
   inventory: ReturnType<typeof inventoryFromSnapshot>;
@@ -124,6 +127,18 @@ export async function runFirstPassOrganizationResolution(input: {
       throw new Error("applyWeb1Identity requires applyStewardApprovals (ALL14 base)");
     }
     snapshot = applyWeb1StewardToSnapshot({
+      snapshot,
+      publication,
+      contention,
+    });
+  }
+
+  // BRAND-1 is opt-in after WEB-1.
+  if (input.applyBrand1Identity) {
+    if (!input.applyWeb1Identity) {
+      throw new Error("applyBrand1Identity requires applyWeb1Identity");
+    }
+    snapshot = applyBrand1StewardToSnapshot({
       snapshot,
       publication,
       contention,

@@ -46,3 +46,6 @@ next-env.d.ts
 
 agent-tools/
 scripts/__pycache__/
+
+# ORG-RES-BRAND-1 local acquisition / visual cache
+/.data-brand1/

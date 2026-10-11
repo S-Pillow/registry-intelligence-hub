@@ -161,6 +161,23 @@ export function organizationResolutionSemanticHashInput(
           },
         }
       : {}),
+    ...(snapshot.brand1StewardDecisionProvenance
+      ? {
+          brand1StewardDecisionProvenance: {
+            decisionId: snapshot.brand1StewardDecisionProvenance.decisionId,
+            authority: snapshot.brand1StewardDecisionProvenance.authority,
+            decidedAt: snapshot.brand1StewardDecisionProvenance.decidedAt,
+            scope: snapshot.brand1StewardDecisionProvenance.scope,
+            approvedApplicantLegalNames: [
+              ...snapshot.brand1StewardDecisionProvenance.approvedApplicantLegalNames,
+            ].sort(),
+            priorStewardDecisionId: snapshot.brand1StewardDecisionProvenance.priorStewardDecisionId,
+            sourceEvidencePackageSemanticHash:
+              snapshot.brand1StewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            notes: snapshot.brand1StewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };
