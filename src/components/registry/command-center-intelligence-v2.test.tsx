@@ -201,6 +201,7 @@ function renderCc(document: RegistryApplicationsDocumentV2, claim = promotedClai
 describe("Command Center intelligence-first 2.x IA", () => {
   it("1-6 — official posture, coverage context, WDO metadata", () => {
     renderCc(makeDocument());
+    expect(screen.getByRole("heading", { name: "2026 round at a glance" })).toBeInTheDocument();
     expect(screen.getByTestId("cc-v2-official-apps")).toHaveTextContent("1615");
     expect(screen.getByTestId("cc-v2-official-applicants")).toHaveTextContent("481");
     expect(screen.getByTestId("cc-v2-contention-sets")).toHaveTextContent("263");
@@ -210,9 +211,24 @@ describe("Command Center intelligence-first 2.x IA", () => {
     expect(screen.getByTestId("cc-v2-coverage-completeness")).toHaveTextContent("partial");
     expect(screen.getByTestId("cc-v2-coverage-excluded")).toHaveTextContent(/administrative-check/);
     expect(screen.queryByText("WDO2627T-T45217")).not.toBeInTheDocument();
+    expect(screen.queryByText(/READY_WITH_LIMITATION/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Publication 2/i)).not.toBeInTheDocument();
     // Observed must not be the hero Application count
     const posture = screen.getByTestId("cc-section-round-posture");
     expect(within(posture).queryByText("1614")).not.toBeInTheDocument();
+  });
+
+  it("cross-round limitation labels stay business-readable", () => {
+    renderCc(makeDocument());
+    expect(screen.getByTestId("cc-v2-cross-apps-limitation")).toHaveTextContent(
+      /ICANN official round totals/i,
+    );
+    expect(screen.getByTestId("cc-v2-cross-idn-limitation")).toHaveTextContent(
+      /ICANN official round totals/i,
+    );
+    expect(screen.getByTestId("cc-v2-cross-apps-limitation")).not.toHaveTextContent(
+      /READY_WITH_LIMITATION/,
+    );
   });
 
   it("7-9 — Applications and IDN cross-round with derived deltas", () => {
@@ -267,7 +283,7 @@ describe("Command Center intelligence-first 2.x IA", () => {
       /relationship grain/i,
     );
     expect(screen.getByTestId("cc-v2-contention-not-exact-string")).toHaveTextContent(
-      /exact-string/i,
+      /official initial contention publication/i,
     );
     expect(screen.getByTestId("cc-section-composition")).toHaveTextContent(
       /not industries, sectors, or market categories/i,
@@ -279,7 +295,7 @@ describe("Command Center intelligence-first 2.x IA", () => {
     expect(screen.getByTestId("cc-v2-official-apps")).toHaveTextContent("1615");
     expect(screen.getByTestId("cc-v2-contention-unavailable")).toBeInTheDocument();
     expect(screen.getByTestId("cc-v2-contention-unavailable")).toHaveTextContent(
-      /fails closed independently/i,
+      /unavailable independently/i,
     );
     expect(screen.getByTestId("cc-v2-cross-apps-2026")).toHaveTextContent("1615");
   });
@@ -294,10 +310,11 @@ describe("Command Center intelligence-first 2.x IA", () => {
       "href",
       "/explore",
     );
-    expect(screen.getByRole("link", { name: "View data provenance" })).toHaveAttribute(
+    expect(screen.getByTestId("cc-v2-data-health-link")).toHaveAttribute(
       "href",
       "/data-health",
     );
+    expect(screen.getByTestId("cc-v2-data-health-link")).toHaveTextContent("Data & methodology");
     expect(screen.queryByTestId("search-v2")).not.toBeInTheDocument();
     expect(screen.queryByTestId("explore-content-v2")).not.toBeInTheDocument();
   });

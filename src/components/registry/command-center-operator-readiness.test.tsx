@@ -367,9 +367,17 @@ describe("CC-OR-1 operator readiness", () => {
 
   it("38 — navigation, lenses, time basis, search, and Instant Briefing stay in place", () => {
     render(<CommandCenter presentation="rehearsal" />);
-    for (const name of ["Command Center", "Explore", "Compare", "Saved", "Briefings", "Data Health"]) {
-      expect(screen.getByRole("link", { name })).toBeInTheDocument();
+    const nav = screen.getByTestId("hub-primary-nav");
+    for (const name of ["Command Center", "Explore", "Competitive Landscape"]) {
+      expect(within(nav).getByRole("link", { name })).toBeInTheDocument();
     }
+    for (const name of ["Compare", "Saved", "Briefings", "Data Health"]) {
+      expect(within(nav).queryByRole("link", { name })).not.toBeInTheDocument();
+    }
+    expect(within(nav).getByRole("link", { name: "Data & methodology" })).toHaveAttribute(
+      "href",
+      "/data-health?presentation=rehearsal",
+    );
     expect(screen.getByRole("link", { name: "Open Data Health" })).toHaveAttribute("href", "/data-health?presentation=rehearsal");
     for (const name of ["All Intelligence", "Commercial", "Product & Strategy", "Marketing"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();

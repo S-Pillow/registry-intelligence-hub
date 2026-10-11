@@ -92,11 +92,11 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
             Round posture
           </p>
           <h1 id="cc-round-posture-heading" className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-            Authoritative state of the 2026 round
+            2026 round at a glance
           </h1>
           <p className="mt-2 text-sm leading-6 text-slate-700">
-            Official aggregates orient the round. Local RIH coverage is disclosed separately — not as
-            the round total.
+            Official ICANN aggregates anchor round posture. RIH coverage is disclosed separately and is
+            not the official round total.
           </p>
         </header>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,7 +174,7 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
             Official initial contention
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-700">
-            Sourced from the ICANN Reveal Day contention publication — not RIH exact-string grouping.
+            Based on ICANN&apos;s official initial contention publication.
           </p>
         </header>
 
@@ -213,7 +213,8 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
                 initial contention snapshot, not a live lifecycle forecast.
               </p>
               <p className="mt-2 text-xs text-slate-600" data-testid="cc-v2-contention-not-exact-string">
-                Not RIH exact-string competition. Source Org Name is not a resolved Organization.
+                Based on ICANN&apos;s official initial contention publication. Source organization name
+                on that publication is not a confirmed Organization mapping.
               </p>
             </div>
 
@@ -252,8 +253,8 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
             <p className="font-semibold">Official initial contention unavailable</p>
             <p className="mt-1 text-xs leading-5">{competitiveStructure.reason}</p>
             <p className="mt-2 text-xs text-slate-600">
-              Application round posture remains active. Contention fails closed independently — no
-              exact-string fallback.
+              Application round posture remains active. Contention is unavailable independently and
+              is not inferred from applied-string grouping.
             </p>
           </div>
         )}
@@ -318,14 +319,14 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
       <section aria-labelledby="cc-coverage-heading" data-testid="cc-section-coverage">
         <header className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
-            Evidence posture
+            Coverage
           </p>
           <h2 id="cc-coverage-heading" className="mt-2 text-2xl font-bold tracking-tight">
-            Coverage and provenance
+            What RIH currently represents
           </h2>
         </header>
         <div
-          className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm"
           data-testid="cc-v2-coverage-panel"
         >
           <ul className="space-y-1.5">
@@ -334,9 +335,9 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
               <strong data-testid="cc-v2-coverage-official">{coverage.officialApplications}</strong>
             </li>
             <li>
-              RIH normalized records:{" "}
+              Application rows represented in RIH:{" "}
               <strong data-testid="cc-v2-coverage-observed">{coverage.observedApplicationRecords}</strong>
-              <span className="text-amber-900/80"> — coverage context only, not the round total</span>
+              <span className="text-slate-600"> — coverage context only, not the round total</span>
             </li>
             <li>
               Coverage:{" "}
@@ -346,7 +347,7 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
               Known excluded: {coverage.knownExcludedCount === 1
                 ? "one administrative-check record"
                 : `${coverage.knownExcludedCount} records`}{" "}
-              (metadata only — not a normal Application row)
+              (not a normal Application row)
             </li>
           </ul>
           <p className="mt-3">
@@ -355,7 +356,7 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
               className="font-semibold text-[#006a56] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
               data-testid="cc-v2-data-health-link"
             >
-              View data provenance
+              Data &amp; methodology
             </Link>
           </p>
         </div>

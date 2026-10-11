@@ -223,6 +223,11 @@ describe("CompetitiveLandscapeContent", () => {
   it("renders orientation, dual GoDaddy roles, counterparts, and full participant landscape", () => {
     renderLandscape();
     expect(screen.getByTestId("competitive-landscape")).toBeInTheDocument();
+    expect(screen.getByTestId("competitive-landscape")).toHaveTextContent(
+      /Applicant legal names currently represented in RIH/i,
+    );
+    expect(screen.getByTestId("competitive-landscape")).not.toHaveTextContent(/Full-coverage/i);
+    expect(screen.getByRole("link", { name: "Data & methodology" })).toHaveAttribute("href", "/data-health");
     expect(screen.getByTestId("landscape-orientation")).toHaveTextContent("1,615");
     expect(screen.getByTestId("landscape-orientation")).toHaveTextContent("481");
     expect(screen.getByTestId("godaddy-as-applicant")).toHaveTextContent(GODADDY_FOCAL_APPLICANT_LEGAL_NAME);

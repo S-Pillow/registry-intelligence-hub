@@ -21,13 +21,12 @@ export function SearchContentV2({ document }: { document: RegistryApplicationsDo
     <section data-testid="search-content-v2" className="space-y-4">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
-          Search · Publication 2.x
+          Search
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Search applications</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-700">
-          Search Applied String, Application ID, Applicant legal name, country/location, region,
-          status, stage, APS type, and designation flags. Organization / category / returning /
-          confidence are not searchable.
+          Search applied string, application ID, applicant legal name, country/location, region,
+          status, stage, application type, and designation flags.
         </p>
       </div>
 

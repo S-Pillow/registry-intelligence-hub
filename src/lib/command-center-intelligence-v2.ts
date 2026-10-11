@@ -314,7 +314,7 @@ export function buildCommandCenterIntelligenceV2(input: {
     APPROVED_2012_BASELINE.applications,
     document.officialApplications,
     claimActuality,
-    "Reveal Day application-count comparison (READY_WITH_LIMITATION) — official aggregate, not observed row count",
+    "2012 and 2026 figures use ICANN official round totals — not observed application rows",
   );
 
   const idnCrossRound = buildOfficialAggregateCrossRound(
@@ -322,7 +322,7 @@ export function buildCommandCenterIntelligenceV2(input: {
     APPROVED_2012_BASELINE.idnApplications,
     APPROVED_2026_ORIENTATION_AGGREGATES.idnApplications,
     claimActuality,
-    "IDN designation/application comparison (READY_WITH_LIMITATION) — official aggregate",
+    "IDN figures use ICANN official round totals",
   );
 
   return {

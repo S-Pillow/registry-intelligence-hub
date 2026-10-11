@@ -167,7 +167,10 @@ export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
           </Badge>
           <span className="text-xs text-slate-600">Catalog {snapshot.catalogVersion}</span>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight">Data Health</h1>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
+          Technical data health &amp; methodology
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Data Health</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Operator-facing view of what the Hub holds, what is trustworthy, what is rehearsal versus historical, and
           what unlocks cross-round intelligence. Gates come from the central eligibility catalog and claim actuality —

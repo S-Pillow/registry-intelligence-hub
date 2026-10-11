@@ -923,22 +923,44 @@ describe("Investigate — shared intelligence drawer", () => {
 });
 
 describe("Saved navigation and one-click Watch", () => {
-  it("enables Saved, Briefings, and Data Health navigation links", () => {
+  it("keeps primary business nav to Command Center, Explore, and Competitive Landscape", () => {
     render(<CommandCenter presentation="rehearsal" />);
 
-    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved?presentation=rehearsal");
-    expect(screen.getByRole("link", { name: "Briefings" })).toHaveAttribute("href", "/briefings?presentation=rehearsal");
-    expect(screen.getByRole("link", { name: "Data Health" })).toHaveAttribute("href", "/data-health?presentation=rehearsal");
+    const nav = screen.getByTestId("hub-primary-nav");
+    expect(within(nav).getByRole("link", { name: "Command Center" })).toHaveAttribute(
+      "href",
+      "/?presentation=rehearsal",
+    );
+    expect(within(nav).getByRole("link", { name: "Explore" })).toHaveAttribute(
+      "href",
+      "/explore?presentation=rehearsal",
+    );
+    expect(within(nav).getByRole("link", { name: "Competitive Landscape" })).toHaveAttribute(
+      "href",
+      "/competitive-landscape?presentation=rehearsal",
+    );
+    expect(within(nav).queryByRole("link", { name: "Compare" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Saved" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Briefings" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Data Health" })).not.toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Data & methodology" })).toHaveAttribute(
+      "href",
+      "/data-health?presentation=rehearsal",
+    );
   });
 
-  it("exposes Briefings and Data Health in Hub nav without relying on horizontal scroll", () => {
+  it("keeps Data & methodology discoverable without primary-nav highlight on operator routes", () => {
     render(<CommandCenter presentation="rehearsal" view="data-health" />);
 
-    const briefings = screen.getByRole("link", { name: "Briefings" });
-    const dataHealth = screen.getByRole("link", { name: "Data Health" });
-    expect(briefings).toHaveAttribute("href", "/briefings?presentation=rehearsal");
-    expect(dataHealth).toHaveAttribute("href", "/data-health?presentation=rehearsal");
-    expect(dataHealth).toHaveAttribute("aria-current", "page");
+    const nav = screen.getByTestId("hub-primary-nav");
+    expect(within(nav).getByRole("link", { name: "Data & methodology" })).toHaveAttribute(
+      "href",
+      "/data-health?presentation=rehearsal",
+    );
+    expect(within(nav).queryByRole("link", { name: "Briefings" })).not.toBeInTheDocument();
+    for (const label of ["Command Center", "Explore", "Competitive Landscape"]) {
+      expect(within(nav).getByRole("link", { name: label })).not.toHaveAttribute("aria-current", "page");
+    }
   });
 
   it("one-click Watches an entity from Explore and reflects the same watched state from the intelligence drawer", async () => {

@@ -179,15 +179,14 @@ import {
 type ViewState = "ready" | "loading" | "empty" | "error";
 export type { CompareEntityType };
 
-const navItems = [
-  "Command Center",
-  "Explore",
-  "Compare",
-  "Saved",
-  "Briefings",
-  "Competitive Landscape",
-  "Data Health",
-];
+/** Primary business workflows only — Compare/Saved/Briefings/Data Health stay route-addressable. */
+const primaryNavItems = [
+  { label: "Command Center", href: "/" },
+  { label: "Explore", href: "/explore" },
+  { label: "Competitive Landscape", href: "/competitive-landscape" },
+] as const;
+
+const DATA_METHODOLOGY_HREF = "/data-health";
 
 type HubView =
   | "command"
@@ -198,19 +197,12 @@ type HubView =
   | "competitive-landscape"
   | "data-health";
 
-function hubNavHref(item: string, index: number): string {
-  if (index === 0) return "/";
-  return `/${item.toLowerCase().replace(/ /g, "-")}`;
-}
-
 function hubNavActiveLabel(view: HubView): string {
   if (view === "explore") return "Explore";
-  if (view === "compare") return "Compare";
-  if (view === "saved") return "Saved";
-  if (view === "briefings") return "Briefings";
   if (view === "competitive-landscape") return "Competitive Landscape";
-  if (view === "data-health") return "Data Health";
-  return "Command Center";
+  if (view === "command") return "Command Center";
+  // Direct gated/operator routes: no primary-nav highlight.
+  return "";
 }
 
 function presentationHref(href: string, presentation: ProductPresentation) {
@@ -284,9 +276,12 @@ function ShellHeader({ presentation }: { presentation: ProductPresentation }) {
                 <Link href={homeHref} className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Home</Link>
                 <a href="https://forgeforward.app/tools" className="block rounded-lg px-3 py-3 text-sm font-medium hover:bg-slate-100">Tools</a>
                 <div className="my-3 border-t" />
-                {navItems.map((item, index) => (
-                  <Link key={item} href={presentationHref(hubNavHref(item, index), presentation)} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item}</Link>
+                {primaryNavItems.map((item) => (
+                  <Link key={item.label} href={presentationHref(item.href, presentation)} className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-emerald-50 hover:text-[#006a56]">{item.label}</Link>
                 ))}
+                <Link href={presentationHref(DATA_METHODOLOGY_HREF, presentation)} className="block rounded-lg px-3 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800">
+                  Data &amp; methodology
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -298,18 +293,30 @@ function ShellHeader({ presentation }: { presentation: ProductPresentation }) {
 
 function HubNav({ active = "Command Center", presentation }: { active?: string; presentation: ProductPresentation }) {
   return (
-    <div className="border-b bg-white">
-      <div className="mx-auto grid max-w-[1480px] grid-cols-3 gap-x-0 gap-y-0 px-2 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto sm:px-6">
-        {navItems.map((item, index) => (
-          <Link
-            key={item}
-            href={presentationHref(hubNavHref(item, index), presentation)}
-            aria-current={active === item ? "page" : undefined}
-            className={`border-b-2 px-2 py-2.5 text-center text-xs font-semibold leading-tight sm:shrink-0 sm:px-3 sm:py-3 sm:text-left sm:text-sm ${active === item ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
-          >
-            {item}
-          </Link>
-        ))}
+    <div className="border-b bg-white" data-testid="hub-primary-nav">
+      <div className="mx-auto flex max-w-[1480px] flex-wrap items-end justify-between gap-2 px-2 sm:px-6">
+        <nav
+          aria-label="Hub business navigation"
+          className="grid flex-1 grid-cols-3 gap-x-0 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto"
+        >
+          {primaryNavItems.map((item) => (
+            <Link
+              key={item.label}
+              href={presentationHref(item.href, presentation)}
+              aria-current={active === item.label ? "page" : undefined}
+              className={`border-b-2 px-2 py-2.5 text-center text-xs font-semibold leading-tight sm:shrink-0 sm:px-3 sm:py-3 sm:text-left sm:text-sm ${active === item.label ? "border-[#007d65] text-[#006a56]" : "border-transparent text-slate-600 hover:text-slate-950"}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <Link
+          href={presentationHref(DATA_METHODOLOGY_HREF, presentation)}
+          className="mb-2 shrink-0 px-2 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline sm:mb-2.5 sm:px-1"
+          data-testid="data-methodology-link"
+        >
+          Data &amp; methodology
+        </Link>
       </div>
     </div>
   );
@@ -2251,25 +2258,42 @@ function CommandCenterActiveV2({
           <ExploreContentV2 document={document} initial={exploreParams} />
         ) : view === "compare" ? (
           <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
-            <h1 className="text-xl font-bold">Compare remains eligibility-gated for Publication 2.x</h1>
+            <h1 className="text-xl font-bold">Compare is not available for the current 2026 data view yet</h1>
             <p className="mt-2 text-slate-700">
-              No broad 2.x Compare enablement in this activation path. Blocked metrics stay blocked;
-              do not fabricate 1.1 organization/category/returning dimensions.
+              Use Competitive Landscape for current participant comparisons or Explore for
+              application-level research.
+            </p>
+            <p className="mt-4 flex flex-wrap gap-3">
+              <Link href={presentationHref("/competitive-landscape", presentation)} className="font-semibold text-[#006a56] underline">
+                Open Competitive Landscape
+              </Link>
+              <Link href={presentationHref("/explore", presentation)} className="font-semibold text-[#006a56] underline">
+                Open Explore
+              </Link>
             </p>
           </section>
         ) : view === "saved" ? (
           <section data-testid="saved-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
-            <h1 className="text-xl font-bold">Saved is gated for Publication 2.x</h1>
+            <h1 className="text-xl font-bold">Saved workflows are not available for the current 2026 data view yet</h1>
             <p className="mt-2 text-slate-700">
-              Saved workflows require 1.1-shaped Application fields (organization/category/returning).
-              They are explicitly unsupported for active registry-browser-applications/2.0.0.
+              Continue with Explore or Competitive Landscape for current research.
+            </p>
+            <p className="mt-4">
+              <Link href={presentationHref("/explore", presentation)} className="font-semibold text-[#006a56] underline">
+                Open Explore
+              </Link>
             </p>
           </section>
         ) : view === "briefings" ? (
           <section data-testid="briefings-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
-            <h1 className="text-xl font-bold">Briefings are gated for Publication 2.x</h1>
+            <h1 className="text-xl font-bold">Briefings are not available for the current 2026 data view yet</h1>
             <p className="mt-2 text-slate-700">
-              Briefings require 1.1-shaped Application fields. Do not fabricate compatibility for 2.x.
+              Use Command Center for round posture or Competitive Landscape for participant intelligence.
+            </p>
+            <p className="mt-4">
+              <Link href={presentationHref("/", presentation)} className="font-semibold text-[#006a56] underline">
+                Open Command Center
+              </Link>
             </p>
           </section>
         ) : view === "competitive-landscape" ? (

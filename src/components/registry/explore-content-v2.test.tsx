@@ -44,11 +44,15 @@ describe("active 2.x Search/Explore/Command Center surfaces", () => {
 
     render(<ExploreContentV2 document={document} />);
     expect(screen.getByTestId("coverage-disclosure-v2")).toBeInTheDocument();
-    expect(screen.getByTestId("disclosure-official-applications")).toHaveTextContent("1615");
-    expect(screen.getByTestId("disclosure-observed-records")).toHaveTextContent("1614");
-    expect(screen.getByTestId("explore-v2-gated-facets")).toHaveTextContent("organization");
-    expect(screen.getByTestId("explore-v2-gated-facets")).toHaveTextContent("confidence");
+    expect(screen.getByTestId("disclosure-official-applications")).toHaveTextContent("1,615");
+    expect(screen.getByTestId("disclosure-observed-records")).toHaveTextContent("1,614");
+    expect(screen.getByTestId("coverage-disclosure-v2")).toHaveTextContent(/administrative-check/i);
+    expect(screen.getAllByRole("link", { name: "Data & methodology" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("disclosure-data-methodology-link")).toHaveAttribute("href", "/data-health");
+    expect(screen.queryByTestId("explore-v2-gated-facets")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Publication 2/i)).not.toBeInTheDocument();
     expect(screen.getByTestId("explore-v2-result-count")).toHaveTextContent("RIH observed records");
+    expect(screen.getByTestId("explore-v2-search")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Filter by organization/i)).toBeNull();
     expect(screen.queryByLabelText(/Filter by category/i)).toBeNull();
     cleanup();
@@ -135,8 +139,8 @@ describe("Explore full-result pagination (EXPLORE-PAGING-1)", () => {
     expect(visibleRowIds()).toEqual(document.applications.slice(0, 100).map((a) => a.applicationId));
     expect(screen.getByTestId("explore-v2-prev")).toBeDisabled();
     expect(screen.getByTestId("explore-v2-next")).not.toBeDisabled();
-    expect(screen.getByTestId("disclosure-official-applications")).toHaveTextContent("1615");
-    expect(screen.getByTestId("disclosure-observed-records")).toHaveTextContent("1614");
+    expect(screen.getByTestId("disclosure-official-applications")).toHaveTextContent("1,615");
+    expect(screen.getByTestId("disclosure-observed-records")).toHaveTextContent("1,614");
     expect(screen.queryByText(/Showing first 100/i)).not.toBeInTheDocument();
   });
 

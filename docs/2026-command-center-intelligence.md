@@ -10,7 +10,7 @@
 2. **What changed since 2012** — only READY_WITH_LIMITATION comparisons (Applications, IDN)  
 3. **Competitive structure** — official initial contention (not exact-string grouping)  
 4. **Round composition** — designation / relationship orientation (not sectors/categories)  
-5. **Evidence posture** — PARTIAL 1614/1615 coverage + Data Health link  
+5. **Coverage** — PARTIAL 1614/1615 coverage + Data & methodology (`/data-health`) link 
 
 ## Eligible now
 

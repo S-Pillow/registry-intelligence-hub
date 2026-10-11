@@ -181,11 +181,11 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
       >
         <h1 className="text-xl font-bold">Competitive Landscape unavailable</h1>
         <p className="mt-2 text-slate-700">
-          Requires an active Publication 2.x Application payload with official contention overlay.
+          Requires an active 2026 application dataset with official contention membership.
         </p>
         <p className="mt-3">
           <Link href="/data-health" className="font-semibold text-[#006a56] underline">
-            Open Data Health
+            Data &amp; methodology
           </Link>
         </p>
       </section>
@@ -202,11 +202,12 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Competitive Landscape</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Applicant competitive intelligence</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
-          Full-coverage view of observed Applicant legal names. Applicant is the ICANN-source analytical grain;
-          Organization mapping is optional enrichment. Use RSP prospecting research to investigate public-signal
-          backend Registry Service Provider questions — not selected-RSP facts.{" "}
+          Analyze the {coverage.observedApplicantLegalNames.toLocaleString("en-US")} Applicant legal
+          names currently represented in RIH. Applicant is the ICANN-source analytical grain;
+          Organization mapping is optional enrichment. RSP prospecting uses public Main-RSP signals —
+          not selected-RSP facts.{" "}
           <Link href="/data-health" className="font-semibold text-[#006a56] underline">
-            Coverage detail in Data Health
+            Data &amp; methodology
           </Link>
           .
         </p>

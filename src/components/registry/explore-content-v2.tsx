@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   DEFAULT_EXPLORE_FILTERS_V2,
   filterBrowserApplicationsV2,
   localResultCountV2,
-  UNSUPPORTED_EXPLORE_FACETS_V2,
   type ExploreFilterStateV2,
 } from "@/lib/registry-application-payload-v2";
 import type { RegistryApplicationsDocumentV2 } from "@/lib/registry-applications-document-v2";
@@ -66,19 +66,22 @@ export function ExploreContentV2({
     <section data-testid="explore-content-v2" className="space-y-4">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
-          Explore · Publication 2.x
+          Explore
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Explore registry applications</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-700">
-          Source-backed Application fields only. Organization, category, returning, and confidence
-          are not available in Publication 2.0.0.
+          Search all {document.observedApplicationRecords.toLocaleString("en-US")} application
+          records currently represented in RIH. ICANN reports{" "}
+          {document.officialApplications.toLocaleString("en-US")} applications; one
+          administrative-check record is not represented as a normal application row.{" "}
+          <Link
+            href="/data-health"
+            className="font-semibold text-[#006a56] underline underline-offset-2"
+          >
+            Data &amp; methodology
+          </Link>
         </p>
       </div>
-
-      <CoverageDisclosureV2
-        document={document}
-        matchingObservedRecords={count.matchingObservedRecords}
-      />
 
       <div className="flex flex-wrap gap-2">
         <input
@@ -116,16 +119,17 @@ export function ExploreContentV2({
         </select>
       </div>
 
-      <p className="text-xs text-slate-600" data-testid="explore-v2-gated-facets">
-        Gated facets (not shown): {UNSUPPORTED_EXPLORE_FACETS_V2.join(", ")}
-      </p>
+      <CoverageDisclosureV2
+        document={document}
+        matchingObservedRecords={count.matchingObservedRecords}
+      />
 
       <p aria-live="polite" className="text-sm font-bold text-slate-900" data-testid="explore-v2-result-count">
         {count.matchingObservedRecords} matching RIH observed records
         {" · "}
-        {document.observedApplicationRecords} records in active payload
+        {document.observedApplicationRecords} represented in RIH
         {" · "}
-        official aggregate {document.officialApplications}
+        official {document.officialApplications}
       </p>
 
       <ul className="divide-y rounded-lg border border-slate-200 bg-white" data-testid="explore-v2-results">
