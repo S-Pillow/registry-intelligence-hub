@@ -141,7 +141,12 @@ import { useSavedWork } from "@/lib/use-saved-work";
 import { SavedContent, type SavedParams } from "@/components/registry/saved-content";
 import { BriefingsContent, BriefThisButton } from "@/components/registry/briefing-content";
 import { CompetitiveLandscapeContent } from "@/components/registry/competitive-landscape-content";
+import {
+  ChangesContent,
+  CommandCenterRecentChangesCard,
+} from "@/components/registry/changes-content";
 import { DataHealthContent } from "@/components/registry/data-health-content";
+import type { ChangeIntelFeedState } from "@/change-intel/types";
 import { Historical2012StructureSection } from "@/components/registry/historical-2012-structure-section";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 import {
@@ -179,11 +184,12 @@ import {
 type ViewState = "ready" | "loading" | "empty" | "error";
 export type { CompareEntityType };
 
-/** Primary business workflows only — Compare/Saved/Briefings/Data Health stay route-addressable. */
+/** Primary business workflows — Compare/Saved/Briefings/Data Health stay route-addressable. */
 const primaryNavItems = [
   { label: "Command Center", href: "/" },
   { label: "Explore", href: "/explore" },
   { label: "Competitive Landscape", href: "/competitive-landscape" },
+  { label: "Changes", href: "/changes" },
 ] as const;
 
 const DATA_METHODOLOGY_HREF = "/data-health";
@@ -195,11 +201,13 @@ type HubView =
   | "saved"
   | "briefings"
   | "competitive-landscape"
-  | "data-health";
+  | "data-health"
+  | "changes";
 
 function hubNavActiveLabel(view: HubView): string {
   if (view === "explore") return "Explore";
   if (view === "competitive-landscape") return "Competitive Landscape";
+  if (view === "changes") return "Changes";
   if (view === "command") return "Command Center";
   // Direct gated/operator routes: no primary-nav highlight.
   return "";
@@ -297,7 +305,7 @@ function HubNav({ active = "Command Center", presentation }: { active?: string; 
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-end justify-between gap-2 px-2 sm:px-6">
         <nav
           aria-label="Hub business navigation"
-          className="grid flex-1 grid-cols-3 gap-x-0 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto"
+          className="grid flex-1 grid-cols-2 gap-x-0 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto md:grid-cols-4"
         >
           {primaryNavItems.map((item) => (
             <Link
@@ -2236,6 +2244,7 @@ function CommandCenterActiveV2({
   claimActuality,
   exploreParams = {},
   overlays,
+  changeFeed = { initialized: false },
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2247,6 +2256,7 @@ function CommandCenterActiveV2({
   document: RegistryApplicationsDocumentV2;
   claimActuality: ClaimActualityState;
   overlays?: ParticipantOverlays;
+  changeFeed?: ChangeIntelFeedState;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
@@ -2256,6 +2266,8 @@ function CommandCenterActiveV2({
       >
         {view === "explore" ? (
           <ExploreContentV2 document={document} initial={exploreParams} />
+        ) : view === "changes" ? (
+          <ChangesContent feed={changeFeed} />
         ) : view === "compare" ? (
           <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
             <h1 className="text-xl font-bold">Compare is not available for the current 2026 data view yet</h1>
@@ -2299,9 +2311,13 @@ function CommandCenterActiveV2({
         ) : view === "competitive-landscape" ? (
           <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
         ) : view === "data-health" ? (
-          <DataHealthContent state={state} />
+          <DataHealthContent state={state} changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }} />
         ) : (
-          <CommandCenterOrientationV2 document={document} claimActuality={claimActuality} />
+          <CommandCenterOrientationV2
+            document={document}
+            claimActuality={claimActuality}
+            changeFeed={changeFeed}
+          />
         )}
       </main>
     </div>
@@ -2314,6 +2330,7 @@ export function CommandCenter(props: {
   exploreParams?: ExploreParams;
   compareParams?: CompareParams;
   savedParams?: SavedParams;
+  changeFeed?: ChangeIntelFeedState;
   briefingId?: string;
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
@@ -2351,6 +2368,7 @@ function CommandCenterV1({
   briefingId,
   presentation = "pre-reveal",
   overlays,
+  changeFeed = { initialized: false },
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2360,6 +2378,7 @@ function CommandCenterV1({
   briefingId?: string;
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
+  changeFeed?: ChangeIntelFeedState;
 }) {
   const claimActualityState = useHubClaimActualityState();
   const { mode: registryPayloadMode } = useHubRegistryData();
@@ -2483,8 +2502,20 @@ function CommandCenterV1({
       <ShellHeader presentation={presentation} />
       <PresentationModeBanner presentation={presentation} promoted={publicationIsPromoted} />
       <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
-      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} presentation={presentation} /> : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} /> : view === "data-health" ? <DataHealthContent state={state} /> : (
+      {view === "explore" ? <ExploreContent state={state} initial={exploreParams} presentation={presentation} /> : view === "changes" ? (
+        <main className="mx-auto max-w-6xl px-4 py-8">
+          <ChangesContent feed={changeFeed ?? { initialized: false }} />
+        </main>
+      ) : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} /> : view === "data-health" ? (
+        <DataHealthContent
+          state={state}
+          changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }}
+        />
+      ) : (
       <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+        <div className="mb-6">
+          <CommandCenterRecentChangesCard feed={changeFeed} />
+        </div>
         <section data-testid="publication-state" aria-label="Publication state" className="mb-6 rounded-xl border border-slate-300 bg-white p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="bg-emerald-100 text-[#006a56]"><CheckCircle2 /> {publicationIsPromoted ? "Promoted 2026 snapshot" : showRehearsal ? "Demo / Rehearsal" : "Pre-Reveal"}</Badge>

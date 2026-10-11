@@ -128,6 +128,20 @@ export type DataHealthSnapshot = {
     prerequisites: string[];
     checklist: PublicationChecklistItem[];
   };
+  changeIntelligence: {
+    initialized: boolean;
+    lastCheckedAt: string | null;
+    currentObservationId: string | null;
+    previousObservationId: string | null;
+    latestDiffCounts: {
+      applicationChanges: number;
+      contentionChanges: number;
+      total: number;
+    } | null;
+    applicationSourceHash: string | null;
+    contentionSourceHash: string | null;
+    validationState: string;
+  };
 };
 
 export function humanizeMethodReadiness(readiness: MetricReadiness | string): string {
@@ -524,6 +538,18 @@ export function buildDataHealthSnapshot(
     reason: "not-configured",
     errorMessage: "2012 confirmed portfolio sidecar not configured.",
   },
+  changeIntelligenceFeed?: {
+    initialized: boolean;
+    lastCheckedAt?: string | null;
+    currentObservationId?: string | null;
+    previousObservationId?: string | null;
+    latestDiff?: {
+      summary: { applicationChanges: number; contentionChanges: number };
+      changes: unknown[];
+    } | null;
+    applicationSource?: { contentSha256?: string } | null;
+    contentionSource?: { contentSha256?: string } | null;
+  },
 ): DataHealthSnapshot {
   const resolution = coerceHubRegistryDataResolution(resolutionInput);
   const claim = claimActualityAssertedForBrowser(claimActuality, resolution);
@@ -621,6 +647,24 @@ export function buildDataHealthSnapshot(
       unlockSummary: `${comparableUnlocked} of ${comparableTotal} COMPARABLE metrics allow cross-round comparison at current actuality.`,
       prerequisites,
       checklist: buildPublicationChecklist(claim, resolution, historical2012, comparableUnlocked),
+    },
+    changeIntelligence: {
+      initialized: Boolean(changeIntelligenceFeed?.initialized),
+      lastCheckedAt: changeIntelligenceFeed?.lastCheckedAt ?? null,
+      currentObservationId: changeIntelligenceFeed?.currentObservationId ?? null,
+      previousObservationId: changeIntelligenceFeed?.previousObservationId ?? null,
+      latestDiffCounts: changeIntelligenceFeed?.initialized && changeIntelligenceFeed.latestDiff
+        ? {
+            applicationChanges: changeIntelligenceFeed.latestDiff.summary.applicationChanges,
+            contentionChanges: changeIntelligenceFeed.latestDiff.summary.contentionChanges,
+            total: changeIntelligenceFeed.latestDiff.changes.length,
+          }
+        : null,
+      applicationSourceHash: changeIntelligenceFeed?.applicationSource?.contentSha256 ?? null,
+      contentionSourceHash: changeIntelligenceFeed?.contentionSource?.contentSha256 ?? null,
+      validationState: changeIntelligenceFeed?.initialized
+        ? "initialized — latest feed readable from local change-intel state"
+        : "not-initialized",
     },
   };
 }

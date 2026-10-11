@@ -119,14 +119,38 @@ function ChecklistStatus({ item }: { item: PublicationChecklistItem }) {
   );
 }
 
-export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
+export function DataHealthContent({
+  state = "ready",
+  changeFeed,
+}: {
+  state?: ViewState;
+  changeFeed?: {
+    initialized: boolean;
+    lastCheckedAt?: string | null;
+    currentObservationId?: string | null;
+    previousObservationId?: string | null;
+    latestDiff?: {
+      summary: { applicationChanges: number; contentionChanges: number };
+      changes: unknown[];
+    } | null;
+    applicationSource?: { contentSha256?: string } | null;
+    contentionSource?: { contentSha256?: string } | null;
+  };
+}) {
   const claimActuality = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();
   const historical2012 = useHistorical2012Payload();
   const confirmedPortfolios = useHistorical2012ConfirmedPortfolios();
   const snapshot = useMemo(
-    () => buildDataHealthSnapshot(claimActuality, registryResolution, historical2012, confirmedPortfolios),
-    [claimActuality, registryResolution, historical2012, confirmedPortfolios],
+    () =>
+      buildDataHealthSnapshot(
+        claimActuality,
+        registryResolution,
+        historical2012,
+        confirmedPortfolios,
+        changeFeed,
+      ),
+    [claimActuality, registryResolution, historical2012, confirmedPortfolios, changeFeed],
   );
 
   if (state === "loading") {
@@ -368,6 +392,62 @@ export function DataHealthContent({ state = "ready" }: { state?: ViewState }) {
             <li key={item}>{item}</li>
           ))}
         </ul>
+      </section>
+
+      <section aria-labelledby="change-intel-heading" className="mb-10" data-testid="data-health-change-intel">
+        <h2 id="change-intel-heading" className="mb-4 text-lg font-semibold">
+          Change Intelligence (technical)
+        </h2>
+        <Card>
+          <CardContent className="space-y-3 pt-6 text-sm text-slate-700">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Initialized</dt>
+                <dd className="mt-1 font-medium">{snapshot.changeIntelligence.initialized ? "Yes" : "No"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Validation state</dt>
+                <dd className="mt-1 font-medium">{snapshot.changeIntelligence.validationState}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last checked</dt>
+                <dd className="mt-1 font-medium">{snapshot.changeIntelligence.lastCheckedAt ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current observation</dt>
+                <dd className="mt-1 break-all font-mono text-xs">
+                  {snapshot.changeIntelligence.currentObservationId ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Previous observation</dt>
+                <dd className="mt-1 break-all font-mono text-xs">
+                  {snapshot.changeIntelligence.previousObservationId ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest diff counts</dt>
+                <dd className="mt-1 font-medium">
+                  {snapshot.changeIntelligence.latestDiffCounts
+                    ? `Application ${snapshot.changeIntelligence.latestDiffCounts.applicationChanges} · Contention ${snapshot.changeIntelligence.latestDiffCounts.contentionChanges} · Total ${snapshot.changeIntelligence.latestDiffCounts.total}`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Application source hash</dt>
+                <dd className="mt-1 break-all font-mono text-[10px]">
+                  {snapshot.changeIntelligence.applicationSourceHash ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Contention source hash</dt>
+                <dd className="mt-1 break-all font-mono text-[10px]">
+                  {snapshot.changeIntelligence.contentionSourceHash ?? "—"}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
       </section>
 
       <section aria-labelledby="publication-heading">

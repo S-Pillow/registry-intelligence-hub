@@ -8,6 +8,8 @@ import {
   type CommandCenterIntelligenceV2,
   type CrossRoundDeltaVm,
 } from "@/lib/command-center-intelligence-v2";
+import { CommandCenterRecentChangesCard } from "@/components/registry/changes-content";
+import type { ChangeIntelFeedState } from "@/change-intel/types";
 
 function CrossRoundCard({
   title,
@@ -79,12 +81,19 @@ function PostureStat({
   );
 }
 
-function IntelligenceSections({ intelligence }: { intelligence: CommandCenterIntelligenceV2 }) {
+function IntelligenceSections({
+  intelligence,
+  changeFeed,
+}: {
+  intelligence: CommandCenterIntelligenceV2;
+  changeFeed: ChangeIntelFeedState;
+}) {
   const { roundPosture, crossRound, competitiveStructure, roundComposition, coverage, drilldown } =
     intelligence;
 
   return (
     <div className="space-y-10" data-testid="command-center-intelligence-v2">
+      <CommandCenterRecentChangesCard feed={changeFeed} />
       {/* Section 1 — Round posture */}
       <section aria-labelledby="cc-round-posture-heading" data-testid="cc-section-round-posture">
         <header className="max-w-3xl">
@@ -404,14 +413,16 @@ function IntelligenceSections({ intelligence }: { intelligence: CommandCenterInt
 export function CommandCenterOrientationV2({
   document,
   claimActuality,
+  changeFeed = { initialized: false },
 }: {
   document: RegistryApplicationsDocumentV2;
   claimActuality: ClaimActualityState;
+  changeFeed?: ChangeIntelFeedState;
 }) {
   const intelligence = buildCommandCenterIntelligenceV2({ document, claimActuality });
   return (
     <section data-testid="command-center-orientation-v2" className="space-y-4">
-      <IntelligenceSections intelligence={intelligence} />
+      <IntelligenceSections intelligence={intelligence} changeFeed={changeFeed} />
     </section>
   );
 }
