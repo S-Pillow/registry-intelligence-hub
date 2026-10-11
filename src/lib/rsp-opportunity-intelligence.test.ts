@@ -271,9 +271,16 @@ describe("RSP opportunity intelligence", () => {
 describe("Organization mapping labels", () => {
   it("uses explicit business-facing labels", () => {
     expect(organizationMappingLabel("CONFIRMED", "GoDaddy")).toBe("Confirmed · GoDaddy");
-    expect(organizationMappingLabel("CANDIDATE", null)).toBe("Candidate organization");
-    expect(organizationMappingLabel("AMBIGUOUS", null)).toBe("Ambiguous organization");
-    expect(organizationMappingLabel("UNRESOLVED", null)).toBe("No organization mapping");
+    expect(organizationMappingLabel("CANDIDATE", null)).toBe("Candidate match");
+    expect(organizationMappingLabel("AMBIGUOUS", null)).toBe("Identity ambiguous");
+    expect(organizationMappingLabel("UNRESOLVED", null)).toBe("Not yet resolved");
+  });
+
+  it("does not present candidate/ambiguous as confirmed or unresolved as nonexistence", () => {
+    expect(organizationMappingLabel("CANDIDATE", "Acme")).not.toMatch(/Confirmed/);
+    expect(organizationMappingLabel("AMBIGUOUS", "Acme")).not.toMatch(/Confirmed/);
+    expect(organizationMappingLabel("UNRESOLVED", null)).not.toMatch(/no organization exists/i);
+    expect(organizationMappingLabel("UNRESOLVED", null)).not.toBe("No organization mapping");
   });
 });
 

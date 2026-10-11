@@ -88,7 +88,15 @@ function ChangeEntry({ change }: { change: ChangeRecord }) {
         {change.contentionSetId ? (
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-500">Contention set</dt>
-            <dd className="font-semibold">#{change.contentionSetId}</dd>
+            <dd className="font-semibold">
+              <Link
+                href={`/contention?set=${encodeURIComponent(change.contentionSetId)}`}
+                className="text-[#006a56] underline"
+                data-testid="change-contention-set-link"
+              >
+                #{change.contentionSetId}
+              </Link>
+            </dd>
           </div>
         ) : null}
         {change.rspPublicPosture ? (

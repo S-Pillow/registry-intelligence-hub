@@ -368,7 +368,7 @@ describe("CC-OR-1 operator readiness", () => {
   it("38 — navigation, lenses, time basis, search, and Instant Briefing stay in place", () => {
     render(<CommandCenter presentation="rehearsal" />);
     const nav = screen.getByTestId("hub-primary-nav");
-    for (const name of ["Command Center", "Explore", "Competitive Landscape"]) {
+    for (const name of ["Command Center", "Explore", "Competitive Landscape", "Contention", "Changes"]) {
       expect(within(nav).getByRole("link", { name })).toBeInTheDocument();
     }
     for (const name of ["Compare", "Saved", "Briefings", "Data Health"]) {

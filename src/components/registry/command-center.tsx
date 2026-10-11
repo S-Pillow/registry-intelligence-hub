@@ -145,6 +145,15 @@ import {
   ChangesContent,
   CommandCenterRecentChangesCard,
 } from "@/components/registry/changes-content";
+import {
+  CommandCenterContentionCard,
+  ContentionContent,
+} from "@/components/registry/contention-content";
+import { buildParticipantIntelligence } from "@/lib/participant-intelligence";
+import type {
+  ContentionGodaddyFilter,
+  ContentionSizeFilter,
+} from "@/lib/contention-intelligence";
 import { DataHealthContent } from "@/components/registry/data-health-content";
 import type { ChangeIntelFeedState } from "@/change-intel/types";
 import { Historical2012StructureSection } from "@/components/registry/historical-2012-structure-section";
@@ -189,6 +198,7 @@ const primaryNavItems = [
   { label: "Command Center", href: "/" },
   { label: "Explore", href: "/explore" },
   { label: "Competitive Landscape", href: "/competitive-landscape" },
+  { label: "Contention", href: "/contention" },
   { label: "Changes", href: "/changes" },
 ] as const;
 
@@ -201,12 +211,14 @@ type HubView =
   | "saved"
   | "briefings"
   | "competitive-landscape"
+  | "contention"
   | "data-health"
   | "changes";
 
 function hubNavActiveLabel(view: HubView): string {
   if (view === "explore") return "Explore";
   if (view === "competitive-landscape") return "Competitive Landscape";
+  if (view === "contention") return "Contention";
   if (view === "changes") return "Changes";
   if (view === "command") return "Command Center";
   // Direct gated/operator routes: no primary-nav highlight.
@@ -2212,22 +2224,31 @@ function CommandCenterFailClosedShell({
   presentation,
   resolution,
   overlays,
+  contentionParams,
 }: {
   view: HubView;
   presentation: ProductPresentation;
   resolution: HubRegistryDataResolution;
   overlays?: ParticipantOverlays;
+  contentionParams?: ContentionPageParams;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
       <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
       <main
-        className={`mx-auto px-4 py-8 ${view === "competitive-landscape" ? "max-w-[1480px]" : "max-w-6xl"}`}
+        className={`mx-auto px-4 py-8 ${
+          view === "competitive-landscape" || view === "contention" ? "max-w-[1480px]" : "max-w-6xl"
+        }`}
       >
         {view === "data-health" ? (
           <DataHealthContent state="ready" />
         ) : view === "competitive-landscape" ? (
           <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
+        ) : view === "contention" ? (
+          <ContentionContent
+            overlays={overlays ?? { organizations: [], returning: [] }}
+            {...(contentionParams ?? {})}
+          />
         ) : (
           <ActiveSourceFailClosed resolution={resolution} />
         )}
@@ -2235,6 +2256,14 @@ function CommandCenterFailClosedShell({
     </div>
   );
 }
+
+export type ContentionPageParams = {
+  initialView?: "godaddy" | "all";
+  initialQ?: string;
+  initialSet?: string;
+  initialGodaddy?: ContentionGodaddyFilter;
+  initialSize?: ContentionSizeFilter;
+};
 
 function CommandCenterActiveV2({
   state = "ready",
@@ -2245,6 +2274,7 @@ function CommandCenterActiveV2({
   exploreParams = {},
   overlays,
   changeFeed = { initialized: false },
+  contentionParams,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2257,17 +2287,31 @@ function CommandCenterActiveV2({
   claimActuality: ClaimActualityState;
   overlays?: ParticipantOverlays;
   changeFeed?: ChangeIntelFeedState;
+  contentionParams?: ContentionPageParams;
 }) {
+  const participantIntel = useMemo(
+    () => buildParticipantIntelligence(document, overlays),
+    [document, overlays],
+  );
+  const contentionOverlay = document.contentionOverlay;
+
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
       <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
       <main
-        className={`mx-auto px-4 py-8 ${view === "competitive-landscape" ? "max-w-[1480px]" : "max-w-6xl"}`}
+        className={`mx-auto px-4 py-8 ${
+          view === "competitive-landscape" || view === "contention" ? "max-w-[1480px]" : "max-w-6xl"
+        }`}
       >
         {view === "explore" ? (
           <ExploreContentV2 document={document} initial={exploreParams} />
         ) : view === "changes" ? (
           <ChangesContent feed={changeFeed} />
+        ) : view === "contention" ? (
+          <ContentionContent
+            overlays={overlays ?? { organizations: [], returning: [] }}
+            {...(contentionParams ?? {})}
+          />
         ) : view === "compare" ? (
           <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
             <h1 className="text-xl font-bold">Compare is not available for the current 2026 data view yet</h1>
@@ -2313,11 +2357,26 @@ function CommandCenterActiveV2({
         ) : view === "data-health" ? (
           <DataHealthContent state={state} changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }} />
         ) : (
-          <CommandCenterOrientationV2
-            document={document}
-            claimActuality={claimActuality}
-            changeFeed={changeFeed}
-          />
+          <div className="space-y-4">
+            <CommandCenterContentionCard
+              officialSets={
+                contentionOverlay.status === "available"
+                  ? (contentionOverlay.officialContentionSetCount ?? 0)
+                  : 0
+              }
+              officialMemberships={
+                contentionOverlay.status === "available"
+                  ? (contentionOverlay.joinedMemberCount ?? 0)
+                  : 0
+              }
+              uniqueGodaddySets={participantIntel.focal?.row.officialContentionSetsTouched ?? 0}
+            />
+            <CommandCenterOrientationV2
+              document={document}
+              claimActuality={claimActuality}
+              changeFeed={changeFeed}
+            />
+          </div>
         )}
       </main>
     </div>
@@ -2334,6 +2393,7 @@ export function CommandCenter(props: {
   briefingId?: string;
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
+  contentionParams?: ContentionPageParams;
 }) {
   const resolution = useHubRegistryData();
   const claimActualityState = useHubClaimActualityState();
@@ -2344,6 +2404,7 @@ export function CommandCenter(props: {
         presentation={props.presentation ?? "pre-reveal"}
         resolution={resolution}
         overlays={props.overlays}
+        contentionParams={props.contentionParams}
       />
     );
   }
@@ -2506,6 +2567,8 @@ function CommandCenterV1({
         <main className="mx-auto max-w-6xl px-4 py-8">
           <ChangesContent feed={changeFeed ?? { initialized: false }} />
         </main>
+      ) : view === "contention" ? (
+        <ContentionContent overlays={overlays ?? { organizations: [], returning: [] }} />
       ) : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} /> : view === "data-health" ? (
         <DataHealthContent
           state={state}

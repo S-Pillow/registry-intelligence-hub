@@ -60,12 +60,14 @@ async function renderActiveV2(view: "command" | "explore" | "compare" | "saved" 
 }
 
 describe("PRODUCT-UX-1 business surface cleanup", () => {
-  it("primary nav is Command Center / Explore / Competitive Landscape with Data & methodology", async () => {
+  it("primary nav is Command Center / Explore / Competitive Landscape / Contention / Changes with Data & methodology", async () => {
     await renderActiveV2("command");
     const nav = screen.getByTestId("hub-primary-nav");
     expect(within(nav).getByRole("link", { name: "Command Center" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Explore" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Competitive Landscape" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Contention" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Changes" })).toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Compare" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Saved" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Briefings" })).not.toBeInTheDocument();

@@ -923,7 +923,7 @@ describe("Investigate — shared intelligence drawer", () => {
 });
 
 describe("Saved navigation and one-click Watch", () => {
-  it("keeps primary business nav to Command Center, Explore, and Competitive Landscape", () => {
+  it("keeps primary business nav to Command Center, Explore, Competitive Landscape, Contention, and Changes", () => {
     render(<CommandCenter presentation="rehearsal" />);
 
     const nav = screen.getByTestId("hub-primary-nav");
@@ -938,6 +938,14 @@ describe("Saved navigation and one-click Watch", () => {
     expect(within(nav).getByRole("link", { name: "Competitive Landscape" })).toHaveAttribute(
       "href",
       "/competitive-landscape?presentation=rehearsal",
+    );
+    expect(within(nav).getByRole("link", { name: "Contention" })).toHaveAttribute(
+      "href",
+      "/contention?presentation=rehearsal",
+    );
+    expect(within(nav).getByRole("link", { name: "Changes" })).toHaveAttribute(
+      "href",
+      "/changes?presentation=rehearsal",
     );
     expect(within(nav).queryByRole("link", { name: "Compare" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Saved" })).not.toBeInTheDocument();

@@ -354,7 +354,7 @@ export function buildCommandCenterIntelligenceV2(input: {
     drilldown: {
       exploreApplicationsHref: "/explore",
       searchRecordsHref: "/explore",
-      exploreContentionHref: "/explore",
+      exploreContentionHref: "/contention",
       dataHealthHref: "/data-health",
     },
   };

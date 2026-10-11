@@ -434,7 +434,7 @@ export function buildRspOpportunityIntelligence(
   };
 }
 
-/** Business-facing Organization mapping labels (ORG UX). */
+/** Business-facing Organization mapping labels (ORG UX / CONT-INTEL-1). */
 export function organizationMappingLabel(
   status: OrganizationResolutionOverlayStatus,
   confirmedName: string | null,
@@ -443,14 +443,25 @@ export function organizationMappingLabel(
     case "CONFIRMED":
       return confirmedName ? `Confirmed · ${confirmedName}` : "Confirmed organization";
     case "CANDIDATE":
-      return "Candidate organization";
+      return "Candidate match";
     case "AMBIGUOUS":
-      return "Ambiguous organization";
+      return "Identity ambiguous";
     case "UNRESOLVED":
     default:
-      return "No organization mapping";
+      return "Not yet resolved";
   }
 }
+
+/** Short state explanations for Organization mapping affordances. */
+export const ORGANIZATION_MAPPING_EXPLANATIONS = {
+  preamble:
+    "Applicant is the published legal entity. Organization mapping is an evidence-backed broader corporate identity when RIH can establish one.",
+  CONFIRMED: "RIH has accepted evidence linking this Applicant to the named Organization.",
+  CANDIDATE: "A plausible relationship exists but has not been accepted as confirmed.",
+  AMBIGUOUS: "Available evidence does not support one definitive Organization identity.",
+  UNRESOLVED:
+    "RIH has not established an Organization mapping; this is not evidence that no broader relationship exists.",
+} as const;
 
 export function prospectingPostureLabel(posture: RspProspectingPosture): string {
   switch (posture) {

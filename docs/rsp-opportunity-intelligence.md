@@ -81,11 +81,11 @@ No fuzzy matching, string similarity as fact, ownership inference, or new Organi
 | Underlying | Label |
 | --- | --- |
 | CONFIRMED | Confirmed organization / `Confirmed · {name}` |
-| CANDIDATE | Candidate organization |
-| AMBIGUOUS | Ambiguous organization |
-| UNRESOLVED | No organization mapping |
+| CANDIDATE | Candidate match |
+| AMBIGUOUS | Identity ambiguous |
+| UNRESOLVED | Not yet resolved |
 
-“No organization mapping” does not imply bad or incomplete ICANN Applicant data — Applicant statistics remain valid.
+“Not yet resolved” does not imply that no broader organization exists — Applicant statistics remain valid.
 
 ## Non-goals
 

@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHubRegistryData } from "@/components/registry/hub-registry-data-provider";
 import {
@@ -20,88 +19,18 @@ import {
   clearedCapabilityLabel,
   filterProspects,
   mainRspSignalLabel,
-  organizationMappingLabel,
   prospectingPostureLabel,
   type ApplicantRspPosture,
   type RspProspectFilter,
   type RspProspectingPosture,
 } from "@/lib/rsp-opportunity-intelligence";
+import {
+  OrganizationMappingBadge,
+  OrganizationMappingExplainer,
+} from "@/components/registry/organization-mapping-display";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
-}
-
-function OrganizationMappingBadge({
-  status,
-  name,
-}: {
-  status: string;
-  name: string | null;
-}) {
-  const label = organizationMappingLabel(
-    status as "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED",
-    name,
-  );
-  if (status === "CONFIRMED" && name) {
-    return (
-      <Badge variant="outline" className="bg-emerald-100 text-[#006a56]" data-testid="org-confirmed-badge">
-        {label}
-      </Badge>
-    );
-  }
-  if (status === "CANDIDATE") {
-    return (
-      <Badge variant="outline" className="bg-amber-50 text-amber-900" data-testid="org-candidate-badge">
-        {label}
-      </Badge>
-    );
-  }
-  if (status === "AMBIGUOUS") {
-    return (
-      <Badge variant="outline" className="bg-orange-50 text-orange-900" data-testid="org-ambiguous-badge">
-        {label}
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="bg-slate-100 text-slate-700" data-testid="org-unresolved-badge">
-      {label}
-    </Badge>
-  );
-}
-
-function OrganizationMappingExplainer() {
-  return (
-    <details className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm" data-testid="org-mapping-explainer">
-      <summary className="cursor-pointer font-semibold text-slate-900">
-        What do organization mappings mean?
-      </summary>
-      <dl className="mt-2 space-y-2 text-slate-700">
-        <div>
-          <dt className="font-medium text-slate-900">Confirmed organization</dt>
-          <dd>
-            RIH has sufficient evidence and steward approval to associate this ICANN Applicant legal name with the
-            displayed Organization.
-          </dd>
-        </div>
-        <div>
-          <dt className="font-medium text-slate-900">Candidate organization</dt>
-          <dd>RIH found a plausible relationship, but it is not confirmed as fact.</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-slate-900">Ambiguous organization</dt>
-          <dd>Available evidence does not support one clear Organization relationship.</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-slate-900">No organization mapping</dt>
-          <dd>
-            RIH has not established a broader Organization mapping for this Applicant. The Applicant itself and its
-            application statistics remain valid ICANN-source data.
-          </dd>
-        </div>
-      </dl>
-    </details>
-  );
 }
 
 type Surface = "participants" | "rsp-prospects";
@@ -500,7 +429,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="CANDIDATE">Candidate</option>
                 <option value="AMBIGUOUS">Ambiguous</option>
-                <option value="UNRESOLVED">No organization mapping</option>
+                <option value="UNRESOLVED">Not yet resolved</option>
               </select>
             </label>
             <label className="text-sm text-slate-700">

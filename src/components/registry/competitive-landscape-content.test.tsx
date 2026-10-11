@@ -249,7 +249,7 @@ describe("CompetitiveLandscapeContent", () => {
     expect(screen.getByTestId("returning-badge")).toHaveTextContent(/Returning/);
     expect(screen.queryByText(/new participant/i)).not.toBeInTheDocument();
     expect(screen.getByText("Unresolved Applicant GmbH")).toBeInTheDocument();
-    expect(screen.getAllByText(/No organization mapping/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Not yet resolved/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/^Not resolved$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Not confirmed$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/available customer/i)).not.toBeInTheDocument();

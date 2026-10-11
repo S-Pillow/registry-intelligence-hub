@@ -58,6 +58,7 @@ describe("Changes surface", () => {
     expect(within(nav).getByRole("link", { name: "Command Center" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Explore" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Competitive Landscape" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Contention" })).toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Compare" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Saved" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Briefings" })).not.toBeInTheDocument();
