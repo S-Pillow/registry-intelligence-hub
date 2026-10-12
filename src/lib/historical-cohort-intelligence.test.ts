@@ -8,12 +8,17 @@ import {
   formatCohortSharePercent,
   historicalCohortsHref,
   HISTORICAL_COHORT_CONCENTRATION_TOP_NS,
+  HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT,
   HISTORICAL_COHORT_GRAIN,
   HISTORICAL_COHORT_LARGEST_LIMIT,
   HISTORICAL_COHORT_PORTFOLIO_BANDS,
   type HistoricalApplicantPortfolioCohortIntelligence,
 } from "@/lib/historical-cohort-intelligence";
-import { buildApplicantLegalNameConcentration, type Application } from "@/lib/registry-data";
+import {
+  buildApplicantLegalNameConcentration,
+  EXACT_APPLIED_STRING_COMPETITION_METHOD,
+  type Application,
+} from "@/lib/registry-data";
 import { HUB_BASE_PATH, withBasePath } from "@/lib/hub-paths";
 
 const document = JSON.parse(
@@ -165,6 +170,7 @@ describe("HIST-COHORT-1 performance / payload", () => {
         "bands",
         "concentration",
         "concentrationMethod",
+        "exactStringCompetition",
         "exclusions",
         "grain",
         "hrefs",
@@ -179,6 +185,10 @@ describe("HIST-COHORT-1 performance / payload", () => {
         "title",
       ].sort(),
     );
+    expect(intelligence.exactStringCompetition.ranked.length).toBeLessThanOrEqual(
+      HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT,
+    );
+    expect(JSON.stringify(intelligence.exactStringCompetition)).not.toContain('"applications":[');
   });
 
   it("concentration helper and cohort builder agree on legal-name ranking", () => {
@@ -207,14 +217,89 @@ describe("HIST-COHORT-1 navigation helpers", () => {
 });
 
 describe("HIST-COHORT-1 exclusions stay declarative", () => {
-  it("declares deferred competition and Organization cohort surfaces", () => {
-    expect(intelligence.exclusions.join(" ")).toMatch(/Exact-repeat/i);
+  it("declares deferred and excluded surfaces without peer preliminary-contention board", () => {
     expect(intelligence.exclusions.join(" ")).toMatch(/Preliminary contention/i);
     expect(intelligence.exclusions.join(" ")).toMatch(/Organization/i);
     expect(intelligence.exclusions.join(" ")).toMatch(/Cross-round/i);
     expect(intelligence.provenance.limitations.some((line) => /not a 2012 vs 2026/i.test(line))).toBe(
       true,
     );
+  });
+});
+
+describe("HIST-COHORT-2A exact-string competition aggregates", () => {
+  it("pins exposed Applicants, Applications, and repeated-string counts", () => {
+    const exact = intelligence.exactStringCompetition;
+    expect(exact.applicantsExposed).toBe(452);
+    expect(exact.applicationsExposed).toBe(751);
+    expect(exact.repeatedStringCount).toBe(230);
+    expect(intelligence.applicantLegalNameDenominator).toBe(1154);
+    expect(intelligence.applicationDenominator).toBe(1930);
+    expect(exact.applicantShare).toBeCloseTo(452 / 1154, 12);
+    expect(exact.applicationShare).toBeCloseTo(751 / 1930, 12);
+    expect(formatCohortSharePercent(exact.applicantShare)).toBe("39.17%");
+    expect(formatCohortSharePercent(exact.applicationShare)).toBe("38.91%");
+    expect(exact.exactRepeatApplicationsAlsoInPreliminaryContention).toBe(748);
+  });
+
+  it("pins top Applicant exact-string exposure with deterministic ordering", () => {
+    const byName = Object.fromEntries(
+      intelligence.exactStringCompetition.ranked.map((row) => [
+        row.applicantLegalName,
+        row,
+      ]),
+    );
+    expect(byName["Charleston Road Registry Inc."]).toMatchObject({
+      applicationsInExactStringCompetition: 58,
+      portfolioApplicationCount: 101,
+    });
+    expect(byName["Top Level Domain Holdings Limited"]).toMatchObject({
+      applicationsInExactStringCompetition: 56,
+      portfolioApplicationCount: 70,
+    });
+    expect(byName["Uniregistry, Corp."]).toMatchObject({
+      applicationsInExactStringCompetition: 45,
+      portfolioApplicationCount: 54,
+    });
+    expect(byName["Amazon EU S.à r.l."]).toMatchObject({
+      applicationsInExactStringCompetition: 35,
+      portfolioApplicationCount: 76,
+    });
+    expect(byName["Afilias Limited"]).toMatchObject({
+      applicationsInExactStringCompetition: 16,
+      portfolioApplicationCount: 26,
+    });
+    expect(byName["NU DOT CO LLC"]).toMatchObject({
+      applicationsInExactStringCompetition: 13,
+      portfolioApplicationCount: 13,
+      portfolioExposureShare: 1,
+    });
+    expect(intelligence.exactStringCompetition.ranked[0]?.applicantLegalName).toBe(
+      "Charleston Road Registry Inc.",
+    );
+    expect(intelligence.exactStringCompetition.ranked.map((r) => r.applicationsInExactStringCompetition)).toEqual(
+      [...intelligence.exactStringCompetition.ranked.map((r) => r.applicationsInExactStringCompetition)].sort(
+        (a, b) => b - a,
+      ),
+    );
+  });
+});
+
+describe("HIST-COHORT-2A concept safety", () => {
+  it("never labels exact-string competition as official contention", () => {
+    const exact = intelligence.exactStringCompetition;
+    expect(exact.label).toBe("Exact-string competition");
+    expect(exact.method).toBe(EXACT_APPLIED_STRING_COMPETITION_METHOD);
+    expect(exact.grain).toBe("exact-applied-for-string");
+    const blob = JSON.stringify(exact);
+    expect(blob).not.toMatch(/"official contention"/i);
+    expect(exact.limitations.join(" ")).toMatch(/not official contention/i);
+    expect(exact.limitations.join(" ")).toMatch(/keeps the two historical concepts separate/i);
+    expect(intelligence.exclusions.join(" ")).toMatch(/Preliminary contention leaderboard/i);
+    expect(intelligence.exclusions.join(" ")).toMatch(/Cross-round exact-string/i);
+    // 230 / 751 must not be framed as contention sets / memberships in product copy fields
+    expect(exact.limitations.join(" ")).not.toMatch(/230.*contention sets/i);
+    expect(JSON.stringify(intelligence)).not.toMatch(/2012→2026|vs 2026 official initial contention delta/i);
   });
 });
 

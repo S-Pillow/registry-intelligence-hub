@@ -40,8 +40,9 @@ describe("HistoricalCohortContent", () => {
     expect(charleston).toHaveAttribute("data-applicant-legal-name", "Charleston Road Registry Inc.");
     expect(within(charleston).getByTestId("cohort-largest-1-apps")).toHaveTextContent("101");
 
-    const afilias = screen.getByText("Afilias Limited").closest("tr")!;
-    const united = screen.getByText("United TLD Holdco Ltd.").closest("tr")!;
+    const largestSection = screen.getByTestId("cohort-largest");
+    const afilias = within(largestSection).getByText("Afilias Limited").closest("tr")!;
+    const united = within(largestSection).getByText("United TLD Holdco Ltd.").closest("tr")!;
     expect(within(afilias).getByText("26")).toBeInTheDocument();
     expect(within(united).getByText("26")).toBeInTheDocument();
 
@@ -51,7 +52,31 @@ describe("HistoricalCohortContent", () => {
     );
     expect(screen.getByTestId("cohort-explore-1").getAttribute("href")).not.toContain("/applicant?");
     expect(screen.getByTestId("cohort-methodology")).toHaveTextContent(/Applicant legal name/i);
-    expect(screen.getByTestId("cohort-exclusions")).toHaveTextContent(/Exact-repeat/i);
+    expect(screen.getByTestId("cohort-exclusions")).toHaveTextContent(/Preliminary contention/i);
     expect(screen.queryByText(/market dominance/i)).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("cohort-exact-string")).toBeInTheDocument();
+    expect(screen.getByTestId("cohort-exact-string-applicants")).toHaveTextContent("452");
+    expect(screen.getByTestId("cohort-exact-string-apps")).toHaveTextContent("751");
+    expect(screen.getByTestId("cohort-exact-string-groups")).toHaveTextContent("230");
+    expect(screen.getByTestId("cohort-exact-string-groups")).toHaveTextContent(/Not official contention sets/i);
+    expect(screen.getByTestId("cohort-exact-string-contention-note")).toHaveTextContent(/748/);
+    expect(screen.getByTestId("cohort-exact-string-contention-note")).toHaveTextContent(
+      /keeps the two historical concepts separate/i,
+    );
+
+    const charlestonExact = screen.getByTestId("cohort-exact-string-row-1");
+    expect(charlestonExact).toHaveAttribute(
+      "data-applicant-legal-name",
+      "Charleston Road Registry Inc.",
+    );
+    expect(screen.getByTestId("cohort-exact-string-exposed-1")).toHaveTextContent("58");
+    const exactSection = screen.getByTestId("cohort-exact-string");
+    expect(within(exactSection).getByText("NU DOT CO LLC").closest("tr")).toHaveTextContent("13");
+    expect(screen.getByTestId("cohort-exact-string-explore-1")).toHaveAttribute(
+      "href",
+      expect.stringContaining("dataset=2012-historical"),
+    );
+    expect(exactSection).not.toHaveTextContent(/official contention memberships/i);
   });
 });

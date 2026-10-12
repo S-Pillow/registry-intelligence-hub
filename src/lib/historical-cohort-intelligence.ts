@@ -1,7 +1,9 @@
 /**
- * HIST-COHORT-1 — 2012 Applicant portfolio structure (2012-only).
+ * HIST-COHORT-1 / 2A — 2012 Applicant portfolio structure + exact-string competition
+ * exposure (2012-only).
  *
  * Grain: exact Applicant legal name on the committed Reveal Day fixture.
+ * Competition unit: exact repeated applied-for string (not official contention).
  * No Organization merge, no affiliate inference, no cross-round deltas.
  */
 
@@ -9,6 +11,11 @@ import { APPROVED_2012_BASELINE } from "@/comparison/approved-2012-baseline";
 import {
   APPLICANT_LEGAL_NAME_CONCENTRATION_METHOD,
   buildApplicantLegalNameConcentration,
+  buildExactAppliedStringCompetition,
+  EXACT_APPLIED_STRING_COMPETITION_GRAIN,
+  EXACT_APPLIED_STRING_COMPETITION_METHOD,
+  exactAppliedForStringKey,
+  exploreHistorical2012StringsHref,
   type Application,
 } from "@/lib/registry-data";
 import { hubPath } from "@/lib/hub-paths";
@@ -36,6 +43,9 @@ export const HISTORICAL_COHORT_CONCENTRATION_TOP_NS = [5, 10, 25, 50] as const;
 
 /** Enough ranked rows to surface the tied 26-Application legal names. */
 export const HISTORICAL_COHORT_LARGEST_LIMIT = 12;
+
+/** Bounded exact-string competition ranking (exposed Applications desc). */
+export const HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT = 25;
 
 export type HistoricalCohortPortfolioBand = {
   id: HistoricalCohortBandId;
@@ -73,6 +83,32 @@ export type HistoricalCohortLargestApplicant = {
   exploreHref: string;
 };
 
+export type HistoricalCohortExactStringExposureRow = {
+  rank: number;
+  applicantLegalName: string;
+  portfolioApplicationCount: number;
+  applicationsInExactStringCompetition: number;
+  distinctRepeatedStrings: number;
+  portfolioExposureShare: number;
+  exploreHref: string;
+};
+
+export type HistoricalCohortExactStringCompetition = {
+  label: "Exact-string competition";
+  productQuestion: string;
+  method: typeof EXACT_APPLIED_STRING_COMPETITION_METHOD;
+  grain: typeof EXACT_APPLIED_STRING_COMPETITION_GRAIN;
+  applicantsExposed: number;
+  applicationsExposed: number;
+  repeatedStringCount: number;
+  applicantShare: number;
+  applicationShare: number;
+  /** Applications in exact repeats that also carry preliminary contention membership. */
+  exactRepeatApplicationsAlsoInPreliminaryContention: number;
+  ranked: HistoricalCohortExactStringExposureRow[];
+  limitations: string[];
+};
+
 export type HistoricalApplicantPortfolioCohortIntelligence = {
   roundProgramYear: 2012;
   observation: "2012-reveal-day";
@@ -88,6 +124,7 @@ export type HistoricalApplicantPortfolioCohortIntelligence = {
   oneOffVsMulti: HistoricalCohortOneOffVsMulti;
   concentration: HistoricalCohortConcentrationRow[];
   largest: HistoricalCohortLargestApplicant[];
+  exactStringCompetition: HistoricalCohortExactStringCompetition;
   provenance: {
     sourceLabel: string;
     grainLabel: string;
@@ -100,7 +137,9 @@ export type HistoricalApplicantPortfolioCohortIntelligence = {
     commandCenter: string;
     crossRound: string;
     exploreHistorical: string;
+    exploreHistoricalStrings: string;
     dataHealth: string;
+    exactStringSectionAnchor: string;
   };
 };
 
@@ -201,6 +240,13 @@ export function buildHistoricalApplicantPortfolioCohorts(
       exploreHref: exploreHistorical2012ApplicantLegalNameHref(row.applicantLegalName),
     }));
 
+  const exactStringCompetition = buildExactStringCompetitionExposure({
+    applications,
+    portfolioByLegalName: new Map(ranked.map((row) => [row.applicantLegalName, row.count])),
+    applicantLegalNameDenominator,
+    applicationDenominator,
+  });
+
   return {
     roundProgramYear: 2012,
     observation: "2012-reveal-day",
@@ -225,6 +271,7 @@ export function buildHistoricalApplicantPortfolioCohorts(
     },
     concentration: concentrationRows,
     largest,
+    exactStringCompetition,
     provenance: {
       sourceLabel: APPROVED_2012_BASELINE.sourceLabel,
       grainLabel: "Exact Applicant legal name on each 2012 Reveal Day Application",
@@ -235,23 +282,99 @@ export function buildHistoricalApplicantPortfolioCohorts(
         "Counts group by Applicant legal name, not resolved Organization.",
         "Affiliates and parent companies are not merged.",
         "Application concentration by Applicant legal name is not economic market share.",
-        "Exact-string competition and preliminary contention cohorts are deferred.",
+        "Exact-string competition counts Applications for the same exact applied-for string — not official contention sets or memberships.",
+        "Preliminary contention remains a separate historical concept and is not ranked as a peer leaderboard here.",
       ],
     },
     exclusions: [
       "Community / Geographic leaderboards",
-      "Exact-repeat competition leaderboard",
       "Preliminary contention leaderboard",
       "Historical Organization cohort as round coverage",
       "Cross-round Applicant concentration delta",
+      "Cross-round exact-string / contention comparison",
       "IDN as a primary workflow",
     ],
     hrefs: {
       commandCenter: hubPath("/"),
       crossRound: hubPath("/cross-round"),
       exploreHistorical: `${hubPath("/explore")}?dataset=2012-historical&entity=applications`,
+      exploreHistoricalStrings: exploreHistorical2012StringsHref(),
       dataHealth: hubPath("/data-health"),
+      exactStringSectionAnchor: `${hubPath("/historical-cohorts")}#exact-string-competition`,
     },
+  };
+}
+
+function buildExactStringCompetitionExposure(args: {
+  applications: readonly Application[];
+  portfolioByLegalName: Map<string, number>;
+  applicantLegalNameDenominator: number;
+  applicationDenominator: number;
+}): HistoricalCohortExactStringCompetition {
+  const exact = buildExactAppliedStringCompetition(args.applications);
+  const repeatedStringKeys = new Set(
+    exact.competingGroups.map((group) => group.appliedForString),
+  );
+
+  type Acc = {
+    exposed: number;
+    strings: Set<string>;
+  };
+  const byApplicant = new Map<string, Acc>();
+  let exactRepeatApplicationsAlsoInPreliminaryContention = 0;
+
+  for (const application of args.applications) {
+    const appliedForString = exactAppliedForStringKey(application);
+    if (appliedForString === null || !repeatedStringKeys.has(appliedForString)) continue;
+    const applicantLegalName = application.applicant.trim();
+    if (!applicantLegalName) continue;
+    const slot = byApplicant.get(applicantLegalName) ?? { exposed: 0, strings: new Set<string>() };
+    slot.exposed += 1;
+    slot.strings.add(appliedForString);
+    byApplicant.set(applicantLegalName, slot);
+    if (application.contentionSet) {
+      exactRepeatApplicationsAlsoInPreliminaryContention += 1;
+    }
+  }
+
+  const ranked = [...byApplicant.entries()]
+    .map(([applicantLegalName, slot]) => {
+      const portfolioApplicationCount = args.portfolioByLegalName.get(applicantLegalName) ?? 0;
+      return {
+        applicantLegalName,
+        portfolioApplicationCount,
+        applicationsInExactStringCompetition: slot.exposed,
+        distinctRepeatedStrings: slot.strings.size,
+        portfolioExposureShare: share(slot.exposed, portfolioApplicationCount),
+        exploreHref: exploreHistorical2012ApplicantLegalNameHref(applicantLegalName),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.applicationsInExactStringCompetition - a.applicationsInExactStringCompetition ||
+        a.applicantLegalName.localeCompare(b.applicantLegalName),
+    )
+    .slice(0, HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT)
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+
+  return {
+    label: "Exact-string competition",
+    productQuestion: "How exposed were 2012 Applicant portfolios to exact-string competition?",
+    method: EXACT_APPLIED_STRING_COMPETITION_METHOD,
+    grain: EXACT_APPLIED_STRING_COMPETITION_GRAIN,
+    applicantsExposed: byApplicant.size,
+    applicationsExposed: exact.applicationsInCompetingGroups,
+    repeatedStringCount: exact.competingGroupCount,
+    applicantShare: share(byApplicant.size, args.applicantLegalNameDenominator),
+    applicationShare: share(exact.applicationsInCompetingGroups, args.applicationDenominator),
+    exactRepeatApplicationsAlsoInPreliminaryContention,
+    ranked,
+    limitations: [
+      "Exact-string competition means Applications for the same exact applied-for string.",
+      "These groups are not official contention sets, and Applications in them are not official contention memberships.",
+      "Most exact-repeat Applications also appeared in preliminary contention data, but RIH keeps the two historical concepts separate.",
+      "2012-only — not compared to 2026 official initial contention.",
+    ],
   };
 }
 
