@@ -39,10 +39,14 @@ Do not place a large standalone Contention summary card above round posture.
 - Cross-round Community, Geographic, official contention-set deltas  
 - Applicant concentration presented as Organization intelligence  
 
-## Next dependencies
+## Current expansion direction
 
-1. **ORG-RES-2026-1** — evidence-backed 2026 Organization resolution (layer present; confirmed-only product still gated — see `docs/2026-organization-resolution.md`)  
-2. **CROSS-ROUND-ID-1** — defensible 2012↔2026 participant identity  
-3. Then CONTENTION-INTEL-1 / Compare–Briefing rework as eligibility permits  
+Command Center hierarchy is live and is the operational intelligence landing surface (posture → attention → monitoring → structural change → contention depth → composition → coverage → investigation actions).
+
+Organization resolution and Organization / Applicant intelligence are already active where evidence supports them (partial: 145 Confirmed Applicant mappings / 89 Confirmed Organizations / 2 Candidate / 2 Ambiguous / 331 Unresolved — see `docs/2026-organization-resolution.md`). Confirmed cross-round Organization identity overlays are available for accepted mappings (including Microsoft and Google) and remain evidence-gated rather than broadly complete.
+
+Contention intelligence, Compare, cross-round structural intelligence, historical cohorts (HIST-COHORT-1 / 2A), and scheduled Change Intelligence are live. Historical cohort expansion can proceed incrementally without treating Organization resolution as a prerequisite.
+
+Next planned historical lens: **2012 regional Applicant structure**. IDN Applicant participation remains a later historical cohort option.
 
 Production Reveal Day closeout (infrastructure): `docs/2026-reveal-day-production-closeout.md`.
