@@ -260,9 +260,13 @@ function IntelligenceSections({
                   </ul>
                 ) : null}
                 <p className="mt-3 text-xs">
-                  <a href="/contention" className="font-semibold text-[#006a56] underline">
+                  <Link
+                    href="/contention"
+                    className="font-semibold text-[#006a56] underline"
+                    data-testid="cc-v2-inspect-contention-sets"
+                  >
                     Inspect actual sets on Contention
-                  </a>
+                  </Link>
                 </p>
               </div>
             ) : null}

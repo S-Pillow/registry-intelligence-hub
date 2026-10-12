@@ -318,4 +318,13 @@ describe("Command Center intelligence-first 2.x IA", () => {
     expect(screen.queryByTestId("search-v2")).not.toBeInTheDocument();
     expect(screen.queryByTestId("explore-content-v2")).not.toBeInTheDocument();
   });
+
+  it("ORG-INTEL-1A — Inspect actual sets on Contention uses Next Link (basePath-safe)", () => {
+    renderCc(makeDocument());
+    const cta = screen.getByRole("link", { name: "Inspect actual sets on Contention" });
+    expect(cta).toHaveAttribute("href", "/contention");
+    expect(cta).toHaveAttribute("data-testid", "cc-v2-inspect-contention-sets");
+    // App-relative href is correct for next/link; Next prefixes configured basePath at runtime.
+    expect(cta.getAttribute("href")).not.toBe("https://forgeforward.app/contention");
+  });
 });
