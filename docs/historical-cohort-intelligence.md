@@ -220,6 +220,8 @@ Regional rows link to:
 
 `/explore?dataset=2012-historical&entity=applications&region=<CODE>`
 
+Explicit `dataset=2012-historical` selects historical Explore regardless of promoted/current-round default mode (ActiveV2). Plain `/explore` without that parameter keeps the current 2026 Explore surface.
+
 No new 2012 Applicant Profile. No automatic link to 2026 Applicant Profiles from name equality.
 
 ## Provenance (business UI)

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
-import { useHubRegistryDocument } from "@/components/registry/hub-registry-data-provider";
+import { useHubRegistryData } from "@/components/registry/hub-registry-data-provider";
+import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
 import { type EntityType, type Lens } from "@/lib/registry-data";
 import {
   currentScopeRecordCount,
@@ -33,7 +34,10 @@ const QUICK_WATCHLIST_NAME = "Quick Watchlist";
 
 export function useSavedWork() {
   const claimActualityState = useHubClaimActualityState();
-  const registryDocument = useHubRegistryDocument();
+  // Promoted ActiveV2 leaves resolution.document null; fall back so historical Explore
+  // can mount the V1 shell without throwing (briefings remain disabled on 2012).
+  const registryDocument =
+    useHubRegistryData().document ?? rehearsalRegistryApplicationsDocument();
   const [storage] = useState<SavedWorkStorage>(() => createSavedWorkStorage());
   const [hydrated, setHydrated] = useState(false);
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);

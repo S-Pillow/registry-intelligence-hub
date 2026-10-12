@@ -166,6 +166,8 @@ import { ActiveSourceFailClosed } from "@/components/registry/active-source-fail
 import { ExploreContentV2 } from "@/components/registry/explore-content-v2";
 import { CommandCenterOrientationV2 } from "@/components/registry/command-center-orientation-v2";
 import { hubPath } from "@/lib/hub-paths";
+import { shouldRenderHistoricalExploreSurface } from "@/lib/explore-dataset-routing";
+import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
 import type { ParticipantOverlays } from "@/lib/participant-intelligence";
 import {
   isHttpSourceUrl,
@@ -1245,8 +1247,8 @@ function exploreDatasetFromParam(value: string | undefined): ExploreDatasetMode 
 
 function ExploreContent({ state, initial, presentation }: { state: ViewState; initial: ExploreParams; presentation: ProductPresentation }) {
   const claimActualityState = useHubClaimActualityState();
-  const { mode: registryPayloadMode } = useHubRegistryData();
-  const registryFixture = useHubRegistryDocument();
+  const registryResolution = useHubRegistryData();
+  const { mode: registryPayloadMode } = registryResolution;
   const historical2012 = useHistorical2012Payload();
   const confirmedPortfoliosSidecar = useHistorical2012ConfirmedPortfolios();
   const datasetMode = exploreDatasetFromParam(initial.dataset);
@@ -1257,8 +1259,11 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
     is2012Historical && initial.entity === "organizations"
       ? HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
       : initial.entity ?? "applications";
+  // Under promoted-2026-v2, resolution.document is null — historical Explore must not call useHubRegistryDocument().
   const activeDocument =
-    is2012Historical && historical2012Loaded ? historical2012.document : registryFixture;
+    is2012Historical && historical2012Loaded
+      ? historical2012.document
+      : registryResolution.document ?? rehearsalRegistryApplicationsDocument();
   const [filters, setFilters] = useState({
     q: initial.q ?? "",
     entity: resolvedInitialEntity,
@@ -1515,10 +1520,13 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
   }
 
   return (
-    <main className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8">
+    <main
+      className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:py-8"
+      data-testid={is2012Historical ? "explore-content-historical" : "explore-content"}
+    >
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Research backbone</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{is2012Historical ? (historicalStringBrowse ? "Browse unique applied strings derived deterministically from the validated 1,930-application Reveal Day payload — separate from the 2026 rehearsal cohort." : "Browse the full 2012 Reveal Day application corpus — separate from the 2026 rehearsal cohort.") : "Search and compose evidence-backed filters across the active 2026 browser dataset (rehearsal or promoted snapshot)."}</p>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <p className="mt-1 max-w-2xl text-xs font-medium text-slate-600">String rows aggregate the same {historical2012.document.applications.length}-application browser payload; contention membership is joined from the official contention publication, not the CSV.</p> : null}</div>
-        <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 sm:items-end"><span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" />{datasetBadge}</span>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <span className="font-medium text-amber-900/90">Derived from validated {historical2012.document.applications.length}-application payload</span> : null}</div>
+        <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 sm:items-end" data-testid="explore-dataset-badge"><span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" />{datasetBadge}</span>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <span className="font-medium text-amber-900/90">Derived from validated {historical2012.document.applications.length}-application payload</span> : null}</div>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
@@ -2409,7 +2417,12 @@ export function CommandCenter(props: {
       />
     );
   }
-  if (resolution.mode === "promoted-2026-v2" && resolution.documentV2) {
+  // Explicit dataset=2012-historical outranks promoted ActiveV2 ExploreContentV2.
+  const historicalExplore = shouldRenderHistoricalExploreSurface({
+    view: props.view,
+    exploreDataset: props.exploreParams?.dataset,
+  });
+  if (resolution.mode === "promoted-2026-v2" && resolution.documentV2 && !historicalExplore) {
     return (
       <CommandCenterActiveV2
         {...props}
@@ -2443,12 +2456,17 @@ function CommandCenterV1({
   changeFeed?: ChangeIntelFeedState;
 }) {
   const claimActualityState = useHubClaimActualityState();
-  const { mode: registryPayloadMode } = useHubRegistryData();
+  const registryResolution = useHubRegistryData();
+  const { mode: registryPayloadMode } = registryResolution;
   const historical2012 = useHistorical2012Payload();
   const historical2012Loaded = historical2012.status === "loaded";
   const structuralSummary = useHistorical2012StructuralSummary();
-  const registryFixture = useHubRegistryDocument();
-  const publicationIsPromoted = registryPayloadMode === "promoted-2026";
+  // Promoted ActiveV2 sets document=null; historical Explore uses a stub so the V1 shell does not throw.
+  // (Only ExploreContent is rendered on the historical-routing path; stub apps are not shown.)
+  const registryFixture =
+    registryResolution.document ?? rehearsalRegistryApplicationsDocument();
+  const publicationIsPromoted =
+    registryPayloadMode === "promoted-2026" || registryPayloadMode === "promoted-2026-v2";
   const showRehearsal = !publicationIsPromoted && presentation === "rehearsal";
   const preReveal = !publicationIsPromoted && presentation !== "rehearsal";
   const snapshotPinSubtitle = publicationIsPromoted
