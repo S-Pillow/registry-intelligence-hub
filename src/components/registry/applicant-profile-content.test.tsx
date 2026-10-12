@@ -26,6 +26,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
     organizationResolutionStatus: "CONFIRMED",
     confirmedOrganizationId: "organization:resolved-2026:salesforce",
     confirmedOrganizationName: "Salesforce",
+    confirmedOrganizationKey: "salesforce",
     identityEvidence: {
       applicantWebsiteHost: "salesforce.com",
       applicantWebsiteUrl: "https://www.salesforce.com",
@@ -54,6 +55,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
     organizationResolutionStatus: "CONFIRMED",
     confirmedOrganizationId: "organization:resolved-2026:salesforce",
     confirmedOrganizationName: "Salesforce",
+    organizationProfileHref: "/organization?key=salesforce",
     identityEvidence: participantRow.identityEvidence,
     brandApplicationCount: 4,
     applicationCount: 4,
@@ -193,6 +195,7 @@ describe("ApplicantProfileContent", () => {
           organizationResolutionStatus: "UNRESOLVED",
           confirmedOrganizationId: null,
           confirmedOrganizationName: null,
+          organizationProfileHref: null,
           organizationContext: null,
           identityEvidence: {
             applicantWebsiteHost: "amazon.com",

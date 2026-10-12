@@ -23,6 +23,7 @@ import {
   type ContentionSizeFilter,
 } from "@/lib/contention-intelligence";
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
+import { organizationProfileHref } from "@/lib/organization-intelligence";
 import { ContentionDistributionPanel } from "@/components/registry/contention-distribution";
 
 function Metric({ label, value, testId }: { label: string; value: string | number; testId: string }) {
@@ -140,6 +141,11 @@ function SetDetailPanel({
                         <OrganizationMappingBadge
                           status={sample.organizationResolutionStatus}
                           name={sample.confirmedOrganizationName}
+                          href={
+                            sample.confirmedOrganizationKey
+                              ? organizationProfileHref(sample.confirmedOrganizationKey)
+                              : null
+                          }
                         />
                       </div>
                       <p className="mt-1 text-xs text-slate-600">{sample.rspPublicPostureLabel}</p>
@@ -195,6 +201,11 @@ function SetDetailPanel({
                     <OrganizationMappingBadge
                       status={m.organizationResolutionStatus}
                       name={m.confirmedOrganizationName}
+                      href={
+                        m.confirmedOrganizationKey
+                          ? organizationProfileHref(m.confirmedOrganizationKey)
+                          : null
+                      }
                     />
                     <span className="text-xs text-slate-600">{m.rspPublicPostureLabel}</span>
                   </div>

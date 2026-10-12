@@ -24,6 +24,8 @@ export type ParticipantOrganizationOverlay = {
   /** Set only when CONFIRMED. */
   confirmedOrganizationId: string | null;
   confirmedOrganizationName: string | null;
+  /** Canonical Organization key from steward snapshot (Confirmed only). */
+  confirmedOrganizationKey?: string | null;
   /** ORG-RES-WEB-1 first-party ICANN identity context (optional). */
   identityEvidence?: ParticipantIdentityEvidenceOverlay | null;
 };
@@ -64,6 +66,8 @@ export type ParticipantRow = {
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
   confirmedOrganizationId: string | null;
   confirmedOrganizationName: string | null;
+  /** Canonical steward key when Confirmed (optional for older fixtures). */
+  confirmedOrganizationKey?: string | null;
   identityEvidence: ParticipantIdentityEvidenceOverlay | null;
   confirmedReturning: ParticipantReturningOverlay | null;
   rankByApplications: number;
@@ -219,8 +223,13 @@ export function buildParticipantIntelligence(
         ? {
             confirmedOrganizationId: org?.confirmedOrganizationId ?? null,
             confirmedOrganizationName: org?.confirmedOrganizationName ?? null,
+            confirmedOrganizationKey: org?.confirmedOrganizationKey ?? null,
           }
-        : { confirmedOrganizationId: null, confirmedOrganizationName: null };
+        : {
+            confirmedOrganizationId: null,
+            confirmedOrganizationName: null,
+            confirmedOrganizationKey: null,
+          };
 
     participantsUnranked.push({
       applicantLegalName,
@@ -237,6 +246,7 @@ export function buildParticipantIntelligence(
       organizationResolutionStatus: resolutionStatus,
       confirmedOrganizationId: confirmed.confirmedOrganizationId,
       confirmedOrganizationName: confirmed.confirmedOrganizationName,
+      confirmedOrganizationKey: confirmed.confirmedOrganizationKey,
       identityEvidence: org?.identityEvidence ?? null,
       confirmedReturning: returning,
     });

@@ -15,6 +15,7 @@ import {
   type ParticipantReturningOverlay,
   type ParticipantRow,
 } from "@/lib/participant-intelligence";
+import { organizationKeyFromOverlays, organizationProfileHref } from "@/lib/organization-intelligence";
 import {
   buildRspOpportunityIntelligence,
   prospectingPostureLabel,
@@ -82,6 +83,8 @@ export type ApplicantIntelligenceProfile = {
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
   confirmedOrganizationId: string | null;
   confirmedOrganizationName: string | null;
+  /** Present only when Confirmed and canonical key is known. */
+  organizationProfileHref: string | null;
   identityEvidence: ParticipantIdentityEvidenceOverlay | null;
   brandApplicationCount: number;
   applicationCount: number;
@@ -292,6 +295,10 @@ export function buildApplicantIntelligenceProfile(
   }
 
   const changesHref = `${options?.changesHrefBase ?? "/changes"}?q=${encodeURIComponent(name)}`;
+  const orgKey =
+    row.organizationResolutionStatus === "CONFIRMED"
+      ? organizationKeyFromOverlays(overlays, row.confirmedOrganizationId)
+      : null;
 
   return {
     found: true,
@@ -302,6 +309,7 @@ export function buildApplicantIntelligenceProfile(
     organizationResolutionStatus: row.organizationResolutionStatus,
     confirmedOrganizationId: row.confirmedOrganizationId,
     confirmedOrganizationName: row.confirmedOrganizationName,
+    organizationProfileHref: orgKey ? organizationProfileHref(orgKey) : null,
     identityEvidence: row.identityEvidence,
     brandApplicationCount: row.designationCounts.brand,
     applicationCount: row.applicationCount,

@@ -16,26 +16,34 @@ const ORG_SNAPSHOT_RELATIVE = `${ORG_RES_OUTPUT_DIR}/organization-resolution-1.0
 const PARTICIPATION_SNAPSHOT_RELATIVE = `${PARTICIPATION_OUTPUT_DIR}/cross-round-participation-intelligence-1.0.0.snapshot.json`;
 
 function organizationsFromSnapshot(snapshot: OrganizationResolutionSnapshot): ParticipantOrganizationOverlay[] {
-  const orgNameById = new Map(snapshot.organizations.map((o) => [o.organizationId, o.canonicalName] as const));
-  return snapshot.applicantIdentityMappings.map((m) => ({
-    applicantLegalName: m.applicantLegalName,
-    resolutionStatus: m.resolutionState,
-    confirmedOrganizationId: m.resolutionState === "CONFIRMED" ? m.organizationId : null,
-    confirmedOrganizationName:
-      m.resolutionState === "CONFIRMED" && m.organizationId
-        ? (orgNameById.get(m.organizationId) ?? null)
+  const orgById = new Map(snapshot.organizations.map((o) => [o.organizationId, o] as const));
+  return snapshot.applicantIdentityMappings.map((m) => {
+    const org = m.resolutionState === "CONFIRMED" && m.organizationId ? orgById.get(m.organizationId) : undefined;
+    return {
+      applicantLegalName: m.applicantLegalName,
+      resolutionStatus: m.resolutionState,
+      confirmedOrganizationId: m.resolutionState === "CONFIRMED" ? m.organizationId : null,
+      confirmedOrganizationName: org?.canonicalName ?? null,
+      confirmedOrganizationKey: org?.organizationKey ?? null,
+      identityEvidence: m.identityContext
+        ? {
+            applicantWebsiteHost: m.identityContext.applicantWebsiteHost,
+            applicantWebsiteUrl: m.identityContext.applicantWebsiteUrl,
+            directParentLegalName: m.identityContext.directParentLegalName,
+            ultimateParentLegalName: m.identityContext.ultimateParentLegalName,
+            ultimateControlLegalName: m.identityContext.ultimateControlLegalName,
+            evidenceExplanationLines: [...m.identityContext.evidenceExplanationLines],
+          }
         : null,
-    identityEvidence: m.identityContext
-      ? {
-          applicantWebsiteHost: m.identityContext.applicantWebsiteHost,
-          applicantWebsiteUrl: m.identityContext.applicantWebsiteUrl,
-          directParentLegalName: m.identityContext.directParentLegalName,
-          ultimateParentLegalName: m.identityContext.ultimateParentLegalName,
-          ultimateControlLegalName: m.identityContext.ultimateControlLegalName,
-          evidenceExplanationLines: [...m.identityContext.evidenceExplanationLines],
-        }
-      : null,
-  }));
+    };
+  });
+}
+
+/** Read steward Organization-resolution snapshot (Confirmed Organizations source of truth). */
+export async function loadOrganizationResolutionSnapshot(
+  workspaceRoot: string = process.cwd(),
+): Promise<OrganizationResolutionSnapshot> {
+  return loadOrganizationSnapshot(workspaceRoot);
 }
 
 function returningFromSnapshots(

@@ -14,6 +14,7 @@ import {
   type ParticipantSortKey,
 } from "@/lib/participant-intelligence";
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
+import { organizationProfileHref } from "@/lib/organization-intelligence";
 import { loadEvaluatedMainRspArtifact } from "@/lib/icann-evaluated-rsp";
 import {
   buildRspOpportunityIntelligence,
@@ -231,6 +232,11 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                 <OrganizationMappingBadge
                   status={focal.row.organizationResolutionStatus}
                   name={focal.row.confirmedOrganizationName}
+                  href={
+                    focal.row.confirmedOrganizationKey
+                      ? organizationProfileHref(focal.row.confirmedOrganizationKey)
+                      : null
+                  }
                 />
               </div>
             </CardHeader>
@@ -502,6 +508,14 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                       <OrganizationMappingBadge
                         status={p.organizationMappingStatus}
                         name={p.confirmedOrganizationName}
+                        href={(() => {
+                          const row = intelligence.participants.find(
+                            (x) => x.applicantLegalName === p.applicantLegalName,
+                          );
+                          return row?.confirmedOrganizationKey
+                            ? organizationProfileHref(row.confirmedOrganizationKey)
+                            : null;
+                        })()}
                       />
                     </td>
                     <td className="px-3 py-2 text-slate-800">{mainRspSignalLabel(p)}</td>
@@ -540,6 +554,14 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                     <OrganizationMappingBadge
                       status={selectedProspectRow.organizationMappingStatus}
                       name={selectedProspectRow.confirmedOrganizationName}
+                      href={(() => {
+                        const row = intelligence.participants.find(
+                          (x) => x.applicantLegalName === selectedProspectRow.applicantLegalName,
+                        );
+                        return row?.confirmedOrganizationKey
+                          ? organizationProfileHref(row.confirmedOrganizationKey)
+                          : null;
+                      })()}
                     />
                   </dd>
                 </div>
@@ -669,6 +691,14 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                         <OrganizationMappingBadge
                           status={c.organizationResolutionStatus}
                           name={c.confirmedOrganizationName}
+                          href={(() => {
+                            const row = intelligence.participants.find(
+                              (x) => x.applicantLegalName === c.applicantLegalName,
+                            );
+                            return row?.confirmedOrganizationKey
+                              ? organizationProfileHref(row.confirmedOrganizationKey)
+                              : null;
+                          })()}
                         />
                       </td>
                     </tr>
@@ -819,6 +849,11 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                         <OrganizationMappingBadge
                           status={p.organizationResolutionStatus}
                           name={p.confirmedOrganizationName}
+                          href={
+                            p.confirmedOrganizationKey
+                              ? organizationProfileHref(p.confirmedOrganizationKey)
+                              : null
+                          }
                         />
                       </td>
                     </tr>

@@ -51,6 +51,7 @@ function row(
     organizationResolutionStatus: opts?.organizationResolutionStatus ?? "UNRESOLVED",
     confirmedOrganizationId: opts?.confirmedOrganizationId ?? null,
     confirmedOrganizationName: opts?.confirmedOrganizationName ?? null,
+    confirmedOrganizationKey: opts?.confirmedOrganizationKey ?? null,
     identityEvidence: opts?.identityEvidence ?? null,
     confirmedReturning: null,
     rankByApplications: 1,

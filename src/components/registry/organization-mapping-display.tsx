@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   ORGANIZATION_MAPPING_EXPLANATIONS,
@@ -10,18 +11,33 @@ import type { OrganizationResolutionOverlayStatus } from "@/lib/participant-inte
 export function OrganizationMappingBadge({
   status,
   name,
+  href,
 }: {
   status: OrganizationResolutionOverlayStatus | string;
   name: string | null;
+  /** Confirmed Organization profile deep link only. */
+  href?: string | null;
 }) {
   const typed = status as OrganizationResolutionOverlayStatus;
   const label = organizationMappingLabel(typed, name);
   if (typed === "CONFIRMED" && name) {
-    return (
+    const badge = (
       <Badge variant="outline" className="bg-emerald-100 text-[#006a56]" data-testid="org-confirmed-badge">
         {label}
       </Badge>
     );
+    if (href) {
+      return (
+        <Link
+          href={href}
+          className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#006a56]"
+          data-testid="org-confirmed-profile-link"
+        >
+          {badge}
+        </Link>
+      );
+    }
+    return badge;
   }
   if (typed === "CANDIDATE") {
     return (

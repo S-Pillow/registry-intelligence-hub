@@ -30,6 +30,7 @@ export type ContentionMemberRow = {
   isGodaddyApplicant: boolean;
   organizationResolutionStatus: OrganizationResolutionOverlayStatus;
   confirmedOrganizationName: string | null;
+  confirmedOrganizationKey?: string | null;
   applicantWebsiteHost: string | null;
   applicantWebsiteUrl: string | null;
   directParentLegalName: string | null;
@@ -188,6 +189,8 @@ export function buildContentionIntelligence(
       const status: OrganizationResolutionOverlayStatus = org?.resolutionStatus ?? "UNRESOLVED";
       const confirmedName =
         status === "CONFIRMED" ? (org?.confirmedOrganizationName ?? null) : null;
+      const confirmedKey =
+        status === "CONFIRMED" ? (org?.confirmedOrganizationKey ?? null) : null;
       const posture = postureByApplicant.get(m.applicantLegalName);
       const rspLabel = posture
         ? prospectingPostureLabel(posture.rspProspectingPosture)
@@ -202,6 +205,7 @@ export function buildContentionIntelligence(
         isGodaddyApplicant: m.applicantLegalName === focalName,
         organizationResolutionStatus: status,
         confirmedOrganizationName: confirmedName,
+        confirmedOrganizationKey: confirmedKey,
         applicantWebsiteHost: identity?.applicantWebsiteHost ?? null,
         applicantWebsiteUrl: identity?.applicantWebsiteUrl ?? null,
         directParentLegalName: identity?.directParentLegalName ?? null,

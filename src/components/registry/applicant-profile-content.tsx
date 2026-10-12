@@ -10,7 +10,6 @@ import {
   type ApplicantIntelligenceLookup,
   type ApplicantIntelligenceProfile,
 } from "@/lib/applicant-intelligence";
-
 function Stat({
   label,
   value,
@@ -92,6 +91,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           <OrganizationMappingBadge
             status={profile.organizationResolutionStatus}
             name={profile.confirmedOrganizationName}
+            href={profile.organizationProfileHref}
           />
           {profile.countries[0] ? (
             <span className="text-sm text-slate-600" data-testid="applicant-country">
@@ -115,7 +115,18 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           <p className="mt-2 text-sm text-slate-700" data-testid="header-org-distinction">
             Legal Applicant remains <span className="font-semibold">{profile.applicantLegalName}</span>.
             Broader Organization:{" "}
-            <span className="font-semibold">Confirmed · {profile.confirmedOrganizationName}</span>.
+            {profile.organizationProfileHref ? (
+              <Link
+                href={profile.organizationProfileHref}
+                className="font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                data-testid="header-org-profile-link"
+              >
+                Confirmed · {profile.confirmedOrganizationName}
+              </Link>
+            ) : (
+              <span className="font-semibold">Confirmed · {profile.confirmedOrganizationName}</span>
+            )}
+            .
           </p>
         ) : profile.organizationResolutionStatus === "UNRESOLVED" ? (
           <p className="mt-2 text-sm text-slate-600" data-testid="header-unresolved-note">
@@ -394,12 +405,23 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
               ))}
             </ul>
           ) : null}
-          <Link
-            href={`/competitive-landscape?q=${encodeURIComponent(profile.organizationContext.organizationName)}`}
-            className="mt-3 inline-block text-sm font-semibold text-[#006a56] underline"
-          >
-            View Organization context
-          </Link>
+          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+            {profile.organizationProfileHref ? (
+              <Link
+                href={profile.organizationProfileHref}
+                className="font-semibold text-[#006a56] underline"
+                data-testid="view-organization-profile"
+              >
+                View Organization Profile
+              </Link>
+            ) : null}
+            <Link
+              href={`/competitive-landscape?q=${encodeURIComponent(profile.organizationContext.organizationName)}`}
+              className="font-semibold text-[#006a56] underline"
+            >
+              View Organization context
+            </Link>
+          </div>
         </section>
       ) : null}
 
