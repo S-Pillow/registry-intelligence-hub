@@ -334,4 +334,11 @@ describe("Command Center intelligence-first 2.x IA", () => {
     expect(cta).toHaveAttribute("href", "/cross-round");
     expect(cta).toHaveTextContent("Explore 2012 vs 2026");
   });
+
+  it("HIST-COHORT-1 — Explore 2012 Applicant structure CTA from What changed since 2012", () => {
+    renderCc(makeDocument());
+    const cta = screen.getByTestId("cc-v2-explore-historical-cohorts");
+    expect(cta).toHaveAttribute("href", "/historical-cohorts");
+    expect(cta).toHaveTextContent("Explore 2012 Applicant structure");
+  });
 });

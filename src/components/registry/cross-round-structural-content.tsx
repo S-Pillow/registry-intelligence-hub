@@ -7,6 +7,7 @@ import type {
   ReturningOrganizationCard,
   StructuralComparisonCard,
 } from "@/lib/cross-round-structural-intelligence";
+import { historicalCohortsHref } from "@/lib/historical-cohort-intelligence";
 
 function formatSigned(n: number): string {
   return n > 0 ? `+${n}` : String(n);
@@ -270,6 +271,18 @@ export function CrossRoundStructuralContent({
           <p className="mt-3 text-xs text-slate-600">{intelligence.participationShape.note}</p>
           <p className="mt-2 text-xs text-slate-600" data-testid="cross-round-coverage-note">
             {intelligence.coverage.wdoDisclosure}
+          </p>
+          <p className="mt-4">
+            <Link
+              href={historicalCohortsHref()}
+              className="text-sm font-semibold text-[#006a56] underline"
+              data-testid="cross-round-historical-cohorts"
+            >
+              Explore 2012 Applicant structure
+            </Link>
+            <span className="mt-1 block text-xs text-slate-600">
+              2012-only portfolio bands and concentration — not an additional cross-round comparison.
+            </span>
           </p>
         </section>
 

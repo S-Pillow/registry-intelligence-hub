@@ -11,6 +11,7 @@ import {
 import { CommandCenterRecentChangesCard } from "@/components/registry/changes-content";
 import type { ChangeIntelFeedState } from "@/change-intel/types";
 import { crossRoundStructuralHref } from "@/lib/cross-round-structural-intelligence";
+import { historicalCohortsHref } from "@/lib/historical-cohort-intelligence";
 
 function CrossRoundCard({
   title,
@@ -168,13 +169,20 @@ function IntelligenceSections({
           ) : null}
         </div>
         {crossRound.applications || crossRound.idn ? (
-          <p className="mt-4">
+          <p className="mt-4 flex flex-wrap items-center gap-3">
             <Link
               href={crossRoundStructuralHref()}
               className="inline-flex items-center rounded-lg bg-[#007d65] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#006a56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
               data-testid="cc-v2-explore-cross-round"
             >
               Explore 2012 vs 2026
+            </Link>
+            <Link
+              href={historicalCohortsHref()}
+              className="inline-flex items-center text-sm font-semibold text-[#006a56] underline-offset-2 hover:underline"
+              data-testid="cc-v2-explore-historical-cohorts"
+            >
+              Explore 2012 Applicant structure
             </Link>
           </p>
         ) : null}

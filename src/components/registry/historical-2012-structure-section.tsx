@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Historical2012StructuralSummary } from "@/historical-2012/structural-summary";
+import { historicalCohortsHref } from "@/lib/historical-cohort-intelligence";
 
 function shareWidth(count: number, denominator: number): number {
   if (denominator <= 0) return 0;
@@ -130,6 +132,15 @@ export function Historical2012StructureSection({ summary }: { summary: Historica
           </CardContent>
         </Card>
       </div>
+      <p className="mt-4">
+        <Link
+          href={historicalCohortsHref()}
+          className="text-sm font-semibold text-[#006a56] underline"
+          data-testid="historical-2012-structure-cohorts-link"
+        >
+          Explore 2012 Applicant structure
+        </Link>
+      </p>
     </section>
   );
 }
