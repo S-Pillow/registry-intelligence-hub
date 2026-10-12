@@ -12,11 +12,13 @@ import {
   HISTORICAL_COHORT_GRAIN,
   HISTORICAL_COHORT_LARGEST_LIMIT,
   HISTORICAL_COHORT_PORTFOLIO_BANDS,
+  HISTORICAL_COHORT_REGION_CODES,
   type HistoricalApplicantPortfolioCohortIntelligence,
 } from "@/lib/historical-cohort-intelligence";
 import {
   buildApplicantLegalNameConcentration,
   EXACT_APPLIED_STRING_COMPETITION_METHOD,
+  exploreHistorical2012RegionHref,
   type Application,
 } from "@/lib/registry-data";
 import { HUB_BASE_PATH, withBasePath } from "@/lib/hub-paths";
@@ -180,11 +182,14 @@ describe("HIST-COHORT-1 performance / payload", () => {
         "oneOffVsMulti",
         "productQuestion",
         "provenance",
+        "regionalStructure",
         "roundProgramYear",
         "subtitle",
         "title",
       ].sort(),
     );
+    expect(intelligence.regionalStructure.rows).toHaveLength(5);
+    expect(JSON.stringify(intelligence.regionalStructure)).not.toContain('"applications":[');
     expect(intelligence.exactStringCompetition.ranked.length).toBeLessThanOrEqual(
       HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT,
     );
@@ -300,6 +305,111 @@ describe("HIST-COHORT-2A concept safety", () => {
     // 230 / 751 must not be framed as contention sets / memberships in product copy fields
     expect(exact.limitations.join(" ")).not.toMatch(/230.*contention sets/i);
     expect(JSON.stringify(intelligence)).not.toMatch(/2012→2026|vs 2026 official initial contention delta/i);
+  });
+});
+
+describe("HIST-COHORT-2B regional Applicant structure", () => {
+  it("pins five Region codes with exact Applicant and Application counts", () => {
+    const regional = intelligence.regionalStructure;
+    expect(HISTORICAL_COHORT_REGION_CODES).toEqual(["NA", "EUR", "AP", "LAC", "AF"]);
+    expect(regional.regionCodes).toEqual(["NA", "EUR", "AP", "LAC", "AF"]);
+    expect(regional.rows).toHaveLength(5);
+    expect(regional.rows.map((row) => row.regionCode)).toEqual(["NA", "EUR", "AP", "LAC", "AF"]);
+    expect(regional.applicantDenominator).toBe(1154);
+    expect(regional.applicationDenominator).toBe(1930);
+
+    const byCode = Object.fromEntries(regional.rows.map((row) => [row.regionCode, row]));
+    expect(byCode.NA).toMatchObject({ applicantCount: 606, applicationCount: 911 });
+    expect(byCode.EUR).toMatchObject({ applicantCount: 304, applicationCount: 675 });
+    expect(byCode.AP).toMatchObject({ applicantCount: 220, applicationCount: 303 });
+    expect(byCode.LAC).toMatchObject({ applicantCount: 15, applicationCount: 24 });
+    expect(byCode.AF).toMatchObject({ applicantCount: 9, applicationCount: 17 });
+    expect(regional.rows.reduce((sum, row) => sum + row.applicantCount, 0)).toBe(1154);
+    expect(regional.rows.reduce((sum, row) => sum + row.applicationCount, 0)).toBe(1930);
+  });
+
+  it("derives deterministic shares from denominators", () => {
+    const byCode = Object.fromEntries(
+      intelligence.regionalStructure.rows.map((row) => [row.regionCode, row]),
+    );
+    expect(byCode.NA.applicantShare).toBeCloseTo(606 / 1154, 12);
+    expect(byCode.NA.applicationShare).toBeCloseTo(911 / 1930, 12);
+    expect(formatCohortSharePercent(byCode.NA.applicantShare)).toBe("52.51%");
+    expect(formatCohortSharePercent(byCode.NA.applicationShare)).toBe("47.20%");
+    expect(formatCohortSharePercent(byCode.EUR.applicantShare)).toBe("26.34%");
+    expect(formatCohortSharePercent(byCode.EUR.applicationShare)).toBe("34.97%");
+    expect(formatCohortSharePercent(byCode.AP.applicantShare)).toBe("19.06%");
+    expect(formatCohortSharePercent(byCode.AP.applicationShare)).toBe("15.70%");
+    expect(formatCohortSharePercent(byCode.LAC.applicantShare)).toBe("1.30%");
+    expect(formatCohortSharePercent(byCode.LAC.applicationShare)).toBe("1.24%");
+    expect(formatCohortSharePercent(byCode.AF.applicantShare)).toBe("0.78%");
+    expect(formatCohortSharePercent(byCode.AF.applicationShare)).toBe("0.88%");
+  });
+
+  it("maps every Applicant legal name to exactly one region", () => {
+    const regionsByApplicant = new Map<string, Set<string>>();
+    for (const application of applications) {
+      const name = application.applicant.trim();
+      const slot = regionsByApplicant.get(name) ?? new Set<string>();
+      slot.add(application.region);
+      regionsByApplicant.set(name, slot);
+    }
+    expect(regionsByApplicant.size).toBe(1154);
+    expect([...regionsByApplicant.values()].every((regions) => regions.size === 1)).toBe(true);
+  });
+
+  it("does not group by Organization fields", () => {
+    const source = buildHistoricalApplicantPortfolioCohorts.toString();
+    expect(source).not.toMatch(/application\.organization/);
+    expect(intelligence.grain).toBe(HISTORICAL_COHORT_GRAIN);
+    expect(intelligence.regionalStructure.regionField).toBe("Region");
+    expect(intelligence.regionalStructure.limitations.join(" ")).toMatch(
+      /Organizations and affiliates are not merged/i,
+    );
+  });
+
+  it("exposes Explore region hrefs without new filter semantics", () => {
+    expect(exploreHistorical2012RegionHref("NA")).toBe(
+      "/explore?dataset=2012-historical&entity=applications&region=NA",
+    );
+    expect(intelligence.regionalStructure.rows.every((row) => row.exploreHref === exploreHistorical2012RegionHref(row.regionCode))).toBe(
+      true,
+    );
+  });
+
+  it("fail-closes on missing, unexpected, or multi-region Applicant legal names", () => {
+    const base = applications[0]!;
+    const mk = (overrides: Partial<Application>): Application =>
+      ({ ...base, ...overrides }) as Application;
+
+    expect(() =>
+      buildHistoricalApplicantPortfolioCohorts([
+        mk({ id: "a1", applicant: "Solo Applicant", region: "" }),
+      ]),
+    ).toThrow(/missing Region/i);
+
+    expect(() =>
+      buildHistoricalApplicantPortfolioCohorts([
+        mk({ id: "a1", applicant: "Solo Applicant", region: "ZZ" }),
+      ]),
+    ).toThrow(/unexpected Region/i);
+
+    expect(() =>
+      buildHistoricalApplicantPortfolioCohorts([
+        mk({ id: "a1", applicant: "Split Applicant", region: "NA" }),
+        mk({ id: "a2", applicant: "Split Applicant", region: "EUR" }),
+      ]),
+    ).toThrow(/multiple regions/i);
+  });
+
+  it("keeps regional product semantics 2012-only and non-market", () => {
+    const regional = intelligence.regionalStructure;
+    expect(regional.label).toBe("2012 Applicant regional structure");
+    expect(regional.limitations.join(" ")).toMatch(/not the Geographic Application designation/i);
+    expect(regional.limitations.join(" ")).toMatch(/2012-only/i);
+    expect(intelligence.exclusions.join(" ")).toMatch(/Cross-round regional/i);
+    expect(JSON.stringify(regional)).not.toMatch(/market/i);
+    expect(JSON.stringify(regional)).not.toMatch(/2012→2026|vs 2026/i);
   });
 });
 

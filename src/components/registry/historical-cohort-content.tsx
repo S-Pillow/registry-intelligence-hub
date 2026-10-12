@@ -45,8 +45,14 @@ export function HistoricalCohortContent({
 }: {
   intelligence: HistoricalApplicantPortfolioCohortIntelligence;
 }) {
-  const { oneOffVsMulti: story, concentration, largest, bands, exactStringCompetition: exact } =
-    intelligence;
+  const {
+    oneOffVsMulti: story,
+    concentration,
+    largest,
+    bands,
+    exactStringCompetition: exact,
+    regionalStructure: regional,
+  } = intelligence;
   const maxBandShare = Math.max(...bands.map((band) => band.applicationShare), 0);
 
   return (
@@ -76,6 +82,13 @@ export function HistoricalCohortContent({
               data-testid="cohort-header-exact-string"
             >
               Exact-string competition
+            </Link>
+            <Link
+              href="#regional-applicant-structure"
+              className="font-medium text-slate-600 hover:text-slate-900"
+              data-testid="cohort-header-regional"
+            >
+              Regional structure
             </Link>
             <Link
               href={intelligence.hrefs.dataHealth}
@@ -469,7 +482,137 @@ export function HistoricalCohortContent({
           </p>
         </section>
 
-        {/* 7. Methodology */}
+        {/* 7. Applicant regional structure */}
+        <section
+          id="regional-applicant-structure"
+          className="mt-10 scroll-mt-6"
+          aria-labelledby="regional-structure-heading"
+          data-testid="cohort-regional"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
+            2012 only · Applicant Region
+          </p>
+          <h2 id="regional-structure-heading" className="mt-2 text-xl font-bold text-slate-950">
+            {regional.label}
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-slate-600" data-testid="cohort-regional-question">
+            {regional.productQuestion}
+          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+            How Applicant legal names and Applications were distributed across the published 2012
+            Region codes.
+          </p>
+
+          <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <table className="min-w-full text-left text-sm" data-testid="cohort-regional-table">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-3 font-semibold sm:px-4">Region</th>
+                  <th className="px-3 py-3 font-semibold sm:px-4">
+                    <span className="hidden sm:inline">Applicant legal names</span>
+                    <span className="sm:hidden">Applicants</span>
+                  </th>
+                  <th className="px-3 py-3 font-semibold sm:px-4">
+                    <span className="hidden sm:inline">Applicant share</span>
+                    <span className="sm:hidden">Appl. %</span>
+                  </th>
+                  <th className="px-3 py-3 font-semibold sm:px-4">Applications</th>
+                  <th className="px-3 py-3 font-semibold sm:px-4">
+                    <span className="hidden sm:inline">Application share</span>
+                    <span className="sm:hidden">Apps %</span>
+                  </th>
+                  <th className="px-3 py-3 font-semibold sm:px-4">Explore</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regional.rows.map((row) => (
+                  <tr
+                    key={row.regionCode}
+                    className="border-b border-slate-100 last:border-0"
+                    data-testid={`cohort-regional-row-${row.regionCode}`}
+                    data-region-code={row.regionCode}
+                  >
+                    <td
+                      className="px-3 py-3 font-semibold tabular-nums text-slate-950 sm:px-4"
+                      data-testid={`cohort-regional-code-${row.regionCode}`}
+                    >
+                      {row.regionCode}
+                    </td>
+                    <td
+                      className="px-3 py-3 tabular-nums text-slate-900 sm:px-4"
+                      data-testid={`cohort-regional-applicants-${row.regionCode}`}
+                    >
+                      <span className="font-medium">{row.applicantCount.toLocaleString()}</span>
+                      <span className="mt-0.5 block text-xs text-slate-600 sm:hidden">
+                        {formatCohortSharePercent(row.applicantShare)}
+                      </span>
+                    </td>
+                    <td
+                      className="hidden px-3 py-3 tabular-nums text-slate-700 sm:table-cell sm:px-4"
+                      data-testid={`cohort-regional-applicant-share-${row.regionCode}`}
+                    >
+                      {formatCohortSharePercent(row.applicantShare)}
+                    </td>
+                    <td
+                      className="px-3 py-3 tabular-nums text-slate-900 sm:px-4"
+                      data-testid={`cohort-regional-apps-${row.regionCode}`}
+                    >
+                      <span className="font-medium">{row.applicationCount.toLocaleString()}</span>
+                      <span className="mt-0.5 block text-xs text-slate-600 sm:hidden">
+                        {formatCohortSharePercent(row.applicationShare)}
+                      </span>
+                    </td>
+                    <td
+                      className="hidden px-3 py-3 tabular-nums text-slate-700 sm:table-cell sm:px-4"
+                      data-testid={`cohort-regional-app-share-${row.regionCode}`}
+                    >
+                      {formatCohortSharePercent(row.applicationShare)}
+                    </td>
+                    <td className="px-3 py-3 sm:px-4">
+                      <Link
+                        href={row.exploreHref}
+                        className="font-semibold text-[#006a56] underline"
+                        data-testid={`cohort-regional-explore-${row.regionCode}`}
+                      >
+                        Explore
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p
+              className="border-t border-slate-100 px-3 py-2 text-xs text-slate-600 sm:px-4"
+              data-testid="cohort-regional-footer"
+            >
+              {regional.applicantDenominator.toLocaleString()} Applicant legal names ·{" "}
+              {regional.applicationDenominator.toLocaleString()} Applications
+            </p>
+          </div>
+
+          <ul
+            className="mt-4 max-w-3xl list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700"
+            data-testid="cohort-regional-interpretation"
+          >
+            <li>
+              NA accounts for the largest share of Applicant legal names and Applications.
+            </li>
+            <li>EUR&apos;s Application share is higher than its Applicant share.</li>
+            <li>AP&apos;s Applicant share is higher than its Application share.</li>
+          </ul>
+          <p
+            className="mt-3 max-w-3xl text-xs leading-5 text-slate-600"
+            data-testid="cohort-regional-methodology"
+          >
+            Region is the published ICANN 2012 Reveal Day <code className="text-[11px]">Region</code>{" "}
+            code on each Application. Applicant Region is not the Geographic Application designation,
+            not Organization headquarters, and not a market. 2012-only — not compared to 2026
+            regional figures. Counts use exact Applicant legal names; Organizations and affiliates are
+            not merged.
+          </p>
+        </section>
+
+        {/* 8. Methodology */}
         <section className="mt-10 mb-8" aria-labelledby="methodology-heading" data-testid="cohort-methodology">
           <h2 id="methodology-heading" className="text-xl font-bold text-slate-950">
             Historical methodology and limitations

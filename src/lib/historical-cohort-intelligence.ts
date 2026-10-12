@@ -1,9 +1,10 @@
 /**
- * HIST-COHORT-1 / 2A — 2012 Applicant portfolio structure + exact-string competition
- * exposure (2012-only).
+ * HIST-COHORT-1 / 2A / 2B — 2012 Applicant portfolio structure, exact-string
+ * competition exposure, and regional Applicant structure (2012-only).
  *
  * Grain: exact Applicant legal name on the committed Reveal Day fixture.
  * Competition unit: exact repeated applied-for string (not official contention).
+ * Region: source-provided Reveal Day `Region` code (not Geographic designation).
  * No Organization merge, no affiliate inference, no cross-round deltas.
  */
 
@@ -15,6 +16,7 @@ import {
   EXACT_APPLIED_STRING_COMPETITION_GRAIN,
   EXACT_APPLIED_STRING_COMPETITION_METHOD,
   exactAppliedForStringKey,
+  exploreHistorical2012RegionHref,
   exploreHistorical2012StringsHref,
   type Application,
 } from "@/lib/registry-data";
@@ -46,6 +48,13 @@ export const HISTORICAL_COHORT_LARGEST_LIMIT = 12;
 
 /** Bounded exact-string competition ranking (exposed Applications desc). */
 export const HISTORICAL_COHORT_EXACT_STRING_EXPOSURE_LIMIT = 25;
+
+/** Canonical Reveal Day Region presentation order (not a performance ranking). */
+export const HISTORICAL_COHORT_REGION_CODES = ["NA", "EUR", "AP", "LAC", "AF"] as const;
+
+export type HistoricalCohortRegionCode = (typeof HISTORICAL_COHORT_REGION_CODES)[number];
+
+const ACCEPTED_REGION_CODES = new Set<string>(HISTORICAL_COHORT_REGION_CODES);
 
 export type HistoricalCohortPortfolioBand = {
   id: HistoricalCohortBandId;
@@ -109,6 +118,26 @@ export type HistoricalCohortExactStringCompetition = {
   limitations: string[];
 };
 
+export type HistoricalCohortRegionalRow = {
+  regionCode: HistoricalCohortRegionCode;
+  applicantCount: number;
+  applicantShare: number;
+  applicationCount: number;
+  applicationShare: number;
+  exploreHref: string;
+};
+
+export type HistoricalCohortRegionalStructure = {
+  label: "2012 Applicant regional structure";
+  productQuestion: string;
+  regionField: "Region";
+  regionCodes: readonly HistoricalCohortRegionCode[];
+  applicationDenominator: number;
+  applicantDenominator: number;
+  rows: HistoricalCohortRegionalRow[];
+  limitations: string[];
+};
+
 export type HistoricalApplicantPortfolioCohortIntelligence = {
   roundProgramYear: 2012;
   observation: "2012-reveal-day";
@@ -125,6 +154,7 @@ export type HistoricalApplicantPortfolioCohortIntelligence = {
   concentration: HistoricalCohortConcentrationRow[];
   largest: HistoricalCohortLargestApplicant[];
   exactStringCompetition: HistoricalCohortExactStringCompetition;
+  regionalStructure: HistoricalCohortRegionalStructure;
   provenance: {
     sourceLabel: string;
     grainLabel: string;
@@ -140,6 +170,7 @@ export type HistoricalApplicantPortfolioCohortIntelligence = {
     exploreHistoricalStrings: string;
     dataHealth: string;
     exactStringSectionAnchor: string;
+    regionalSectionAnchor: string;
   };
 };
 
@@ -247,6 +278,12 @@ export function buildHistoricalApplicantPortfolioCohorts(
     applicationDenominator,
   });
 
+  const regionalStructure = buildRegionalApplicantStructure({
+    applications,
+    applicantLegalNameDenominator,
+    applicationDenominator,
+  });
+
   return {
     roundProgramYear: 2012,
     observation: "2012-reveal-day",
@@ -272,6 +309,7 @@ export function buildHistoricalApplicantPortfolioCohorts(
     concentration: concentrationRows,
     largest,
     exactStringCompetition,
+    regionalStructure,
     provenance: {
       sourceLabel: APPROVED_2012_BASELINE.sourceLabel,
       grainLabel: "Exact Applicant legal name on each 2012 Reveal Day Application",
@@ -284,6 +322,7 @@ export function buildHistoricalApplicantPortfolioCohorts(
         "Application concentration by Applicant legal name is not economic market share.",
         "Exact-string competition counts Applications for the same exact applied-for string — not official contention sets or memberships.",
         "Preliminary contention remains a separate historical concept and is not ranked as a peer leaderboard here.",
+        "Applicant Region is the published 2012 Reveal Day Region code — not the Geographic Application designation, not a market, and not compared to 2026.",
       ],
     },
     exclusions: [
@@ -292,6 +331,7 @@ export function buildHistoricalApplicantPortfolioCohorts(
       "Historical Organization cohort as round coverage",
       "Cross-round Applicant concentration delta",
       "Cross-round exact-string / contention comparison",
+      "Cross-round regional Applicant or Application deltas",
       "IDN as a primary workflow",
     ],
     hrefs: {
@@ -301,7 +341,112 @@ export function buildHistoricalApplicantPortfolioCohorts(
       exploreHistoricalStrings: exploreHistorical2012StringsHref(),
       dataHealth: hubPath("/data-health"),
       exactStringSectionAnchor: `${hubPath("/historical-cohorts")}#exact-string-competition`,
+      regionalSectionAnchor: `${hubPath("/historical-cohorts")}#regional-applicant-structure`,
     },
+  };
+}
+
+/**
+ * HIST-COHORT-2B — Applicant legal-name × Reveal Day Region aggregates.
+ * Fail-closed on missing/unexpected region codes or multi-region legal names.
+ * Groups by `application.applicant` + `application.region` only (never Organization).
+ */
+function buildRegionalApplicantStructure(args: {
+  applications: readonly Application[];
+  applicantLegalNameDenominator: number;
+  applicationDenominator: number;
+}): HistoricalCohortRegionalStructure {
+  const applicationCounts = new Map<HistoricalCohortRegionCode, number>();
+  const applicantRegions = new Map<string, Set<string>>();
+
+  for (const code of HISTORICAL_COHORT_REGION_CODES) {
+    applicationCounts.set(code, 0);
+  }
+
+  for (const application of args.applications) {
+    const regionCode = application.region?.trim() ?? "";
+    if (!regionCode || regionCode === "Unknown region") {
+      throw new Error("HIST-COHORT-2B fail-closed: Application missing Region code");
+    }
+    if (!ACCEPTED_REGION_CODES.has(regionCode)) {
+      throw new Error(
+        `HIST-COHORT-2B fail-closed: unexpected Region code "${regionCode}"`,
+      );
+    }
+    const code = regionCode as HistoricalCohortRegionCode;
+    applicationCounts.set(code, (applicationCounts.get(code) ?? 0) + 1);
+
+    const applicantLegalName = application.applicant.trim();
+    if (!applicantLegalName) {
+      throw new Error("HIST-COHORT-2B fail-closed: Application missing Applicant legal name");
+    }
+    const regions = applicantRegions.get(applicantLegalName) ?? new Set<string>();
+    regions.add(code);
+    applicantRegions.set(applicantLegalName, regions);
+  }
+
+  if (applicantRegions.size !== args.applicantLegalNameDenominator) {
+    throw new Error(
+      `HIST-COHORT-2B fail-closed: Applicant legal-name count ${applicantRegions.size} ≠ denominator ${args.applicantLegalNameDenominator}`,
+    );
+  }
+
+  const applicantCounts = new Map<HistoricalCohortRegionCode, number>();
+  for (const code of HISTORICAL_COHORT_REGION_CODES) {
+    applicantCounts.set(code, 0);
+  }
+
+  for (const [applicantLegalName, regions] of applicantRegions) {
+    if (regions.size !== 1) {
+      throw new Error(
+        `HIST-COHORT-2B fail-closed: Applicant legal name spans multiple regions: ${applicantLegalName} → ${[...regions].sort().join(",")}`,
+      );
+    }
+    const code = [...regions][0] as HistoricalCohortRegionCode;
+    applicantCounts.set(code, (applicantCounts.get(code) ?? 0) + 1);
+  }
+
+  const rows: HistoricalCohortRegionalRow[] = HISTORICAL_COHORT_REGION_CODES.map((regionCode) => {
+    const applicantCount = applicantCounts.get(regionCode) ?? 0;
+    const applicationCount = applicationCounts.get(regionCode) ?? 0;
+    return {
+      regionCode,
+      applicantCount,
+      applicantShare: share(applicantCount, args.applicantLegalNameDenominator),
+      applicationCount,
+      applicationShare: share(applicationCount, args.applicationDenominator),
+      exploreHref: exploreHistorical2012RegionHref(regionCode),
+    };
+  });
+
+  const applicantTotal = rows.reduce((sum, row) => sum + row.applicantCount, 0);
+  const applicationTotal = rows.reduce((sum, row) => sum + row.applicationCount, 0);
+  if (applicantTotal !== args.applicantLegalNameDenominator) {
+    throw new Error(
+      `HIST-COHORT-2B fail-closed: regional Applicant sum ${applicantTotal} ≠ ${args.applicantLegalNameDenominator}`,
+    );
+  }
+  if (applicationTotal !== args.applicationDenominator) {
+    throw new Error(
+      `HIST-COHORT-2B fail-closed: regional Application sum ${applicationTotal} ≠ ${args.applicationDenominator}`,
+    );
+  }
+
+  return {
+    label: "2012 Applicant regional structure",
+    productQuestion:
+      "How were 2012 Applicant legal names and Applications distributed across Applicant regions?",
+    regionField: "Region",
+    regionCodes: HISTORICAL_COHORT_REGION_CODES,
+    applicationDenominator: args.applicationDenominator,
+    applicantDenominator: args.applicantLegalNameDenominator,
+    rows,
+    limitations: [
+      "Region is the published ICANN 2012 Reveal Day Region code on each Application.",
+      "Applicant Region is not the Geographic Application designation.",
+      "2012-only — not a regional comparison to 2026.",
+      "Counts use exact Applicant legal names; Organizations and affiliates are not merged.",
+    ],
   };
 }
 

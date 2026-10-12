@@ -78,5 +78,54 @@ describe("HistoricalCohortContent", () => {
       expect.stringContaining("dataset=2012-historical"),
     );
     expect(exactSection).not.toHaveTextContent(/official contention memberships/i);
+
+    // HIST-COHORT-2B — after exact-string
+    const pageHtml = screen.getByTestId("historical-cohorts-page").innerHTML;
+    expect(pageHtml.indexOf('data-testid="cohort-exact-string"')).toBeLessThan(
+      pageHtml.indexOf('data-testid="cohort-regional"'),
+    );
+    expect(pageHtml.indexOf('data-testid="cohort-bands"')).toBeLessThan(
+      pageHtml.indexOf('data-testid="cohort-exact-string"'),
+    );
+
+    expect(screen.getByRole("heading", { name: "2012 Applicant regional structure" })).toBeInTheDocument();
+    expect(screen.getByTestId("cohort-regional")).toHaveAttribute("id", "regional-applicant-structure");
+    expect(screen.getByTestId("cohort-header-regional")).toHaveAttribute(
+      "href",
+      "#regional-applicant-structure",
+    );
+    expect(screen.getByTestId("cohort-regional-table").querySelectorAll("tbody tr")).toHaveLength(5);
+    expect(screen.getByTestId("cohort-regional-code-NA")).toHaveTextContent("NA");
+    expect(screen.getByTestId("cohort-regional-applicants-NA")).toHaveTextContent("606");
+    expect(screen.getByTestId("cohort-regional-apps-NA")).toHaveTextContent("911");
+    expect(screen.getByTestId("cohort-regional-applicant-share-NA")).toHaveTextContent("52.51%");
+    expect(screen.getByTestId("cohort-regional-app-share-NA")).toHaveTextContent("47.20%");
+    expect(screen.getByTestId("cohort-regional-applicants-EUR")).toHaveTextContent("304");
+    expect(screen.getByTestId("cohort-regional-apps-EUR")).toHaveTextContent("675");
+    expect(screen.getByTestId("cohort-regional-applicant-share-EUR")).toHaveTextContent("26.34%");
+    expect(screen.getByTestId("cohort-regional-app-share-EUR")).toHaveTextContent("34.97%");
+    expect(screen.getByTestId("cohort-regional-applicants-AP")).toHaveTextContent("220");
+    expect(screen.getByTestId("cohort-regional-apps-AP")).toHaveTextContent("303");
+    expect(screen.getByTestId("cohort-regional-footer")).toHaveTextContent(/1,154 Applicant legal names/);
+    expect(screen.getByTestId("cohort-regional-footer")).toHaveTextContent(/1,930 Applications/);
+    expect(screen.getByTestId("cohort-regional-methodology")).toHaveTextContent(
+      /not the Geographic Application designation/i,
+    );
+    expect(screen.getByTestId("cohort-regional")).toHaveTextContent(/not a market/i);
+    expect(screen.getByTestId("cohort-regional")).not.toHaveTextContent(
+      /North American market|European market|Asia-Pacific market|regional market/i,
+    );
+    expect(screen.getByTestId("cohort-regional")).not.toHaveTextContent(/2012→2026|vs 2026/i);
+    expect(screen.getByTestId("cohort-regional-explore-NA")).toHaveAttribute(
+      "href",
+      "/explore?dataset=2012-historical&entity=applications&region=NA",
+    );
+    expect(screen.getByTestId("cohort-regional-explore-EUR")).toHaveAttribute(
+      "href",
+      "/explore?dataset=2012-historical&entity=applications&region=EUR",
+    );
+    expect(screen.getByTestId("cohort-regional-explore-AP").getAttribute("href")).not.toMatch(
+      /^https?:\/\//,
+    );
   });
 });

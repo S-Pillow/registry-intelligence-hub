@@ -1,4 +1,4 @@
-# Historical cohort intelligence (HIST-COHORT-1 / 2A)
+# Historical cohort intelligence (HIST-COHORT-1 / 2A / 2B)
 
 Route: **`/historical-cohorts`**  
 Title: **2012 Applicant portfolio structure**  
@@ -8,6 +8,7 @@ Subtitle: How Applications were distributed across Applicant legal names in the 
 
 1. Was the 2012 round dominated by one-off Applicants or portfolio players, and how concentrated were Applications among the largest Applicant legal names?
 2. **(HIST-COHORT-2A)** How exposed were 2012 Applicant portfolios to exact-string competition?
+3. **(HIST-COHORT-2B)** How were 2012 Applicant legal names and Applications distributed across Applicant regions?
 
 ## Governing grain
 
@@ -134,6 +135,54 @@ Do **not** imply exact repeated string == preliminary contention set.
 
 No 2012 exact-repeat vs 2026 contention deltas. CROSS-ROUND-STRUCT-1 blockers unchanged.
 
+## Applicant regional structure (HIST-COHORT-2B)
+
+### Source semantics
+
+Region is the published ICANN 2012 Reveal Day CSV `Region` code, projected to `application.region` (trim only). No country→region mapping.
+
+Accepted codes (presentation order): **NA · EUR · AP · LAC · AF**
+
+Region means the Applicant’s published Reveal Day regional classification. It is **not**:
+
+- the Geographic Application designation (`Geographic?` / browser `type`);
+- applied-for string geography;
+- Organization headquarters;
+- a market.
+
+Discovery detail (including Geographic? 66 vs exclusive type Geographic 55): `docs/historical-cohort-2b-regional-discovery.md`.
+
+### Grain and consistency
+
+Exact Applicant legal name. Every legal name maps to exactly one region (1154 / 1154). Missing, unexpected, or multi-region legal names fail closed.
+
+### Aggregates
+
+| Region | Applicant legal names | Applicant share | Applications | Application share |
+| --- | ---: | ---: | ---: | ---: |
+| NA | 606 | 52.51% | 911 | 47.20% |
+| EUR | 304 | 26.34% | 675 | 34.97% |
+| AP | 220 | 19.06% | 303 | 15.70% |
+| LAC | 15 | 1.30% | 24 | 1.24% |
+| AF | 9 | 0.78% | 17 | 0.88% |
+| **Total** | **1154** | **100%** | **1930** | **100%** |
+
+### UI
+
+Compact five-row comparison table after exact-string competition. In-page anchor: `#regional-applicant-structure`.
+
+Descriptive interpretation only (no causal / performance wording). Mean Applications per Applicant is research context only and is **not** shown in v1.
+
+### Drill-down
+
+`/explore?dataset=2012-historical&entity=applications&region=<CODE>`
+
+Existing Explore region filter; no new query parameter.
+
+### Cross-round prohibition
+
+No 2012→2026 regional deltas. CROSS-ROUND-STRUCT-1 regional blockers unchanged.
+
 ## Exclusions
 
 Not first-class on this page:
@@ -141,7 +190,7 @@ Not first-class on this page:
 - Community / Geographic leaderboards
 - Preliminary contention leaderboard
 - Historical Organization cohort as round coverage
-- Cross-round Applicant / concentration / exact-string deltas
+- Cross-round Applicant / concentration / exact-string / regional deltas
 - IDN as a primary historical workflow (deferred)
 
 ## Cross-round non-comparability
@@ -153,7 +202,7 @@ Entry from `/cross-round` is a 2012-only drill-down, not another comparison metr
 ## Performance architecture
 
 - Server loads the committed 2012 fixture.
-- `buildHistoricalApplicantPortfolioCohorts` derives aggregates + bounded top-N only (portfolio + exact-string exposure).
+- `buildHistoricalApplicantPortfolioCohorts` derives aggregates + bounded top-N only (portfolio + exact-string exposure + five regional rows).
 - Client payload excludes the 1930-row Application corpus.
 - Historical Explore continues to hydrate the full document when opened; the cohort page does not.
 
@@ -167,6 +216,10 @@ Exact-string section also links to historical string browse:
 
 `/explore?dataset=2012-historical&entity=strings`
 
+Regional rows link to:
+
+`/explore?dataset=2012-historical&entity=applications&region=<CODE>`
+
 No new 2012 Applicant Profile. No automatic link to 2026 Applicant Profiles from name equality.
 
 ## Provenance (business UI)
@@ -176,8 +229,9 @@ Expose:
 - 2012 Reveal Day source label
 - Applicant legal-name grain
 - Exact applied-string grouping for competition exposure
+- Region = published Reveal Day Region code (≠ Geographic designation)
 - 1930 / 1154 denominators
-- methodology limitations (including exact-string ≠ official contention)
+- methodology limitations (including exact-string ≠ official contention; 2012-only regional view)
 
 Do not expose corpus hashes, internal schema IDs, or fixture filenames on the normal business surface.
 
@@ -185,10 +239,11 @@ Do not expose corpus hashes, internal schema IDs, or fixture filenames on the no
 
 - Command Center — “Explore 2012 Applicant structure”
 - `/cross-round` — “Explore 2012 Applicant structure”
-- In-page anchor: `#exact-string-competition`
+- In-page anchors: `#exact-string-competition`, `#regional-applicant-structure`
 
 ## Code
 
 - Derivation: `src/lib/historical-cohort-intelligence.ts`
 - Page: `src/app/historical-cohorts/page.tsx`
 - UI: `src/components/registry/historical-cohort-content.tsx`
+- Discovery: `docs/historical-cohort-2b-regional-discovery.md`

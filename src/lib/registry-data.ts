@@ -197,6 +197,15 @@ export function exploreHistorical2012ContentionApplicationsHref() {
   return `${hubPath("/explore")}?${params}`;
 }
 
+/** Explore handoff for 2012 Applications filtered by Reveal Day Region code (HIST-COHORT-2B). */
+export function exploreHistorical2012RegionHref(regionCode: string) {
+  const params = new URLSearchParams();
+  params.set("dataset", "2012-historical");
+  params.set("entity", "applications");
+  params.set("region", regionCode);
+  return `${hubPath("/explore")}?${params}`;
+}
+
 /** Explore deep link preserving historical string browse context for one applied string. */
 export function exploreHistorical2012StringResearchHref(stringKey: string) {
   const params = new URLSearchParams();
