@@ -7,7 +7,7 @@
 ## Active 2.x hierarchy
 
 1. **Round posture** — official Applications 1615, Applicants 481, official initial contention 263 / 891  
-2. **What changed since 2012** — only READY_WITH_LIMITATION comparisons (Applications, IDN)  
+2. **What changed since 2012** — only READY_WITH_LIMITATION comparisons (Applications, IDN), with CTA **Explore 2012 vs 2026** → `/cross-round` (see `docs/cross-round-structural-intelligence.md`)  
 3. **Competitive structure** — official initial contention (not exact-string grouping)  
 4. **Round composition** — designation / relationship orientation (not sectors/categories)  
 5. **Coverage** — PARTIAL 1614/1615 coverage + Data & methodology (`/data-health`) link 

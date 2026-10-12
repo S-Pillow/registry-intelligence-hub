@@ -116,6 +116,7 @@ const paths = [
   withBasePath("/saved"),
   withBasePath("/briefings"),
   withBasePath("/data-health"),
+  withBasePath("/cross-round"),
 ];
 
 killListenersOnPort(port);

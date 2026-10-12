@@ -327,4 +327,11 @@ describe("Command Center intelligence-first 2.x IA", () => {
     // App-relative href is correct for next/link; Next prefixes configured basePath at runtime.
     expect(cta.getAttribute("href")).not.toBe("https://forgeforward.app/contention");
   });
+
+  it("CROSS-ROUND-STRUCT-1 — Explore 2012 vs 2026 CTA from What changed since 2012", () => {
+    renderCc(makeDocument());
+    const cta = screen.getByTestId("cc-v2-explore-cross-round");
+    expect(cta).toHaveAttribute("href", "/cross-round");
+    expect(cta).toHaveTextContent("Explore 2012 vs 2026");
+  });
 });

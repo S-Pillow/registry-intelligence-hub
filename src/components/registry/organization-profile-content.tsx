@@ -176,6 +176,15 @@ function ProfileFound({ profile }: { profile: OrganizationIntelligenceProfile })
         <Link href={profile.contentionHref} className="font-semibold text-[#006a56] underline">
           Contention
         </Link>
+        {profile.confirmedReturning ? (
+          <Link
+            href="/cross-round"
+            className="font-semibold text-[#006a56] underline"
+            data-testid="org-cross-round-link"
+          >
+            2012 vs 2026 structural comparison
+          </Link>
+        ) : null}
         {profile.applicantEntityCount === 1 ? (
           <Link
             href={profile.applicants[0]!.profileHref}

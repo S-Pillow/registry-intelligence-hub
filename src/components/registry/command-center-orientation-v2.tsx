@@ -10,6 +10,7 @@ import {
 } from "@/lib/command-center-intelligence-v2";
 import { CommandCenterRecentChangesCard } from "@/components/registry/changes-content";
 import type { ChangeIntelFeedState } from "@/change-intel/types";
+import { crossRoundStructuralHref } from "@/lib/cross-round-structural-intelligence";
 
 function CrossRoundCard({
   title,
@@ -166,6 +167,17 @@ function IntelligenceSections({
             />
           ) : null}
         </div>
+        {crossRound.applications || crossRound.idn ? (
+          <p className="mt-4">
+            <Link
+              href={crossRoundStructuralHref()}
+              className="inline-flex items-center rounded-lg bg-[#007d65] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#006a56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
+              data-testid="cc-v2-explore-cross-round"
+            >
+              Explore 2012 vs 2026
+            </Link>
+          </p>
+        ) : null}
         <ul className="sr-only" data-testid="cc-v2-omitted-blocked-cross-round">
           {crossRound.omittedBlocked.map((id) => (
             <li key={id}>{id}</li>
