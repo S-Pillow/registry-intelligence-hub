@@ -38,6 +38,22 @@ Counts must agree with Change Intelligence’s official contention membership un
 
 Application membership count and distinct Applicant count are separate.
 
+## Crowding distribution (APPLICANT-INTEL-1)
+
+The `/contention` page explains crowding in business language:
+
+- Heading: **How crowded are the contention sets?**
+- Plain-language definition of a contention set (Applications competing; Application count may exceed distinct Applicants)
+- Largest set: **N competing Applications** (not “N members”)
+- Distribution rows: **N Applications · M sets**
+- Clicking a distribution row reveals the matching set(s) with set ID, string(s), Application count, distinct Applicant count, and GoDaddy indicator
+- Opening a set uses the existing set-detail / deep-link flow
+- Interaction is keyboard-accessible (`button` + `aria-expanded`)
+
+Do not present unexplained “Size N: M sets / members” chips.
+
+Applicant legal names in set detail and counterpart lists deep-link to `/applicant?name=…`.
+
 ## GoDaddy exposure
 
 **GoDaddy exposure** = official initial contention sets that contain one or more Registry Services, LLC Applications.

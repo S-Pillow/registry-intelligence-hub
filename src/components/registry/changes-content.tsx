@@ -7,6 +7,7 @@ import type {
   ChangeRecord,
   PrimaryImpact,
 } from "@/change-intel/types";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
 
 const IMPACT_LABEL: Record<PrimaryImpact, string> = {
   GODADDY_DIRECT: "GoDaddy direct",
@@ -76,7 +77,15 @@ function ChangeEntry({ change }: { change: ChangeRecord }) {
         {change.applicantLegalName ? (
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-500">Applicant</dt>
-            <dd className="font-semibold">{change.applicantLegalName}</dd>
+            <dd className="font-semibold">
+              <Link
+                href={applicantProfileHref(change.applicantLegalName)}
+                className="text-[#006a56] underline-offset-2 hover:underline"
+                data-testid="change-applicant-profile-link"
+              >
+                {change.applicantLegalName}
+              </Link>
+            </dd>
           </div>
         ) : null}
         {change.applicationId ? (

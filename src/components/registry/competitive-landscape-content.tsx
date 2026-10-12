@@ -13,6 +13,7 @@ import {
   type ParticipantOverlays,
   type ParticipantSortKey,
 } from "@/lib/participant-intelligence";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import { loadEvaluatedMainRspArtifact } from "@/lib/icann-evaluated-rsp";
 import {
   buildRspOpportunityIntelligence,
@@ -600,6 +601,13 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
               })()}
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 <Link
+                  href={applicantProfileHref(selectedProspectRow.applicantLegalName)}
+                  className="font-semibold text-[#006a56] underline"
+                  data-testid="prospect-applicant-profile"
+                >
+                  Applicant profile
+                </Link>
+                <Link
                   href={exploreApplicantHref(selectedProspectRow.applicantLegalName)}
                   className="font-semibold text-[#006a56] underline"
                   data-testid="prospect-explore-applicant"
@@ -647,7 +655,11 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                   {contentionCounterparts.slice(0, 25).map((c) => (
                     <tr key={c.applicantLegalName}>
                       <td className="px-3 py-2 font-medium text-slate-900">
-                        <Link href={exploreApplicantHref(c.applicantLegalName)} className="text-[#006a56] underline">
+                        <Link
+                          href={applicantProfileHref(c.applicantLegalName)}
+                          className="text-[#006a56] underline"
+                          data-testid="counterpart-applicant-profile"
+                        >
                           {c.applicantLegalName}
                         </Link>
                       </td>
@@ -780,7 +792,11 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                     <tr key={p.applicantLegalName} data-applicant={p.applicantLegalName}>
                       <td className="px-3 py-2 tabular-nums text-slate-500">{p.rankByApplications}</td>
                       <td className="px-3 py-2 font-medium text-slate-900">
-                        <Link href={exploreApplicantHref(p.applicantLegalName)} className="text-[#006a56] underline">
+                        <Link
+                          href={applicantProfileHref(p.applicantLegalName)}
+                          className="text-[#006a56] underline"
+                          data-testid="participant-applicant-profile"
+                        >
                           {p.applicantLegalName}
                         </Link>
                         {p.confirmedReturning ? (

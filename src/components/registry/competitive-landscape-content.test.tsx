@@ -266,10 +266,14 @@ describe("CompetitiveLandscapeContent", () => {
     expect(screen.getByTestId("visible-participant-count")).toHaveTextContent("Showing 2 / 5");
   });
 
-  it("links Applicant rows into Explore with Applicant filter", () => {
+  it("links Applicant rows to Applicant profile deep links", () => {
     renderLandscape();
-    const link = screen.getAllByRole("link", { name: GODADDY_FOCAL_APPLICANT_LEGAL_NAME })[0];
-    expect(link).toHaveAttribute("href", expect.stringContaining("/explore?q="));
+    const profileLinks = screen.getAllByRole("link", { name: GODADDY_FOCAL_APPLICANT_LEGAL_NAME });
+    expect(profileLinks.length).toBeGreaterThan(0);
+    expect(profileLinks[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining(`/applicant?name=${encodeURIComponent(GODADDY_FOCAL_APPLICANT_LEGAL_NAME)}`),
+    );
   });
 
   it("switches to RSP research surface with factual posture labels and limitation copy", async () => {

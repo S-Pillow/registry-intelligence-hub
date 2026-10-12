@@ -233,24 +233,37 @@ function IntelligenceSections({
                 data-testid="cc-v2-contention-set-sizes"
               >
                 <p className="text-sm font-semibold text-slate-900">
-                  Largest official initial set:{" "}
+                  How crowded are the contention sets?
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  ICANN groups competing Applications into contention sets. A larger Application count
+                  means more Applications in that competition group — not necessarily that many distinct
+                  Applicants.
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  Largest contention set:{" "}
                   <span data-testid="cc-v2-contention-largest-set">
                     {competitiveStructure.largestSetSize}
                   </span>{" "}
-                  members
+                  competing Applications
                 </p>
                 {competitiveStructure.setSizeDistribution.length > 0 ? (
-                  <ul className="mt-3 flex flex-wrap gap-2" aria-label="Set-size distribution">
+                  <ul className="mt-3 flex flex-wrap gap-2" aria-label="Contention Application-count distribution">
                     {competitiveStructure.setSizeDistribution.slice(0, 8).map((row) => (
                       <li
                         key={row.size}
                         className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700"
                       >
-                        size {row.size}: {row.setCount} set{row.setCount === 1 ? "" : "s"}
+                        {row.size} Applications · {row.setCount} set{row.setCount === 1 ? "" : "s"}
                       </li>
                     ))}
                   </ul>
                 ) : null}
+                <p className="mt-3 text-xs">
+                  <a href="/contention" className="font-semibold text-[#006a56] underline">
+                    Inspect actual sets on Contention
+                  </a>
+                </p>
               </div>
             ) : null}
           </div>

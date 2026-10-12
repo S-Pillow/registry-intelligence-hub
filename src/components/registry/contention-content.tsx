@@ -22,6 +22,8 @@ import {
   type ContentionSetRow,
   type ContentionSizeFilter,
 } from "@/lib/contention-intelligence";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
+import { ContentionDistributionPanel } from "@/components/registry/contention-distribution";
 
 function Metric({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -128,7 +130,11 @@ function SetDetailPanel({
                   return (
                     <li key={name} className="rounded-lg border border-slate-200 px-3 py-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Link href={sample.exploreApplicantHref} className="font-semibold text-[#006a56] underline">
+                        <Link
+                          href={applicantProfileHref(name)}
+                          className="font-semibold text-[#006a56] underline"
+                          data-testid="contention-counterpart-applicant-profile"
+                        >
                           {name}
                         </Link>
                         <OrganizationMappingBadge
@@ -175,7 +181,15 @@ function SetDetailPanel({
                     ) : null}
                   </div>
                   <p className="mt-1 font-mono text-xs text-slate-600">{m.applicationId}</p>
-                  <p className="mt-1 text-slate-800">{m.applicantLegalName}</p>
+                  <p className="mt-1 text-slate-800">
+                    <Link
+                      href={applicantProfileHref(m.applicantLegalName)}
+                      className="font-medium text-[#006a56] underline-offset-2 hover:underline"
+                      data-testid="contention-member-applicant-profile"
+                    >
+                      {m.applicantLegalName}
+                    </Link>
+                  </p>
                   {m.region ? <p className="text-xs text-slate-500">Region: {m.region}</p> : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <OrganizationMappingBadge
@@ -332,16 +346,25 @@ export function ContentionContent({
           testId="metric-counterpart-memberships"
         />
         <Metric
-          label="Largest set"
+          label="Largest set (Applications)"
           value={metrics.largestSetSize}
           testId="metric-largest-set"
         />
         <Metric
-          label="Largest GoDaddy set"
+          label="Largest GoDaddy set (Applications)"
           value={metrics.largestGodaddySetSize}
           testId="metric-largest-godaddy-set"
         />
       </section>
+
+      <ContentionDistributionPanel
+        sets={intel.sets}
+        largestSetSize={metrics.largestSetSize}
+        onOpenSet={(setId) => {
+          setSelectedSetId(setId);
+          syncUrl({ set: setId });
+        }}
+      />
 
       <div
         className="mt-6 inline-flex rounded-lg border border-slate-300 bg-slate-100 p-1"

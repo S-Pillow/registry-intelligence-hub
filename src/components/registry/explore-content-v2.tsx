@@ -18,6 +18,7 @@ import {
   formatExplorePageRange,
   type ExplorePageSize,
 } from "@/lib/explore-pagination";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
 
 export function ExploreContentV2({
   document,
@@ -141,8 +142,16 @@ export function ExploreContentV2({
           >
             <strong>.{app.appliedString.label}</strong>
             <span className="mt-0.5 block text-slate-700">
-              {app.applicationId} · {app.applicant} · {app.country} · {app.region} ·{" "}
-              {app.applicationStatus} · {app.processingStage} · {app.applicationType}
+              {app.applicationId} ·{" "}
+              <Link
+                href={applicantProfileHref(app.applicant)}
+                className="font-medium text-[#006a56] underline-offset-2 hover:underline"
+                data-testid="explore-v2-applicant-profile"
+              >
+                {app.applicant}
+              </Link>{" "}
+              · {app.country} · {app.region} · {app.applicationStatus} · {app.processingStage} ·{" "}
+              {app.applicationType}
               {app.designations.idn ? " · IDN" : ""}
               {app.designations.brand ? " · Brand" : ""}
               {app.designations.community ? " · Community" : ""}

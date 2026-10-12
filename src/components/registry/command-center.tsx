@@ -150,6 +150,7 @@ import {
   ContentionContent,
 } from "@/components/registry/contention-content";
 import { buildParticipantIntelligence } from "@/lib/participant-intelligence";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import type {
   ContentionGodaddyFilter,
   ContentionSizeFilter,
@@ -437,13 +438,25 @@ function ExploreEntityActions({
   compareWatchDisabled?: boolean;
 }) {
   const canActOnEntity = Boolean(investigationItem.entityType && investigationItem.entityKey) && !compareWatchDisabled;
+  const applicantLegalName = !compareWatchDisabled
+    ? investigationItem.records.find((r) => r.applicant?.trim())?.applicant.trim() ?? null
+    : null;
   return (
-    <div className={`flex gap-2 ${className}`}>
+    <div className={`flex flex-wrap gap-2 ${className}`}>
       <ProvenanceSheet
         {...investigationItem}
         triggerClassName="inline-flex h-8 items-center rounded-lg bg-[#007d65] px-2.5 text-xs font-bold text-white hover:bg-[#006a56] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
         trigger="Investigate"
       />
+      {applicantLegalName ? (
+        <Link
+          href={applicantProfileHref(applicantLegalName)}
+          className="inline-flex h-8 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-[#006a56] underline-offset-2 hover:bg-emerald-50 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+          data-testid="explore-applicant-profile-link"
+        >
+          Applicant profile
+        </Link>
+      ) : null}
       {canActOnEntity ? (
         <>
           <QuickCompareButton item={investigationItem} />
@@ -2799,29 +2812,39 @@ function CommandCenterV1({
                       const records = registryFixture.applications.filter((record) => record.applicant.trim() === item.applicantLegalName);
                       const shareWidth = item.shareDenominator > 0 ? (item.count / item.shareDenominator) * 100 : 0;
                       return (
-                        <ProvenanceSheet
-                          key={item.applicantLegalName}
-                          id={`applicant-legal-name-${item.applicantLegalName}`}
-                          kind="metric"
-                          label={`${item.applicantLegalName}: ${item.count} of ${item.shareDenominator} applications`}
-                          records={records}
-                          triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
-                          trigger={
-                            <>
-                              <span className="font-mono text-xs text-slate-600">0{index + 1}</span>
-                              <span>
-                                <span className="flex items-center justify-between gap-4">
-                                  <strong className="text-sm" data-testid={`applicant-concentration-${index}`}>{item.applicantLegalName}</strong>
-                                  <strong className="text-sm">{item.count} of {item.shareDenominator}</strong>
+                        <div key={item.applicantLegalName} className="space-y-1">
+                          <ProvenanceSheet
+                            id={`applicant-legal-name-${item.applicantLegalName}`}
+                            kind="metric"
+                            label={`${item.applicantLegalName}: ${item.count} of ${item.shareDenominator} applications`}
+                            records={records}
+                            triggerClassName="group grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-lg border border-transparent px-2 py-2 text-left hover:border-emerald-200 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]"
+                            trigger={
+                              <>
+                                <span className="font-mono text-xs text-slate-600">0{index + 1}</span>
+                                <span>
+                                  <span className="flex items-center justify-between gap-4">
+                                    <strong className="text-sm" data-testid={`applicant-concentration-${index}`}>{item.applicantLegalName}</strong>
+                                    <strong className="text-sm">{item.count} of {item.shareDenominator}</strong>
+                                  </span>
+                                  <span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200">
+                                    <span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${shareWidth}%` }} />
+                                  </span>
                                 </span>
-                                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-slate-200">
-                                  <span className="block h-full rounded-full bg-[#007d65]" style={{ width: `${shareWidth}%` }} />
-                                </span>
-                              </span>
-                              <ChevronRight className="size-4 text-[#007d65]" />
-                            </>
-                          }
-                        />
+                                <ChevronRight className="size-4 text-[#007d65]" />
+                              </>
+                            }
+                          />
+                          <p className="pl-10 text-xs">
+                            <Link
+                              href={applicantProfileHref(item.applicantLegalName)}
+                              className="font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                              data-testid={`applicant-concentration-profile-${index}`}
+                            >
+                              Applicant profile
+                            </Link>
+                          </p>
+                        </div>
                       );
                     })}
                     {applicantConcentration.ranked.length > visibleApplicantConcentration.length ? (
