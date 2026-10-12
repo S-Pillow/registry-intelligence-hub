@@ -145,10 +145,7 @@ import {
   ChangesContent,
   CommandCenterRecentChangesCard,
 } from "@/components/registry/changes-content";
-import {
-  CommandCenterContentionCard,
-  ContentionContent,
-} from "@/components/registry/contention-content";
+import { ContentionContent } from "@/components/registry/contention-content";
 import { buildParticipantIntelligence } from "@/lib/participant-intelligence";
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import type {
@@ -2306,7 +2303,8 @@ function CommandCenterActiveV2({
     () => buildParticipantIntelligence(document, overlays),
     [document, overlays],
   );
-  const contentionOverlay = document.contentionOverlay;
+  const godaddyUniqueContentionSets =
+    participantIntel.focal?.row.officialContentionSetsTouched ?? null;
 
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
@@ -2374,26 +2372,12 @@ function CommandCenterActiveV2({
         ) : view === "data-health" ? (
           <DataHealthContent state={state} changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }} />
         ) : (
-          <div className="space-y-4">
-            <CommandCenterContentionCard
-              officialSets={
-                contentionOverlay.status === "available"
-                  ? (contentionOverlay.officialContentionSetCount ?? 0)
-                  : 0
-              }
-              officialMemberships={
-                contentionOverlay.status === "available"
-                  ? (contentionOverlay.joinedMemberCount ?? 0)
-                  : 0
-              }
-              uniqueGodaddySets={participantIntel.focal?.row.officialContentionSetsTouched ?? 0}
-            />
-            <CommandCenterOrientationV2
-              document={document}
-              claimActuality={claimActuality}
-              changeFeed={changeFeed}
-            />
-          </div>
+          <CommandCenterOrientationV2
+            document={document}
+            claimActuality={claimActuality}
+            changeFeed={changeFeed}
+            godaddyUniqueContentionSets={godaddyUniqueContentionSets}
+          />
         )}
       </main>
     </div>

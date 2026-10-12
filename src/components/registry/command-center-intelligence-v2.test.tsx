@@ -341,4 +341,63 @@ describe("Command Center intelligence-first 2.x IA", () => {
     expect(cta).toHaveAttribute("href", "/historical-cohorts");
     expect(cta).toHaveTextContent("Explore 2012 Applicant structure");
   });
+
+  it("HIERARCHY-1 — round posture precedes secondary sections; top Contention card removed", () => {
+    renderCc(makeDocument());
+    expect(screen.queryByTestId("cc-contention-card")).not.toBeInTheDocument();
+    const root = screen.getByTestId("command-center-intelligence-v2");
+    const order = [
+      "cc-section-round-posture",
+      "cc-section-attention",
+      "cc-recent-changes",
+      "cc-section-cross-round",
+      "cc-section-contention",
+      "cc-section-composition",
+      "cc-section-coverage",
+    ];
+    let last = -1;
+    for (const id of order) {
+      const el = within(root).getByTestId(id);
+      const pos = root.innerHTML.indexOf(`data-testid="${id}"`);
+      expect(pos).toBeGreaterThan(last);
+      expect(el).toBeInTheDocument();
+      last = pos;
+    }
+  });
+
+  it("HIERARCHY-1 — attention strip coverage + neutral structural deltas + CTA hierarchy", () => {
+    renderCc(makeDocument());
+    expect(screen.getByRole("heading", { name: "What deserves attention" })).toBeInTheDocument();
+    expect(screen.getByTestId("cc-attention-coverage-observed")).toHaveTextContent("1614");
+    expect(screen.getByTestId("cc-attention-coverage-official")).toHaveTextContent("1615");
+    expect(screen.getByTestId("cc-attention-coverage-excluded")).toHaveTextContent(
+      /administrative-check/i,
+    );
+    expect(screen.getByTestId("cc-v2-cross-apps-delta")).toHaveAttribute("data-delta-style", "neutral");
+    expect(screen.getByTestId("cc-v2-cross-idn-delta")).toHaveAttribute("data-delta-style", "neutral");
+    expect(screen.getByTestId("cc-v2-cross-apps-delta").className).not.toMatch(/006a56|red|green/i);
+    expect(screen.getByTestId("cc-v2-competitive-landscape-cta")).toHaveAttribute(
+      "data-cta-priority",
+      "primary",
+    );
+    expect(screen.getByTestId("cc-v2-explore-applications-cta")).toHaveAttribute(
+      "data-cta-priority",
+      "secondary",
+    );
+    expect(screen.getByTestId("cc-v2-search-records-cta")).toHaveAttribute(
+      "data-cta-priority",
+      "secondary",
+    );
+    expect(screen.getByTestId("cc-v2-contention-cta")).toHaveAttribute(
+      "data-cta-priority",
+      "secondary",
+    );
+    expect(screen.getByTestId("cc-v2-composition-idn")).toHaveTextContent("21");
+    expect(screen.getByTestId("cc-v2-composition-brand")).toHaveTextContent("333");
+    expect(screen.getByTestId("cc-v2-composition-community")).toHaveTextContent("16");
+    expect(screen.getByTestId("cc-v2-composition-geographic")).toHaveTextContent("15");
+    expect(screen.getByTestId("cc-v2-composition-variants")).toHaveTextContent("9");
+    expect(screen.getByTestId("cc-v2-replacement-relationship-grain")).toBeInTheDocument();
+    expect(screen.getByTestId("cc-v2-coverage-panel")).toBeInTheDocument();
+  });
 });

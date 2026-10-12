@@ -6,11 +6,18 @@
 
 ## Active 2.x hierarchy
 
-1. **Round posture** — official Applications 1615, Applicants 481, official initial contention 263 / 891  
-2. **What changed since 2012** — only READY_WITH_LIMITATION comparisons (Applications, IDN), with CTA **Explore 2012 vs 2026** → `/cross-round` (see `docs/cross-round-structural-intelligence.md`)  
-3. **Competitive structure** — official initial contention (not exact-string grouping)  
-4. **Round composition** — designation / relationship orientation (not sectors/categories)  
-5. **Coverage** — PARTIAL 1614/1615 coverage + Data & methodology (`/data-health`) link 
+Operational intelligence order (COMMAND-CENTER-HIERARCHY-1):
+
+1. **Round posture** — official Applications 1615, Applicants 481, official initial contention 263 / 891 (first substantive block)  
+2. **What deserves attention** — compact deterministic strip only: GoDaddy contention footprint (66 unique official initial sets), public change-monitoring status, coverage exception (1614 / 1615 + administrative-check disclosure). No LLM narrative, risk scores, or commercial recommendations.  
+3. **Recent changes / monitoring** — compact status row when the latest check has zero material changes; fuller card when changes exist. CTA → `/changes`.  
+4. **What changed since 2012** — only READY_WITH_LIMITATION comparisons (Applications, IDN), with CTA **Explore 2012 vs 2026** → `/cross-round` (see `docs/cross-round-structural-intelligence.md`). Raw structural deltas use **neutral** styling (not green/red “good/bad” semantics).  
+5. **Competitive structure** — official initial contention depth (sets / memberships / crowded-set distribution); not duplicated as a standalone top Contention summary card  
+6. **Round composition** — compact designation / relationship orientation (not sectors/categories)  
+7. **Coverage** — secondary PARTIAL 1614/1615 panel + Data & methodology (`/data-health`) link  
+8. **Investigation actions** — one primary CTA (**Open Competitive Landscape**); secondary text links for Explore applications, Search records, Explore contention  
+
+Do not place a large standalone Contention summary card above round posture. 
 
 ## Eligible now
 

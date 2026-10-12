@@ -343,32 +343,65 @@ export function CommandCenterRecentChangesCard({ feed }: { feed: ChangeIntelFeed
   if (!feed.initialized) {
     return (
       <section
-        className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+        className="rounded-lg border border-slate-200 bg-white px-3 py-2.5"
         data-testid="cc-recent-changes"
+        data-change-state="uninitialized"
       >
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">What changed</p>
-        <h2 className="mt-2 text-xl font-bold tracking-tight">Recent changes</h2>
-        <p className="mt-2 text-sm text-slate-700">
-          Change monitoring has not been initialized for this environment yet.
-        </p>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-900">Recent changes</h2>
+          <p className="text-xs text-slate-600">
+            Change monitoring has not been initialized for this environment yet.
+          </p>
+        </div>
       </section>
     );
   }
   const latest = feed.latestDiff;
   const count = latest && !latest.semanticUnchanged ? latest.changes.length : 0;
   const top = latest?.changes?.[0];
+
+  // Compact status row when there are no material changes.
+  if (count === 0) {
+    return (
+      <section
+        className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2"
+        data-testid="cc-recent-changes"
+        data-change-state="zero"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <p className="text-sm text-slate-800">
+            <span className="font-semibold text-slate-900">Recent changes</span>
+            <span className="mx-1.5 text-slate-400" aria-hidden>
+              ·
+            </span>
+            <span data-testid="cc-recent-changes-status">
+              Last checked {formatWhen(feed.lastCheckedAt)} · No public Application or contention
+              changes.
+            </span>
+          </p>
+          <Link
+            href="/changes"
+            className="text-sm font-semibold text-[#006a56] underline-offset-2 hover:underline"
+            data-testid="cc-view-changes-cta"
+          >
+            View changes
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
       data-testid="cc-recent-changes"
+      data-change-state="nonzero"
     >
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">What changed</p>
       <h2 className="mt-2 text-xl font-bold tracking-tight">Recent changes</h2>
-      <p className="mt-2 text-sm text-slate-700">
-        Last checked {formatWhen(feed.lastCheckedAt)}.{" "}
-        {count === 0
-          ? "No public Application or contention changes in the latest check."
-          : `${count} meaningful change${count === 1 ? "" : "s"} in the latest check.`}
+      <p className="mt-2 text-sm text-slate-700" data-testid="cc-recent-changes-status">
+        Last checked {formatWhen(feed.lastCheckedAt)}. {count} meaningful change
+        {count === 1 ? "" : "s"} in the latest check.
       </p>
       {top ? (
         <p className="mt-2 text-sm text-slate-800" data-testid="cc-recent-changes-top">

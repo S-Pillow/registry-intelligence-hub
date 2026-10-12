@@ -46,6 +46,19 @@ describe("Changes surface", () => {
     const { feed } = makeRepresentativeFeed();
     render(<CommandCenterRecentChangesCard feed={feed} />);
     expect(screen.getByTestId("cc-view-changes-cta")).toHaveAttribute("href", "/changes");
+    expect(screen.getByTestId("cc-recent-changes")).toHaveAttribute("data-change-state", "nonzero");
+  });
+
+  it("Command Center recent-changes renders compact zero-change status", () => {
+    const { zeroChangeFeed } = makeRepresentativeFeed();
+    render(<CommandCenterRecentChangesCard feed={zeroChangeFeed} />);
+    const card = screen.getByTestId("cc-recent-changes");
+    expect(card).toHaveAttribute("data-change-state", "zero");
+    expect(screen.getByTestId("cc-recent-changes-status")).toHaveTextContent(
+      /No public Application or contention changes/i,
+    );
+    expect(screen.getByTestId("cc-view-changes-cta")).toHaveAttribute("href", "/changes");
+    expect(screen.queryByTestId("cc-recent-changes-top")).not.toBeInTheDocument();
   });
 
   it("primary nav includes Changes and excludes Compare/Saved/Briefings/Data Health", () => {

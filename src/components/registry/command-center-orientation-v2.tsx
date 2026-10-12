@@ -46,9 +46,10 @@ function CrossRoundCard({
         <div>
           <dt className="text-[11px] uppercase tracking-wide text-slate-500">Change</dt>
           <dd
-            className="mt-1 text-2xl font-bold tabular-nums text-[#006a56]"
+            className="mt-1 text-2xl font-bold tabular-nums text-slate-800"
             data-testid={`${testIdPrefix}-delta`}
             data-direction={direction}
+            data-delta-style="neutral"
           >
             {comparison.difference > 0 ? `+${comparison.difference}` : comparison.difference}
           </dd>
@@ -83,20 +84,131 @@ function PostureStat({
   );
 }
 
-function IntelligenceSections({
+function AttentionStrip({
   intelligence,
   changeFeed,
+  godaddyUniqueContentionSets,
 }: {
   intelligence: CommandCenterIntelligenceV2;
   changeFeed: ChangeIntelFeedState;
+  godaddyUniqueContentionSets: number | null;
+}) {
+  const { coverage } = intelligence;
+  const latest = changeFeed.initialized ? changeFeed.latestDiff : null;
+  const changeCount =
+    latest && !latest.semanticUnchanged ? latest.changes.length : changeFeed.initialized ? 0 : null;
+
+  return (
+    <section
+      aria-labelledby="cc-attention-heading"
+      data-testid="cc-section-attention"
+      className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+    >
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">Attention</p>
+          <h2 id="cc-attention-heading" className="mt-1 text-lg font-bold tracking-tight">
+            What deserves attention
+          </h2>
+        </div>
+        <p className="text-[11px] text-slate-500">Deterministic signals only</p>
+      </header>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-3" data-testid="cc-attention-signals">
+        <li
+          className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2"
+          data-testid="cc-attention-godaddy"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            GoDaddy contention footprint
+          </p>
+          <p className="mt-1 text-sm font-semibold tabular-nums text-slate-900">
+            {godaddyUniqueContentionSets != null ? (
+              <>
+                <span data-testid="cc-attention-godaddy-sets">{godaddyUniqueContentionSets}</span>{" "}
+                official initial contention sets
+              </>
+            ) : (
+              <span data-testid="cc-attention-godaddy-unavailable">Unavailable</span>
+            )}
+          </p>
+        </li>
+        <li
+          className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2"
+          data-testid="cc-attention-changes"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Public change monitoring
+          </p>
+          <p className="mt-1 text-sm text-slate-800">
+            {!changeFeed.initialized ? (
+              <span data-testid="cc-attention-changes-uninitialized">
+                Change monitoring not initialized
+              </span>
+            ) : changeCount === 0 ? (
+              <span data-testid="cc-attention-changes-none">
+                No public Application or contention changes in the latest check
+              </span>
+            ) : (
+              <span data-testid="cc-attention-changes-count">
+                {changeCount} meaningful change{changeCount === 1 ? "" : "s"} in the latest check
+              </span>
+            )}
+          </p>
+          {changeFeed.initialized ? (
+            <p className="mt-1 text-xs">
+              <Link
+                href="/changes"
+                className="font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                data-testid="cc-attention-changes-link"
+              >
+                View changes
+              </Link>
+            </p>
+          ) : null}
+        </li>
+        <li
+          className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2"
+          data-testid="cc-attention-coverage"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Coverage exception
+          </p>
+          <p className="mt-1 text-sm text-slate-800">
+            <span data-testid="cc-attention-coverage-observed">
+              {coverage.observedApplicationRecords}
+            </span>{" "}
+            represented Application rows /{" "}
+            <span data-testid="cc-attention-coverage-official">
+              {coverage.officialApplications}
+            </span>{" "}
+            official Applications
+          </p>
+          <p className="mt-1 text-xs text-slate-600" data-testid="cc-attention-coverage-excluded">
+            {coverage.knownExcludedCount === 1
+              ? "1 administrative-check Application outside the normal list/export"
+              : `${coverage.knownExcludedCount} records outside the normal list/export`}
+          </p>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function IntelligenceSections({
+  intelligence,
+  changeFeed,
+  godaddyUniqueContentionSets,
+}: {
+  intelligence: CommandCenterIntelligenceV2;
+  changeFeed: ChangeIntelFeedState;
+  godaddyUniqueContentionSets: number | null;
 }) {
   const { roundPosture, crossRound, competitiveStructure, roundComposition, coverage, drilldown } =
     intelligence;
 
   return (
-    <div className="space-y-10" data-testid="command-center-intelligence-v2">
-      <CommandCenterRecentChangesCard feed={changeFeed} />
-      {/* Section 1 — Round posture */}
+    <div className="space-y-8" data-testid="command-center-intelligence-v2">
+      {/* Section 1 — Round posture (first substantive block) */}
       <section aria-labelledby="cc-round-posture-heading" data-testid="cc-section-round-posture">
         <header className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
@@ -138,7 +250,17 @@ function IntelligenceSections({
         </div>
       </section>
 
-      {/* Section 2 — What changed since 2012 */}
+      {/* Section 2 — What deserves attention */}
+      <AttentionStrip
+        intelligence={intelligence}
+        changeFeed={changeFeed}
+        godaddyUniqueContentionSets={godaddyUniqueContentionSets}
+      />
+
+      {/* Section 3 — Recent changes / monitoring */}
+      <CommandCenterRecentChangesCard feed={changeFeed} />
+
+      {/* Section 4 — What changed since 2012 */}
       <section aria-labelledby="cc-cross-round-heading" data-testid="cc-section-cross-round">
         <header className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
@@ -193,7 +315,7 @@ function IntelligenceSections({
         </ul>
       </section>
 
-      {/* Section 3 — Competitive structure */}
+      {/* Section 5 — Competitive structure (depth, not first-screen duplicate) */}
       <section aria-labelledby="cc-contention-heading" data-testid="cc-section-contention">
         <header className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
@@ -306,22 +428,22 @@ function IntelligenceSections({
         )}
       </section>
 
-      {/* Section 4 — Round composition */}
+      {/* Section 6 — Round composition (compact) */}
       {roundComposition ? (
         <section aria-labelledby="cc-composition-heading" data-testid="cc-section-composition">
           <header className="max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
               Round composition
             </p>
-            <h2 id="cc-composition-heading" className="mt-2 text-2xl font-bold tracking-tight">
+            <h2 id="cc-composition-heading" className="mt-1 text-xl font-bold tracking-tight">
               Published application characteristics
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-700">
+            <p className="mt-1 text-sm leading-5 text-slate-700">
               Designation and relationship orientation — not industries, sectors, or market
               categories.
             </p>
           </header>
-          <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <dl className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {(
               [
                 ["idn", roundComposition.idn, "cc-v2-composition-idn"],
@@ -334,26 +456,26 @@ function IntelligenceSections({
             ).map(([key, item, testId]) => (
               <div
                 key={key}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-3"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2"
                 data-testid={testId}
               >
-                <dt className="text-xs font-medium text-slate-600">{item.label}</dt>
-                <dd className="mt-1 text-2xl font-bold tabular-nums">{item.value}</dd>
+                <dt className="text-[11px] font-medium text-slate-600">{item.label}</dt>
+                <dd className="mt-0.5 text-xl font-bold tabular-nums">{item.value}</dd>
                 {"selfIdentified" in item && item.selfIdentified ? (
-                  <p className="mt-1 text-[11px] text-slate-500" data-testid="cc-v2-geo-self-identified">
+                  <p className="mt-0.5 text-[11px] text-slate-500" data-testid="cc-v2-geo-self-identified">
                     Self-identified Geographic designation
                   </p>
                 ) : null}
                 {"relationshipGrain" in item && item.relationshipGrain ? (
                   <p
-                    className="mt-1 text-[11px] text-slate-500"
+                    className="mt-0.5 text-[11px] text-slate-500"
                     data-testid="cc-v2-replacement-relationship-grain"
                   >
                     Relationship grain — not extra applications
                   </p>
                 ) : null}
                 {"orientationOnly" in item && item.orientationOnly ? (
-                  <p className="mt-1 text-[11px] text-slate-500">2026 orientation only</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">2026 orientation only</p>
                 ) : null}
               </div>
             ))}
@@ -361,29 +483,29 @@ function IntelligenceSections({
         </section>
       ) : null}
 
-      {/* Section 5 — Evidence / coverage + drilldown */}
+      {/* Section 7 — Coverage (secondary) + Section 8 — drilldown CTAs */}
       <section aria-labelledby="cc-coverage-heading" data-testid="cc-section-coverage">
         <header className="max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
             Coverage
           </p>
-          <h2 id="cc-coverage-heading" className="mt-2 text-2xl font-bold tracking-tight">
+          <h2 id="cc-coverage-heading" className="mt-1 text-xl font-bold tracking-tight">
             What RIH currently represents
           </h2>
         </header>
         <div
-          className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm"
+          className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5 text-sm text-slate-800"
           data-testid="cc-v2-coverage-panel"
         >
-          <ul className="space-y-1.5">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
             <li>
               Official applications:{" "}
               <strong data-testid="cc-v2-coverage-official">{coverage.officialApplications}</strong>
             </li>
             <li>
-              Application rows represented in RIH:{" "}
+              Application rows represented:{" "}
               <strong data-testid="cc-v2-coverage-observed">{coverage.observedApplicationRecords}</strong>
-              <span className="text-slate-600"> — coverage context only, not the round total</span>
+              <span className="text-slate-600"> — coverage context only</span>
             </li>
             <li>
               Coverage:{" "}
@@ -396,7 +518,7 @@ function IntelligenceSections({
               (not a normal Application row)
             </li>
           </ul>
-          <p className="mt-3">
+          <p className="mt-2 text-xs">
             <Link
               href={coverage.dataHealthHref}
               className="font-semibold text-[#006a56] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
@@ -408,7 +530,7 @@ function IntelligenceSections({
         </div>
 
         <nav
-          className="mt-5 flex flex-wrap gap-3"
+          className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2"
           aria-label="Evidence drilldown"
           data-testid="cc-v2-drilldown"
         >
@@ -416,25 +538,31 @@ function IntelligenceSections({
             href="/competitive-landscape"
             className="inline-flex items-center rounded-lg bg-[#007d65] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#006a56] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
             data-testid="cc-v2-competitive-landscape-cta"
+            data-cta-priority="primary"
           >
             Open Competitive Landscape
           </Link>
           <Link
             href={drilldown.exploreApplicationsHref}
-            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
+            className="text-sm font-semibold text-slate-700 underline-offset-2 hover:underline"
+            data-testid="cc-v2-explore-applications-cta"
+            data-cta-priority="secondary"
           >
             Explore applications
           </Link>
           <Link
             href={drilldown.searchRecordsHref}
-            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
+            className="text-sm font-semibold text-slate-700 underline-offset-2 hover:underline"
+            data-testid="cc-v2-search-records-cta"
+            data-cta-priority="secondary"
           >
             Search records
           </Link>
           <Link
             href={drilldown.exploreContentionHref}
-            className="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#007d65]"
+            className="text-sm font-semibold text-slate-700 underline-offset-2 hover:underline"
             data-testid="cc-v2-contention-cta"
+            data-cta-priority="secondary"
           >
             Explore contention
           </Link>
@@ -452,15 +580,22 @@ export function CommandCenterOrientationV2({
   document,
   claimActuality,
   changeFeed = { initialized: false },
+  godaddyUniqueContentionSets = null,
 }: {
   document: RegistryApplicationsDocumentV2;
   claimActuality: ClaimActualityState;
   changeFeed?: ChangeIntelFeedState;
+  /** Accepted GoDaddy unique official initial contention set count (attention strip). */
+  godaddyUniqueContentionSets?: number | null;
 }) {
   const intelligence = buildCommandCenterIntelligenceV2({ document, claimActuality });
   return (
     <section data-testid="command-center-orientation-v2" className="space-y-4">
-      <IntelligenceSections intelligence={intelligence} changeFeed={changeFeed} />
+      <IntelligenceSections
+        intelligence={intelligence}
+        changeFeed={changeFeed}
+        godaddyUniqueContentionSets={godaddyUniqueContentionSets}
+      />
     </section>
   );
 }
