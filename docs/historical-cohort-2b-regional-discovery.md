@@ -49,12 +49,27 @@ Existing Command Center 2012 geography UI intentionally surfaces **ICANN region 
 Region describes the Applicant’s **published ICANN Reveal Day regional classification** associated with the Application row (Applicant address / Applicant location region in the Reveal Day export), **not**:
 
 - applied-for string geography;
-- Geographic-designation Applications (`Geographic?` column → `type: "Geographic"`);
+- Geographic Application designation (`Geographic?` column on the Reveal Day CSV);
 - registry service location;
 - Organization headquarters;
 - target market or economic market.
 
-**Geographic designation is separate.** There are **55** Geographic-designation Applications in the corpus; they appear across all five region codes and must not be conflated with Applicant region.
+**Geographic designation is separate from Applicant region.** Re-derived from the committed Reveal Day CSV:
+
+| Designation fact | Count | Definition |
+| --- | ---: | --- |
+| `Community?` affirmative (`Y`/`YES`) | **84** | Raw source flag; matches `APPROVED_2012_BASELINE.communityDesignations` |
+| `Geographic?` affirmative (`Y`/`YES`) | **66** | Raw source flag; matches `APPROVED_2012_BASELINE.geographicDesignations` |
+| Both `Community?` + `Geographic?` affirmative | **11** | Dual-flag Applications |
+| Geographic-only (`Geographic?` yes, `Community?` not) | **55** | Exclusive remainder of the 66 |
+| Browser `type === "Geographic"` | **55** | Exclusive classification in `build-browser-payload.ts` |
+
+**Exclusive classification rule** (`applicationTypeFromRow`): Community takes precedence — if `Community?` is affirmative → `type: "Community"`; else if `Geographic?` is affirmative → `type: "Geographic"`; else `Generic`. Therefore:
+
+- **66** = total Applications with raw `Geographic?` affirmative (including the 11 that are also Community).
+- **55** = Applications classified as browser `type === "Geographic"` = Geographic-only under the exclusive rule (66 − 11).
+
+Do **not** describe 55 as the total Geographic-designation Application count. Product copy that needs the designation total should use **66**. The 55 Geographic-typed Applications still appear across all five region codes and must not be conflated with Applicant region.
 
 ---
 
