@@ -2326,18 +2326,22 @@ function CommandCenterActiveV2({
             {...(contentionParams ?? {})}
           />
         ) : view === "compare" ? (
-          <section data-testid="compare-gated-v2" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
-            <h1 className="text-xl font-bold">Compare is not available for the current 2026 data view yet</h1>
+          <section data-testid="compare-intel-v2-entry" className="rounded-lg border border-slate-300 bg-white px-4 py-6 text-sm">
+            <h1 className="text-xl font-bold">Compare Applicants and Organizations</h1>
             <p className="mt-2 text-slate-700">
-              Use Competitive Landscape for current participant comparisons or Explore for
-              application-level research.
+              Side-by-side comparison for current-round Applicant and Confirmed Organization
+              intelligence — portfolio, Brand, contention, public RSP posture, and confirmed
+              cross-round history.
             </p>
             <p className="mt-4 flex flex-wrap gap-3">
+              <Link href="/compare" className="font-semibold text-[#006a56] underline" data-testid="compare-intel-open">
+                Open Compare
+              </Link>
               <Link href={presentationHref("/competitive-landscape", presentation)} className="font-semibold text-[#006a56] underline">
-                Open Competitive Landscape
+                Competitive Landscape
               </Link>
               <Link href={presentationHref("/explore", presentation)} className="font-semibold text-[#006a56] underline">
-                Open Explore
+                Explore
               </Link>
             </p>
           </section>

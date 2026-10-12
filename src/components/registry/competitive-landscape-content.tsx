@@ -31,6 +31,7 @@ import {
   OrganizationMappingBadge,
   OrganizationMappingExplainer,
 } from "@/components/registry/organization-mapping-display";
+import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -815,6 +816,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                     <th className="px-3 py-2 font-semibold">Sets</th>
                     <th className="px-3 py-2 font-semibold">Region</th>
                     <th className="px-3 py-2 font-semibold">Organization mapping</th>
+                    <th className="px-3 py-2 font-semibold">Compare</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -856,6 +858,14 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
                           }
                         />
                       </td>
+                      <td className="px-3 py-2">
+                        <CompareAddButton
+                          type="applicant"
+                          entityKey={p.applicantLegalName}
+                          label={p.applicantLegalName}
+                          testId={`landscape-compare-applicant-${p.rankByApplications}`}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -864,6 +874,7 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
           </section>
         </>
       )}
+      <CompareTrayFloating />
     </div>
   );
 }

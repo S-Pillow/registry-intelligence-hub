@@ -75,10 +75,10 @@ describe("PRODUCT-UX-1 business surface cleanup", () => {
     expect(within(nav).getByTestId("data-methodology-link")).toHaveAttribute("href", "/data-health");
   });
 
-  it("gated Compare/Saved/Briefings routes stay valid without implementation jargon", async () => {
+  it("Compare/Saved/Briefings routes stay valid without implementation jargon", async () => {
     await renderActiveV2("compare");
-    const compare = screen.getByTestId("compare-gated-v2");
-    expect(compare).toHaveTextContent(/not available for the current 2026 data view yet/i);
+    const compare = screen.getByTestId("compare-intel-v2-entry");
+    expect(compare).toHaveTextContent(/Compare Applicants and Organizations/i);
     expect(compare).not.toHaveTextContent(/1\.1-shaped/i);
     expect(compare).not.toHaveTextContent(/do not fabricate/i);
     expect(compare).not.toHaveTextContent(/Publication 2/i);

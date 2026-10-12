@@ -10,6 +10,7 @@ import {
   type ApplicantIntelligenceLookup,
   type ApplicantIntelligenceProfile,
 } from "@/lib/applicant-intelligence";
+import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 function Stat({
   label,
   value,
@@ -133,6 +134,14 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
             No broader Organization mapping is confirmed yet. Applicant intelligence below still applies.
           </p>
         ) : null}
+        <div className="mt-4" data-testid="applicant-compare-actions">
+          <CompareAddButton
+            type="applicant"
+            entityKey={profile.applicantLegalName}
+            label={profile.applicantLegalName}
+            testId="applicant-add-to-compare"
+          />
+        </div>
       </header>
 
       <section
@@ -495,6 +504,7 @@ export function ApplicantProfileContent({
       ) : (
         <ProfileFound profile={lookup} />
       )}
+      <CompareTrayFloating />
     </div>
   );
 }

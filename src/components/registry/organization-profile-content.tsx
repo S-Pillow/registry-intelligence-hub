@@ -6,6 +6,7 @@ import {
   type OrganizationIntelligenceLookup,
   type OrganizationIntelligenceProfile,
 } from "@/lib/organization-intelligence";
+import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 
 function Stat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -115,6 +116,14 @@ function ProfileFound({ profile }: { profile: OrganizationIntelligenceProfile })
               Returning participation
             </span>
           ) : null}
+        </div>
+        <div className="mt-4" data-testid="organization-compare-actions">
+          <CompareAddButton
+            type="organization"
+            entityKey={profile.organizationKey}
+            label={profile.canonicalName}
+            testId="organization-add-to-compare"
+          />
         </div>
       </header>
 
@@ -570,6 +579,7 @@ export function OrganizationProfileContent({
       ) : (
         <ProfileFound profile={lookup} />
       )}
+      <CompareTrayFloating />
     </div>
   );
 }
