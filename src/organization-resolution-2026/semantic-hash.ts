@@ -178,6 +178,25 @@ export function organizationResolutionSemanticHashInput(
           },
         }
       : {}),
+    ...(snapshot.tranche1bStewardDecisionProvenance
+      ? {
+          tranche1bStewardDecisionProvenance: {
+            decisionId: snapshot.tranche1bStewardDecisionProvenance.decisionId,
+            authority: snapshot.tranche1bStewardDecisionProvenance.authority,
+            decidedAt: snapshot.tranche1bStewardDecisionProvenance.decidedAt,
+            scope: snapshot.tranche1bStewardDecisionProvenance.scope,
+            approvedApplicantLegalNames: [
+              ...snapshot.tranche1bStewardDecisionProvenance.approvedApplicantLegalNames,
+            ].sort(),
+            priorStewardDecisionId: snapshot.tranche1bStewardDecisionProvenance.priorStewardDecisionId,
+            sourceEvidencePackageSemanticHash:
+              snapshot.tranche1bStewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            sourceEvidencePackageCommit:
+              snapshot.tranche1bStewardDecisionProvenance.sourceEvidencePackageCommit,
+            notes: snapshot.tranche1bStewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };

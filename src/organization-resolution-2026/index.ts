@@ -25,6 +25,11 @@ export {
   BRAND1_STEWARD_DECISION_ID,
   BRAND1_IDENTITY_EVIDENCE_PACKAGE,
 } from "./applicant-identity/steward-decision-brand1";
+export {
+  TRANCHE1B_STEWARD_DECISION_ID,
+  TRANCHE1_IDENTITY_EVIDENCE_PACKAGE,
+  TRANCHE1B_APPROVED_TRANSITIONS,
+} from "./applicant-identity/steward-decision-tranche1b";
 export { buildBrandApplicantInventory } from "./applicant-identity/brand-inventory";
 export {
   isStrictSelfIdentityMatch,

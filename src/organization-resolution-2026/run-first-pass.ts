@@ -26,6 +26,7 @@ import { applyResearchPackageToSnapshot } from "./apply-research";
 import { applyStewardApprovalsToSnapshot } from "./apply-steward-approvals";
 import { applyWeb1StewardToSnapshot } from "./applicant-identity/apply-web1-steward";
 import { applyBrand1StewardToSnapshot } from "./applicant-identity/apply-brand1-steward";
+import { applyTranche1bStewardToSnapshot } from "./applicant-identity/apply-tranche1b-steward";
 import { RESEARCH_PACKAGE_2026_2 } from "./fixtures/research-package-2026-2";
 import type { ResearchPackage } from "./review-types";
 
@@ -71,6 +72,8 @@ export async function runFirstPassOrganizationResolution(input: {
   applyWeb1Identity?: boolean;
   /** ORG-RES-BRAND-1: apply Brand self-identity evidence + steward batch after WEB-1. */
   applyBrand1Identity?: boolean;
+  /** ORG-RES-TRANCHE-1B: apply steward-approved 1A CONFIRM transitions after BRAND-1. */
+  applyTranche1bIdentity?: boolean;
 }): Promise<{
   snapshot: OrganizationResolutionSnapshot;
   inventory: ReturnType<typeof inventoryFromSnapshot>;
@@ -139,6 +142,18 @@ export async function runFirstPassOrganizationResolution(input: {
       throw new Error("applyBrand1Identity requires applyWeb1Identity");
     }
     snapshot = applyBrand1StewardToSnapshot({
+      snapshot,
+      publication,
+      contention,
+    });
+  }
+
+  // TRANCHE-1B is opt-in after BRAND-1.
+  if (input.applyTranche1bIdentity) {
+    if (!input.applyBrand1Identity) {
+      throw new Error("applyTranche1bIdentity requires applyBrand1Identity");
+    }
+    snapshot = applyTranche1bStewardToSnapshot({
       snapshot,
       publication,
       contention,

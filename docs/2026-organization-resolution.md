@@ -337,6 +337,47 @@ Artifacts:
 
 Identity panel shows Brand applications as supporting context (e.g. `4 of 4`) — not as proof of brand ownership.
 
+## ORG-RES-TRANCHE-1B — steward-approved 1A CONFIRM transitions
+
+**Decision ID:** `RIH-ORG-RES-TRANCHE-1B-ALL9-20261013`  
+**Authority:** operator / product steward (not Build Agent)  
+**Approval:** all nine exact ORG-RES-TRANCHE-1A CONFIRM recommendations  
+**Source evidence:** immutable 1A package `applicant-identity-evidence-package-tranche1.json` @ `35b1ff8` (research record unchanged)
+
+### Counts before → after
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Confirmed Applicant mappings | 145 | **154** |
+| Confirmed Organizations | 89 | **98** |
+| Candidate / Ambiguous | 2 / 2 | 2 / 2 |
+| Unresolved Applicants | 331 | **322** |
+| Confirmed Applications | 1,036 | **1,099** |
+| Confirmed Brand Applications | 126 | **141** |
+| Confirmed contention memberships | 685 | **714** |
+| Residual unresolved Applications | — | **475** |
+| Residual unresolved Brand Applications | — | **190** |
+
+### Semantic hash
+
+| | Value |
+| --- | --- |
+| Old (post BRAND-1) | `4837173224fc89ae617de3620396950e18c8da99a5333459a8782e032ce3bb87` |
+| New (post TRANCHE-1B) | `52aca2c47520e42da7773b546fff4996f307a677e2ec679546dc568d9a0b2ad8` |
+
+Repeated regeneration must reproduce the same new hash.
+
+Confirmed contention set coverage (distinct official sets with ≥1 Confirmed membership): **254** / 263 (membership coverage 714 / 891).
+
+**Confirmed subset ≠ complete round.** Product surfaces continue to disclose confirmed-only Organization coverage limits. Round-wide Organization total remains blocked.
+
+KEEP_CANDIDATE / MARK_AMBIGUOUS / NO_EVIDENCE dossiers from 1A were **not** approved and remain non-CONFIRMED.
+
+Artifacts:
+
+- `src/organization-resolution-2026/applicant-identity/steward-decision-tranche1b.ts`
+- `src/organization-resolution-2026/applicant-identity/apply-tranche1b-steward.ts`
+
 ## Deferred
 
 - **CROSS-ROUND-ID-1 / 1A** — see `docs/cross-round-organization-identity.md` (2 steward-confirmed identity pairs; returning-new still blocked)  
@@ -352,4 +393,4 @@ Identity panel shows Brand applications as supporting context (e.g. `4 of 4`) �
 - Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
 - Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
 - Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`  
-- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts` + `applicant-identity/steward-decision-brand1.ts`
+- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts` + `applicant-identity/steward-decision-brand1.ts` + `applicant-identity/steward-decision-tranche1b.ts`

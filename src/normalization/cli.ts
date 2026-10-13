@@ -116,6 +116,7 @@ async function main(): Promise<void> {
         writeArtifacts: Boolean(values.write),
         applyWeb1Identity: true,
         applyBrand1Identity: true,
+        applyTranche1bIdentity: true,
       });
       console.log(
         JSON.stringify(

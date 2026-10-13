@@ -163,3 +163,16 @@ No HIST-COHORT-2C · no category taxonomy · no selected-RSP claims · no Change
 ## Next step
 
 Return to Prompt Agent / product steward. If any CONFIRM rows are accepted, issue **ORG-RES-TRANCHE-1B** with the exact approved Applicant → Organization transitions only.
+
+---
+
+## Steward disposition (ORG-RES-TRANCHE-1B) — append-only
+
+**Decision ID:** `RIH-ORG-RES-TRANCHE-1B-ALL9-20261013`  
+**Authority:** operator / product steward  
+**Decided:** 2026-10-13  
+**Disposition:** APPROVE all nine CONFIRM recommendations listed above (exact Applicant legal name → canonical Organization key/name).
+
+Non-CONFIRM dossiers in this package (KEEP_CANDIDATE, MARK_AMBIGUOUS, NO_EVIDENCE) were **not** approved and must remain non-CONFIRMED.
+
+This section records steward disposition only. The research recommendation narrative and evidence package above are the immutable pre-approval record and were not rewritten to imply contemporaneous approval during research. Product CONFIRMED transitions are applied by the TRANCHE-1B stewardship mechanism documented in `docs/2026-organization-resolution.md`.
