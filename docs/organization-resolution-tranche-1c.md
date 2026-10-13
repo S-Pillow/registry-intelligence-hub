@@ -131,3 +131,23 @@ No 1B decision edits · no CONFIRMED transitions · no HIST-COHORT-2C · no cate
 ## Next step
 
 Return to Prompt Agent / product steward. If any CONFIRM rows are accepted, issue a separate approval unit listing exact Applicant → Organization transitions only.
+
+## Steward disposition (ORG-RES-TRANCHE-1D) — append-only
+
+**Decision ID:** `RIH-ORG-RES-TRANCHE-1D-ALL7-20261013`  
+**Authority:** operator / product steward  
+**Disposition:** Approve all 7 ORG-RES-TRANCHE-1C CONFIRM recommendations.
+
+| Applicant | Organization | Key |
+| --- | --- | --- |
+| Amazon Registry Services, Inc. | Amazon Registry Services | `amazon-registry-services` |
+| AT&T Services, Inc. | AT&T Services | `att-services` |
+| Taisho Pharmaceutical Co., Ltd. | Taisho Pharmaceutical | `taisho-pharmaceutical` |
+| Corporation Service Company | Corporation Service Company | `corporation-service-company` |
+| Cam Connecting SARL | Cam Connecting | `cam-connecting` |
+| ALIBABA INNOVATION PRIVATE LIMITED | Alibaba Group | `alibaba-group` (reuse) |
+| American Lebanese Syrian Associated Charities, Inc. | ALSAC | `alsac` |
+
+Not approved (remain non-CONFIRMED): Registered Agents Inc · NAME SPACE LLC · TechEdge Limited.
+
+This section records steward disposition only. The research recommendation narrative and evidence package above are the immutable pre-approval record and were not rewritten to imply contemporaneous approval during research. Product CONFIRMED transitions are applied by the TRANCHE-1D stewardship mechanism documented in `docs/2026-organization-resolution.md`.

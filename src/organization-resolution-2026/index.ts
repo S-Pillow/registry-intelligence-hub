@@ -30,6 +30,11 @@ export {
   TRANCHE1_IDENTITY_EVIDENCE_PACKAGE,
   TRANCHE1B_APPROVED_TRANSITIONS,
 } from "./applicant-identity/steward-decision-tranche1b";
+export {
+  TRANCHE1D_STEWARD_DECISION_ID,
+  TRANCHE1C_IDENTITY_EVIDENCE_PACKAGE,
+  TRANCHE1D_APPROVED_TRANSITIONS,
+} from "./applicant-identity/steward-decision-tranche1d";
 export { buildBrandApplicantInventory } from "./applicant-identity/brand-inventory";
 export {
   isStrictSelfIdentityMatch,

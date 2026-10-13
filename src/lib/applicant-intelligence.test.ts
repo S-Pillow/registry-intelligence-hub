@@ -406,7 +406,7 @@ describe("applicant profile derivation (live acceptance)", () => {
     expect(profile.brandApplicationCount).toBe(2);
   });
 
-  it("Amazon Registry Services, Inc. — unresolved but complete Applicant profile", async () => {
+  it("Amazon Registry Services, Inc. — Confirmed Amazon Registry Services overlay", async () => {
     const [document, overlays] = await Promise.all([loadLiveDocument(), loadParticipantOverlays(WORKSPACE)]);
     const profile = buildApplicantIntelligenceProfile(
       document,
@@ -416,8 +416,8 @@ describe("applicant profile derivation (live acceptance)", () => {
     );
     expect(profile.found).toBe(true);
     if (!profile.found) return;
-    expect(profile.organizationResolutionStatus).toBe("UNRESOLVED");
-    expect(profile.organizationContext).toBeNull();
+    expect(profile.organizationResolutionStatus).toBe("CONFIRMED");
+    expect(profile.confirmedOrganizationName).toBe("Amazon Registry Services");
     expect(profile.applicationCount).toBeGreaterThan(0);
     expect(profile.portfolio.length).toBe(profile.applicationCount);
     expect(profile.rspPostureLabel).toBeTruthy();
@@ -429,10 +429,10 @@ describe("applicant profile derivation (live acceptance)", () => {
     const candidate = overlays.organizations.filter((o) => o.resolutionStatus === "CANDIDATE");
     const ambiguous = overlays.organizations.filter((o) => o.resolutionStatus === "AMBIGUOUS");
     const unresolved = overlays.organizations.filter((o) => o.resolutionStatus === "UNRESOLVED");
-    expect(confirmed).toHaveLength(145);
-    expect(new Set(confirmed.map((c) => c.confirmedOrganizationId).filter(Boolean)).size).toBe(89);
+    expect(confirmed).toHaveLength(161);
+    expect(new Set(confirmed.map((c) => c.confirmedOrganizationId).filter(Boolean)).size).toBe(104);
     expect(candidate).toHaveLength(2);
     expect(ambiguous).toHaveLength(2);
-    expect(unresolved).toHaveLength(331);
+    expect(unresolved).toHaveLength(315);
   });
 });

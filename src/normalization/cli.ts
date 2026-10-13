@@ -117,6 +117,7 @@ async function main(): Promise<void> {
         applyWeb1Identity: true,
         applyBrand1Identity: true,
         applyTranche1bIdentity: true,
+        applyTranche1dIdentity: true,
       });
       console.log(
         JSON.stringify(

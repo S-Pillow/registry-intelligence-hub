@@ -378,6 +378,64 @@ Artifacts:
 - `src/organization-resolution-2026/applicant-identity/steward-decision-tranche1b.ts`
 - `src/organization-resolution-2026/applicant-identity/apply-tranche1b-steward.ts`
 
+## ORG-RES-TRANCHE-1D — steward-approved 1C CONFIRM transitions
+
+**Decision ID:** `RIH-ORG-RES-TRANCHE-1D-ALL7-20261013`  
+**Authority:** operator / product steward (not Build Agent)  
+**Approval:** all seven exact ORG-RES-TRANCHE-1C CONFIRM recommendations  
+**Source evidence:** immutable 1C package `applicant-identity-evidence-package-tranche1c.json` @ `1de5f3d` (research record unchanged)
+
+### Exact approvals
+
+| Applicant | Organization | Key |
+| --- | --- | --- |
+| Amazon Registry Services, Inc. | Amazon Registry Services | `amazon-registry-services` (new) |
+| AT&T Services, Inc. | AT&T Services | `att-services` (new) |
+| Taisho Pharmaceutical Co., Ltd. | Taisho Pharmaceutical | `taisho-pharmaceutical` (new) |
+| Corporation Service Company | Corporation Service Company | `corporation-service-company` (new) |
+| Cam Connecting SARL | Cam Connecting | `cam-connecting` (new) |
+| ALIBABA INNOVATION PRIVATE LIMITED | Alibaba Group | `alibaba-group` (**reuse** existing Confirmed Organization) |
+| American Lebanese Syrian Associated Charities, Inc. | ALSAC | `alsac` (new) |
+
+Parents / affiliates remain separate relationship facts (Amazon.com, Inc.; AT&T Inc.; Taisho Pharmaceutical Holdings; AC WEBCONNECTING NV; St. Jude Children’s Research Hospital). Alibaba Group reuse is based on 1C common-control evidence under the existing canonical grouping — not name-only ALIBABA matching.
+
+Not approved: Registered Agents Inc · NAME SPACE LLC · TechEdge Limited.
+
+### Counts before → after
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Confirmed Applicant mappings | 154 | **161** |
+| Confirmed Organizations | 98 | **104** (+6 new; +1 Alibaba Group reuse) |
+| Candidate / Ambiguous | 2 / 2 | 2 / 2 |
+| Unresolved Applicants | 322 | **315** |
+| Confirmed Applications | 1,099 | **1,129** |
+| Confirmed Brand Applications | 141 | **160** |
+| Confirmed contention memberships | 714 | **724** |
+| Residual unresolved Applications | 475 | **445** |
+| Residual unresolved Brand Applications | 190 | **171** |
+
+### Semantic hash
+
+| | Value |
+| --- | --- |
+| Old (post TRANCHE-1B) | `52aca2c47520e42da7773b546fff4996f307a677e2ec679546dc568d9a0b2ad8` |
+| New (post TRANCHE-1D) | `06ba3920f6028b1a410835332869869691252432bdb1b7c923e7baee519d346c` |
+
+Repeated regeneration must reproduce the same new hash.
+
+Confirmed contention set coverage (re-derived): **256** / 263 (was 254; membership coverage 724 / 891).
+
+**Confirmed subset ≠ complete round.** Product surfaces continue to disclose confirmed-only Organization coverage limits. Round-wide Organization total remains blocked. Do not present 104 Organizations as a complete round-wide total.
+
+RSP aggregates after 1D: **479 / 476 / 3 / 0** (unchanged). Alibaba Group does not currently seed a public Main-RSP capability match, so ALIBABA INNOVATION PRIVATE LIMITED remains `NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND`. No new RSP evidence and no selected-RSP inference.
+
+Artifacts:
+
+- `src/organization-resolution-2026/applicant-identity/steward-decision-tranche1d.ts`
+- `src/organization-resolution-2026/applicant-identity/apply-tranche1d-steward.ts`
+- Research package (unchanged): `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-tranche1c.json`
+
 ## Deferred
 
 - **CROSS-ROUND-ID-1 / 1A** — see `docs/cross-round-organization-identity.md` (2 steward-confirmed identity pairs; returning-new still blocked)  
@@ -389,8 +447,8 @@ Artifacts:
 ## Implementation
 
 - `src/organization-resolution-2026/` — types, pin, builder, hash, eligibility, research queue, research package, steward apply, review, tests  
-- `src/organization-resolution-2026/applicant-identity/` — website normalize/cluster, Brand inventory/match/discovery, APS detail extract, WEB-1 + BRAND-1 evidence apply + steward  
+- `src/organization-resolution-2026/applicant-identity/` — website normalize/cluster, Brand inventory/match/discovery, APS detail extract, WEB-1 + BRAND-1 + TRANCHE evidence apply + steward  
 - Reuses 2012 promotion **states** and immutable-op / no-silent-merge architecture  
 - Materializes `organization:resolved-2026:{key}` (parallel to 2012 `organization:promoted:{key}`)  
 - Research package: `src/organization-resolution-2026/fixtures/research-package-2026-2.ts`  
-- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts` + `applicant-identity/steward-decision-brand1.ts` + `applicant-identity/steward-decision-tranche1b.ts`
+- Steward decisions: `steward-decision.ts` (ALL14) + `applicant-identity/steward-decision-web1.ts` + `applicant-identity/steward-decision-brand1.ts` + `applicant-identity/steward-decision-tranche1b.ts` + `applicant-identity/steward-decision-tranche1d.ts`

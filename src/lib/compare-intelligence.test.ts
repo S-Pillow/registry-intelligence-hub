@@ -92,16 +92,17 @@ describe("Applicant comparison", () => {
     expect(apps.values.every((v) => v.kind === "number" && v.value < 50)).toBe(true);
   });
 
-  it("Amazon Registry Services, Inc. remains comparable while Organization unresolved", async () => {
+  it("Amazon Registry Services, Inc. vs AT&T Services, Inc. — Confirmed self-Organizations", async () => {
     const d = await deps();
     const model = buildCompareIntelViewModel({
       ...d,
       type: "applicant",
-      idsRaw: encodeCompareIntelIds(["Amazon Registry Services, Inc.", "Anthropic, PBC"]),
+      idsRaw: encodeCompareIntelIds(["Amazon Registry Services, Inc.", "AT&T Services, Inc."]),
     });
     expect(model.columns.every((c) => c.lookup.found)).toBe(true);
     const org = sectionRow(model, "identity", "confirmed-org");
-    expect(formatCompareMetricValue(org.values[0]!)).toMatch(/Not resolved/i);
+    expect(formatCompareMetricValue(org.values[0]!)).toMatch(/Amazon Registry Services/);
+    expect(formatCompareMetricValue(org.values[1]!)).toMatch(/AT&T Services/);
     const apps = sectionRow(model, "portfolio", "applications");
     expect(apps.values[0]?.kind).toBe("number");
     expect(apps.values[0]).not.toEqual({ kind: "number", value: 0 });

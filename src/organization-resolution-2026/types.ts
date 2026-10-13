@@ -37,6 +37,19 @@ export type Tranche1bStewardDecisionProvenance = {
   notes: string;
 };
 
+export type Tranche1dStewardDecisionProvenance = {
+  decisionId: string;
+  authority: string;
+  decidedAt: string;
+  scope: string;
+  approvedApplicantLegalNames: readonly string[];
+  priorStewardDecisionId: string;
+  sourceEvidencePackageSemanticHash: string;
+  /** Immutable 1C evidence package git commit. */
+  sourceEvidencePackageCommit: string;
+  notes: string;
+};
+
 /** Shared with 2012 organization-promotion states. */
 export type OrganizationResolutionState = "CONFIRMED" | "CANDIDATE" | "AMBIGUOUS" | "UNRESOLVED";
 
@@ -188,6 +201,8 @@ export type OrganizationResolutionSnapshot = {
   brand1StewardDecisionProvenance?: Brand1StewardDecisionProvenance;
   /** ORG-RES-TRANCHE-1B steward batch provenance (additive; does not replace BRAND-1). */
   tranche1bStewardDecisionProvenance?: Tranche1bStewardDecisionProvenance;
+  /** ORG-RES-TRANCHE-1D steward batch provenance (additive; does not replace TRANCHE-1B). */
+  tranche1dStewardDecisionProvenance?: Tranche1dStewardDecisionProvenance;
   quality: OrganizationResolutionQuality;
   semanticContentSha256: string;
   generatedAt: string;

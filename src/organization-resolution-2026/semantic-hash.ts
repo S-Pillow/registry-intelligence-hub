@@ -197,6 +197,25 @@ export function organizationResolutionSemanticHashInput(
           },
         }
       : {}),
+    ...(snapshot.tranche1dStewardDecisionProvenance
+      ? {
+          tranche1dStewardDecisionProvenance: {
+            decisionId: snapshot.tranche1dStewardDecisionProvenance.decisionId,
+            authority: snapshot.tranche1dStewardDecisionProvenance.authority,
+            decidedAt: snapshot.tranche1dStewardDecisionProvenance.decidedAt,
+            scope: snapshot.tranche1dStewardDecisionProvenance.scope,
+            approvedApplicantLegalNames: [
+              ...snapshot.tranche1dStewardDecisionProvenance.approvedApplicantLegalNames,
+            ].sort(),
+            priorStewardDecisionId: snapshot.tranche1dStewardDecisionProvenance.priorStewardDecisionId,
+            sourceEvidencePackageSemanticHash:
+              snapshot.tranche1dStewardDecisionProvenance.sourceEvidencePackageSemanticHash,
+            sourceEvidencePackageCommit:
+              snapshot.tranche1dStewardDecisionProvenance.sourceEvidencePackageCommit,
+            notes: snapshot.tranche1dStewardDecisionProvenance.notes,
+          },
+        }
+      : {}),
     quality: snapshot.quality,
     limitations: [...snapshot.limitations].sort(),
   };
