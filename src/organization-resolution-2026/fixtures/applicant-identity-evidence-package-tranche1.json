@@ -1,0 +1,1213 @@
+{
+  "packageVersion": "applicant-identity-evidence-package/1.0.0",
+  "methodNote": "ORG-RES-TRANCHE-1A bounded Brand + multi-Application UNRESOLVED research package. Recommendations only — never steward APPROVE / never resolutionState CONFIRMED. Brand designation and website alone never CONFIRM. Parent/control fields remain separate from Organization. Existing CONFIRMED mappings untouched.",
+  "researchedAt": "2026-10-13",
+  "decisionId": "RIH-ORG-RES-TRANCHE-1A-20261013",
+  "dossiers": [
+    {
+      "applicantLegalName": "Suffix Inc.",
+      "representativeApplicationId": "SI2639T-T10771",
+      "candidateOrganizationKey": "suffix",
+      "candidateCanonicalName": "Suffix",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "Strict legal-name↔website self-identity (Suffix ↔ suffix.domains) plus first-party copyright identifying Suffix Inc.; Brand designation absent — confirmation rests on B self-identity, not Brand.",
+      "requiredStewardAction": "APPROVE Confirmed · Suffix or REJECT. Do not invent parent from portfolio size.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "suffix.domains",
+      "applicantWebsiteUrl": "https://suffix.domains",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Applicant Website: suffix.domains",
+        "Strict self-identity: Suffix Inc. ↔ suffix.domains",
+        "First-party copyright: Suffix Inc.",
+        "24 Applications / 0 Brand / 13 contention memberships",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-suffix-aps-website",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/SI2639T-T10771/summary",
+          "title": "APS summary — Suffix Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS Applicant Website https://suffix.domains.",
+          "supportsClaim": "Applicant publishes first-party website on suffix.domains",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone never confirms"
+        },
+        {
+          "evidenceId": "ev-t1a-suffix-self-identity",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/SI2639T-T10771/summary#self-identity",
+          "title": "APS legal-name / domain self-identity — Suffix Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Applicant legal name Suffix Inc. and registrable domain suffix.domains share conservative stem 'suffix'.",
+          "supportsClaim": "Self-identity supports Organization Suffix without collapsing unrelated Applicants. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Matching is discovery-quality; steward approval required"
+        },
+        {
+          "evidenceId": "ev-t1a-suffix-first-party",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://suffix.domains/",
+          "title": "suffix.domains copyright — Suffix Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "First-party site copyright line identifies © 2026 Suffix Inc.",
+          "supportsClaim": "First-party site attributes operator identity to Suffix Inc.",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Marketing site; not a securities filing"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Endpoint Domains, Inc.",
+      "representativeApplicationId": "EDI2665T-T12533",
+      "candidateOrganizationKey": "endpoint-domains",
+      "candidateCanonicalName": "Endpoint Domains",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "Strict legal-name↔website self-identity (Endpoint Domains ↔ endpointdomains.com) plus first-party copyright identifying Endpoint Domains, Inc.",
+      "requiredStewardAction": "APPROVE Confirmed · Endpoint Domains or REJECT.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "endpointdomains.com",
+      "applicantWebsiteUrl": "https://endpointdomains.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Applicant Website: endpointdomains.com",
+        "Strict self-identity match",
+        "First-party copyright: Endpoint Domains, Inc.",
+        "Do not collapse founder-affiliated companies",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-endpoint-aps-website",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/EDI2665T-T12533/summary",
+          "title": "APS summary — Endpoint Domains, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS Applicant Website http://endpointdomains.com.",
+          "supportsClaim": "Applicant publishes website on endpointdomains.com",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone never confirms"
+        },
+        {
+          "evidenceId": "ev-t1a-endpoint-self-identity",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/EDI2665T-T12533/summary#self-identity",
+          "title": "APS legal-name / domain self-identity — Endpoint Domains, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Legal name and endpointdomains.com share stem endpointdomains.",
+          "supportsClaim": "Self-identity supports Organization Endpoint Domains. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Steward approval still required"
+        },
+        {
+          "evidenceId": "ev-t1a-endpoint-first-party",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://endpointdomains.com/",
+          "title": "endpointdomains.com copyright — Endpoint Domains, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "First-party site copyright © 2026 Endpoint Domains, Inc.",
+          "supportsClaim": "First-party attribution to Endpoint Domains, Inc.",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Founder bios mention other companies (System1, DreamHost) — do not collapse those into this Organization"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Public Interest Registry",
+      "representativeApplicationId": "PIR2624T-T12017",
+      "candidateOrganizationKey": "public-interest-registry",
+      "candidateCanonicalName": "Public Interest Registry",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "First-party PIR site explicitly states Public Interest Registry is the nonprofit that manages .ORG; APS Applicant Website is pir.org.",
+      "requiredStewardAction": "APPROVE Confirmed · Public Interest Registry or REJECT. Internet Society founding relationship is parent/history context, not a collapse of Applicant into Internet Society.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "pir.org",
+      "applicantWebsiteUrl": "https://pir.org",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Applicant Website: pir.org",
+        "First-party: Public Interest Registry nonprofit identity",
+        "Internet Society = founding/related context, not Organization collapse",
+        "8 Applications / 0 Brand / 4 contention memberships",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-pir-aps-website",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/PIR2624T-T12017/summary",
+          "title": "APS summary — Public Interest Registry",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationWebsite https://pir.org/.",
+          "supportsClaim": "Applicant publishes pir.org",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone never confirms"
+        },
+        {
+          "evidenceId": "ev-t1a-pir-first-party",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://pir.org/who-we-are/",
+          "title": "PIR Who We Are — Public Interest Registry identity",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "PIR states: Based in Reston, Virginia, Public Interest Registry is a nonprofit organization created by the Internet Society to manage the .ORG domain.",
+          "supportsClaim": "Explicit first-party self-identification as Public Interest Registry",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Internet Society is founding context / related entity — store separately if steward models parent; do not replace Applicant"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Dine Brands Global, Inc.",
+      "representativeApplicationId": "DIN2676T-T15162",
+      "candidateOrganizationKey": "dine-brands-global",
+      "candidateCanonicalName": "Dine Brands Global",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "SEC EDGAR registrant name exactly matches APS Applicant legal name Dine Brands Global, Inc. (ticker DIN); APS website dinebrands.com corroborates.",
+      "requiredStewardAction": "APPROVE Confirmed · Dine Brands Global or REJECT. Applebee's/IHOP strings remain Applications, not Organizations.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "dinebrands.com",
+      "applicantWebsiteUrl": "https://dinebrands.com/en",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "SEC A: exact legal-name registrant match",
+        "APS B: Applicant + dinebrands.com",
+        "Brand C corroboration only",
+        "Applied-for strings (e.g. applebees) are not Organizations",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-dine-sec",
+          "strength": "A",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://data.sec.gov/submissions/CIK0000049754.json",
+          "title": "SEC submissions — Dine Brands Global, Inc.",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "EDGAR entity name Dine Brands Global, Inc.; ticker DIN.",
+          "supportsClaim": "Authoritative legal registrant matches Applicant legal name. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "SEC identity ≠ TLD strategy proof"
+        },
+        {
+          "evidenceId": "ev-t1a-dine-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/DIN2676T-T15162/summary",
+          "title": "APS summary — Dine Brands Global, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Dine Brands Global, Inc.; website https://www.dinebrands.com/en; Brand TLD types including applebees.",
+          "supportsClaim": "APS identifies applying legal entity and brand portfolio context",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Brand strings are Applications only"
+        },
+        {
+          "evidenceId": "ev-t1a-dine-brand",
+          "strength": "C",
+          "sourceType": "aps-publication",
+          "sourceIdentifier": "aps-applications-2.0.0:DIN2676T-T15162:designations.brand",
+          "title": "APS Brand designation — Dine Brands Global, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "3 of 3 Applications Brand-designated.",
+          "supportsClaim": "Brand corroborates intentional brand-string applications",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Brand alone never confirms"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Axon Enterprise, Inc.",
+      "representativeApplicationId": "AXON2696T-T41181",
+      "candidateOrganizationKey": "axon-enterprise",
+      "candidateCanonicalName": "Axon Enterprise",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "SEC EDGAR registrant AXON ENTERPRISE, INC. (CIK 0001069183, ticker AXON) matches APS Applicant Axon Enterprise, Inc.; APS website axon.com.",
+      "requiredStewardAction": "APPROVE Confirmed · Axon Enterprise or REJECT.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "axon.com",
+      "applicantWebsiteUrl": "https://axon.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "SEC A exact registrant",
+        "APS B Applicant + axon.com",
+        "Brand C only",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-axon-sec",
+          "strength": "A",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://data.sec.gov/submissions/CIK0001069183.json",
+          "title": "SEC submissions — AXON ENTERPRISE, INC.",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "EDGAR name AXON ENTERPRISE, INC.; ticker AXON; Nasdaq.",
+          "supportsClaim": "Authoritative registrant matches Applicant (casing normalized). Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "SEC identity only"
+        },
+        {
+          "evidenceId": "ev-t1a-axon-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/AXON2696T-T41181/summary",
+          "title": "APS summary — Axon Enterprise, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Axon Enterprise, Inc.; website https://www.axon.com/; Brand string axon.",
+          "supportsClaim": "APS identifies applying entity",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone insufficient"
+        },
+        {
+          "evidenceId": "ev-t1a-axon-brand",
+          "strength": "C",
+          "sourceType": "aps-publication",
+          "sourceIdentifier": "aps-applications-2.0.0:AXON2696T-T41181:designations.brand",
+          "title": "APS Brand designation — Axon Enterprise, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Brand-designated Applications present.",
+          "supportsClaim": "Brand corroboration",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Brand alone never confirms"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Canadian Imperial Bank of Commerce",
+      "representativeApplicationId": "CM2687T-T70607",
+      "candidateOrganizationKey": "canadian-imperial-bank-of-commerce",
+      "candidateCanonicalName": "Canadian Imperial Bank of Commerce",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "SEC EDGAR registrant CANADIAN IMPERIAL BANK OF COMMERCE /CAN/ (CIK 0001045520, ticker CM) matches APS Applicant; APS website cibc.com; Brand string simplii remains an Application.",
+      "requiredStewardAction": "APPROVE Confirmed · Canadian Imperial Bank of Commerce or REJECT. Do not create a separate Simplii Organization.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "cibc.com",
+      "applicantWebsiteUrl": "https://cibc.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "SEC A registrant match",
+        "APS B + cibc.com",
+        "Simplii = Application string only",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-cibc-sec",
+          "strength": "A",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://data.sec.gov/submissions/CIK0001045520.json",
+          "title": "SEC submissions — CANADIAN IMPERIAL BANK OF COMMERCE /CAN/",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "EDGAR name CANADIAN IMPERIAL BANK OF COMMERCE /CAN/; tickers CM/CNDIF; recent 6-K filings in 2026.",
+          "supportsClaim": "Authoritative registrant matches Applicant legal name",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "Canadian issuer filing in EDGAR"
+        },
+        {
+          "evidenceId": "ev-t1a-cibc-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/CM2687T-T70607/summary",
+          "title": "APS summary — Canadian Imperial Bank of Commerce",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Canadian Imperial Bank of Commerce; website https://www.cibc.com/.",
+          "supportsClaim": "APS identifies applying bank entity",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone insufficient"
+        },
+        {
+          "evidenceId": "ev-t1a-cibc-brand",
+          "strength": "C",
+          "sourceType": "aps-publication",
+          "sourceIdentifier": "aps-applications-2.0.0:CM2687T-T70607:designations.brand",
+          "title": "APS Brand designation — CIBC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Brand Applications present (e.g. simplii).",
+          "supportsClaim": "Brand corroboration",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Product/brand strings are not Organizations"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Epic systems corporation",
+      "representativeApplicationId": "ESC2616T-T27738",
+      "candidateOrganizationKey": "epic-systems",
+      "candidateCanonicalName": "Epic Systems",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "First-party epic.com copyright identifies Epic Systems Corporation; APS Applicant legal name is Epic systems corporation (same entity, casing variant); APS website epic.com.",
+      "requiredStewardAction": "APPROVE Confirmed · Epic Systems or REJECT. Preserve exact APS Applicant legal-name string on the mapping.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "epic.com",
+      "applicantWebsiteUrl": "https://epic.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "First-party B: Epic Systems Corporation",
+        "APS B Applicant + epic.com",
+        "Casing variant noted",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-epic-first-party",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://www.epic.com/about",
+          "title": "Epic About — Epic Systems Corporation copyright",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Copyright © 2026 Epic Systems Corporation on first-party About property.",
+          "supportsClaim": "First-party legal-entity self-identification. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Not a securities filing"
+        },
+        {
+          "evidenceId": "ev-t1a-epic-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ESC2616T-T27738/summary",
+          "title": "APS summary — Epic systems corporation",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Epic systems corporation; website https://www.epic.com/; Brand string epic.",
+          "supportsClaim": "APS identifies applying entity aligning to Epic Systems Corporation",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Casing variant on 'systems' — steward should treat as same legal entity spelling normalization"
+        },
+        {
+          "evidenceId": "ev-t1a-epic-brand",
+          "strength": "C",
+          "sourceType": "aps-publication",
+          "sourceIdentifier": "aps-applications-2.0.0:ESC2616T-T27738:designations.brand",
+          "title": "APS Brand designation — Epic",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Brand-designated Applications present.",
+          "supportsClaim": "Brand corroboration",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Brand alone never confirms"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Industria de Diseño Textil S.A.",
+      "representativeApplicationId": "ITX2621T-T22327",
+      "candidateOrganizationKey": "inditex",
+      "candidateCanonicalName": "Inditex",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "SEC ADR registrant title 'Industria de Diseno Textil Inditex SA / ADR' links the Applicant legal name to Inditex; APS website inditex.com; Brand applications (e.g. oysho) remain Applications under the Applicant — do not create Zara/Oysho Organizations.",
+      "requiredStewardAction": "APPROVE Confirmed · Inditex or REJECT. Do not create brand-string Organizations.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "inditex.com",
+      "applicantWebsiteUrl": "https://inditex.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "SEC A: Industria…Inditex SA ADR title",
+        "APS B + inditex.com",
+        "Brand house strings ≠ Organizations",
+        "Lanes: BRAND+MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-inditex-sec",
+          "strength": "A",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://data.sec.gov/submissions/CIK0001438656.json",
+          "title": "SEC submissions — Industria de Diseno Textil Inditex SA / ADR",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "EDGAR title Industria de Diseno Textil Inditex SA / ADR (CIK 0001438656, IDEXF).",
+          "supportsClaim": "Authoritative listing ties Industria de Diseño Textil identity to Inditex. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "ADR wrapper; Spanish accents normalized in EDGAR"
+        },
+        {
+          "evidenceId": "ev-t1a-inditex-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ITX2621T-T22327/summary",
+          "title": "APS summary — Industria de Diseño Textil S.A.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Industria de Diseño Textil S.A.; website https://www.inditex.com; Brand types.",
+          "supportsClaim": "APS identifies applying legal entity with Inditex web presence",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone insufficient"
+        },
+        {
+          "evidenceId": "ev-t1a-inditex-brand",
+          "strength": "C",
+          "sourceType": "aps-publication",
+          "sourceIdentifier": "aps-applications-2.0.0:ITX2621T-T22327:designations.brand",
+          "title": "APS Brand designation — Inditex Applicant",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "6 Brand Applications under this Applicant.",
+          "supportsClaim": "Brand corroboration for house brands",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Zara/Oysho/etc. strings are Applications, not Organizations"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Hostinger UAB",
+      "representativeApplicationId": "HU2684T-T32145",
+      "candidateOrganizationKey": "hostinger",
+      "candidateCanonicalName": "Hostinger",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "Hostinger privacy policy identifies HOSTINGER, UAB (Lithuanian private limited company) as controller affiliate matching APS Applicant Hostinger UAB; APS website hostinger.com.",
+      "requiredStewardAction": "APPROVE Confirmed · Hostinger or REJECT. Distinguish HOSTINGER operations, UAB if steward later models affiliates separately.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "hostinger.com",
+      "applicantWebsiteUrl": "https://hostinger.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "First-party B: HOSTINGER, UAB in privacy policy",
+        "APS B Applicant + hostinger.com",
+        "Affiliate HOSTINGER operations, UAB noted separately",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-hostinger-privacy",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://www.hostinger.com/legal/privacy-policy",
+          "title": "Hostinger Privacy Policy — HOSTINGER, UAB",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "Policy identifies HOSTINGER, UAB, private limited liability company organized under the laws of the Republic of Lithuania.",
+          "supportsClaim": "First-party legal-entity identification matching Applicant Hostinger UAB. Operating Organization label for this Applicant legal entity; parents/control remain separate fields (not a parent-subsidiary collapse claim).",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "Also names HOSTINGER operations, UAB as affiliate — do not auto-merge without steward review"
+        },
+        {
+          "evidenceId": "ev-t1a-hostinger-aps",
+          "strength": "B",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/HU2684T-T32145/summary",
+          "title": "APS summary — Hostinger UAB",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Hostinger UAB; website https://www.hostinger.com.",
+          "supportsClaim": "APS identifies applying entity",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website alone insufficient"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Amazon Registry Services, Inc.",
+      "representativeApplicationId": "ARSI2666T-T15666",
+      "candidateOrganizationKey": "amazon-registry-services",
+      "candidateCanonicalName": "Amazon Registry Services",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website registry.amazon and Amazon Registry marketing identify an Amazon Registry operating face, but tranche research did not obtain explicit A/B ownership/control language tying Amazon Registry Services, Inc. to Amazon.com, Inc. for 2026. Self-organization as Amazon Registry Services is plausible; parent Amazon remains unproven here.",
+      "requiredStewardAction": "Keep CANDIDATE · Amazon Registry Services. Do NOT approve Amazon.com parent collapse without explicit ownership evidence. Brand≠confirm.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "registry.amazon",
+      "applicantWebsiteUrl": "https://registry.amazon",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "8 Brand Applications — prioritization only",
+        "registry.amazon is C corroboration, not A/B ownership",
+        "No Amazon.com parent CONFIRM in 1A",
+        "Lanes: BRAND+MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-amazon-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ARSI2666T-T15666/summary",
+          "title": "APS summary — Amazon Registry Services, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Amazon Registry Services, Inc.; website https://www.registry.amazon/; Brand TLDs.",
+          "supportsClaim": "Published Applicant + Amazon Registry web presence",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website/Brand do not prove Amazon.com parent/control"
+        },
+        {
+          "evidenceId": "ev-t1a-amazon-site",
+          "strength": "C",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://www.registry.amazon/",
+          "title": "Amazon Registry marketing site",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Site markets Amazon Registry domain products (.bot, .now, etc.).",
+          "supportsClaim": "Corroborates Amazon Registry operating brand",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "No explicit wholly-owned/subsidiary statement captured in this tranche"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "AT&T Services, Inc.",
+      "representativeApplicationId": "ASI2642T-T71986",
+      "candidateOrganizationKey": "att-services",
+      "candidateCanonicalName": "AT&T Services",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "Applicant is AT&T Services, Inc. with website att.com. SEC registrant AT&T Inc. is a different legal entity. Without explicit subsidiary/control evidence for the Services entity, do not collapse to AT&T Inc.",
+      "requiredStewardAction": "Keep CANDIDATE · AT&T Services (not AT&T Inc.). Require ownership evidence before parent collapse.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "att.com",
+      "applicantWebsiteUrl": "https://att.com",
+      "directParentLegalName": "AT&T Inc.",
+      "ultimateParentLegalName": "AT&T Inc.",
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Applicant ≠ AT&T Inc. without ownership evidence",
+        "Brand att is Application string",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-att-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ASI2642T-T71986/summary",
+          "title": "APS summary — AT&T Services, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName AT&T Services, Inc.; website https://www.att.com; Brand att.",
+          "supportsClaim": "Applicant legal entity published",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "att.com does not prove Services==Inc parent identity"
+        },
+        {
+          "evidenceId": "ev-t1a-att-sec-parent",
+          "strength": "C",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://data.sec.gov/submissions/CIK0000732717.json",
+          "title": "SEC submissions — AT&T INC.",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "EDGAR registrant AT&T INC. exists as a distinct legal name from AT&T Services, Inc.",
+          "supportsClaim": "Shows parent-brand public company exists separately",
+          "temporalRelevance": "Source as-of 2026-10-13",
+          "limitations": "Do not treat as proof that Applicant maps to AT&T Inc. without subsidiary evidence"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Taisho Pharmaceutical Co., Ltd.",
+      "representativeApplicationId": "TPCL2648T-T11392",
+      "candidateOrganizationKey": "taisho-pharmaceutical",
+      "candidateCanonicalName": "Taisho Pharmaceutical",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS publishes Taisho Pharmaceutical Co., Ltd. with taisho.co.jp. Tranche did not capture a qualifying A filing or stronger B self-identity package beyond website/Brand corroboration.",
+      "requiredStewardAction": "Keep CANDIDATE pending Japanese corporate-registry / stronger first-party legal identity package.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "taisho.co.jp",
+      "applicantWebsiteUrl": "https://taisho.co.jp",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "C-only package — cannot CONFIRM",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-taisho-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/TPCL2648T-T11392/summary",
+          "title": "APS summary — Taisho Pharmaceutical Co., Ltd.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Taisho Pharmaceutical Co., Ltd.; website https://www.taisho.co.jp/; Brand applications.",
+          "supportsClaim": "Applicant + JP website published",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website/Brand insufficient for CONFIRM in this tranche"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Corporation Service Company",
+      "representativeApplicationId": "CSC2689T-T73615",
+      "candidateOrganizationKey": "corporation-service-company",
+      "candidateCanonicalName": "Corporation Service Company",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website cscglobal.com (CSC). Plausible self/trade-name relationship but legal-name↔domain stem match fails and no A filing captured for Corporation Service Company in this tranche.",
+      "requiredStewardAction": "Keep CANDIDATE · Corporation Service Company / CSC Global identity pending stronger legal-name evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "cscglobal.com",
+      "applicantWebsiteUrl": "https://cscglobal.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "CSC Global brand site is C only",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-csc-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/CSC2689T-T73615/summary",
+          "title": "APS summary — Corporation Service Company",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Corporation Service Company; website https://www.cscglobal.com.",
+          "supportsClaim": "Applicant + CSC Global web presence",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Trade-name relationship not A/B proven here"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Registered Agents Inc",
+      "representativeApplicationId": "RAI2657T-T39048",
+      "candidateOrganizationKey": "registered-agents",
+      "candidateCanonicalName": "Registered Agents",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "First-party registeredagentsinc.com aligns to Registered Agents Inc naming, but strict stem match fails and no A/B filing captured.",
+      "requiredStewardAction": "Keep CANDIDATE pending stronger self-identity/registry evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "registeredagentsinc.com",
+      "applicantWebsiteUrl": "https://registeredagentsinc.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Near-name website — not strict self-identity",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-rai-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/RAI2657T-T39048/summary",
+          "title": "APS summary — Registered Agents Inc",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.registeredagentsinc.com/.",
+          "supportsClaim": "Applicant website published",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Cam Connecting SARL",
+      "representativeApplicationId": "CCS2640T-T19940",
+      "candidateOrganizationKey": "cam-connecting",
+      "candidateCanonicalName": "Cam Connecting",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "Applicant website camconnecting.cam corroborates trading name; no A/B ownership or registry extract captured.",
+      "requiredStewardAction": "Keep CANDIDATE · self Cam Connecting pending stronger evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "camconnecting.cam",
+      "applicantWebsiteUrl": "https://camconnecting.cam",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "11 Applications — research priority only",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-cam-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/CCS2640T-T19940/summary",
+          "title": "APS summary — Cam Connecting SARL",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://camconnecting.cam/.",
+          "supportsClaim": "Trading-name website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "ALIBABA INNOVATION PRIVATE LIMITED",
+      "representativeApplicationId": "AIPL2696T-T43947",
+      "candidateOrganizationKey": "alibaba-group",
+      "candidateCanonicalName": "Alibaba Group",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "Existing CONFIRMED Organization alibaba-group already maps other Applicants. This Applicant uses qwencloud.com and lacks tranche A/B ownership evidence linking ALIBABA INNOVATION PRIVATE LIMITED into Alibaba Group. Reuse of canonical key is provisional only.",
+      "requiredStewardAction": "Keep CANDIDATE for possible alibaba-group reuse. Do NOT auto-join without ownership/control evidence. Do not demote existing Alibaba CONFIRMED mappings.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "qwencloud.com",
+      "applicantWebsiteUrl": "https://qwencloud.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Possible reuse of existing alibaba-group key — unproven",
+        "qwencloud.com ≠ Alibaba Group proof",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-aip-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/AIPL2696T-T43947/summary",
+          "title": "APS summary — ALIBABA INNOVATION PRIVATE LIMITED",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.qwencloud.com/.",
+          "supportsClaim": "Published Applicant + Qwen Cloud site",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Name similarity to Alibaba Group is D/C discovery only; existing org key reuse is not proof"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "American Lebanese Syrian Associated Charities, Inc.",
+      "representativeApplicationId": "ALSA2663T-T49987",
+      "candidateOrganizationKey": "alsac",
+      "candidateCanonicalName": "ALSAC",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website stjude.org. ALSAC is known publicly as St. Jude fundraising entity, but tranche did not capture A/B charter/identity package; website host is St. Jude brand property.",
+      "requiredStewardAction": "Keep CANDIDATE · ALSAC. Do not collapse to St. Jude Children's Research Hospital without explicit organizational evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "stjude.org",
+      "applicantWebsiteUrl": "https://stjude.org",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "stjude.org does not alone define Organization boundary",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-alsac-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ALSA2663T-T49987/summary",
+          "title": "APS summary — ALSAC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName American Lebanese Syrian Associated Charities, Inc.; website https://www.stjude.org.",
+          "supportsClaim": "Applicant published with St. Jude website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website brand property ≠ proven Organization collapse"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "NAME SPACE LLC",
+      "representativeApplicationId": "NSL2674T-T21960",
+      "candidateOrganizationKey": "name-space",
+      "candidateCanonicalName": "NAME SPACE",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website nmspc.co only; no A/B identity package.",
+      "requiredStewardAction": "Keep CANDIDATE pending stronger evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "nmspc.co",
+      "applicantWebsiteUrl": "https://nmspc.co",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-nmspc-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/NSL2674T-T21960/summary",
+          "title": "APS summary — NAME SPACE LLC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Website https://www.nmspc.co.",
+          "supportsClaim": "Published website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "TechEdge Limited",
+      "representativeApplicationId": "TL2645T-T13654",
+      "candidateOrganizationKey": "techedge",
+      "candidateCanonicalName": "TechEdge",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website gtldtechedge.com; no A/B package.",
+      "requiredStewardAction": "Keep CANDIDATE pending stronger evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "gtldtechedge.com",
+      "applicantWebsiteUrl": "https://gtldtechedge.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-techedge-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/TL2645T-T13654/summary",
+          "title": "APS summary — TechEdge Limited",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Website http://www.gtldtechedge.com.",
+          "supportsClaim": "Published website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Innovation Service Limited",
+      "representativeApplicationId": "ISL2626T-T27355",
+      "candidateOrganizationKey": "innovation-service",
+      "candidateCanonicalName": "Innovation Service",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website nic.help; no A/B package proving Organization beyond Applicant.",
+      "requiredStewardAction": "Keep CANDIDATE pending stronger evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "nic.help",
+      "applicantWebsiteUrl": "https://nic.help",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-isl-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ISL2626T-T27355/summary",
+          "title": "APS summary — Innovation Service Limited",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Website https://nic.help.",
+          "supportsClaim": "Published website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Internet DotTrademark Organisation Limited",
+      "representativeApplicationId": "IDOL2621T-T12142",
+      "candidateOrganizationKey": "internet-dottrademark-organisation",
+      "candidateCanonicalName": "Internet DotTrademark Organisation",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS website trademarkdomain.com; no A/B package.",
+      "requiredStewardAction": "Keep CANDIDATE pending stronger evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "trademarkdomain.com",
+      "applicantWebsiteUrl": "https://trademarkdomain.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-idol-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/IDOL2621T-T12142/summary",
+          "title": "APS summary — Internet DotTrademark Organisation Limited",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Website https://www.trademarkdomain.com/.",
+          "supportsClaim": "Published website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "CareCredit LLC",
+      "representativeApplicationId": "CL2657T-T10900",
+      "candidateOrganizationKey": "carecredit",
+      "candidateCanonicalName": "CareCredit",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "recommendationReason": "APS website is synchrony.com while Applicant legal name is CareCredit LLC. Plausible Synchrony Financial brand/subsidiary relationship, but Organization boundary (CareCredit vs Synchrony) is unclear without ownership evidence.",
+      "requiredStewardAction": "MARK AMBIGUOUS — do not CONFIRM to Synchrony or CareCredit without ownership/control package.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "synchrony.com",
+      "applicantWebsiteUrl": "https://synchrony.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Applicant CareCredit LLC vs website synchrony.com",
+        "Ambiguous Organization boundary",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-carecredit-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/CL2657T-T10900/summary",
+          "title": "APS summary — CareCredit LLC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.synchrony.com/.",
+          "supportsClaim": "Website points to Synchrony while Applicant is CareCredit",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Conflicting identity signals"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "ML 35 LLC",
+      "representativeApplicationId": "M3L2665T-T11517",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "resolutionState": "AMBIGUOUS",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "recommendationReason": "Applicant ML 35 LLC publishes website bankofamerica.com with Brand applications. Pattern resembles special-purpose / affiliate Applicant using a larger brand website; Organization could be ML 35, Bank of America, or another vehicle — not resolvable from C evidence.",
+      "requiredStewardAction": "MARK AMBIGUOUS — do not map to Bank of America from website alone.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "bankofamerica.com",
+      "applicantWebsiteUrl": "https://bankofamerica.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Legal name ML 35 LLC ≠ bankofamerica.com self-identity",
+        "Brand cannot resolve ambiguity",
+        "Lanes: BRAND+MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-ml35-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/M3L2665T-T11517/summary",
+          "title": "APS summary — ML 35 LLC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.bankofamerica.com; Brand applications.",
+          "supportsClaim": "Website/Brand point away from literal Applicant name",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Classic ambiguous affiliate/SPV signal"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Beijing Zitiao Network Technology Co., Ltd.",
+      "representativeApplicationId": "BZNT2680T-T49729",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "resolutionState": "AMBIGUOUS",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "recommendationReason": "APS websites include douyin.com/doubao.com. Related Applicant Douyin Vision Co., Ltd. is also in this tranche with different websites. ByteDance/Douyin family boundaries are not established by C website evidence.",
+      "requiredStewardAction": "MARK AMBIGUOUS across Zitiao/Douyin/ByteDance until ownership graph evidence exists. Do not create TikTok/Douyin product Organizations from Brand strings.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "douyin.com;https",
+      "applicantWebsiteUrl": "https://douyin.com;https//www.doubao.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Related tranche Applicant: Douyin Vision Co., Ltd.",
+        "Product websites ≠ Organization proof",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-zitiao-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/BZNT2680T-T49729/summary",
+          "title": "APS summary — Beijing Zitiao Network Technology Co., Ltd.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS raw websites include douyin.com and doubao.com; Brand applications.",
+          "supportsClaim": "Product websites without ownership/control package",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Multi-entity ByteDance-family ambiguity"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Douyin Vision Co., Ltd.",
+      "representativeApplicationId": "DVCL2661T-T73486",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "resolutionState": "AMBIGUOUS",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "recommendationReason": "APS websites fanqienovel.com / hongguoduanju.com differ from Zitiao's douyin.com set. Same corporate-family ambiguity as Beijing Zitiao without ownership evidence.",
+      "requiredStewardAction": "MARK AMBIGUOUS — do not auto-merge with Beijing Zitiao or ByteDance.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "fanqienovel.com",
+      "applicantWebsiteUrl": "https://fanqienovel.com/;https://hongguoduanju.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Do not merge with Beijing Zitiao on name similarity alone",
+        "Lanes: BRAND"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-douyin-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/DVCL2661T-T73486/summary",
+          "title": "APS summary — Douyin Vision Co., Ltd.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS websites https://fanqienovel.com/; https://hongguoduanju.com/; Brand applications.",
+          "supportsClaim": "Distinct website set from Zitiao Applicant",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Family ambiguity unresolved"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "NextGEN TLDs GmbH",
+      "representativeApplicationId": "NTG2671T-T12150",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "resolutionState": "UNRESOLVED",
+      "reviewRecommendation": "NO_EVIDENCE",
+      "recommendationReason": "APS website nowebsite.de is a placeholder-class host and provides no defensible Organization identity beyond the Applicant legal name.",
+      "requiredStewardAction": "Leave UNRESOLVED / NO_EVIDENCE until real first-party or registry evidence appears.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": "nowebsite.de",
+      "applicantWebsiteUrl": "https://nowebsite.de",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "22 Applications — priority for research, not for weak confirm",
+        "Placeholder website",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-nextgen-aps",
+          "strength": "D",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/NTG2671T-T12150/summary",
+          "title": "APS summary — NextGEN TLDs GmbH",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.nowebsite.de.",
+          "supportsClaim": "Placeholder website only",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "D discovery-only; cannot CONFIRM"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "NETDREAM PTE. LTD.",
+      "representativeApplicationId": "NPL2622T-T22956",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "resolutionState": "UNRESOLVED",
+      "reviewRecommendation": "NO_EVIDENCE",
+      "recommendationReason": "APS website recorded as example.com / invalid in WEB-1 inventory — no usable first-party identity surface.",
+      "requiredStewardAction": "Leave UNRESOLVED / NO_EVIDENCE.",
+      "temporalNote": "ORG-RES-TRANCHE-1A research 2026-10-13; APS Reveal Day 2026-10-07",
+      "applicantWebsiteHost": null,
+      "applicantWebsiteUrl": "https://www.example.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Invalid/example website",
+        "Lanes: MULTI"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1a-netdream-aps",
+          "strength": "D",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/NPL2622T-T22956/summary",
+          "title": "APS summary — NETDREAM PTE. LTD.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "WEB-1 inventory: rawWebsite https://www.example.com; normalized host null/invalid.",
+          "supportsClaim": "No usable Applicant Website identity",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "D only"
+        }
+      ]
+    }
+  ]
+}
