@@ -1,0 +1,695 @@
+{
+  "schemaVersion": "org-res-tranche-queue/1.0.0",
+  "decisionId": "RIH-ORG-RES-TRANCHE-1A-20261013",
+  "selection": {
+    "brandLaneRule": "UNRESOLVED with brand>=1; top 15 by brand desc, apps desc, contention memberships desc, name asc",
+    "multiLaneRule": "UNRESOLVED with apps>=2; top 15 by apps desc, brand desc, contention memberships desc, name asc",
+    "maxDossiers": 30
+  },
+  "dossiers": [
+    {
+      "applicantLegalName": "Amazon Registry Services, Inc.",
+      "lanes": [
+        "BRAND",
+        "MULTI"
+      ],
+      "applicationCount": 8,
+      "brandApplicationCount": 8,
+      "officialContentionMembershipCount": 2,
+      "distinctContentionSetCount": 2,
+      "representativeApplicationIds": [
+        "ARSI2666T-T15666",
+        "ARSI2666T-T50233",
+        "ARSI2666T-T58152",
+        "ARSI2666T-T66071",
+        "ARSI2666T-T73990",
+        "ARSI2666T-T81909",
+        "ARSI2666T-T89828",
+        "ARSI2666T-T97747"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "amazon",
+      "candidateCanonicalName": "Amazon",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Industria de Diseño Textil S.A.",
+      "lanes": [
+        "BRAND",
+        "MULTI"
+      ],
+      "applicationCount": 6,
+      "brandApplicationCount": 6,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "ITX2621T-T22327",
+        "ITX2621T-T38165",
+        "ITX2621T-T39673",
+        "ITX2621T-T54003",
+        "ITX2621T-T61922",
+        "ITX2621T-T88570"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "inditex",
+      "candidateCanonicalName": "Inditex",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "ML 35 LLC",
+      "lanes": [
+        "BRAND",
+        "MULTI"
+      ],
+      "applicationCount": 5,
+      "brandApplicationCount": 5,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "M3L2665T-T11517",
+        "M3L2665T-T19436",
+        "M3L2665T-T77760",
+        "M3L2665T-T85679",
+        "M3L2665T-T93598"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "bank-of-america",
+      "candidateCanonicalName": "Bank of America",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Beijing Zitiao Network Technology Co., Ltd.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 3,
+      "brandApplicationCount": 3,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "BZNT2680T-T49729",
+        "BZNT2680T-T57648",
+        "BZNT2680T-T65567"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "bytedance",
+      "candidateCanonicalName": "ByteDance",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Dine Brands Global, Inc.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 3,
+      "brandApplicationCount": 3,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "DIN2676T-T15162",
+        "DIN2676T-T23081",
+        "DIN2676T-T31000"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "dine-brands",
+      "candidateCanonicalName": "Dine Brands Global",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Douyin Vision Co., Ltd.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 3,
+      "brandApplicationCount": 3,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "DVCL2661T-T73486",
+        "DVCL2661T-T81405",
+        "DVCL2661T-T89324"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "bytedance",
+      "candidateCanonicalName": "ByteDance",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Taisho Pharmaceutical Co., Ltd.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 3,
+      "brandApplicationCount": 3,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "TPCL2648T-T11392",
+        "TPCL2648T-T85554",
+        "TPCL2648T-T93473"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "taisho",
+      "candidateCanonicalName": "Taisho Pharmaceutical",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Epic systems corporation",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 1,
+      "distinctContentionSetCount": 1,
+      "representativeApplicationIds": [
+        "ESC2616T-T27738",
+        "ESC2616T-T43576"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "epic-systems",
+      "candidateCanonicalName": "Epic Systems",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "ALIBABA INNOVATION PRIVATE LIMITED",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "AIPL2696T-T43947",
+        "AIPL2696T-T64813"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "alibaba-group",
+      "candidateCanonicalName": "Alibaba Group",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "AT&T Services, Inc.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "ASI2642T-T71986",
+        "ASI2642T-T79905"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "att",
+      "candidateCanonicalName": "AT&T",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "American Lebanese Syrian Associated Charities, Inc.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "ALSA2663T-T49987",
+        "ALSA2663T-T53253"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "alsac",
+      "candidateCanonicalName": "ALSAC",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Axon Enterprise, Inc.",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "AXON2696T-T41181",
+        "AXON2696T-T49100"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "axon",
+      "candidateCanonicalName": "Axon",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Canadian Imperial Bank of Commerce",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "CM2687T-T70607",
+        "CM2687T-T86445"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "cibc",
+      "candidateCanonicalName": "CIBC",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "CareCredit LLC",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "CL2657T-T10900",
+        "CL2657T-T34657"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "synchrony",
+      "candidateCanonicalName": "Synchrony",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Corporation Service Company",
+      "lanes": [
+        "BRAND"
+      ],
+      "applicationCount": 2,
+      "brandApplicationCount": 2,
+      "officialContentionMembershipCount": 0,
+      "distinctContentionSetCount": 0,
+      "representativeApplicationIds": [
+        "CSC2689T-T73615",
+        "CSC2689T-T81534"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "csc",
+      "candidateCanonicalName": "CSC",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Suffix Inc.",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 24,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 13,
+      "distinctContentionSetCount": 13,
+      "representativeApplicationIds": [
+        "SI2639T-T10771",
+        "SI2639T-T14041",
+        "SI2639T-T15799",
+        "SI2639T-T18690",
+        "SI2639T-T21581",
+        "SI2639T-T23718",
+        "SI2639T-T26609",
+        "SI2639T-T29500"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "NO_EVIDENCE",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "NextGEN TLDs GmbH",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 22,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 11,
+      "distinctContentionSetCount": 11,
+      "representativeApplicationIds": [
+        "NTG2671T-T12150",
+        "NTG2671T-T13787",
+        "NTG2671T-T15041",
+        "NTG2671T-T22960",
+        "NTG2671T-T26730",
+        "NTG2671T-T27988",
+        "NTG2671T-T29625",
+        "NTG2671T-T30879"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "NO_EVIDENCE",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Endpoint Domains, Inc.",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 12,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 7,
+      "distinctContentionSetCount": 7,
+      "representativeApplicationIds": [
+        "EDI2665T-T12533",
+        "EDI2665T-T15424",
+        "EDI2665T-T28371",
+        "EDI2665T-T39181",
+        "EDI2665T-T44209",
+        "EDI2665T-T47100",
+        "EDI2665T-T52128",
+        "EDI2665T-T67966"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "endpoint-domains",
+      "candidateCanonicalName": "Endpoint Domains",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Cam Connecting SARL",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 11,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 8,
+      "distinctContentionSetCount": 8,
+      "representativeApplicationIds": [
+        "CCS2640T-T19940",
+        "CCS2640T-T40806",
+        "CCS2640T-T43697",
+        "CCS2640T-T48725",
+        "CCS2640T-T56644",
+        "CCS2640T-T59535",
+        "CCS2640T-T64563",
+        "CCS2640T-T75373"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": "cam-connecting",
+      "candidateCanonicalName": "Cam Connecting",
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "TechEdge Limited",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 10,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 8,
+      "distinctContentionSetCount": 8,
+      "representativeApplicationIds": [
+        "TL2645T-T13654",
+        "TL2645T-T21573",
+        "TL2645T-T29492",
+        "TL2645T-T30242",
+        "TL2645T-T37411",
+        "TL2645T-T44697",
+        "TL2645T-T45834",
+        "TL2645T-T53249"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Innovation Service Limited",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 10,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 7,
+      "distinctContentionSetCount": 7,
+      "representativeApplicationIds": [
+        "ISL2626T-T27355",
+        "ISL2626T-T35274",
+        "ISL2626T-T43193",
+        "ISL2626T-T51112",
+        "ISL2626T-T59031",
+        "ISL2626T-T66950",
+        "ISL2626T-T74869",
+        "ISL2626T-T82788"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "innovation-service",
+      "candidateCanonicalName": "Innovation Service Limited",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "NAME SPACE LLC",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 10,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 6,
+      "distinctContentionSetCount": 6,
+      "representativeApplicationIds": [
+        "NSL2674T-T21960",
+        "NSL2674T-T26234",
+        "NSL2674T-T26988",
+        "NSL2674T-T50745",
+        "NSL2674T-T61555",
+        "NSL2674T-T66583",
+        "NSL2674T-T72365",
+        "NSL2674T-T80030"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Public Interest Registry",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 8,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 4,
+      "distinctContentionSetCount": 4,
+      "representativeApplicationIds": [
+        "PIR2624T-T12017",
+        "PIR2624T-T15791",
+        "PIR2624T-T23710",
+        "PIR2624T-T31629",
+        "PIR2624T-T39548",
+        "PIR2624T-T82034",
+        "PIR2624T-T89953",
+        "PIR2624T-T97872"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "pir",
+      "candidateCanonicalName": "Public Interest Registry",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Internet DotTrademark Organisation Limited",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 7,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 4,
+      "distinctContentionSetCount": 4,
+      "representativeApplicationIds": [
+        "IDOL2621T-T12142",
+        "IDOL2621T-T20061",
+        "IDOL2621T-T27980",
+        "IDOL2621T-T43818",
+        "IDOL2621T-T51737",
+        "IDOL2621T-T53999",
+        "IDOL2621T-T66079"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "internet-dottrademark",
+      "candidateCanonicalName": "Internet DotTrademark Organisation",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "Registered Agents Inc",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 6,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 5,
+      "distinctContentionSetCount": 5,
+      "representativeApplicationIds": [
+        "RAI2657T-T39048",
+        "RAI2657T-T62805",
+        "RAI2657T-T70724",
+        "RAI2657T-T78643",
+        "RAI2657T-T86562",
+        "RAI2657T-T94481"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "MARK_AMBIGUOUS",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    },
+    {
+      "applicantLegalName": "Hostinger UAB",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 4,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 4,
+      "distinctContentionSetCount": 4,
+      "representativeApplicationIds": [
+        "HU2684T-T32145",
+        "HU2684T-T34403",
+        "HU2684T-T42201",
+        "HU2684T-T81042"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "CONFIRM",
+      "candidateOrganizationKey": "hostinger",
+      "candidateCanonicalName": "Hostinger",
+      "downstreamSurfacesIfApproved": [
+        "Organization Profile",
+        "Organization Compare",
+        "Competitive Landscape",
+        "Contention",
+        "future Change Organization context"
+      ]
+    },
+    {
+      "applicantLegalName": "NETDREAM PTE. LTD.",
+      "lanes": [
+        "MULTI"
+      ],
+      "applicationCount": 4,
+      "brandApplicationCount": 0,
+      "officialContentionMembershipCount": 4,
+      "distinctContentionSetCount": 4,
+      "representativeApplicationIds": [
+        "NPL2622T-T22956",
+        "NPL2622T-T30875",
+        "NPL2622T-T38794",
+        "NPL2622T-T46713"
+      ],
+      "priorResolutionState": "UNRESOLVED",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "candidateOrganizationKey": null,
+      "candidateCanonicalName": null,
+      "downstreamSurfacesIfApproved": []
+    }
+  ]
+}

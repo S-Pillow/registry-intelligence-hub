@@ -1,40 +1,45 @@
 # ORG-RES-TRANCHE-1A — steward review package
 
-**Status:** RESEARCH / RECOMMENDATION ONLY  
+**Status:** RESEARCH / EVIDENCE / RECOMMENDATION only  
 **Decision id:** `RIH-ORG-RES-TRANCHE-1A-20261013`  
-**Baseline tip:** `b110927` (prioritization) · production source `a2e334f`  
-**Evidence package:** `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-tranche1.json`
+**Baseline commit:** `b110927` (prioritization tip)  
+**Parent production source:** `a2e334f`
 
 ## Steward disclaimer (mandatory)
 
-This unit **does not** approve Organization mappings.
+This package **does not** grant steward approval and **does not** create product-eligible CONFIRMED Organization mappings.
 
+- Build Agent recommendations ≠ APPROVE.
 - No `resolutionState=CONFIRMED` transitions were applied.
-- No steward `APPROVE` decisions were recorded.
-- No product Organization sidecar / semantic hash change is authorized by this package.
-- **CONFIRM** below means *recommend for steward approval*, not product eligibility.
-
-A separate **ORG-RES-TRANCHE-1B** authorization listing exact Applicant → Organization approvals is required before any recommendation becomes CONFIRMED.
+- No changes were made to `organization-resolution-registry.json` approvals.
+- Production Organization semantic hash remains  
+  `4837173224fc89ae617de3620396950e18c8da99a5333459a8782e032ce3bb87`.
+- A separate **ORG-RES-TRANCHE-1B** authorization is required before any CONFIRM recommendation becomes product-actual.
 
 ## Queue selection method
 
-Deterministic dual-lane selection over currently **UNRESOLVED** Applicant legal names (re-derived from production Organization snapshot + browser + contention publication; reconciled to prioritization baselines).
+Deterministic dual-lane union over currently **UNRESOLVED** Applicant legal names (no fabricated weighted score):
 
-**Lane A — Brand** (UNRESOLVED with ≥1 Brand Application): top 15 by Brand Application count ↓, total Applications ↓, official initial contention memberships ↓, Applicant legal name ↑.
+1. **Brand lane** — Brand Applications ≥ 1; top 15 by Brand count ↓, Applications ↓, contention memberships ↓, legal name ↑  
+2. **Multi-Application lane** — Applications ≥ 2; top 15 by Applications ↓, Brand ↓, contention memberships ↓, legal name ↑  
+3. Union + de-duplicate; max 30; do not pad  
 
-**Lane B — Multi-Application** (UNRESOLVED with ≥2 Applications): top 15 by Applications ↓, Brand Applications ↓, contention memberships ↓, name ↑.
+Implementation: `src/organization-resolution-2026/applicant-identity/tranche-1a-queue.ts`  
+Committed queue: `src/organization-resolution-2026/fixtures/org-res-tranche-1a-queue.json`  
+Evidence package: `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-tranche1a.json`
 
-Union + de-duplicate → **27** dossiers (15+15−3 overlap). Not padded to 30.
+### Selection result
 
-### Overlap (both lanes)
+| Lane | Count |
+| --- | --- |
+| Brand | 15 |
+| Multi-Application | 15 |
+| Overlap | 3 |
+| Unique dossiers | **27** |
 
-1. Amazon Registry Services, Inc.  
-2. Industria de Diseño Textil S.A.  
-3. ML 35 LLC  
+Overlap: Amazon Registry Services, Inc. · Industria de Diseño Textil S.A. · ML 35 LLC
 
-### Expected high-impact names
-
-Suffix Inc., NextGEN TLDs GmbH, Endpoint Domains, Inc., Cam Connecting SARL, Innovation Service Limited, NAME SPACE LLC, TechEdge Limited, Amazon Registry Services, Inc., and Public Interest Registry **all appear** via the deterministic rules (no hard-coding).
+High-impact multi-Application names from prioritization (Suffix, NextGEN, Endpoint, Cam Connecting, Innovation Service, NAME SPACE, TechEdge, Amazon, PIR) appear via the deterministic Multi lane (Amazon also Brand). They were **not** hard-coded.
 
 ## Current actual coverage (unchanged)
 
@@ -43,123 +48,98 @@ Suffix Inc., NextGEN TLDs GmbH, Endpoint Domains, Inc., Cam Connecting SARL, Inn
 | Confirmed Applicant mappings | 145 |
 | Confirmed Organizations | 89 |
 | Candidate / Ambiguous / Unresolved | 2 / 2 / 331 |
-| Applications under Confirmed Organizations | 1,036 / 1,614 |
-| Brand Applications under Confirmed Organizations | 126 / 333 |
-| Contention memberships under Confirmed Organizations | 685 / 891 |
-| Organization semantic hash | `4837173224fc89ae617de3620396950e18c8da99a5333459a8782e032ce3bb87` |
+| Applications under Confirmed Orgs | 1,036 / 1,614 |
+| Brand Applications under Confirmed Orgs | 126 / 333 |
+| Contention memberships under Confirmed Orgs | 685 / 891 |
+| Organization semantic hash | `48371732…e3bb87` |
 
-Unresolved impact (re-derived): **538** Applications · **205** Brand · **188** contention memberships · **137** sets · **69** multi-Application Applicants (276 Applications).
+## Recommendations summary
 
-## Selected Applicants
-
-Format: Applicant · Applications · Brand · contention memberships · lane(s) · recommendation
-
-### Lane A (Brand)
-
-1. Amazon Registry Services, Inc. · 8 · 8 · 2 · BRAND+MULTI · KEEP_CANDIDATE  
-2. Industria de Diseño Textil S.A. · 6 · 6 · 0 · BRAND+MULTI · **CONFIRM → Inditex**  
-3. ML 35 LLC · 5 · 5 · 0 · BRAND+MULTI · MARK_AMBIGUOUS  
-4. Beijing Zitiao Network Technology Co., Ltd. · 3 · 3 · 0 · BRAND · MARK_AMBIGUOUS  
-5. Dine Brands Global, Inc. · 3 · 3 · 0 · BRAND · **CONFIRM → Dine Brands Global**  
-6. Douyin Vision Co., Ltd. · 3 · 3 · 0 · BRAND · MARK_AMBIGUOUS  
-7. Taisho Pharmaceutical Co., Ltd. · 3 · 3 · 0 · BRAND · KEEP_CANDIDATE  
-8. Epic systems corporation · 2 · 2 · 1 · BRAND · **CONFIRM → Epic Systems**  
-9. ALIBABA INNOVATION PRIVATE LIMITED · 2 · 2 · 0 · BRAND · KEEP_CANDIDATE (possible `alibaba-group` reuse)  
-10. AT&T Services, Inc. · 2 · 2 · 0 · BRAND · KEEP_CANDIDATE  
-11. American Lebanese Syrian Associated Charities, Inc. · 2 · 2 · 0 · BRAND · KEEP_CANDIDATE  
-12. Axon Enterprise, Inc. · 2 · 2 · 0 · BRAND · **CONFIRM → Axon Enterprise**  
-13. Canadian Imperial Bank of Commerce · 2 · 2 · 0 · BRAND · **CONFIRM → Canadian Imperial Bank of Commerce**  
-14. CareCredit LLC · 2 · 2 · 0 · BRAND · MARK_AMBIGUOUS  
-15. Corporation Service Company · 2 · 2 · 0 · BRAND · KEEP_CANDIDATE  
-
-### Lane B (Multi-Application) — unique additions beyond overlap
-
-1. Suffix Inc. · 24 · 0 · 13 · MULTI · **CONFIRM → Suffix**  
-2. NextGEN TLDs GmbH · 22 · 0 · 11 · MULTI · NO_EVIDENCE  
-3. Endpoint Domains, Inc. · 12 · 0 · 7 · MULTI · **CONFIRM → Endpoint Domains**  
-4. Cam Connecting SARL · 11 · 0 · 8 · MULTI · KEEP_CANDIDATE  
-5. TechEdge Limited · 10 · 0 · 8 · MULTI · KEEP_CANDIDATE  
-6. Innovation Service Limited · 10 · 0 · 7 · MULTI · KEEP_CANDIDATE  
-7. NAME SPACE LLC · 10 · 0 · 6 · MULTI · KEEP_CANDIDATE  
-8. Public Interest Registry · 8 · 0 · 4 · MULTI · **CONFIRM → Public Interest Registry**  
-9. Internet DotTrademark Organisation Limited · 7 · 0 · 4 · MULTI · KEEP_CANDIDATE  
-10. Registered Agents Inc · 6 · 0 · 5 · MULTI · KEEP_CANDIDATE  
-11. Hostinger UAB · 4 · 0 · 4 · MULTI · **CONFIRM → Hostinger**  
-12. NETDREAM PTE. LTD. · 4 · 0 · 4 · MULTI · NO_EVIDENCE  
-
-## Recommendation summary
-
-| Recommendation | Count | Notes |
-| --- | --- | --- |
-| **CONFIRM** | 9 | All have ≥1 A or B evidence; none Brand-only / website-only / C|D-only |
-| KEEP_CANDIDATE | 12 | Plausible but below CONFIRM threshold |
-| MARK_AMBIGUOUS | 4 | Conflicting website vs legal-name / corporate-family boundary |
-| REJECT_RELATIONSHIP | 0 | — |
-| NO_EVIDENCE | 2 | Placeholder / invalid website only |
-
-### CONFIRM recommendations (steward decision list)
-
-| Applicant | Proposed Organization | Key | A/B summary |
-| --- | --- | --- | --- |
-| Suffix Inc. | Suffix | `suffix` | B strict self-identity + B first-party copyright |
-| Endpoint Domains, Inc. | Endpoint Domains | `endpoint-domains` | B strict self-identity + B first-party copyright |
-| Public Interest Registry | Public Interest Registry | `public-interest-registry` | B first-party Who We Are identity |
-| Dine Brands Global, Inc. | Dine Brands Global | `dine-brands-global` | A SEC registrant exact match |
-| Axon Enterprise, Inc. | Axon Enterprise | `axon-enterprise` | A SEC registrant match |
-| Canadian Imperial Bank of Commerce | Canadian Imperial Bank of Commerce | `canadian-imperial-bank-of-commerce` | A SEC registrant match |
-| Epic systems corporation | Epic Systems | `epic-systems` | B first-party copyright + B APS |
-| Industria de Diseño Textil S.A. | Inditex | `inditex` | A SEC ADR title linking legal name↔Inditex |
-| Hostinger UAB | Hostinger | `hostinger` | B privacy policy HOSTINGER, UAB + B APS |
-
-**Existing Organization keys reused in CONFIRM set:** none (all newly proposed keys).  
-**Parent/control:** AT&T Services notes AT&T Inc. as separate possible parent (KEEP_CANDIDATE only). PIR notes Internet Society as founding context, not collapse.
-
-## Evidence safety gates
-
-| Gate | Result |
+| Recommendation | Count |
 | --- | --- |
-| Brand-only CONFIRM | **0** |
-| Website-only CONFIRM | **0** |
-| C/D-only CONFIRM | **0** |
-| Parent conflated into Organization | **0** |
-| Cross-round approvals | **0** |
-| Selected-RSP inferences | **0** |
-| Existing CONFIRMED demotions | **0** |
+| CONFIRM | 15 |
+| KEEP_CANDIDATE | 8 |
+| MARK_AMBIGUOUS | 2 |
+| REJECT_RELATIONSHIP | 0 |
+| NO_EVIDENCE | 2 |
 
-Brand was used for **queue prioritization / C corroboration only**.
+### CONFIRM (steward decision required)
 
-## PRO FORMA if steward approves all 9 CONFIRM recommendations
+| Applicant | Proposed Organization | Key | Existing? | Primary A/B basis |
+| --- | --- | --- | --- | --- |
+| Amazon Registry Services, Inc. | Amazon | `amazon` | new | APS Q12 100% owned by Amazon.com, Inc.; Q108 |
+| ALIBABA INNOVATION PRIVATE LIMITED | Alibaba Group | `alibaba-group` | **reuse** | APS QPE/ultimate control Alibaba Group Holding Limited |
+| Industria de Diseño Textil S.A. | Inditex | `inditex` | new | APS Q12 aka INDITEX, S.A. + existing .Zara RO |
+| AT&T Services, Inc. | AT&T | `att` | new | APS parent/control AT&T Inc. |
+| CareCredit LLC | Synchrony | `synchrony` | new | APS parent/control Synchrony Financial |
+| Corporation Service Company | CSC | `csc` | new | APS subsidiary of WMB Holdings + CSC registrar family |
+| ML 35 LLC | Bank of America | `bank-of-america` | new | APS 100% indirect owner Bank of America Corporation |
+| Beijing Zitiao Network Technology Co., Ltd. | ByteDance | `bytedance` | new | APS ultimate parent/control Bytedance Ltd. |
+| Douyin Vision Co., Ltd. | ByteDance | `bytedance` | new (shared) | same ownership chain |
+| Taisho Pharmaceutical Co., Ltd. | Taisho Pharmaceutical | `taisho` | new | APS wholly-owned operating company of Holdings |
+| Public Interest Registry | Public Interest Registry | `pir` | new | Existing RO; Internet Society parent/control separate |
+| Hostinger UAB | Hostinger | `hostinger` | new | Strict hostinger.com self-identity + Hostinger-group APS disclosures |
+| Epic systems corporation | Epic Systems | `epic-systems` | new | APS Spec-13 self brand-TLD mission for Epic Systems Corporation |
+| Innovation Service Limited | Innovation Service Limited | `innovation-service` | new | Existing RO of .HELP (self) |
+| Internet DotTrademark Organisation Limited | Internet DotTrademark Organisation | `internet-dottrademark` | new | Existing RO; DotTrademark Holding parents separate |
+
+Parents/control are stored as separate fields. Product brands / applied-for strings are not Organizations.
+
+### KEEP_CANDIDATE
+
+Axon Enterprise, Inc. · American Lebanese Syrian Associated Charities, Inc. · Canadian Imperial Bank of Commerce · Dine Brands Global, Inc. · Endpoint Domains, Inc. · Cam Connecting SARL · NETDREAM PTE. LTD. · TechEdge Limited
+
+### MARK_AMBIGUOUS
+
+NAME SPACE LLC · Registered Agents Inc
+
+### NO_EVIDENCE
+
+Suffix Inc. · NextGEN TLDs GmbH
+
+## PRO FORMA if steward approves **all** CONFIRM recommendations
 
 **Not product-actual. No mappings changed.**
 
-| Delta | Value |
+| Metric | Delta / result |
 | --- | --- |
-| Additional Confirmed Applicant mappings | +9 (145→154) |
-| Additional Confirmed Organizations | +9 new keys (89→98) |
-| Applications newly entering Confirmed coverage | **+63** (1,036→1,099) |
-| Brand Applications newly entering Confirmed coverage | **+15** (126→141) |
-| Contention memberships newly entering Confirmed coverage | **+29** (685→714) |
-| Distinct contention sets affected | **29** |
-| Remaining unresolved Applicants | **322** |
-| Remaining unresolved Applications | **475** |
+| Additional Confirmed Applicant mappings | +15 → 160 |
+| Existing Organization keys reused | 1 (`alibaba-group`) |
+| New Organization keys proposed | 13 |
+| Confirmed Organizations (pro forma) | 89 + 13 = 102 |
+| Additional Applications covered | +67 → 1,103 |
+| Additional Brand Applications covered | +38 → 164 |
+| Additional contention memberships covered | +22 → 707 |
+| Distinct contention sets affected | 21 |
+| Remaining UNRESOLVED Applicants | 316 |
+| Remaining UNRESOLVED Applications | 471 |
 
-Residual Brand gap would remain large (205−15 = **190** Brand Applications still unresolved) — this tranche is intentionally bounded.
+## Downstream potential (only if later approved)
 
-## Downstream potential (only if 1B approves)
+Organization Profiles · Organization Compare · Competitive Landscape · Contention aggregation context · future Change Organization context.
 
-| Surface | Potential |
+**Not created by this unit:** cross-round returning identity · selected-RSP claims · category taxonomy · HIST-COHORT-2C · ChangeRecord schema changes.
+
+## Evidence safety checklist
+
+| Rule | Result |
 | --- | --- |
-| Organization Profiles | New profiles for 9 keys |
-| Organization Compare | New comparable Organizations |
-| Competitive Landscape | Confirmed rollups gain 63 Applications |
-| Contention | Aggregation/context enrichment only (263/891 unchanged) |
-| Cross-round | **None** in this unit (no returning approvals) |
-| Change future Org context | Keys would be available later to attach; Change Intel untouched here |
+| Brand-only CONFIRM | 0 |
+| Website-only CONFIRM | 0 |
+| C/D-only CONFIRM | 0 |
+| Parent conflated into Organization key | 0 (parents stored separately) |
+| Cross-round approvals | 0 |
+| Selected-RSP inferences | 0 |
+| New product CONFIRMED mappings | 0 |
 
-## Non-goals honored
+## Artifacts
 
-No HIST-COHORT-2C · no category taxonomy · no selected-RSP claims · no Change Intelligence mutation · no registry steward APPROVE edits · no resolve-all-331 · no UI.
+- `src/organization-resolution-2026/fixtures/applicant-identity-evidence-package-tranche1a.json`
+- `src/organization-resolution-2026/fixtures/org-res-tranche-1a-queue.json`
+- `src/organization-resolution-2026/applicant-identity/tranche-1a-queue.ts`
+- `src/organization-resolution-2026/applicant-identity/tranche-1a-governance.test.ts`
+- `scripts/generate-org-res-tranche-1a-package.mjs` (regeneration helper; not a runtime dependency)
 
-## Next step
+## Next
 
-Return to Prompt Agent / product steward. If any CONFIRM rows are accepted, issue **ORG-RES-TRANCHE-1B** with the exact approved Applicant → Organization transitions only.
+Return to Prompt Agent / product steward. If any CONFIRM rows are accepted, authorize **ORG-RES-TRANCHE-1B** with the exact approved Applicant → Organization transitions. Do not apply approvals automatically.
