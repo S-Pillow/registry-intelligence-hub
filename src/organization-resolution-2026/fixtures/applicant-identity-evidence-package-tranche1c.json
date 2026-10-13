@@ -1,0 +1,496 @@
+{
+  "packageVersion": "applicant-identity-evidence-package/1.0.0",
+  "methodNote": "ORG-RES-TRANCHE-1C targeted follow-up on ten non-CONFIRMED 1A Applicants. Research/recommendation only — never steward APPROVE / never resolutionState CONFIRMED. Self-identity Organization confirmation does not require ultimate-parent proof; parent/control fields remain separate. Existing 1B CONFIRMED mappings and 1A research package untouched.",
+  "researchedAt": "2026-10-13",
+  "decisionId": "RIH-ORG-RES-TRANCHE-1C-20261013",
+  "dossiers": [
+    {
+      "applicantLegalName": "Amazon Registry Services, Inc.",
+      "representativeApplicationId": "ARSI2666T-T15666",
+      "candidateOrganizationKey": "amazon-registry-services",
+      "candidateCanonicalName": "Amazon Registry Services",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "First-party Amazon Registry Conditions of Use identify Amazon Registry Services, Inc. (“Amazon Registry”) as the contracting operator of registry.amazon. APS responses further disclose 100% ownership by Amazon.com, Inc. and name Amazon.com, Inc. as Direct Parent / Ultimate Control — recorded separately. Organization is Amazon Registry Services, not Amazon.com.",
+      "requiredStewardAction": "APPROVE Confirmed · Amazon Registry Services or REJECT. Do NOT collapse Organization to Amazon.com, Inc. Parent Amazon.com, Inc. may be retained as relationship context only.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07; Conditions of Use last updated 2023-12-18 (continuity through 2026 applications).",
+      "applicantWebsiteHost": "registry.amazon",
+      "applicantWebsiteUrl": "https://registry.amazon",
+      "directParentLegalName": "Amazon.com, Inc.",
+      "ultimateParentLegalName": "Amazon.com, Inc.",
+      "ultimateControlLegalName": "Amazon.com, Inc.",
+      "evidenceExplanationLines": [
+        "Self-Organization: Amazon Registry Services (not Amazon.com)",
+        "B first-party Conditions of Use exact legal name Amazon Registry Services, Inc.",
+        "B APS ownership: 100% owned by Amazon.com, Inc. (parent separate)",
+        "Existing key match: no · new key amazon-registry-services",
+        "8 Brand Applications — Applications only"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-amazon-cou",
+          "strength": "B",
+          "sourceType": "first-party-legal",
+          "sourceIdentifier": "https://m.media-amazon.com/images/G/01/arsi/documents/2023.12.18_ARSI_Conditions_of_Use.pdf",
+          "title": "Amazon Registry Conditions of Use — Amazon Registry Services, Inc.",
+          "asOf": "2023-12-18",
+          "retrievedAt": "2026-10-13",
+          "summary": "Conditions of Use: Amazon Registry Services, Inc. (“Amazon Registry”) provides Amazon Registry TLDs via registry.amazon; postal address Amazon Registry Services, Inc., Seattle WA; service of process captioned Amazon Registry Services, Inc.",
+          "supportsClaim": "Exact Applicant legal entity self-identifies as the Amazon Registry operating Organization",
+          "temporalRelevance": "Legal terms dated 2023-12-18 governing registry.amazon during 2026 application period",
+          "limitations": "Does not alone establish Amazon.com as product Organization"
+        },
+        {
+          "evidenceId": "ev-t1c-amazon-aps-ownership",
+          "strength": "B",
+          "sourceType": "icann-public-responses",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/applications/ARSI2666T-T97747/application-responses",
+          "title": "APS responses — Amazon Registry Services, Inc. ownership / parent",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS states Amazon Registry Services, Inc. is wholly owned by / 100% owner Amazon.com, Inc. (Direct Parent and Ultimate Control named Amazon.com, Inc.); Affiliate disclosures for AWS Registry LLC and Amazon Registrar entities.",
+          "supportsClaim": "Authoritative Applicant disclosure of exact entity ownership and separate parent Amazon.com, Inc.",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Parent disclosure must not collapse Organization to Amazon.com"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "AT&T Services, Inc.",
+      "representativeApplicationId": "ASI2642T-T71986",
+      "candidateOrganizationKey": "att-services",
+      "candidateCanonicalName": "AT&T Services",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "SEC Exhibit 21 (AT&T Inc. Form 10-K year ended 2025, filed 2026-02-09) lists exact legal name AT&T Services, Inc. (Delaware) conducting business as AT&T Services / AT&T Labs among principal subsidiaries. Establishes Applicant as a distinct operating subsidiary Organization; AT&T Inc. is the parent registrant, not the Organization.",
+      "requiredStewardAction": "APPROVE Confirmed · AT&T Services or REJECT. Record parent AT&T Inc. separately. Do NOT use AT&T Inc. as Organization.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; Exhibit 21 as-of 2025-12-31 filed 2026-02-09; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "att.com",
+      "applicantWebsiteUrl": "https://att.com",
+      "directParentLegalName": "AT&T Inc.",
+      "ultimateParentLegalName": "AT&T Inc.",
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Self-Organization: AT&T Services (not AT&T Inc.)",
+        "A SEC Exhibit 21 exact subsidiary legal name AT&T Services, Inc.",
+        "Parent AT&T Inc. separate — not required to prove self-Organization once entity is listed",
+        "Existing key match: no · new key att-services"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-att-ex21",
+          "strength": "A",
+          "sourceType": "sec-filing",
+          "sourceIdentifier": "https://www.sec.gov/Archives/edgar/data/732717/000073271726000120/ex-21ye2025.htm",
+          "title": "SEC Exhibit 21 — Principal subsidiaries of AT&T Inc. (YE 2025)",
+          "asOf": "2025-12-31",
+          "retrievedAt": "2026-10-13",
+          "summary": "Exhibit 21 to AT&T Inc. Form 10-K lists Legal Name AT&T Services, Inc.; State Delaware; Conducts Business Under AT&T Services; AT&T Labs.",
+          "supportsClaim": "Authoritative regulatory schedule identifying exact Applicant legal entity as a principal AT&T Inc. subsidiary",
+          "temporalRelevance": "As-of 2025-12-31; filing 2026-02-09 covers period overlapping 2026 applications",
+          "limitations": "Exhibit proves subsidiary identity and parent AT&T Inc.; does not make AT&T Inc. the product Organization"
+        },
+        {
+          "evidenceId": "ev-t1c-att-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/ASI2642T-T71986/summary",
+          "title": "APS summary — AT&T Services, Inc.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName AT&T Services, Inc.; website https://www.att.com; Brand att.",
+          "supportsClaim": "Corroborates published Applicant legal name for 2026 applications",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "APS/website alone would be C; CONFIRM rests on Exhibit 21 A evidence"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Taisho Pharmaceutical Co., Ltd.",
+      "representativeApplicationId": "TPCL2648T-T11392",
+      "candidateOrganizationKey": "taisho-pharmaceutical",
+      "candidateCanonicalName": "Taisho Pharmaceutical",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "APS responses identify Taisho Pharmaceutical Co., Ltd. as the applying entity and describe it as a Tokyo-headquartered corporation that is a wholly owned operating company within the Taisho Pharmaceutical Holdings Co., Ltd. group. Material shareholder named Taisho Pharmaceutical Holdings Co., Ltd. Organization is the operating company Taisho Pharmaceutical — not Holdings.",
+      "requiredStewardAction": "APPROVE Confirmed · Taisho Pharmaceutical or REJECT. Do NOT substitute Taisho Pharmaceutical Holdings as Organization. Holdings may be recorded as parent/shareholder separately.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "taisho.co.jp",
+      "applicantWebsiteUrl": "https://taisho.co.jp",
+      "directParentLegalName": "Taisho Pharmaceutical Holdings Co., Ltd.",
+      "ultimateParentLegalName": "Taisho Pharmaceutical Holdings Co., Ltd.",
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Self-Organization: Taisho Pharmaceutical (operating company)",
+        "B APS first-party: wholly owned operating company within Holdings group",
+        "Holdings named as material shareholder / parent — separate from Organization",
+        "Existing key match: no · new key taisho-pharmaceutical",
+        "Brand strings (e.g. lipovitan) remain Applications"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-taisho-aps-self",
+          "strength": "B",
+          "sourceType": "icann-public-responses",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/applications/TPCL2648T-T11392/application-responses",
+          "title": "APS responses — Taisho Pharmaceutical Co., Ltd. operating identity",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Q1 legal name Taisho Pharmaceutical Co., Ltd. Mission text: corporation headquartered in Tokyo, Japan, and a wholly owned operating company within the Taisho Pharmaceutical Holdings Co., Ltd. group. Material Shareholders: Taisho Pharmaceutical Holdings Co., Ltd.",
+          "supportsClaim": "Exact Applicant self-identifies as operating Organization distinct from Holdings parent",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Do not promote Holdings or Lipovitan brand to Organization"
+        },
+        {
+          "evidenceId": "ev-t1c-taisho-aps-summary",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/TPCL2648T-T11392/summary",
+          "title": "APS summary — Taisho Pharmaceutical Co., Ltd.",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Taisho Pharmaceutical Co., Ltd.; website https://www.taisho.co.jp/; Brand applications.",
+          "supportsClaim": "Corroborates Applicant + first-party website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Summary alone is C corroboration"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Corporation Service Company",
+      "representativeApplicationId": "CSC2689T-T73615",
+      "candidateOrganizationKey": "corporation-service-company",
+      "candidateCanonicalName": "Corporation Service Company",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "First-party CSC Legal Terms of Use identify Corporation Service Company® (“CSC®”) as the website operator (Delaware corporation, Wilmington registered office). Corporate press announcement states Corporation Service Company remains the legal trade name while CSC is the commercial brand. No existing Confirmed Organization key for CSC/Corporation Service Company.",
+      "requiredStewardAction": "APPROVE Confirmed · Corporation Service Company or REJECT. Canonical name uses legal trade name; CSC is brand/DBA context only.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07; legal page retrieved 2026-10-13.",
+      "applicantWebsiteHost": "cscglobal.com",
+      "applicantWebsiteUrl": "https://cscglobal.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Self-Organization: Corporation Service Company (legal trade name)",
+        "B first-party Legal Terms: Corporation Service Company® (“CSC®”)",
+        "B/C press: legal trade name remains Corporation Service Company",
+        "Existing key match: no · new key corporation-service-company"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-csc-legal",
+          "strength": "B",
+          "sourceType": "first-party-legal",
+          "sourceIdentifier": "https://www.cscglobal.com/service/legal/",
+          "title": "CSC Legal Terms of Use — Corporation Service Company",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "Website Terms: The Corporation Service Company® (“CSC®”) Website at www.cscglobal.com; CSC is a privately held corporation, incorporated in Delaware, registered office 251 Little Falls Drive, Wilmington, DE 19808.",
+          "supportsClaim": "Exact Applicant legal trade name self-identifies as Organization; CSC is commercial brand abbreviation",
+          "temporalRelevance": "First-party legal terms retrieved 2026-10-13 covering Applicant website used in 2026 APS",
+          "limitations": "Does not prove public-company registrant identity beyond Delaware private corporation statement"
+        },
+        {
+          "evidenceId": "ev-t1c-csc-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/CSC2689T-T73615/summary",
+          "title": "APS summary — Corporation Service Company",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS organizationName Corporation Service Company; website https://www.cscglobal.com.",
+          "supportsClaim": "Corroborates Applicant legal name + CSC Global website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C corroboration of B legal terms"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Registered Agents Inc",
+      "representativeApplicationId": "RAI2657T-T39048",
+      "candidateOrganizationKey": "registered-agents",
+      "candidateCanonicalName": "Registered Agents",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "First-party privacy policy uses “Registered Agents Inc.”, but other first-party pages inconsistently use “Registered Agent Inc” (singular) and a Law Enforcement Guide addresses “Northwest Registered Agent Service Inc” at the same Sheridan WY address. Exact legal-entity boundary remains insufficiently settled for CONFIRM.",
+      "requiredStewardAction": "Keep CANDIDATE · Registered Agents pending consistent A/B registry or unitary legal-name package resolving Northwest Registered Agent Service Inc naming.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "registeredagentsinc.com",
+      "applicantWebsiteUrl": "https://registeredagentsinc.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Near-match privacy naming is promising but contradicted by Northwest Registered Agent Service Inc captions",
+        "No A corporate-registry extract captured",
+        "Existing key match: no"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-rai-privacy",
+          "strength": "C",
+          "sourceType": "first-party-legal",
+          "sourceIdentifier": "https://www.registeredagentsinc.com/privacy-policy/",
+          "title": "Registered Agents Inc. Privacy Policy",
+          "asOf": "2025-12-30",
+          "retrievedAt": "2026-10-13",
+          "summary": "Privacy Policy titled Registered Agents Inc.; body: Registered Agents Inc. and its affiliates (collectively, “Registered Agents Inc.”).",
+          "supportsClaim": "First-party naming aligns to Applicant string",
+          "temporalRelevance": "Policy last updated 2025-12-30; retrieved 2026-10-13",
+          "limitations": "Strength held to C because sibling first-party pages use inconsistent legal captions (Agent vs Agents; Northwest Registered Agent Service Inc)"
+        },
+        {
+          "evidenceId": "ev-t1c-rai-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/RAI2657T-T39048/summary",
+          "title": "APS summary — Registered Agents Inc",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.registeredagentsinc.com/.",
+          "supportsClaim": "Published Applicant website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "Cam Connecting SARL",
+      "representativeApplicationId": "CCS2640T-T19940",
+      "candidateOrganizationKey": "cam-connecting",
+      "candidateCanonicalName": "Cam Connecting",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "Monaco Journal de Monaco official extract (2019) constitutes société à responsabilité limitée under denomination CAM CONNECTING at 32 rue des Remparts, Monaco. First-party About page states CamConnecting SARL is an information technology company for registry operations. APS affiliate disclosure names AC WEBCONNECTING NV separately — not collapsed into Organization.",
+      "requiredStewardAction": "APPROVE Confirmed · Cam Connecting or REJECT. Affiliate AC WEBCONNECTING NV may be noted separately; do not infer Organization from .cam portfolio size.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; Monaco constitution published 2019; IANA .cam transfer 2022 confirms Cam Connecting SARL registry operator continuity into 2026 applications.",
+      "applicantWebsiteHost": "camconnecting.cam",
+      "applicantWebsiteUrl": "https://camconnecting.cam",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Self-Organization: Cam Connecting",
+        "A Monaco Journal constitution CAM CONNECTING SARL",
+        "B first-party About: CamConnecting SARL registry operations",
+        "Affiliate AC WEBCONNECTING NV separate (APS)",
+        "Existing key match: no · new key cam-connecting"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-cam-monaco",
+          "strength": "A",
+          "sourceType": "corporate-registry",
+          "sourceIdentifier": "https://journaldemonaco.gouv.mc/fr/Journaux/2019/Journal-8463/CAM-CONNECTING-CONSTITUTION-D-UNE-SOCIETE-A-RESPONSABILITE-LIMITEE",
+          "title": "Journal de Monaco — CAM CONNECTING SARL constitution",
+          "asOf": "2019-12-06",
+          "retrievedAt": "2026-10-13",
+          "summary": "Official Monaco commercial journal extract: denomination « CAM CONNECTING »; SARL; siège 32, rue des Remparts à Monaco; gérants Antje SCHONEVELD / Christian CAUMONT; objet includes domain names and IP rights. Applicant self-identity Organization; parent entity is not substituted.",
+          "supportsClaim": "Authoritative corporate formation of exact Applicant operating entity in Monaco; parent is not the Organization",
+          "temporalRelevance": "Formation 2019; entity remains .cam registry operator through IANA transfer 2022 and 2026 APS applications",
+          "limitations": "Formation extract is historical; continuity supported by IANA/ICANN registry-operator role, not by a 2026 re-filing captured here"
+        },
+        {
+          "evidenceId": "ev-t1c-cam-about",
+          "strength": "B",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "https://camconnecting.cam/about",
+          "title": "CamConnecting About — CamConnecting SARL",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "About us: CamConnecting SARL is an information technology company. Registry operations and domain abuse handling. Contact/address Monaco; © 2026 CamConnecting SARL.",
+          "supportsClaim": "First-party self-identity of Cam Connecting SARL as registry operating Organization",
+          "temporalRelevance": "Site copyright 2026; retrieved 2026-10-13",
+          "limitations": "Affiliate relationships disclosed in APS are separate"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "ALIBABA INNOVATION PRIVATE LIMITED",
+      "representativeApplicationId": "AIPL2696T-T43947",
+      "candidateOrganizationKey": "alibaba-group",
+      "candidateCanonicalName": "Alibaba Group",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "APS affiliate disclosure states Alibaba Cloud (Beijing) Technology Co., Ltd. is an Affiliate of the applicant and both are under the common control of Alibaba Group Holding Limited. Existing Confirmed Organization key alibaba-group (Alibaba Group) already maps related Singapore/Alibaba RO Applicants. H2 group mapping is supported; do not invent Organization solely because the legal name contains ALIBABA. Self-Organization “Alibaba Innovation” remains an alternative if steward prefers Applicant-grain identity.",
+      "requiredStewardAction": "APPROVE Confirmed · Alibaba Group (reuse alibaba-group) or REJECT / choose self-Organization Alibaba Innovation with new key. Do not demote existing alibaba-group CONFIRMED mappings. Record Alibaba Group Holding Limited as control parent context.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "qwencloud.com",
+      "applicantWebsiteUrl": "https://qwencloud.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": "Alibaba Group Holding Limited",
+      "ultimateControlLegalName": "Alibaba Group Holding Limited",
+      "evidenceExplanationLines": [
+        "H2: reuse existing Confirmed Organization alibaba-group",
+        "B APS: common control of Alibaba Group Holding Limited with Affiliate Alibaba Cloud (Beijing)",
+        "H1 self Alibaba Innovation not selected as primary recommendation (steward may override)",
+        "Brand .qwen remains Application string",
+        "Existing key match: yes · reuse alibaba-group"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-aip-aps-control",
+          "strength": "B",
+          "sourceType": "icann-public-responses",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/applications/AIPL2696T-T43947/application-responses",
+          "title": "APS responses — ALIBABA INNOVATION PRIVATE LIMITED common control",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Affiliate disclosure: Alibaba Cloud (Beijing) Technology Co., Ltd. is an Affiliate of the applicant; both are under the common control (parent/control) of Alibaba Group Holding Limited. Neither controls the other. Applicant legal name ALIBABA INNOVATION PRIVATE LIMITED; website qwencloud.com.",
+          "supportsClaim": "Explicit Applicant disclosure of common parent/control by Alibaba Group Holding Limited supporting reuse of existing Alibaba Group Organization",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Common control ≠ automatic identity with every Alibaba affiliate; steward must accept group Organization boundary"
+        },
+        {
+          "evidenceId": "ev-t1c-aip-aps-summary",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/AIPL2696T-T43947/summary",
+          "title": "APS summary — ALIBABA INNOVATION PRIVATE LIMITED",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.qwencloud.com/; Brand qwen applications.",
+          "supportsClaim": "Corroborates Applicant publication",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Website/Brand alone cannot CONFIRM; name resemblance to Alibaba is D discovery only"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "American Lebanese Syrian Associated Charities, Inc.",
+      "representativeApplicationId": "ALSA2663T-T49987",
+      "candidateOrganizationKey": "alsac",
+      "candidateCanonicalName": "ALSAC",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "CONFIRM",
+      "recommendationReason": "First-party St. Jude/ALSAC Legal page states American Lebanese Syrian Associated Charities, Inc. (ALSAC) is an Illinois nonprofit fundraising and awareness organization for St. Jude Children’s Research Hospital, with address 501 St. Jude Place, Memphis. Trademark notice: ALSAC is a service mark of American Lebanese Syrian Associated Charities, Inc.; ST. JUDE CHILDREN’S RESEARCH HOSPITAL is a registered trademark of St. Jude Children’s Research Hospital, Inc. — establishing separate Organization boundary.",
+      "requiredStewardAction": "APPROVE Confirmed · ALSAC or REJECT. Do NOT collapse ALSAC into St. Jude Children’s Research Hospital; record fundraising relationship separately.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; legal page retrieved 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "stjude.org",
+      "applicantWebsiteUrl": "https://stjude.org",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Self-Organization: ALSAC (= American Lebanese Syrian Associated Charities, Inc.)",
+        "B first-party Legal registrations + trademark ownership statement",
+        "St. Jude Children’s Research Hospital, Inc. is a separate legal entity / trademark owner",
+        "Existing key match: no · new key alsac"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-alsac-legal",
+          "strength": "B",
+          "sourceType": "first-party-legal",
+          "sourceIdentifier": "https://www.stjude.org/legal.html",
+          "title": "St. Jude Legal — ALSAC registrations and trademarks",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "Registrations: ALSAC is the fundraising and awareness organization for St. Jude Children’s Research Hospital; Illinois nonprofit; American Lebanese Syrian Associated Charities, Inc. (ALSAC) located at 501 St. Jude Place, Memphis, TN 38105. Trademark statement: ST. JUDE CHILDREN’S RESEARCH HOSPITAL is a registered trademark of St. Jude Children’s Research Hospital, Inc. ALSAC is a service mark of American Lebanese Syrian Associated Charities, Inc. Applicant self-identity Organization; parent entity is not substituted.",
+          "supportsClaim": "Exact Applicant legal entity self-identifies as ALSAC Organization distinct from St. Jude Children’s Research Hospital, Inc.; parent is not the Organization",
+          "temporalRelevance": "First-party legal page retrieved 2026-10-13 covering Applicant website used in 2026 APS",
+          "limitations": "Fundraising relationship to St. Jude must remain a separate fact, not Organization collapse"
+        },
+        {
+          "evidenceId": "ev-t1c-alsac-aps",
+          "strength": "C",
+          "sourceType": "icann-public-responses",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/applications/ALSA2663T-T49987/application-responses",
+          "title": "APS responses — ALSAC DBA names",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "Q1 Full Legal Name American Lebanese Syrian Associated Charities, Inc.; Q2 Doing Business As ALSAC, ALSAC/St. Jude, St. Jude, St. Jude Children's Research Hospital.",
+          "supportsClaim": "Corroborates Applicant legal name and ALSAC DBA",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "DBA list including St. Jude names must not force Organization collapse to the hospital entity"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "NAME SPACE LLC",
+      "representativeApplicationId": "NSL2674T-T21960",
+      "candidateOrganizationKey": "name-space",
+      "candidateCanonicalName": "NAME SPACE",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "Generic legal name NAME SPACE LLC makes string matching unsafe. Applicant website nmspc.co did not yield an authoritative legal/privacy imprint in this pass (site error on retrieval). No A corporate-registry extract or B first-party legal identity package captured.",
+      "requiredStewardAction": "Keep CANDIDATE pending exact-entity A/B package. Do not CONFIRM from nmspc.co domain resemblance.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "nmspc.co",
+      "applicantWebsiteUrl": "https://nmspc.co",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Generic name — D matching forbidden for CONFIRM",
+        "No A/B legal package in this pass",
+        "Existing key match: no"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-nmspc-aps",
+          "strength": "C",
+          "sourceType": "icann-public-summary",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/aps/applications/NSL2674T-T21960/summary",
+          "title": "APS summary — NAME SPACE LLC",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "APS website https://www.nmspc.co.",
+          "supportsClaim": "Published Applicant website",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "C only; website retrieval failed for deeper legal pages in this pass"
+        }
+      ]
+    },
+    {
+      "applicantLegalName": "TechEdge Limited",
+      "representativeApplicationId": "TL2645T-T13654",
+      "candidateOrganizationKey": "techedge",
+      "candidateCanonicalName": "TechEdge",
+      "resolutionState": "CANDIDATE",
+      "reviewRecommendation": "KEEP_CANDIDATE",
+      "recommendationReason": "APS affiliate disclosure names TechEdge Limited as applicant entity affiliated with July Name Limited via common individual ownership — useful context but not a settled self-identity legal package. First-party gtldtechedge.com is marketing copy with spacing variants (“Tech Edge Limited” / “TechEdge Limited”). Unrelated Techedge/TechEdge companies create disambiguation risk without A registry extract or B terms/privacy exact-entity page.",
+      "requiredStewardAction": "Keep CANDIDATE pending exact-entity A/B package distinguishing this Hong Kong-affiliated gTLD applicant from unrelated TechEdge companies. Affiliate July Name Limited must not become Organization without evidence.",
+      "temporalNote": "ORG-RES-TRANCHE-1C research 2026-10-13; APS Reveal Day 2026-10-07.",
+      "applicantWebsiteHost": "gtldtechedge.com",
+      "applicantWebsiteUrl": "https://gtldtechedge.com",
+      "directParentLegalName": null,
+      "ultimateParentLegalName": null,
+      "ultimateControlLegalName": null,
+      "evidenceExplanationLines": [
+        "Name collision risk with unrelated TechEdge entities",
+        "APS affiliate note is relationship context, not enough for CONFIRM alone",
+        "Existing key match: no"
+      ],
+      "evidence": [
+        {
+          "evidenceId": "ev-t1c-techedge-aps-aff",
+          "strength": "C",
+          "sourceType": "icann-public-responses",
+          "sourceIdentifier": "https://newgtldprogram-aps.icann.org/applications/TL2645T-T53249/application-responses",
+          "title": "APS responses — TechEdge Limited affiliate disclosure",
+          "asOf": "2026-10-07",
+          "retrievedAt": "2026-10-13",
+          "summary": "TechEdge Limited is the applicant entity. July Name Limited is an ICANN-accredited registrar (IANA ID 3855); parent company Hong Kong Juming Network Technology Co., Ltd. TechEdge Limited and Hong Kong Juming Network Technology Co., Ltd are wholly owned by the same individual; TechEdge Limited and July Name Limited are affiliated entities.",
+          "supportsClaim": "Applicant names itself and discloses affiliate July Name Limited / common ownership",
+          "temporalRelevance": "2026 application / Reveal Day period",
+          "limitations": "Affiliate/common-owner disclosure held to C for CONFIRM purposes due to name-collision risk and lack of unitary first-party legal imprint"
+        },
+        {
+          "evidenceId": "ev-t1c-techedge-site",
+          "strength": "C",
+          "sourceType": "first-party-corporate",
+          "sourceIdentifier": "http://www.gtldtechedge.com/",
+          "title": "gtldtechedge.com marketing site",
+          "asOf": "2026-10-13",
+          "retrievedAt": "2026-10-13",
+          "summary": "Marketing site titles Tech Edge Limited / TechEdge Limited as new gTLD applicant; contact@gtldtechedge.com.",
+          "supportsClaim": "Corroborates gTLD-applicant marketing identity",
+          "temporalRelevance": "Retrieved 2026-10-13",
+          "limitations": "Marketing copy; spacing variants; not a legal terms package"
+        }
+      ]
+    }
+  ]
+}
