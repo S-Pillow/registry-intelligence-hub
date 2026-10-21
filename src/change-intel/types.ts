@@ -160,3 +160,71 @@ export type ChangeIntelFeed = {
 export type ChangeIntelFeedState =
   | { initialized: false }
   | ChangeIntelFeed;
+
+/** Derived materiality — never persisted into ChangeRecord storage. */
+export type ChangeMateriality = "MATERIAL" | "CONTEXTUAL";
+
+/**
+ * Read-time / view-model Organization context for a ChangeRecord.
+ * Layer C (current RIH intelligence) — must not be merged into immutable
+ * observation or ChangeRecord storage.
+ */
+export type DerivedChangeOrganizationContext = {
+  /** Organization-resolution snapshot semanticContentSha256 used for this derivation. */
+  organizationSnapshotHash: string;
+  /** Stable snapshot provenance when present on the Organization snapshot. */
+  organizationSnapshotGeneratedAt: string | null;
+  organizationResolutionState:
+    | "CONFIRMED"
+    | "CANDIDATE"
+    | "AMBIGUOUS"
+    | "UNRESOLVED"
+    | "MISSING";
+  confirmedOrganizationId: string | null;
+  confirmedOrganizationKey: string | null;
+  confirmedOrganizationName: string | null;
+  organizationHref: string | null;
+};
+
+export type DerivedChangeInvestigationLinks = {
+  exploreHref: string | null;
+  competitiveLandscapeHref: string | null;
+  applicantHref: string | null;
+  organizationHref: string | null;
+  contentionSets: Array<{ contentionSetId: string; href: string }>;
+  /** Omitted unless a valid same-grain multi-subject Compare URL exists. */
+  compareHref: string | null;
+};
+
+/** Presentation overlay for one immutable ChangeRecord (CHANGE-INTEL-2A). */
+export type DerivedChangeContext = {
+  materiality: ChangeMateriality;
+  organization: DerivedChangeOrganizationContext;
+  /** Contention set IDs from the temporally appropriate observation, not live publications. */
+  contentionSetIds: string[];
+  links: DerivedChangeInvestigationLinks;
+  displayImpactLabel: string;
+  /** Full deterministic reasons, sanitized for user-facing safety, deduped, stable order. */
+  displayImpactReasons: string[];
+  displayRspPosture: string | null;
+};
+
+export type ChangeInvestigationView = {
+  change: ChangeRecord;
+  derived: DerivedChangeContext;
+};
+
+/**
+ * UI feed: immutable ChangeIntelFeed plus read-time derived context.
+ * Does not alter on-disk observations/diffs/feed JSON.
+ */
+export type ChangeIntelPresentationFeed = ChangeIntelFeed & {
+  organizationSnapshotHash: string;
+  organizationSnapshotGeneratedAt: string | null;
+  /** Derived context keyed by changeId (latest + recent meaningful). */
+  derivedByChangeId: Record<string, DerivedChangeContext>;
+};
+
+export type ChangeIntelPresentationFeedState =
+  | { initialized: false }
+  | ChangeIntelPresentationFeed;

@@ -31,6 +31,7 @@ describe("Changes surface", () => {
     const filtered = screen.getAllByTestId(/change-entry-/);
     expect(filtered.every((el) => el.getAttribute("data-impact") === "RSP_RESEARCH_RELEVANT")).toBe(true);
     expect(screen.queryByText(/available customer/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/RSP research/i)).not.toBeInTheDocument();
   });
 
   it("shows healthy zero-change state with prior history", () => {

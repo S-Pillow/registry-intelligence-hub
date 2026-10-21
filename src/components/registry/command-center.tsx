@@ -153,7 +153,12 @@ import type {
   ContentionSizeFilter,
 } from "@/lib/contention-intelligence";
 import { DataHealthContent } from "@/components/registry/data-health-content";
-import type { ChangeIntelFeedState } from "@/change-intel/types";
+import type {
+  ChangeIntelFeedState,
+  ChangeIntelPresentationFeedState,
+} from "@/change-intel/types";
+
+type ChangeFeedProp = ChangeIntelFeedState | ChangeIntelPresentationFeedState;
 import { Historical2012StructureSection } from "@/components/registry/historical-2012-structure-section";
 import { useHubClaimActualityState } from "@/components/registry/hub-claim-actuality-provider";
 import {
@@ -2304,7 +2309,7 @@ function CommandCenterActiveV2({
   document: RegistryApplicationsDocumentV2;
   claimActuality: ClaimActualityState;
   overlays?: ParticipantOverlays;
-  changeFeed?: ChangeIntelFeedState;
+  changeFeed?: ChangeFeedProp;
   contentionParams?: ContentionPageParams;
 }) {
   const participantIntel = useMemo(
@@ -2398,7 +2403,7 @@ export function CommandCenter(props: {
   exploreParams?: ExploreParams;
   compareParams?: CompareParams;
   savedParams?: SavedParams;
-  changeFeed?: ChangeIntelFeedState;
+  changeFeed?: ChangeFeedProp;
   briefingId?: string;
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
@@ -2453,7 +2458,7 @@ function CommandCenterV1({
   briefingId?: string;
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
-  changeFeed?: ChangeIntelFeedState;
+  changeFeed?: ChangeFeedProp;
 }) {
   const claimActualityState = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();

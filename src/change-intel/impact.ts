@@ -1,3 +1,4 @@
+import { rspUnmatchedImpactReason } from "@/change-intel/impact-display";
 import { GODADDY_FOCAL_APPLICANT_LEGAL_NAME } from "@/lib/participant-intelligence";
 import {
   prospectingPostureLabel,
@@ -108,9 +109,7 @@ export function assignImpact(input: {
       reasons.push("Changed Application participates in an official contention set with Registry Services, LLC.");
     } else if (rsp?.rspProspectingPosture === "NO_PUBLIC_MAIN_RSP_CAPABILITY_FOUND") {
       primary = "RSP_RESEARCH_RELEVANT";
-      reasons.push(
-        "Applicant currently has no public Main-RSP capability match — may be worth GoDaddy Registry investigation. Selected RSP is not disclosed in public Application data.",
-      );
+      reasons.push(rspUnmatchedImpactReason());
     } else {
       reasons.push("Public-source change without direct GoDaddy portfolio or GoDaddy contention set impact.");
       if (rspLabel) {

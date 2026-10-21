@@ -84,3 +84,58 @@ After merge/deploy of application code, operators must explicitly:
 4. only then authorize scheduling (outside Next.js).
 
 Acquisition-only repairs (CHANGE-INTEL-1B) must not re-bootstrap an already-initialized production monitor.
+
+## CHANGE-INTEL-2A — Organization-aware investigation context
+
+Read-time / view-model enrichment only. Three layers stay separate:
+
+| Layer | Meaning | Mutated by 2A? |
+| --- | --- | --- |
+| A. Public observation | What ICANN exposed at that observation | **No** |
+| B. ChangeRecord | Immutable deterministic diff | **No** |
+| C. Derived current intelligence | What RIH currently knows about the participant | Yes (ephemeral) |
+
+### Organization snapshot / hash provenance
+
+- Confirmed Organization context is resolved at presentation time from the current Organization-resolution snapshot.
+- Derived context reports `organizationSnapshotHash` (`semanticContentSha256`) and `organizationSnapshotGeneratedAt` when present.
+- Do **not** hard-code the hash in product logic. Do **not** persist Organization identity into ChangeRecord storage or a runtime enrichment sidecar in 2A.
+- Organization context is **current** RIH intelligence applied to an immutable historical change — not a claim that the mapping existed at observation time.
+
+### Confirmed-only rule
+
+Product Organization identity (`confirmedOrganizationId` / name / href) is exposed only when `resolutionState == CONFIRMED`. Candidate, Ambiguous, Unresolved, and missing mappings yield null Organization claims. Applicant legal name on the ChangeRecord remains the authoritative source identity and is never renamed by enrichment.
+
+### Materiality
+
+Derived (not persisted) values: `MATERIAL` | `CONTEXTUAL`.
+
+- **MATERIAL** if presence add/remove, contention membership add/remove, material field change (`applicantLegalName`, `appliedForString`, `applicationStatus`, `brand`, `community`, `idn`, `geoSelfDesignated`), or GoDaddy direct/contention impact band.
+- **CONTEXTUAL** when the change is only among `processingStage` / `applicationType` / `country` / `region` and no MATERIAL rule applies.
+- Unknown change types or tracked fields fail closed (treated as MATERIAL / unsupported).
+- Materiality does **not** mean commercial opportunity, win/loss, or withdrawal certainty.
+
+### Contention temporal basis
+
+Contention investigation links use the historically appropriate observation:
+
+- `APPLICATION_NOW_PRESENT` / `APPLICATION_FIELD_CHANGED` → target (to) observation
+- `APPLICATION_NO_LONGER_PRESENT` → source (from) observation
+- Membership added/removed → set id already on the record
+
+Never substitute today’s live contention memberships.
+
+### Safe public-RSP posture wording
+
+Internal impact enum `RSP_RESEARCH_RELEVANT` is unchanged (including historical stored bands). User-facing label is **Public Main-RSP unmatched**. Reason text states only the unmatched public capability fact — no “RSP research”, “worth investigation”, opportunity, or selected-provider language. Selected RSP remains non-public; aggregate logic unchanged.
+
+### Investigation links
+
+Where supported: Explore, Competitive Landscape, Applicant profile, Confirmed Organization profile, contention set(s). Compare is omitted when a valid same-grain multi-subject URL cannot be formed (no mixed-grain fabrication).
+
+### Explicitly deferred
+
+- Applicant/Organization **grouping** of change cards (candidate CHANGE-INTEL-2B)
+- Historical timelines per Application / Applicant / Organization
+- Persisted Organization-enrichment sidecars
+- Commercial-opportunity bands / Watchlist redesign

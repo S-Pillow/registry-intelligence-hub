@@ -2,19 +2,22 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  IMPACT_DISPLAY_LABEL,
+  displayImpactLabel,
+  displayImpactReasons,
+  displayRspPostureLine,
+} from "@/change-intel/impact-display";
+import { changeMateriality } from "@/change-intel/materiality";
+import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import type {
   ChangeIntelFeedState,
+  ChangeIntelPresentationFeedState,
+  ChangeMateriality,
   ChangeRecord,
+  DerivedChangeContext,
   PrimaryImpact,
 } from "@/change-intel/types";
-import { applicantProfileHref } from "@/lib/applicant-intelligence";
-
-const IMPACT_LABEL: Record<PrimaryImpact, string> = {
-  GODADDY_DIRECT: "GoDaddy direct",
-  GODADDY_CONTENTION: "GoDaddy contention",
-  RSP_RESEARCH_RELEVANT: "RSP research",
-  MARKET_CHANGE: "Market",
-};
 
 const CHANGE_TYPE_LABEL: Record<string, string> = {
   APPLICATION_NOW_PRESENT: "Now present in the current published Application list",
@@ -44,29 +47,114 @@ function impactTone(impact: PrimaryImpact): string {
   return "bg-slate-100 text-slate-700";
 }
 
-function ChangeEntry({ change }: { change: ChangeRecord }) {
+function materialityTone(m: ChangeMateriality): string {
+  if (m === "MATERIAL") return "bg-[#004c3d] text-white";
+  return "bg-slate-200 text-slate-800";
+}
+
+function isPresentationFeed(
+  feed: ChangeIntelFeedState | ChangeIntelPresentationFeedState,
+): feed is ChangeIntelPresentationFeedState & { initialized: true } {
+  return Boolean(feed.initialized && "derivedByChangeId" in feed);
+}
+
+function resolveDerived(
+  change: ChangeRecord,
+  feed: ChangeIntelFeedState | ChangeIntelPresentationFeedState,
+): DerivedChangeContext {
+  if (isPresentationFeed(feed)) {
+    const existing = feed.derivedByChangeId[change.changeId];
+    if (existing) return existing;
+  }
+  // Client-safe fallback when enrichment was not supplied (tests / uninitialized org).
+  return {
+    materiality: changeMateriality(change),
+    organization: {
+      organizationSnapshotHash: "not-enriched",
+      organizationSnapshotGeneratedAt: null,
+      organizationResolutionState: "MISSING",
+      confirmedOrganizationId: null,
+      confirmedOrganizationKey: null,
+      confirmedOrganizationName: null,
+      organizationHref: null,
+    },
+    contentionSetIds: change.contentionSetId ? [change.contentionSetId] : [],
+    links: {
+      exploreHref: change.exploreHref,
+      competitiveLandscapeHref: change.competitiveLandscapeHref,
+      applicantHref: change.applicantLegalName
+        ? applicantProfileHref(change.applicantLegalName)
+        : null,
+      organizationHref: null,
+      contentionSets: change.contentionSetId
+        ? [
+            {
+              contentionSetId: change.contentionSetId,
+              href: `/contention?set=${encodeURIComponent(change.contentionSetId)}`,
+            },
+          ]
+        : [],
+      compareHref: null,
+    },
+    displayImpactLabel: displayImpactLabel(change.primaryImpact),
+    displayImpactReasons: displayImpactReasons(change.impactReasons),
+    displayRspPosture: displayRspPostureLine(change.rspPublicPosture, change.primaryImpact),
+  };
+}
+
+function ChangeEntry({
+  change,
+  derived,
+}: {
+  change: ChangeRecord;
+  derived: DerivedChangeContext;
+}) {
+  const org = derived.organization;
+  const contentionLinks =
+    derived.links.contentionSets.length > 0
+      ? derived.links.contentionSets
+      : change.contentionSetId
+        ? [
+            {
+              contentionSetId: change.contentionSetId,
+              href: `/contention?set=${encodeURIComponent(change.contentionSetId)}`,
+            },
+          ]
+        : [];
+
   return (
     <article
       className="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
       data-testid={`change-entry-${change.changeId}`}
       data-impact={change.primaryImpact}
+      data-materiality={derived.materiality}
+      data-org-state={org.organizationResolutionState}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
             {change.sourceType === "application" ? "Application" : "Contention"}
           </p>
-          <h3 className="mt-1 text-base font-semibold text-slate-950">
+          <h3 className="mt-1 text-base font-semibold text-slate-950" data-testid="change-what">
             {CHANGE_TYPE_LABEL[change.changeType] ?? change.changeType}
           </h3>
         </div>
-        <span
-          className={`rounded-md px-2 py-1 text-xs font-semibold ${impactTone(change.primaryImpact)}`}
-          data-testid="change-impact-label"
-        >
-          {IMPACT_LABEL[change.primaryImpact]}
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <span
+            className={`rounded-md px-2 py-1 text-xs font-semibold ${materialityTone(derived.materiality)}`}
+            data-testid="change-materiality-chip"
+          >
+            {derived.materiality === "MATERIAL" ? "Material" : "Contextual"}
+          </span>
+          <span
+            className={`rounded-md px-2 py-1 text-xs font-semibold ${impactTone(change.primaryImpact)}`}
+            data-testid="change-impact-label"
+          >
+            {derived.displayImpactLabel}
+          </span>
+        </div>
       </div>
+
       <dl className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
         {change.appliedForString ? (
           <div>
@@ -74,12 +162,13 @@ function ChangeEntry({ change }: { change: ChangeRecord }) {
             <dd className="font-semibold">.{change.appliedForString}</dd>
           </div>
         ) : null}
+
         {change.applicantLegalName ? (
-          <div>
+          <div data-testid="change-applicant-row">
             <dt className="text-xs uppercase tracking-wide text-slate-500">Applicant</dt>
             <dd className="font-semibold">
               <Link
-                href={applicantProfileHref(change.applicantLegalName)}
+                href={derived.links.applicantHref ?? applicantProfileHref(change.applicantLegalName)}
                 className="text-[#006a56] underline-offset-2 hover:underline"
                 data-testid="change-applicant-profile-link"
               >
@@ -88,33 +177,73 @@ function ChangeEntry({ change }: { change: ChangeRecord }) {
             </dd>
           </div>
         ) : null}
+
+        {org.organizationResolutionState === "CONFIRMED" && org.confirmedOrganizationName ? (
+          <div data-testid="change-organization-row">
+            <dt className="text-xs uppercase tracking-wide text-slate-500">Organization</dt>
+            <dd className="font-semibold">
+              {org.organizationHref ? (
+                <Link
+                  href={org.organizationHref}
+                  className="text-[#006a56] underline-offset-2 hover:underline"
+                  data-testid="change-organization-profile-link"
+                >
+                  {org.confirmedOrganizationName}
+                </Link>
+              ) : (
+                org.confirmedOrganizationName
+              )}
+              <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                Current RIH Confirmed Organization · snapshot {org.organizationSnapshotHash.slice(0, 12)}…
+              </span>
+            </dd>
+          </div>
+        ) : change.applicantLegalName ? (
+          <div data-testid="change-organization-row">
+            <dt className="text-xs uppercase tracking-wide text-slate-500">Organization</dt>
+            <dd className="text-slate-600" data-testid="change-organization-unresolved">
+              Organization not yet resolved
+            </dd>
+          </div>
+        ) : null}
+
         {change.applicationId ? (
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-500">Application ID</dt>
             <dd className="font-mono text-xs">{change.applicationId}</dd>
           </div>
         ) : null}
-        {change.contentionSetId ? (
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-500">Contention set</dt>
+
+        {contentionLinks.length > 0 ? (
+          <div data-testid="change-contention-row">
+            <dt className="text-xs uppercase tracking-wide text-slate-500">
+              Contention set{contentionLinks.length > 1 ? "s" : ""}
+            </dt>
             <dd className="font-semibold">
-              <Link
-                href={`/contention?set=${encodeURIComponent(change.contentionSetId)}`}
-                className="text-[#006a56] underline"
-                data-testid="change-contention-set-link"
-              >
-                #{change.contentionSetId}
-              </Link>
+              {contentionLinks.map((c, i) => (
+                <span key={c.contentionSetId}>
+                  {i > 0 ? ", " : null}
+                  <Link
+                    href={c.href}
+                    className="text-[#006a56] underline"
+                    data-testid="change-contention-set-link"
+                  >
+                    #{c.contentionSetId}
+                  </Link>
+                </span>
+              ))}
             </dd>
           </div>
         ) : null}
-        {change.rspPublicPosture ? (
-          <div className="sm:col-span-2">
+
+        {derived.displayRspPosture ? (
+          <div className="sm:col-span-2" data-testid="change-rsp-posture">
             <dt className="text-xs uppercase tracking-wide text-slate-500">Public RSP posture</dt>
-            <dd>{change.rspPublicPosture}</dd>
+            <dd>{derived.displayRspPosture}</dd>
           </div>
         ) : null}
       </dl>
+
       {change.fieldChanges.length > 0 ? (
         <ul className="mt-3 space-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm" data-testid="change-field-diffs">
           {change.fieldChanges.map((fc) => (
@@ -127,21 +256,53 @@ function ChangeEntry({ change }: { change: ChangeRecord }) {
           ))}
         </ul>
       ) : null}
-      {change.impactReasons.length > 0 ? (
-        <p className="mt-3 text-sm text-slate-600">{change.impactReasons[0]}</p>
+
+      {derived.displayImpactReasons.length > 0 ? (
+        <ul
+          className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600"
+          data-testid="change-impact-reasons"
+        >
+          {derived.displayImpactReasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
       ) : null}
+
       <p className="mt-3 flex flex-wrap gap-3 text-sm">
-        {change.exploreHref ? (
-          <Link href={change.exploreHref} className="font-semibold text-[#006a56] underline">
+        {derived.links.exploreHref ?? change.exploreHref ? (
+          <Link
+            href={derived.links.exploreHref ?? change.exploreHref!}
+            className="font-semibold text-[#006a56] underline"
+            data-testid="change-explore-link"
+          >
             Open in Explore
           </Link>
         ) : null}
-        {change.competitiveLandscapeHref ? (
+        {derived.links.competitiveLandscapeHref ?? change.competitiveLandscapeHref ? (
           <Link
-            href={change.competitiveLandscapeHref}
+            href={derived.links.competitiveLandscapeHref ?? change.competitiveLandscapeHref!}
             className="font-semibold text-[#006a56] underline"
+            data-testid="change-landscape-link"
           >
             Competitive Landscape
+          </Link>
+        ) : null}
+        {derived.links.applicantHref ? (
+          <Link
+            href={derived.links.applicantHref}
+            className="font-semibold text-[#006a56] underline"
+            data-testid="change-applicant-link"
+          >
+            Applicant
+          </Link>
+        ) : null}
+        {derived.links.organizationHref ? (
+          <Link
+            href={derived.links.organizationHref}
+            className="font-semibold text-[#006a56] underline"
+            data-testid="change-organization-link"
+          >
+            Organization
           </Link>
         ) : null}
       </p>
@@ -153,11 +314,12 @@ export function ChangesContent({
   feed,
   fixtureMode = false,
 }: {
-  feed: ChangeIntelFeedState;
+  feed: ChangeIntelFeedState | ChangeIntelPresentationFeedState;
   fixtureMode?: boolean;
 }) {
   const [impact, setImpact] = useState<"all" | PrimaryImpact>("all");
   const [type, setType] = useState<"all" | "application" | "contention">("all");
+  const [materiality, setMateriality] = useState<"all" | ChangeMateriality>("all");
   const [q, setQ] = useState("");
 
   const latest = feed.initialized ? feed.latestDiff : null;
@@ -167,17 +329,22 @@ export function ChangesContent({
   );
 
   const entries = useMemo(() => {
-    const source = latest && !latest.semanticUnchanged && latest.changes.length
-      ? latest.changes
-      : history[0]?.changes ?? [];
+    const source =
+      latest && !latest.semanticUnchanged && latest.changes.length
+        ? latest.changes
+        : history[0]?.changes ?? [];
     return source.filter((c) => {
       if (impact !== "all" && c.primaryImpact !== impact) return false;
       if (type !== "all" && c.sourceType !== type) return false;
+      const derived = resolveDerived(c, feed);
+      if (materiality !== "all" && derived.materiality !== materiality) return false;
       if (!q.trim()) return true;
-      const hay = `${c.applicantLegalName ?? ""} ${c.appliedForString ?? ""} ${c.applicationId ?? ""}`.toLowerCase();
+      const orgName = derived.organization.confirmedOrganizationName ?? "";
+      const hay =
+        `${c.applicantLegalName ?? ""} ${c.appliedForString ?? ""} ${c.applicationId ?? ""} ${orgName}`.toLowerCase();
       return hay.includes(q.trim().toLowerCase());
     });
-  }, [latest, history, impact, type, q]);
+  }, [latest, history, impact, type, materiality, q, feed]);
 
   if (!feed.initialized) {
     return (
@@ -211,6 +378,12 @@ export function ChangesContent({
           Public Application and official initial contention changes since the prior source
           observation — prioritized for GoDaddy Registry impact.
         </p>
+        {isPresentationFeed(feed) ? (
+          <p className="mt-1 text-xs text-slate-500" data-testid="changes-org-snapshot-hash">
+            Organization context from current RIH snapshot{" "}
+            <span className="font-mono">{feed.organizationSnapshotHash.slice(0, 16)}…</span>
+          </p>
+        ) : null}
       </header>
 
       <div
@@ -251,7 +424,7 @@ export function ChangesContent({
             GoDaddy contention {summary.godaddyContention}
           </li>
           <li className="rounded-md bg-sky-100 px-2 py-1 text-sky-950">
-            RSP research {summary.rspResearchRelevant}
+            Public Main-RSP unmatched {summary.rspResearchRelevant}
           </li>
         </ul>
       ) : null}
@@ -267,8 +440,19 @@ export function ChangesContent({
           <option value="all">Impact: all</option>
           <option value="GODADDY_DIRECT">GoDaddy direct</option>
           <option value="GODADDY_CONTENTION">GoDaddy contention</option>
-          <option value="RSP_RESEARCH_RELEVANT">RSP research</option>
+          <option value="RSP_RESEARCH_RELEVANT">Public Main-RSP unmatched</option>
           <option value="MARKET_CHANGE">Market</option>
+        </select>
+        <select
+          aria-label="Filter by materiality"
+          value={materiality}
+          onChange={(e) => setMateriality(e.target.value as typeof materiality)}
+          className="h-10 rounded-lg border border-slate-400 px-2 text-sm"
+          data-testid="changes-filter-materiality"
+        >
+          <option value="all">Materiality: all</option>
+          <option value="MATERIAL">Material</option>
+          <option value="CONTEXTUAL">Contextual</option>
         </select>
         <select
           aria-label="Filter by change type"
@@ -311,7 +495,11 @@ export function ChangesContent({
           <p className="text-sm text-slate-600">No changes match the current filters.</p>
         ) : null}
         {entries.map((change) => (
-          <ChangeEntry key={change.changeId} change={change} />
+          <ChangeEntry
+            key={change.changeId}
+            change={change}
+            derived={resolveDerived(change, feed)}
+          />
         ))}
         {zeroLatest && history[0]?.changes?.length ? (
           <>
@@ -320,12 +508,20 @@ export function ChangesContent({
               .filter((c) => {
                 if (impact !== "all" && c.primaryImpact !== impact) return false;
                 if (type !== "all" && c.sourceType !== type) return false;
+                const derived = resolveDerived(c, feed);
+                if (materiality !== "all" && derived.materiality !== materiality) return false;
                 if (!q.trim()) return true;
-                const hay = `${c.applicantLegalName ?? ""} ${c.appliedForString ?? ""} ${c.applicationId ?? ""}`.toLowerCase();
+                const orgName = derived.organization.confirmedOrganizationName ?? "";
+                const hay =
+                  `${c.applicantLegalName ?? ""} ${c.appliedForString ?? ""} ${c.applicationId ?? ""} ${orgName}`.toLowerCase();
                 return hay.includes(q.trim().toLowerCase());
               })
               .map((change) => (
-                <ChangeEntry key={`hist-${change.changeId}`} change={change} />
+                <ChangeEntry
+                  key={`hist-${change.changeId}`}
+                  change={change}
+                  derived={resolveDerived(change, feed)}
+                />
               ))}
           </>
         ) : null}
@@ -333,13 +529,19 @@ export function ChangesContent({
 
       <aside className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
         Sources: ICANN public Application data · ICANN official initial contention data. Selected RSP
-        is not disclosed in public Application data. Technical hashes live in Data &amp; methodology.
+        is not disclosed in public Application data. Organization context is current RIH Confirmed
+        identity intelligence applied at read time — not a historical claim about the observation.
+        Technical hashes live in Data &amp; methodology.
       </aside>
     </section>
   );
 }
 
-export function CommandCenterRecentChangesCard({ feed }: { feed: ChangeIntelFeedState }) {
+export function CommandCenterRecentChangesCard({
+  feed,
+}: {
+  feed: ChangeIntelFeedState | ChangeIntelPresentationFeedState;
+}) {
   if (!feed.initialized) {
     return (
       <section
@@ -360,7 +562,6 @@ export function CommandCenterRecentChangesCard({ feed }: { feed: ChangeIntelFeed
   const count = latest && !latest.semanticUnchanged ? latest.changes.length : 0;
   const top = latest?.changes?.[0];
 
-  // Compact status row when there are no material changes.
   if (count === 0) {
     return (
       <section
@@ -405,7 +606,7 @@ export function CommandCenterRecentChangesCard({ feed }: { feed: ChangeIntelFeed
       </p>
       {top ? (
         <p className="mt-2 text-sm text-slate-800" data-testid="cc-recent-changes-top">
-          Highest priority: {IMPACT_LABEL[top.primaryImpact]}
+          Highest priority: {IMPACT_DISPLAY_LABEL[top.primaryImpact]}
           {top.applicantLegalName ? ` · ${top.applicantLegalName}` : ""}
           {top.appliedForString ? ` · .${top.appliedForString}` : ""}
         </p>
