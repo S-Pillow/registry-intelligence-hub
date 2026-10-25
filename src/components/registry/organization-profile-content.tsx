@@ -6,7 +6,9 @@ import {
   type OrganizationIntelligenceLookup,
   type OrganizationIntelligenceProfile,
 } from "@/lib/organization-intelligence";
+import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
+import { OrganizationConcentrationProfileContext } from "@/components/registry/organization-concentration-panel";
 
 function Stat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -56,7 +58,13 @@ function HubChrome() {
   );
 }
 
-function ProfileFound({ profile }: { profile: OrganizationIntelligenceProfile }) {
+function ProfileFound({
+  profile,
+  organizationConcentration,
+}: {
+  profile: OrganizationIntelligenceProfile;
+  organizationConcentration?: OrganizationConcentrationModel | null;
+}) {
   const [applicantFilter, setApplicantFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState<"all" | "brand" | "non-brand">("all");
   const [contentionFilter, setContentionFilter] = useState<"all" | "in" | "out">("all");
@@ -174,6 +182,15 @@ function ProfileFound({ profile }: { profile: OrganizationIntelligenceProfile })
         Applicant legal {profile.applicantEntityCount === 1 ? "entity" : "entities"} to{" "}
         {profile.canonicalName}.
       </p>
+
+      {organizationConcentration ? (
+        <div className="mt-4">
+          <OrganizationConcentrationProfileContext
+            model={organizationConcentration}
+            organizationKey={profile.organizationKey}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-3 text-sm" data-testid="organization-profile-actions">
         <Link href={profile.exploreApplicationsHref} className="font-semibold text-[#006a56] underline">
@@ -557,8 +574,10 @@ function ProfileFound({ profile }: { profile: OrganizationIntelligenceProfile })
 
 export function OrganizationProfileContent({
   lookup,
+  organizationConcentration = null,
 }: {
   lookup: OrganizationIntelligenceLookup;
+  organizationConcentration?: OrganizationConcentrationModel | null;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f8]">
@@ -577,7 +596,7 @@ export function OrganizationProfileContent({
           </Link>
         </main>
       ) : (
-        <ProfileFound profile={lookup} />
+        <ProfileFound profile={lookup} organizationConcentration={organizationConcentration} />
       )}
       <CompareTrayFloating />
     </div>

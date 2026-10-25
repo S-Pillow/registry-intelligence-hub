@@ -183,6 +183,7 @@ import {
 import type { RegistryApplicationsDocumentV2 } from "@/lib/registry-applications-document-v2";
 import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
 import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
+import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
 
 export type { SavedParams };
 import {
@@ -2248,12 +2249,14 @@ function CommandCenterFailClosedShell({
   resolution,
   overlays,
   contentionParams,
+  organizationConcentration,
 }: {
   view: HubView;
   presentation: ProductPresentation;
   resolution: HubRegistryDataResolution;
   overlays?: ParticipantOverlays;
   contentionParams?: ContentionPageParams;
+  organizationConcentration?: OrganizationConcentrationModel | null;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
@@ -2266,10 +2269,14 @@ function CommandCenterFailClosedShell({
         {view === "data-health" ? (
           <DataHealthContent state="ready" />
         ) : view === "competitive-landscape" ? (
-          <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
+          <CompetitiveLandscapeContent
+            overlays={overlays ?? { organizations: [], returning: [] }}
+            organizationConcentration={organizationConcentration}
+          />
         ) : view === "contention" ? (
           <ContentionContent
             overlays={overlays ?? { organizations: [], returning: [] }}
+            organizationConcentration={organizationConcentration}
             {...(contentionParams ?? {})}
           />
         ) : (
@@ -2298,6 +2305,7 @@ function CommandCenterActiveV2({
   overlays,
   changeFeed = { initialized: false },
   contentionParams,
+  organizationConcentration = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2311,6 +2319,7 @@ function CommandCenterActiveV2({
   overlays?: ParticipantOverlays;
   changeFeed?: ChangeFeedProp;
   contentionParams?: ContentionPageParams;
+  organizationConcentration?: OrganizationConcentrationModel | null;
 }) {
   const participantIntel = useMemo(
     () => buildParticipantIntelligence(document, overlays),
@@ -2334,6 +2343,7 @@ function CommandCenterActiveV2({
         ) : view === "contention" ? (
           <ContentionContent
             overlays={overlays ?? { organizations: [], returning: [] }}
+            organizationConcentration={organizationConcentration}
             {...(contentionParams ?? {})}
           />
         ) : view === "compare" ? (
@@ -2381,7 +2391,10 @@ function CommandCenterActiveV2({
             </p>
           </section>
         ) : view === "competitive-landscape" ? (
-          <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} />
+          <CompetitiveLandscapeContent
+            overlays={overlays ?? { organizations: [], returning: [] }}
+            organizationConcentration={organizationConcentration}
+          />
         ) : view === "data-health" ? (
           <DataHealthContent state={state} changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }} />
         ) : (
@@ -2408,6 +2421,7 @@ export function CommandCenter(props: {
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
   contentionParams?: ContentionPageParams;
+  organizationConcentration?: OrganizationConcentrationModel | null;
 }) {
   const resolution = useHubRegistryData();
   const claimActualityState = useHubClaimActualityState();
@@ -2419,6 +2433,7 @@ export function CommandCenter(props: {
         resolution={resolution}
         overlays={props.overlays}
         contentionParams={props.contentionParams}
+        organizationConcentration={props.organizationConcentration}
       />
     );
   }
@@ -2449,6 +2464,7 @@ function CommandCenterV1({
   presentation = "pre-reveal",
   overlays,
   changeFeed = { initialized: false },
+  organizationConcentration = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2459,6 +2475,7 @@ function CommandCenterV1({
   presentation?: ProductPresentation;
   overlays?: ParticipantOverlays;
   changeFeed?: ChangeFeedProp;
+  organizationConcentration?: OrganizationConcentrationModel | null;
 }) {
   const claimActualityState = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();
@@ -2592,8 +2609,16 @@ function CommandCenterV1({
           <ChangesContent feed={changeFeed ?? { initialized: false }} />
         </main>
       ) : view === "contention" ? (
-        <ContentionContent overlays={overlays ?? { organizations: [], returning: [] }} />
-      ) : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? <CompetitiveLandscapeContent overlays={overlays ?? { organizations: [], returning: [] }} /> : view === "data-health" ? (
+        <ContentionContent
+          overlays={overlays ?? { organizations: [], returning: [] }}
+          organizationConcentration={organizationConcentration}
+        />
+      ) : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? (
+        <CompetitiveLandscapeContent
+          overlays={overlays ?? { organizations: [], returning: [] }}
+          organizationConcentration={organizationConcentration}
+        />
+      ) : view === "data-health" ? (
         <DataHealthContent
           state={state}
           changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }}

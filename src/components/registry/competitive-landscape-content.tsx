@@ -32,6 +32,8 @@ import {
   OrganizationMappingExplainer,
 } from "@/components/registry/organization-mapping-display";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
+import { OrganizationConcentrationLandscapePanel } from "@/components/registry/organization-concentration-panel";
+import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -39,7 +41,13 @@ function pct(n: number): string {
 
 type Surface = "participants" | "rsp-prospects";
 
-export function CompetitiveLandscapeContent({ overlays }: { overlays: ParticipantOverlays }) {
+export function CompetitiveLandscapeContent({
+  overlays,
+  organizationConcentration = null,
+}: {
+  overlays: ParticipantOverlays;
+  organizationConcentration?: OrganizationConcentrationModel | null;
+}) {
   const resolution = useHubRegistryData();
   const [surface, setSurface] = useState<Surface>("participants");
   const [q, setQ] = useState("");
@@ -216,6 +224,10 @@ export function CompetitiveLandscapeContent({ overlays }: { overlays: Participan
           </p>
         ) : null}
       </section>
+
+      {organizationConcentration ? (
+        <OrganizationConcentrationLandscapePanel model={organizationConcentration} />
+      ) : null}
 
       {/* Dual GoDaddy roles */}
       {focal && godaddyRsp ? (

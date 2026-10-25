@@ -11,6 +11,7 @@ import {
 } from "@/lib/participant-intelligence-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
+import { loadOrganizationConcentrationModel } from "@/lib/organization-concentration-server";
 
 export const metadata: Metadata = {
   title: "Organization profile",
@@ -26,10 +27,11 @@ export default async function OrganizationProfilePage({
   const key = decodeOrganizationProfileKey(rawKey) ?? "";
 
   const claim = await loadPromotedClaimActualityState();
-  const [registry, overlays, orgSnapshot] = await Promise.all([
+  const [registry, overlays, orgSnapshot, organizationConcentration] = await Promise.all([
     loadHubRegistryData(claim),
     loadParticipantOverlays(),
     loadOrganizationResolutionSnapshot(),
+    loadOrganizationConcentrationModel(),
   ]);
 
   if (registry.status !== "ok" || !registry.documentV2) {
@@ -51,5 +53,10 @@ export default async function OrganizationProfilePage({
     key,
   );
 
-  return <OrganizationProfileContent lookup={lookup} />;
+  return (
+    <OrganizationProfileContent
+      lookup={lookup}
+      organizationConcentration={organizationConcentration}
+    />
+  );
 }
