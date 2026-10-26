@@ -33,7 +33,9 @@ import {
 } from "@/components/registry/organization-mapping-display";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 import { OrganizationConcentrationLandscapePanel } from "@/components/registry/organization-concentration-panel";
+import { OrganizationContentionPairsLandscapeTeaser } from "@/components/registry/organization-contention-pairs-panel";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
+import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -44,9 +46,11 @@ type Surface = "participants" | "rsp-prospects";
 export function CompetitiveLandscapeContent({
   overlays,
   organizationConcentration = null,
+  organizationContentionPairs = null,
 }: {
   overlays: ParticipantOverlays;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const resolution = useHubRegistryData();
   const [surface, setSurface] = useState<Surface>("participants");
@@ -227,6 +231,10 @@ export function CompetitiveLandscapeContent({
 
       {organizationConcentration ? (
         <OrganizationConcentrationLandscapePanel model={organizationConcentration} />
+      ) : null}
+
+      {organizationContentionPairs ? (
+        <OrganizationContentionPairsLandscapeTeaser model={organizationContentionPairs} />
       ) : null}
 
       {/* Dual GoDaddy roles */}

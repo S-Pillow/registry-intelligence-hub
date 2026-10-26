@@ -26,7 +26,9 @@ import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import { organizationProfileHref } from "@/lib/organization-intelligence";
 import { ContentionDistributionPanel } from "@/components/registry/contention-distribution";
 import { OrganizationConcentrationContentionPanel } from "@/components/registry/organization-concentration-panel";
+import { OrganizationContentionPairsPanel } from "@/components/registry/organization-contention-pairs-panel";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
+import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
 
 function Metric({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -258,6 +260,7 @@ export function ContentionContent({
   initialGodaddy = "all",
   initialSize = "all",
   organizationConcentration = null,
+  organizationContentionPairs = null,
 }: {
   overlays: ParticipantOverlays;
   initialView?: "godaddy" | "all";
@@ -266,6 +269,7 @@ export function ContentionContent({
   initialGodaddy?: ContentionGodaddyFilter;
   initialSize?: ContentionSizeFilter;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const resolution = useHubRegistryData();
   const router = useRouter();
@@ -384,6 +388,12 @@ export function ContentionContent({
       {organizationConcentration ? (
         <div className="mt-6">
           <OrganizationConcentrationContentionPanel model={organizationConcentration} />
+        </div>
+      ) : null}
+
+      {organizationContentionPairs ? (
+        <div className="mt-6">
+          <OrganizationContentionPairsPanel model={organizationContentionPairs} />
         </div>
       ) : null}
 

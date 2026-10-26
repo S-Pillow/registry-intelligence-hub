@@ -7,8 +7,11 @@ import {
   type OrganizationIntelligenceProfile,
 } from "@/lib/organization-intelligence";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
+import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
+import { organizationCounterpartSummaryForKey } from "@/lib/organization-contention-pairs";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 import { OrganizationConcentrationProfileContext } from "@/components/registry/organization-concentration-panel";
+import { OrganizationContentionPairsProfileContext } from "@/components/registry/organization-contention-pairs-panel";
 
 function Stat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -61,9 +64,11 @@ function HubChrome() {
 function ProfileFound({
   profile,
   organizationConcentration,
+  organizationContentionPairs,
 }: {
   profile: OrganizationIntelligenceProfile;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const [applicantFilter, setApplicantFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState<"all" | "brand" | "non-brand">("all");
@@ -188,6 +193,17 @@ function ProfileFound({
           <OrganizationConcentrationProfileContext
             model={organizationConcentration}
             organizationKey={profile.organizationKey}
+          />
+        </div>
+      ) : null}
+
+      {organizationContentionPairs ? (
+        <div className="mt-4">
+          <OrganizationContentionPairsProfileContext
+            summary={organizationCounterpartSummaryForKey(
+              organizationContentionPairs,
+              profile.organizationKey,
+            )}
           />
         </div>
       ) : null}
@@ -575,9 +591,11 @@ function ProfileFound({
 export function OrganizationProfileContent({
   lookup,
   organizationConcentration = null,
+  organizationContentionPairs = null,
 }: {
   lookup: OrganizationIntelligenceLookup;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f8]">
@@ -596,7 +614,11 @@ export function OrganizationProfileContent({
           </Link>
         </main>
       ) : (
-        <ProfileFound profile={lookup} organizationConcentration={organizationConcentration} />
+        <ProfileFound
+          profile={lookup}
+          organizationConcentration={organizationConcentration}
+          organizationContentionPairs={organizationContentionPairs}
+        />
       )}
       <CompareTrayFloating />
     </div>

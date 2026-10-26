@@ -198,7 +198,7 @@ export function buildOrganizationConcentration(
   // Confirmed Applicant legal name → organizationId
   const applicantToOrgId = new Map<string, string>();
   let confirmedApplicantMappings = 0;
-  let unresolvedApplicantNames = new Set<string>();
+  const unresolvedApplicantNames = new Set<string>();
   for (const m of orgSnapshot.applicantIdentityMappings) {
     if (m.resolutionState === "UNRESOLVED") {
       unresolvedApplicantNames.add(m.applicantLegalName);

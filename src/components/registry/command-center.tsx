@@ -184,6 +184,7 @@ import type { RegistryApplicationsDocumentV2 } from "@/lib/registry-applications
 import type { ClaimActualityState } from "@/reveal-day-2026/claim-actuality";
 import type { HubRegistryDataResolution } from "@/lib/registry-application-payload-shared";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
+import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
 
 export type { SavedParams };
 import {
@@ -2250,6 +2251,7 @@ function CommandCenterFailClosedShell({
   overlays,
   contentionParams,
   organizationConcentration,
+  organizationContentionPairs,
 }: {
   view: HubView;
   presentation: ProductPresentation;
@@ -2257,6 +2259,7 @@ function CommandCenterFailClosedShell({
   overlays?: ParticipantOverlays;
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
@@ -2272,11 +2275,13 @@ function CommandCenterFailClosedShell({
           <CompetitiveLandscapeContent
             overlays={overlays ?? { organizations: [], returning: [] }}
             organizationConcentration={organizationConcentration}
+            organizationContentionPairs={organizationContentionPairs}
           />
         ) : view === "contention" ? (
           <ContentionContent
             overlays={overlays ?? { organizations: [], returning: [] }}
             organizationConcentration={organizationConcentration}
+            organizationContentionPairs={organizationContentionPairs}
             {...(contentionParams ?? {})}
           />
         ) : (
@@ -2306,6 +2311,7 @@ function CommandCenterActiveV2({
   changeFeed = { initialized: false },
   contentionParams,
   organizationConcentration = null,
+  organizationContentionPairs = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2320,6 +2326,7 @@ function CommandCenterActiveV2({
   changeFeed?: ChangeFeedProp;
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const participantIntel = useMemo(
     () => buildParticipantIntelligence(document, overlays),
@@ -2344,6 +2351,7 @@ function CommandCenterActiveV2({
           <ContentionContent
             overlays={overlays ?? { organizations: [], returning: [] }}
             organizationConcentration={organizationConcentration}
+            organizationContentionPairs={organizationContentionPairs}
             {...(contentionParams ?? {})}
           />
         ) : view === "compare" ? (
@@ -2394,6 +2402,7 @@ function CommandCenterActiveV2({
           <CompetitiveLandscapeContent
             overlays={overlays ?? { organizations: [], returning: [] }}
             organizationConcentration={organizationConcentration}
+            organizationContentionPairs={organizationContentionPairs}
           />
         ) : view === "data-health" ? (
           <DataHealthContent state={state} changeFeed={changeFeed.initialized ? changeFeed : { initialized: false }} />
@@ -2422,6 +2431,7 @@ export function CommandCenter(props: {
   overlays?: ParticipantOverlays;
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const resolution = useHubRegistryData();
   const claimActualityState = useHubClaimActualityState();
@@ -2434,6 +2444,7 @@ export function CommandCenter(props: {
         overlays={props.overlays}
         contentionParams={props.contentionParams}
         organizationConcentration={props.organizationConcentration}
+        organizationContentionPairs={props.organizationContentionPairs}
       />
     );
   }
@@ -2465,6 +2476,7 @@ function CommandCenterV1({
   overlays,
   changeFeed = { initialized: false },
   organizationConcentration = null,
+  organizationContentionPairs = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2476,6 +2488,7 @@ function CommandCenterV1({
   overlays?: ParticipantOverlays;
   changeFeed?: ChangeFeedProp;
   organizationConcentration?: OrganizationConcentrationModel | null;
+  organizationContentionPairs?: OrganizationContentionPairModel | null;
 }) {
   const claimActualityState = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();
@@ -2612,11 +2625,13 @@ function CommandCenterV1({
         <ContentionContent
           overlays={overlays ?? { organizations: [], returning: [] }}
           organizationConcentration={organizationConcentration}
+          organizationContentionPairs={organizationContentionPairs}
         />
       ) : view === "compare" ? <CompareContent state={state} initial={compareParams} presentation={presentation} /> : view === "saved" ? <SavedContent state={state} initial={savedParams} presentation={presentation} /> : view === "briefings" ? <BriefingsContent state={state} briefingId={briefingId} presentation={presentation} /> : view === "competitive-landscape" ? (
         <CompetitiveLandscapeContent
           overlays={overlays ?? { organizations: [], returning: [] }}
           organizationConcentration={organizationConcentration}
+          organizationContentionPairs={organizationContentionPairs}
         />
       ) : view === "data-health" ? (
         <DataHealthContent
