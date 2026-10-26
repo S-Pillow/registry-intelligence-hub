@@ -461,3 +461,7 @@ Local research only (not production, not Git):
 - `/tmp/rih-market-baseline-source-1/mrr/...`
 - `/tmp/rih-market-baseline-source-1/dnmi/...`
 - `/tmp/rih-market-baseline-source-1/notes/sample-manifest.json`
+
+## 21. Implementation status
+
+Transactions Stage-D acquisition tooling: see [`market-baseline-mrr.md`](./market-baseline-mrr.md) (`RIH-MARKET-BASELINE-MRR-1`).
