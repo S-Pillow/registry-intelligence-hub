@@ -1,7 +1,25 @@
 import { MRR_USER_AGENT } from "./types";
 
+export type FetchValidators = {
+  etag?: string;
+  lastModified?: string;
+};
+
 export type FetchTextResult =
-  | { ok: true; status: number; text: string; bytes: Uint8Array }
+  | {
+      ok: true;
+      status: 200;
+      text: string;
+      bytes: Uint8Array;
+      etag?: string;
+      lastModified?: string;
+    }
+  | {
+      ok: true;
+      status: 304;
+      etag?: string;
+      lastModified?: string;
+    }
   | { ok: false; status: number; error: string; throttled?: boolean };
 
 export type HttpClientOptions = {
@@ -10,7 +28,10 @@ export type HttpClientOptions = {
   baseDelayMs?: number;
   maxBytes?: number;
   signal?: AbortSignal;
+  validators?: FetchValidators;
 };
+
+export type FetchImpl = (url: string, options?: HttpClientOptions) => Promise<FetchTextResult>;
 
 const DEFAULT_MAX_BYTES = 25_000_000;
 
@@ -26,10 +47,22 @@ export async function fetchBounded(
   let lastError = "unknown";
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(url, {
-        signal: options.signal,
-        headers: { "User-Agent": ua, Accept: "text/csv,text/html,*/*" },
-      });
+      const headers: Record<string, string> = {
+        "User-Agent": ua,
+        Accept: "text/csv,text/html,*/*",
+      };
+      if (options.validators?.etag) headers["If-None-Match"] = options.validators.etag;
+      if (options.validators?.lastModified) {
+        headers["If-Modified-Since"] = options.validators.lastModified;
+      }
+
+      const res = await fetch(url, { signal: options.signal, headers });
+      const etag = res.headers.get("etag") ?? undefined;
+      const lastModified = res.headers.get("last-modified") ?? undefined;
+
+      if (res.status === 304) {
+        return { ok: true, status: 304, etag, lastModified };
+      }
       if (res.status === 404) {
         return { ok: false, status: 404, error: "HTTP 404" };
       }
@@ -55,7 +88,7 @@ export async function fetchBounded(
       }
       const bytes = await readBoundedBody(res, maxBytes);
       const text = new TextDecoder("utf-8").decode(bytes);
-      return { ok: true, status: res.status, text, bytes };
+      return { ok: true, status: 200, text, bytes, etag, lastModified };
     } catch (e) {
       lastError = (e as Error).message;
       if (attempt < maxRetries) {

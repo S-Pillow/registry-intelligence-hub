@@ -8,7 +8,6 @@ import type {
   NormalizedRegistrarRow,
   NormalizedTotals,
   NormalizedTransactionsSnapshot,
-  OptionalMetric,
   ReportingPeriod,
   TermCounts,
 } from "./types";
@@ -24,8 +23,6 @@ export type NormalizeInput = {
   reportingPeriod: ReportingPeriod;
   sourceUrl: string;
   resourcePageUrl: string;
-  previousTotalDomains?: number | null;
-  yearAgoTotalDomains?: number | null;
   revisionOfRawSha256?: string | null;
 };
 
@@ -136,12 +133,6 @@ function rowToRegistrar(
   };
 }
 
-function growthMetric(current: number, prior: number | null | undefined): OptionalMetric {
-  if (prior == null) return { available: false, reason: "prior_period_unavailable" };
-  if (prior === 0) return { available: false, reason: "prior_denominator_zero" };
-  return { available: true, value: (current - prior) / prior };
-}
-
 export function normalizeTransactions(input: NormalizeInput): NormalizeSuccess | NormalizeFailure {
   const tld = normalizeTldAsciiLabel(input.tldAsciiLabel);
   const period = assertReportingPeriod(input.reportingPeriod);
@@ -198,14 +189,10 @@ export function normalizeTransactions(input: NormalizeInput): NormalizeSuccess |
     }
   } catch (e) {
     const msg = (e as Error).message;
-    if (msg.startsWith("Negative")) {
-      return { outcome: "VALIDATION_FAILED", error: msg };
-    }
     return { outcome: "VALIDATION_FAILED", error: msg };
   }
 
   if (!totalsRow) {
-    // Fallback: sum all non-Totals rows including specials — only when Totals absent.
     warnings.push("TOTALS_ROW_ABSENT: summing all non-Totals rows including specials");
     const sumDomains = registrars.reduce((a, r) => a + r.totalDomains, 0);
     totalsRow = {
@@ -239,20 +226,7 @@ export function normalizeTransactions(input: NormalizeInput): NormalizeSuccess |
     }
   }
 
-  const metrics = computeTldMonthMetrics({
-    totals: totalsRow,
-    registrars,
-    previousTotalDomains: input.previousTotalDomains,
-    yearAgoTotalDomains: input.yearAgoTotalDomains,
-  });
-
-  // Attach temporal metrics (growth) here so metrics module stays pure over counts.
-  metrics.netDomainBaseChange =
-    input.previousTotalDomains == null
-      ? { available: false, reason: "prior_period_unavailable" }
-      : { available: true, value: totalsRow.totalDomains - input.previousTotalDomains };
-  metrics.monthOverMonthGrowth = growthMetric(totalsRow.totalDomains, input.previousTotalDomains);
-  metrics.yearOverYearGrowth = growthMetric(totalsRow.totalDomains, input.yearAgoTotalDomains);
+  const metrics = computeTldMonthMetrics({ totals: totalsRow, registrars });
 
   const rawSha256 = sha256Hex(input.rawBytes);
   const snapshotWithoutHash: Omit<NormalizedTransactionsSnapshot, "normalizedContentSha256" | "snapshotId"> = {
@@ -279,8 +253,6 @@ export function normalizeTransactions(input: NormalizeInput): NormalizeSuccess |
     normalizedContentSha256,
   };
 
-  // Re-hash including snapshotId for stability of content hash over semantic payload only —
-  // content hash excludes snapshotId by construction above.
   return { outcome: "SUCCESS", snapshot };
 }
 

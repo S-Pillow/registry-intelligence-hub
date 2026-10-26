@@ -36,11 +36,10 @@ export function sumTermValues(t: TermCounts): number {
   return n;
 }
 
+/** Intrinsic metrics only — pure over the current Transactions report. */
 export function computeTldMonthMetrics(args: {
   totals: NormalizedTotals;
   registrars: NormalizedRegistrarRow[];
-  previousTotalDomains?: number | null;
-  yearAgoTotalDomains?: number | null;
 }): TldMonthMetrics {
   const { totals, registrars } = args;
   const eligible = registrars.filter((r) => isBreadthEligible(r.classification, r.totalDomains));
@@ -70,9 +69,6 @@ export function computeTldMonthMetrics(args: {
     top5RegistrarShare = { available: true, value: top5 / totalDomains };
   }
 
-  // Temporal placeholders filled by normalize.ts once priors known
-  const unavailable: OptionalMetric = { available: false, reason: "prior_period_unavailable" };
-
   return {
     totalDomains,
     netAddsCount: sumTermValues(totals.netAddsByTerm),
@@ -85,8 +81,5 @@ export function computeTldMonthMetrics(args: {
     top5RegistrarShare,
     accreditedRegistrarDomains,
     specialOrSystemDomains,
-    netDomainBaseChange: unavailable,
-    monthOverMonthGrowth: unavailable,
-    yearOverYearGrowth: unavailable,
   };
 }

@@ -2,6 +2,7 @@ export const MRR_TRANSACTIONS_SCHEMA_VERSION = "market-baseline-mrr-transactions
 export const MRR_PARSER_VERSION = "market-baseline-mrr-transactions-parser/1.0.0";
 export const MRR_INDEX_URL = "https://www.icann.org/resources/pages/registry-reports";
 export const MRR_USER_AGENT = "RIH-market-baseline-mrr/1.0 (+research; read-only)";
+export const MRR_OUTCOMES_SCHEMA_VERSION = "market-baseline-mrr-request-outcomes/1.0.0";
 
 export type ReportingPeriod = string; // YYYY-MM
 
@@ -13,6 +14,8 @@ export type AcquisitionOutcome =
   | "PARSE_FAILED"
   | "VALIDATION_FAILED"
   | "NORMALIZATION_FAILED";
+
+export type AcquisitionPhase = "PROBE" | "HISTORY";
 
 export type RegistrarClassification =
   | "TOTALS"
@@ -91,6 +94,7 @@ export type AvailableNumber = { available: true; value: number };
 
 export type OptionalMetric = AvailableNumber | UnavailableMetric;
 
+/** Intrinsic TLD-month metrics — pure over a single Transactions report. */
 export type TldMonthMetrics = {
   totalDomains: number;
   netAddsCount: number;
@@ -103,6 +107,15 @@ export type TldMonthMetrics = {
   top5RegistrarShare: OptionalMetric;
   accreditedRegistrarDomains: number;
   specialOrSystemDomains: number;
+};
+
+/** Cross-snapshot temporal measures — never part of normalized content hash. */
+export type TldMarketSeriesTemporal = {
+  tldAsciiLabel: string;
+  reportingPeriod: ReportingPeriod;
+  totalDomains: number;
+  previousPeriod: ReportingPeriod;
+  yearAgoPeriod: ReportingPeriod;
   netDomainBaseChange: OptionalMetric;
   monthOverMonthGrowth: OptionalMetric;
   yearOverYearGrowth: OptionalMetric;
@@ -134,6 +147,19 @@ export type NormalizedTransactionsEnvelope = {
   probeReportingPeriod?: ReportingPeriod;
 };
 
+/** Explicit current revision pointer for a TLD×period (not lexical hash order). */
+export type PeriodCurrentRevision = {
+  tldAsciiLabel: string;
+  reportingPeriod: ReportingPeriod;
+  sourceUrl: string;
+  currentRawSha256: string;
+  currentNormalizedSha256: string;
+  previousRawSha256: string | null;
+  retrievedAt: string;
+  etag?: string;
+  lastModified?: string;
+};
+
 export type DiscoveredTldPage = {
   tldAsciiLabel: string;
   resourcePageUrl: string;
@@ -155,6 +181,31 @@ export type ProbeTldResult = {
   error?: string;
 };
 
+export type AcquisitionRequestOutcome = {
+  tldAsciiLabel: string;
+  reportingPeriod: ReportingPeriod;
+  phase: AcquisitionPhase;
+  outcome: AcquisitionOutcome;
+  resourcePageUrl: string;
+  sourceUrl?: string;
+  rawSha256?: string;
+  normalizedContentSha256?: string;
+  totalDomains?: number;
+  reusedFromCache: boolean;
+  revalidated: boolean;
+  revisionDetected: boolean;
+  bytesDownloaded: number;
+  error?: string;
+};
+
+export type AcquisitionOutcomesArtifact = {
+  schemaVersion: typeof MRR_OUTCOMES_SCHEMA_VERSION;
+  runId: string;
+  asOfDate: string;
+  probeReportingPeriod: ReportingPeriod;
+  requests: AcquisitionRequestOutcome[];
+};
+
 export type SelectionReason =
   | "TOP_100"
   | "CONTROL_SET"
@@ -165,6 +216,16 @@ export type UniverseMember = {
   reasons: SelectionReason[];
 };
 
+export type OutcomeCountBucket = {
+  success: number;
+  missing: number;
+  downloadFailed: number;
+  unsupportedSchema: number;
+  parseFailed: number;
+  validationFailed: number;
+  normalizationFailed: number;
+};
+
 export type AcquisitionRunManifest = {
   schemaVersion: "market-baseline-mrr-run-manifest/1.0.0";
   runId: string;
@@ -173,15 +234,8 @@ export type AcquisitionRunManifest = {
   asOfDate: string;
   probeReportingPeriod: ReportingPeriod;
   discoveredTldCount: number;
-  probe: {
-    success: number;
-    missing: number;
-    downloadFailed: number;
-    unsupportedSchema: number;
-    parseFailed: number;
-    validationFailed: number;
-    normalizationFailed: number;
-  };
+  probe: OutcomeCountBucket;
+  history: OutcomeCountBucket;
   top100: string[];
   controlSet: string[];
   delegatedOverlaps: string[];
@@ -198,6 +252,8 @@ export type AcquisitionRunManifest = {
   rawHashes: string[];
   normalizedHashes: string[];
   sourceRevisionsDetected: number;
+  outcomesArtifactPath: string;
+  outcomesArtifactSha256: string;
   resultStatus: "SUCCESS" | "PARTIAL" | "STOPPED_THROTTLED" | "FAILED";
   throttlingObserved: boolean;
   durationMs: number;

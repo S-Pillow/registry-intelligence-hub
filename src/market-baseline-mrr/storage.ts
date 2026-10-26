@@ -1,9 +1,12 @@
 import { mkdir, readFile, readdir, writeFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { sha256Hex } from "./hash";
 import type {
+  AcquisitionOutcomesArtifact,
   AcquisitionRunManifest,
   NormalizedTransactionsEnvelope,
   NormalizedTransactionsSnapshot,
+  PeriodCurrentRevision,
   ReportingPeriod,
 } from "./types";
 
@@ -31,8 +34,20 @@ export function normalizedJsonPath(
   return join(mrrRoot(cwd), "normalized", tld, period, `${normalizedSha256}.json`);
 }
 
+export function periodCurrentPath(
+  tld: string,
+  period: ReportingPeriod,
+  cwd = process.cwd(),
+): string {
+  return join(mrrRoot(cwd), "indexes", "periods", tld, `${period}.json`);
+}
+
 export function manifestPath(runId: string, cwd = process.cwd()): string {
   return join(mrrRoot(cwd), "manifests", `${runId}.json`);
+}
+
+export function outcomesPath(runId: string, cwd = process.cwd()): string {
+  return join(mrrRoot(cwd), "manifests", `${runId}.outcomes.json`);
 }
 
 export function indexPath(cwd = process.cwd()): string {
@@ -66,7 +81,21 @@ export async function writeRawImmutable(
   return { path, wrote: true };
 }
 
-/** List existing raw hashes for TLD/period (for revision detection). */
+export async function readRawBytes(
+  tld: string,
+  period: ReportingPeriod,
+  rawSha256: string,
+  cwd = process.cwd(),
+): Promise<Uint8Array | null> {
+  try {
+    const buf = await readFile(rawCsvPath(tld, period, rawSha256, cwd));
+    return new Uint8Array(buf);
+  } catch {
+    return null;
+  }
+}
+
+/** List existing raw hashes for TLD/period (inventory only — not revision order). */
 export async function listRawHashes(
   tld: string,
   period: ReportingPeriod,
@@ -86,7 +115,12 @@ export async function writeNormalizedEnvelope(
   cwd = process.cwd(),
 ): Promise<string> {
   const snap = envelope.snapshot;
-  const path = normalizedJsonPath(snap.tldAsciiLabel, snap.reportingPeriod, snap.normalizedContentSha256, cwd);
+  const path = normalizedJsonPath(
+    snap.tldAsciiLabel,
+    snap.reportingPeriod,
+    snap.normalizedContentSha256,
+    cwd,
+  );
   try {
     await stat(path);
     return path;
@@ -98,18 +132,42 @@ export async function writeNormalizedEnvelope(
   return path;
 }
 
+export async function readPeriodCurrent(
+  tld: string,
+  period: ReportingPeriod,
+  cwd = process.cwd(),
+): Promise<PeriodCurrentRevision | null> {
+  try {
+    const text = await readFile(periodCurrentPath(tld, period, cwd), "utf8");
+    return JSON.parse(text) as PeriodCurrentRevision;
+  } catch {
+    return null;
+  }
+}
+
+export async function writePeriodCurrent(
+  current: PeriodCurrentRevision,
+  cwd = process.cwd(),
+): Promise<string> {
+  const path = periodCurrentPath(current.tldAsciiLabel, current.reportingPeriod, cwd);
+  await ensureParent(path);
+  await writeFile(path, `${JSON.stringify(current, null, 2)}\n`, "utf8");
+  return path;
+}
+
+/** Return the explicitly current accepted revision — not lexicographic hash order. */
 export async function readNormalizedForPeriod(
   tld: string,
   period: ReportingPeriod,
   cwd = process.cwd(),
 ): Promise<NormalizedTransactionsSnapshot | null> {
-  const dir = join(mrrRoot(cwd), "normalized", tld, period);
+  const current = await readPeriodCurrent(tld, period, cwd);
+  if (!current) return null;
   try {
-    const names = await readdir(dir);
-    const jsons = names.filter((n) => n.endsWith(".json")).sort();
-    if (jsons.length === 0) return null;
-    // Prefer latest file name order; content is content-addressed
-    const raw = await readFile(join(dir, jsons[jsons.length - 1]!), "utf8");
+    const raw = await readFile(
+      normalizedJsonPath(tld, period, current.currentNormalizedSha256, cwd),
+      "utf8",
+    );
     const env = JSON.parse(raw) as NormalizedTransactionsEnvelope;
     return env.snapshot;
   } catch {
@@ -122,6 +180,17 @@ export async function writeManifest(manifest: AcquisitionRunManifest, cwd = proc
   await ensureParent(path);
   await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return path;
+}
+
+export async function writeOutcomesArtifact(
+  artifact: AcquisitionOutcomesArtifact,
+  cwd = process.cwd(),
+): Promise<{ path: string; sha256: string }> {
+  const path = outcomesPath(artifact.runId, cwd);
+  const body = `${JSON.stringify(artifact, null, 2)}\n`;
+  await ensureParent(path);
+  await writeFile(path, body, "utf8");
+  return { path, sha256: sha256Hex(body) };
 }
 
 export async function writeCurrentIndex(

@@ -100,6 +100,9 @@ export async function discoverAllTldPages(options?: {
     (async (url: string) => {
       const r = await fetchBounded(url, { signal: options?.signal });
       if (!r.ok) return { ok: false as const, error: r.error };
+      if (r.status === 304 || !("text" in r)) {
+        return { ok: false as const, error: "Unexpected HTTP 304 for discovery HTML" };
+      }
       return { ok: true as const, text: r.text };
     });
 

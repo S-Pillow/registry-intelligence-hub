@@ -1,7 +1,10 @@
-# Market baseline — ICANN MRR Transactions (RIH-MARKET-BASELINE-MRR-1)
+# Market baseline — ICANN MRR Transactions (RIH-MARKET-BASELINE-MRR-1 / 1A)
 
 Implementation of the first round-neutral registry lifecycle acquisition slice.
 Controlling discovery contract: [`market-baseline-source-1.md`](./market-baseline-source-1.md).
+
+MRR-1A corrects temporal purity, remote revision revalidation, and per-request
+coverage evidence.
 
 ## Source
 
@@ -28,6 +31,7 @@ Every run records `asOfDate` and derives a single **`probeReportingPeriod`**:
 - Reports are withheld until **three months after the end of the reporting month**.
 - Locked example: `asOfDate=2026-10-26` → `probeReportingPeriod=2026-06`.
 - Implementation: calendar month of `asOfDate` minus **4** months.
+- `asOfDate` must be a real calendar date (rejects e.g. `2026-02-31`).
 
 All probe rankings use that **same** period. Missing → `MISSING_REPORT` (no silent older substitute).
 
@@ -54,20 +58,23 @@ CSV parsing: RFC 4180 (reused APS-style parser; **no new dependency**).
 Breadth / share numerators use accredited rows with `totalDomains > 0` only.
 Totals reconciliation **includes** special rows in the non-Totals sum.
 
-## Normalized model
+## Normalized model (intrinsic only)
 
 - Schema: `market-baseline-mrr-transactions/1.0.0`
 - Parser: `market-baseline-mrr-transactions-parser/1.0.0`
 - Keys: `tldAsciiLabel` (lowercase A-label, no leading dot) × `reportingPeriod` (`YYYY-MM`)
-- Snapshot includes Totals, registrar rows, metrics, raw/normalized SHA-256, parser/schema profile, optional `revisionOfRawSha256`
-- `retrievedAt` is stored on the envelope **outside** the normalized content hash
+- Snapshot is a **pure** function of raw bytes + intentional source provenance + parser/schema versions.
+- Intrinsic metrics only: `totalDomains`, `netAddsCount`, `netRenewCount`, deletes, transfers, breadth, top/top5 share, accredited/special domain sums.
+- `retrievedAt` is on the envelope **outside** the normalized content hash.
+- Neighboring reporting periods **must not** affect `normalizedContentSha256`.
 
-## Metrics (supported)
+## Temporal metrics (cross-snapshot)
 
-`totalDomains`, `netAddsCount` (Σ net-adds-1..10-yr), `netRenewCount` (count only),
-`deleteCount`, `transferGainingCount`, `transferLosingCount`, `registrarBreadth`,
-`topRegistrarShare`, `top5RegistrarShare`, `accreditedRegistrarDomains`, `specialOrSystemDomains`,
-`netDomainBaseChange` / MoM / YoY when prior periods exist.
+`netDomainBaseChange`, `monthOverMonthGrowth`, and `yearOverYearGrowth` are **not**
+stored in the source-normalized snapshot. They are derived via
+`deriveTldMarketSeriesTemporal` by joining period `t` with exact calendar
+`t−1` and `t−12` snapshots. Missing prerequisites → unavailable with reason.
+No bridging across gaps. Zero prior denominator → unavailable.
 
 ## Metrics (blocked / unsupported)
 
@@ -75,6 +82,30 @@ Totals reconciliation **includes** special rows in the non-Totals sum.
 - customer concentration / HHI as product metric
 - revenue, pricing, market opportunity scores
 - Registry Operator / Registrar→Organization / RSP→TLD joins
+
+## Remote revision revalidation
+
+Authoritative acquisition **always revalidates** the source URL (conditional
+`If-None-Match` / `If-Modified-Since` when validators are known, otherwise GET + SHA-256).
+
+- HTTP **304** → reuse current revision; no duplicate raw write; no revision event.
+- HTTP **200** → hash body; same SHA → reuse; different SHA → new revision.
+- Do **not** skip remote validation merely because a normalized snapshot exists.
+- Optional explicit `cacheOnly` mode exists for offline use; it is **not** the default.
+
+## Current revision pointer
+
+Per TLD×period explicit index (not lexical hash filenames):
+
+```text
+.data/market-baseline/mrr/indexes/periods/<tld>/<YYYY-MM>.json
+```
+
+Fields include `currentRawSha256`, `currentNormalizedSha256`, `previousRawSha256`,
+`retrievedAt`, optional `etag` / `lastModified`.
+
+`readNormalizedForPeriod` returns the **explicitly current** revision.
+`revisionOfRawSha256` chains A→B→C by previous-current pointer, not sorted hashes.
 
 ## Stage D universe
 
@@ -92,10 +123,23 @@ Totals reconciliation **includes** special rows in the non-Totals sum.
   raw/<tld>/<YYYY-MM>/<rawSha256>.csv
   normalized/<tld>/<YYYY-MM>/<normalizedSha256>.json
   manifests/<runId>.json
+  manifests/<runId>.outcomes.json
   indexes/current.json
+  indexes/periods/<tld>/<YYYY-MM>.json
+  indexes/discovery-cache.json
 ```
 
 Raw bytes are content-addressed; same TLD/period/URL with a new hash creates a **new revision** (no overwrite).
+
+## Per-request coverage evidence
+
+Every requested TLD×period is persisted in
+`manifests/<runId>.outcomes.json` (schema
+`market-baseline-mrr-request-outcomes/1.0.0`) with phase (`PROBE`|`HISTORY`),
+outcome, URLs, hashes, reuse/revalidation/revision flags, bytes, and errors.
+The run manifest references the artifact path + SHA-256.
+Detail counts must reconcile exactly to `manifest.probe` / `manifest.history`.
+`PARTIAL` remains valid for legitimate `MISSING_REPORT` identities.
 
 ## CLI
 
@@ -112,11 +156,11 @@ Per TLD/month: `SUCCESS` | `MISSING_REPORT` | `DOWNLOAD_FAILED` | `UNSUPPORTED_S
 
 Network: concurrency ≤4, bounded retries/backoff; stop bulk on material 429/403/5xx.
 
-## Live acceptance
+## Live acceptance (MRR-1)
 
 Recorded under `.data/market-baseline/mrr/manifests/` (gitignored).
 
-| Field | Value (acceptance) |
+| Field | Value (MRR-1 acceptance) |
 | --- | --- |
 | asOfDate | `2026-10-26` |
 | probeReportingPeriod | `2026-06` |
@@ -131,7 +175,8 @@ Recorded under `.data/market-baseline/mrr/manifests/` (gitignored).
 | duration | ~951 s (resume run after initial 429 cooldown; concurrency 2) |
 | throttling (final run) | none |
 
-An earlier attempt at concurrency 4 hit HTTP 429 and stopped safely (`STOPPED_THROTTLED`); the resumed run reused cached normalized probe files and completed Stage D.
+MRR-1A does **not** re-run the full corpus; correctness is proven with mocked
+revision/outcome tests plus optional bounded public smoke.
 
 ## Limitations
 

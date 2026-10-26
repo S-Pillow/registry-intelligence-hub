@@ -1,5 +1,5 @@
 import { discoverAllTldPages } from "./discover";
-import { fetchBounded, mapPool } from "./http";
+import { fetchBounded, mapPool, type FetchImpl } from "./http";
 import { sha256Hex } from "./hash";
 import { loadDelegatedTldLabels } from "./iana-delegation";
 import {
@@ -8,7 +8,7 @@ import {
   selectDelegatedApplicationOverlaps,
 } from "./applied-overlap";
 import { normalizeTransactions } from "./normalize";
-import { historyWindowEndingAt, previousPeriod, probeReportingPeriodFromAsOf, yearAgoPeriod } from "./period";
+import { historyWindowEndingAt, probeReportingPeriodFromAsOf } from "./period";
 import {
   buildHistoryUniverse,
   controlSetPresentInDiscovery,
@@ -17,23 +17,30 @@ import {
 } from "./selection";
 import {
   discoveryCachePath,
-  listRawHashes,
   readNormalizedForPeriod,
+  readPeriodCurrent,
+  readRawBytes,
   writeCurrentIndex,
   writeManifest,
   writeNormalizedEnvelope,
+  writeOutcomesArtifact,
+  writePeriodCurrent,
   writeRawImmutable,
 } from "./storage";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, relative } from "node:path";
 import type {
   AcquisitionOutcome,
+  AcquisitionPhase,
+  AcquisitionRequestOutcome,
   AcquisitionRunManifest,
   DiscoveredTldPage,
   NormalizedTransactionsEnvelope,
+  OutcomeCountBucket,
   ProbeTldResult,
   ReportingPeriod,
 } from "./types";
+import { MRR_OUTCOMES_SCHEMA_VERSION } from "./types";
 
 export type AcquireStageDOptions = {
   asOfDate: string;
@@ -41,23 +48,37 @@ export type AcquireStageDOptions = {
   concurrency?: number;
   appliedLabelsPath?: string;
   appliedLabels?: string[];
-  /** Skip live discovery; inject pages (tests). */
   pages?: DiscoveredTldPage[];
-  /** Inject IANA labels (tests). */
   delegatedLabels?: Set<string>;
-  /** Limit probe TLDs (debug). */
   probeLimit?: number;
-  /** Skip history phase. */
   skipHistory?: boolean;
+  /** Explicit offline mode — skips remote revalidation (NOT default). */
+  cacheOnly?: boolean;
+  fetchImpl?: FetchImpl;
   onLog?: (msg: string) => void;
 };
 
 export type AcquireStageDResult = {
   manifest: AcquisitionRunManifest;
   probeResults: ProbeTldResult[];
+  requestOutcomes: AcquisitionRequestOutcome[];
 };
 
-function emptyProbeCounts(): AcquisitionRunManifest["probe"] {
+export type AcquireOneResult = {
+  outcome: AcquisitionOutcome;
+  error?: string;
+  sourceUrl?: string;
+  rawSha256?: string;
+  normalizedContentSha256?: string;
+  totalDomains?: number;
+  bytesDownloaded: number;
+  reusedFromCache: boolean;
+  revalidated: boolean;
+  revisionDetected: boolean;
+  throttled?: boolean;
+};
+
+function emptyCounts(): OutcomeCountBucket {
   return {
     success: 0,
     missing: 0,
@@ -69,7 +90,7 @@ function emptyProbeCounts(): AcquisitionRunManifest["probe"] {
   };
 }
 
-function bumpProbe(counts: AcquisitionRunManifest["probe"], outcome: AcquisitionOutcome): void {
+export function bumpOutcomeCounts(counts: OutcomeCountBucket, outcome: AcquisitionOutcome): void {
   switch (outcome) {
     case "SUCCESS":
       counts.success += 1;
@@ -95,24 +116,27 @@ function bumpProbe(counts: AcquisitionRunManifest["probe"], outcome: Acquisition
   }
 }
 
-async function acquireOneTransactions(args: {
+export function reconcileOutcomeCounts(
+  requests: AcquisitionRequestOutcome[],
+  phase: AcquisitionPhase,
+): OutcomeCountBucket {
+  const counts = emptyCounts();
+  for (const r of requests) {
+    if (r.phase === phase) bumpOutcomeCounts(counts, r.outcome);
+  }
+  return counts;
+}
+
+export async function acquireOneTransactions(args: {
   page: DiscoveredTldPage;
   period: ReportingPeriod;
   cwd: string;
   asOfDate: string;
   probeReportingPeriod: ReportingPeriod;
-}): Promise<{
-  outcome: AcquisitionOutcome;
-  error?: string;
-  sourceUrl?: string;
-  rawSha256?: string;
-  normalizedContentSha256?: string;
-  totalDomains?: number;
-  bytesDownloaded: number;
-  reusedFromCache: boolean;
-  revisionDetected: boolean;
-  throttled?: boolean;
-}> {
+  cacheOnly?: boolean;
+  fetchImpl?: FetchImpl;
+}): Promise<AcquireOneResult> {
+  const fetchFn = args.fetchImpl ?? fetchBounded;
   const sourceUrl = args.page.transactionsByPeriod[args.period];
   if (!sourceUrl) {
     return {
@@ -120,26 +144,36 @@ async function acquireOneTransactions(args: {
       error: `No Transactions link for ${args.period}`,
       bytesDownloaded: 0,
       reusedFromCache: false,
+      revalidated: false,
       revisionDetected: false,
     };
   }
 
-  const cachedNorm = await readNormalizedForPeriod(args.page.tldAsciiLabel, args.period, args.cwd);
-  if (cachedNorm && cachedNorm.sourceUrl === sourceUrl) {
-    return {
-      outcome: "SUCCESS",
-      sourceUrl,
-      rawSha256: cachedNorm.rawSha256,
-      normalizedContentSha256: cachedNorm.normalizedContentSha256,
-      totalDomains: cachedNorm.metrics.totalDomains,
-      bytesDownloaded: 0,
-      reusedFromCache: true,
-      revisionDetected: false,
-    };
+  const current = await readPeriodCurrent(args.page.tldAsciiLabel, args.period, args.cwd);
+
+  if (args.cacheOnly) {
+    const cached = await readNormalizedForPeriod(args.page.tldAsciiLabel, args.period, args.cwd);
+    if (cached && cached.sourceUrl === sourceUrl) {
+      return {
+        outcome: "SUCCESS",
+        sourceUrl,
+        rawSha256: cached.rawSha256,
+        normalizedContentSha256: cached.normalizedContentSha256,
+        totalDomains: cached.metrics.totalDomains,
+        bytesDownloaded: 0,
+        reusedFromCache: true,
+        revalidated: false,
+        revisionDetected: false,
+      };
+    }
   }
 
-  const existingHashes = await listRawHashes(args.page.tldAsciiLabel, args.period, args.cwd);
-  const download = await fetchBounded(sourceUrl);
+  const validators =
+    current && current.sourceUrl === sourceUrl
+      ? { etag: current.etag, lastModified: current.lastModified }
+      : undefined;
+
+  const download = await fetchFn(sourceUrl, { validators });
   if (!download.ok) {
     return {
       outcome: "DOWNLOAD_FAILED",
@@ -147,27 +181,93 @@ async function acquireOneTransactions(args: {
       sourceUrl,
       bytesDownloaded: 0,
       reusedFromCache: false,
+      revalidated: true,
       revisionDetected: false,
       throttled: download.throttled,
     };
   }
 
+  // Unchanged remote (304) — reuse current revision exactly.
+  if (download.status === 304) {
+    if (!current) {
+      return {
+        outcome: "DOWNLOAD_FAILED",
+        error: "HTTP 304 without local current revision",
+        sourceUrl,
+        bytesDownloaded: 0,
+        reusedFromCache: false,
+        revalidated: true,
+        revisionDetected: false,
+      };
+    }
+    const snap = await readNormalizedForPeriod(args.page.tldAsciiLabel, args.period, args.cwd);
+    if (!snap) {
+      return {
+        outcome: "DOWNLOAD_FAILED",
+        error: "HTTP 304 but normalized current missing",
+        sourceUrl,
+        bytesDownloaded: 0,
+        reusedFromCache: false,
+        revalidated: true,
+        revisionDetected: false,
+      };
+    }
+    await writePeriodCurrent(
+      {
+        ...current,
+        retrievedAt: new Date().toISOString(),
+        etag: download.etag ?? current.etag,
+        lastModified: download.lastModified ?? current.lastModified,
+      },
+      args.cwd,
+    );
+    return {
+      outcome: "SUCCESS",
+      sourceUrl,
+      rawSha256: current.currentRawSha256,
+      normalizedContentSha256: current.currentNormalizedSha256,
+      totalDomains: snap.metrics.totalDomains,
+      bytesDownloaded: 0,
+      reusedFromCache: true,
+      revalidated: true,
+      revisionDetected: false,
+    };
+  }
+
   const rawSha256 = sha256Hex(download.bytes);
-  const reusedFromCache = existingHashes.includes(rawSha256);
-  const revisionDetected = existingHashes.length > 0 && !existingHashes.includes(rawSha256);
-  const revisionOf =
-    revisionDetected && existingHashes.length > 0 ? existingHashes[existingHashes.length - 1]! : null;
+  const sameAsCurrent = current?.currentRawSha256 === rawSha256 && current.sourceUrl === sourceUrl;
+  if (sameAsCurrent && current) {
+    const snap = await readNormalizedForPeriod(args.page.tldAsciiLabel, args.period, args.cwd);
+    await writePeriodCurrent(
+      {
+        ...current,
+        retrievedAt: new Date().toISOString(),
+        etag: download.etag ?? current.etag,
+        lastModified: download.lastModified ?? current.lastModified,
+      },
+      args.cwd,
+    );
+    return {
+      outcome: "SUCCESS",
+      sourceUrl,
+      rawSha256,
+      normalizedContentSha256: current.currentNormalizedSha256,
+      totalDomains: snap?.metrics.totalDomains,
+      bytesDownloaded: 0,
+      reusedFromCache: true,
+      revalidated: true,
+      revisionDetected: false,
+    };
+  }
 
-  await writeRawImmutable(args.page.tldAsciiLabel, args.period, rawSha256, download.bytes, args.cwd);
+  const revisionDetected = Boolean(current && current.currentRawSha256 !== rawSha256);
+  const revisionOf = revisionDetected && current ? current.currentRawSha256 : null;
 
-  const prevSnap = await readNormalizedForPeriod(
+  const rawWrite = await writeRawImmutable(
     args.page.tldAsciiLabel,
-    previousPeriod(args.period),
-    args.cwd,
-  );
-  const yoySnap = await readNormalizedForPeriod(
-    args.page.tldAsciiLabel,
-    yearAgoPeriod(args.period),
+    args.period,
+    rawSha256,
+    download.bytes,
     args.cwd,
   );
 
@@ -178,8 +278,6 @@ async function acquireOneTransactions(args: {
     reportingPeriod: args.period,
     sourceUrl,
     resourcePageUrl: args.page.resourcePageUrl,
-    previousTotalDomains: prevSnap?.metrics.totalDomains ?? null,
-    yearAgoTotalDomains: yoySnap?.metrics.totalDomains ?? null,
     revisionOfRawSha256: revisionOf,
   });
 
@@ -189,19 +287,35 @@ async function acquireOneTransactions(args: {
       error: norm.error,
       sourceUrl,
       rawSha256,
-      bytesDownloaded: reusedFromCache ? 0 : download.bytes.byteLength,
-      reusedFromCache,
+      bytesDownloaded: rawWrite.wrote ? download.bytes.byteLength : 0,
+      reusedFromCache: !rawWrite.wrote,
+      revalidated: true,
       revisionDetected,
     };
   }
 
+  const retrievedAt = new Date().toISOString();
   const envelope: NormalizedTransactionsEnvelope = {
     snapshot: norm.snapshot,
-    retrievedAt: new Date().toISOString(),
+    retrievedAt,
     asOfDate: args.asOfDate,
     probeReportingPeriod: args.probeReportingPeriod,
   };
   await writeNormalizedEnvelope(envelope, args.cwd);
+  await writePeriodCurrent(
+    {
+      tldAsciiLabel: args.page.tldAsciiLabel,
+      reportingPeriod: args.period,
+      sourceUrl,
+      currentRawSha256: rawSha256,
+      currentNormalizedSha256: norm.snapshot.normalizedContentSha256,
+      previousRawSha256: revisionOf,
+      retrievedAt,
+      etag: download.etag,
+      lastModified: download.lastModified,
+    },
+    args.cwd,
+  );
 
   return {
     outcome: "SUCCESS",
@@ -209,9 +323,34 @@ async function acquireOneTransactions(args: {
     rawSha256,
     normalizedContentSha256: norm.snapshot.normalizedContentSha256,
     totalDomains: norm.snapshot.metrics.totalDomains,
-    bytesDownloaded: reusedFromCache ? 0 : download.bytes.byteLength,
-    reusedFromCache,
+    bytesDownloaded: rawWrite.wrote ? download.bytes.byteLength : 0,
+    reusedFromCache: !rawWrite.wrote,
+    revalidated: true,
     revisionDetected,
+  };
+}
+
+function toRequestOutcome(
+  page: DiscoveredTldPage,
+  period: ReportingPeriod,
+  phase: AcquisitionPhase,
+  r: AcquireOneResult,
+): AcquisitionRequestOutcome {
+  return {
+    tldAsciiLabel: page.tldAsciiLabel,
+    reportingPeriod: period,
+    phase,
+    outcome: r.outcome,
+    resourcePageUrl: page.resourcePageUrl,
+    sourceUrl: r.sourceUrl,
+    rawSha256: r.rawSha256,
+    normalizedContentSha256: r.normalizedContentSha256,
+    totalDomains: r.totalDomains,
+    reusedFromCache: r.reusedFromCache,
+    revalidated: r.revalidated,
+    revisionDetected: r.revisionDetected,
+    bytesDownloaded: r.bytesDownloaded,
+    error: r.error,
   };
 }
 
@@ -225,6 +364,7 @@ export async function runStageDAcquisition(
   const startedAt = new Date().toISOString();
   const runId = `mrr-stage-d-${asOfDate}-${startedAt.replace(/[:.]/g, "-")}`;
   const log = options.onLog ?? (() => undefined);
+  const fetchImpl = options.fetchImpl;
 
   let throttlingObserved = false;
   let stopBulk = false;
@@ -280,7 +420,7 @@ export async function runStageDAcquisition(
     probePages = pages.slice(0, options.probeLimit);
   }
 
-  const probeCounts = emptyProbeCounts();
+  const requestOutcomes: AcquisitionRequestOutcome[] = [];
   const probeResults: ProbeTldResult[] = [];
   let filesRequested = 0;
   let filesDownloaded = 0;
@@ -294,6 +434,56 @@ export async function runStageDAcquisition(
   const rawHashes: string[] = [];
   const normalizedHashes: string[] = [];
 
+  const accumulate = (r: AcquireOneResult) => {
+    if (r.outcome === "MISSING_REPORT") missingReports += 1;
+    if (r.outcome === "UNSUPPORTED_SCHEMA") schemaFailures += 1;
+    if (r.outcome === "VALIDATION_FAILED") validationFailures += 1;
+    if (r.outcome === "NORMALIZATION_FAILED" || r.outcome === "PARSE_FAILED") {
+      normalizationFailures += 1;
+    }
+    if (r.reusedFromCache) filesReusedFromCache += 1;
+    else if (r.outcome !== "MISSING_REPORT" && r.bytesDownloaded > 0) filesDownloaded += 1;
+    bytesDownloaded += r.bytesDownloaded;
+    if (r.revisionDetected) sourceRevisionsDetected += 1;
+    if (r.rawSha256) rawHashes.push(r.rawSha256);
+    if (r.normalizedContentSha256) normalizedHashes.push(r.normalizedContentSha256);
+  };
+
+  const runOne = async (
+    page: DiscoveredTldPage,
+    period: ReportingPeriod,
+  ): Promise<AcquireOneResult> => {
+    let r = await acquireOneTransactions({
+      page,
+      period,
+      cwd,
+      asOfDate,
+      probeReportingPeriod,
+      cacheOnly: options.cacheOnly,
+      fetchImpl,
+    });
+    if (r.throttled) {
+      throttlingObserved = true;
+      log(`Throttling observed (${r.error}); cooling down 90s before stop decision`);
+      await new Promise((res) => setTimeout(res, 90_000));
+      const retry = await acquireOneTransactions({
+        page,
+        period,
+        cwd,
+        asOfDate,
+        probeReportingPeriod,
+        cacheOnly: options.cacheOnly,
+        fetchImpl,
+      });
+      if (retry.throttled || retry.outcome === "DOWNLOAD_FAILED") {
+        stopBulk = true;
+        log(`Throttling persisted; stopping bulk acquisition`);
+      }
+      r = retry;
+    }
+    return r;
+  };
+
   log(`Probe period ${probeReportingPeriod} for ${probePages.length} TLDs…`);
   await mapPool(
     probePages,
@@ -301,46 +491,9 @@ export async function runStageDAcquisition(
     async (page) => {
       if (shouldStop()) return;
       filesRequested += 1;
-      const r = await acquireOneTransactions({
-        page,
-        period: probeReportingPeriod,
-        cwd,
-        asOfDate,
-        probeReportingPeriod,
-      });
-      if (r.throttled) {
-        throttlingObserved = true;
-        log(`Throttling observed (${r.error}); cooling down 90s before stop decision`);
-        await new Promise((res) => setTimeout(res, 90_000));
-        // one recovery attempt for this TLD
-        const retry = await acquireOneTransactions({
-          page,
-          period: probeReportingPeriod,
-          cwd,
-          asOfDate,
-          probeReportingPeriod,
-        });
-        if (retry.throttled || retry.outcome === "DOWNLOAD_FAILED") {
-          stopBulk = true;
-          log(`Throttling persisted; stopping bulk acquisition`);
-          Object.assign(r, retry);
-        } else {
-          Object.assign(r, retry);
-        }
-      }
-      bumpProbe(probeCounts, r.outcome);
-      if (r.outcome === "MISSING_REPORT") missingReports += 1;
-      if (r.outcome === "UNSUPPORTED_SCHEMA") schemaFailures += 1;
-      if (r.outcome === "VALIDATION_FAILED") validationFailures += 1;
-      if (r.outcome === "NORMALIZATION_FAILED" || r.outcome === "PARSE_FAILED") {
-        normalizationFailures += 1;
-      }
-      if (r.reusedFromCache) filesReusedFromCache += 1;
-      else if (r.outcome !== "MISSING_REPORT" && r.bytesDownloaded > 0) filesDownloaded += 1;
-      bytesDownloaded += r.bytesDownloaded;
-      if (r.revisionDetected) sourceRevisionsDetected += 1;
-      if (r.rawSha256) rawHashes.push(r.rawSha256);
-      if (r.normalizedContentSha256) normalizedHashes.push(r.normalizedContentSha256);
+      const r = await runOne(page, probeReportingPeriod);
+      accumulate(r);
+      requestOutcomes.push(toRequestOutcome(page, probeReportingPeriod, "PROBE", r));
       probeResults.push({
         tldAsciiLabel: page.tldAsciiLabel,
         resourcePageUrl: page.resourcePageUrl,
@@ -365,9 +518,7 @@ export async function runStageDAcquisition(
   if (options.appliedLabelsPath) {
     appliedLabels = await loadAppliedAsciiLabelsFromFile(options.appliedLabelsPath);
   } else if (appliedLabels.length === 0) {
-    // Best-effort: local reveal publication if present
     try {
-      const { readFile } = await import("node:fs/promises");
       const { join } = await import("node:path");
       const snapPath = join(cwd, ".data/reveal-2026/publications/aps-applications-2.0.0.snapshot.json");
       const text = await readFile(snapPath, "utf8");
@@ -401,7 +552,7 @@ export async function runStageDAcquisition(
     const jobs: Array<{ tld: string; period: ReportingPeriod }> = [];
     for (const member of historyUniverse) {
       for (const period of historyPeriods) {
-        if (period === probeReportingPeriod) continue; // already acquired in probe
+        if (period === probeReportingPeriod) continue;
         jobs.push({ tld: member.tldAsciiLabel, period });
       }
     }
@@ -414,48 +565,32 @@ export async function runStageDAcquisition(
         const page = pageByTld.get(job.tld);
         if (!page) return;
         filesRequested += 1;
-        const r = await acquireOneTransactions({
-          page,
-          period: job.period,
-          cwd,
-          asOfDate,
-          probeReportingPeriod,
-        });
-        if (r.throttled) {
-          throttlingObserved = true;
-          log(`Throttling during history; cooling down 90s`);
-          await new Promise((res) => setTimeout(res, 90_000));
-          const retry = await acquireOneTransactions({
-            page,
-            period: job.period,
-            cwd,
-            asOfDate,
-            probeReportingPeriod,
-          });
-          if (retry.throttled || retry.outcome === "DOWNLOAD_FAILED") {
-            stopBulk = true;
-            log(`Throttling persisted during history; stopping`);
-            Object.assign(r, retry);
-          } else {
-            Object.assign(r, retry);
-          }
-        }
-        if (r.outcome === "MISSING_REPORT") missingReports += 1;
-        if (r.outcome === "UNSUPPORTED_SCHEMA") schemaFailures += 1;
-        if (r.outcome === "VALIDATION_FAILED") validationFailures += 1;
-        if (r.outcome === "NORMALIZATION_FAILED" || r.outcome === "PARSE_FAILED") {
-          normalizationFailures += 1;
-        }
-        if (r.reusedFromCache) filesReusedFromCache += 1;
-        else if (r.outcome !== "MISSING_REPORT" && r.bytesDownloaded > 0) filesDownloaded += 1;
-        bytesDownloaded += r.bytesDownloaded;
-        if (r.revisionDetected) sourceRevisionsDetected += 1;
-        if (r.rawSha256) rawHashes.push(r.rawSha256);
-        if (r.normalizedContentSha256) normalizedHashes.push(r.normalizedContentSha256);
+        const r = await runOne(page, job.period);
+        accumulate(r);
+        requestOutcomes.push(toRequestOutcome(page, job.period, "HISTORY", r));
       },
       shouldStop,
     );
   }
+
+  requestOutcomes.sort(
+    (a, b) =>
+      a.phase.localeCompare(b.phase)
+      || a.tldAsciiLabel.localeCompare(b.tldAsciiLabel)
+      || a.reportingPeriod.localeCompare(b.reportingPeriod),
+  );
+
+  const probeCounts = reconcileOutcomeCounts(requestOutcomes, "PROBE");
+  const historyCounts = reconcileOutcomeCounts(requestOutcomes, "HISTORY");
+
+  const outcomesArtifact: import("./types").AcquisitionOutcomesArtifact = {
+    schemaVersion: MRR_OUTCOMES_SCHEMA_VERSION,
+    runId,
+    asOfDate,
+    probeReportingPeriod,
+    requests: requestOutcomes,
+  };
+  const writtenOutcomes = await writeOutcomesArtifact(outcomesArtifact, cwd);
 
   const completedAt = new Date().toISOString();
   const durationMs = Date.parse(completedAt) - Date.parse(startedAt);
@@ -464,6 +599,7 @@ export async function runStageDAcquisition(
   else if (probeCounts.success === 0) resultStatus = "FAILED";
   else if (
     probeCounts.missing + probeCounts.downloadFailed + probeCounts.unsupportedSchema > 0
+    || historyCounts.missing + historyCounts.downloadFailed > 0
     || schemaFailures > 0
     || validationFailures > 0
   ) {
@@ -479,6 +615,7 @@ export async function runStageDAcquisition(
     probeReportingPeriod,
     discoveredTldCount: pages.length,
     probe: probeCounts,
+    history: historyCounts,
     top100,
     controlSet,
     delegatedOverlaps,
@@ -495,6 +632,8 @@ export async function runStageDAcquisition(
     rawHashes: [...new Set(rawHashes)].sort(),
     normalizedHashes: [...new Set(normalizedHashes)].sort(),
     sourceRevisionsDetected,
+    outcomesArtifactPath: relative(cwd, writtenOutcomes.path),
+    outcomesArtifactSha256: writtenOutcomes.sha256,
     resultStatus,
     throttlingObserved,
     durationMs,
@@ -502,6 +641,8 @@ export async function runStageDAcquisition(
       "Transactions-only Stage D acquisition",
       "Activity links observed during discovery are not downloaded",
       "renewalRate is intentionally unsupported",
+      "normalized snapshots are intrinsic-only; temporal metrics are series derivations",
+      "authoritative acquisition revalidates remote source URLs by default",
     ],
   };
 
@@ -515,9 +656,64 @@ export async function runStageDAcquisition(
       discoveredTldCount: pages.length,
       top100Count: top100.length,
       historyUniverseCount: historyUniverse.length,
+      outcomesArtifactPath: manifest.outcomesArtifactPath,
+      outcomesArtifactSha256: manifest.outcomesArtifactSha256,
     },
     cwd,
   );
 
-  return { manifest, probeResults };
+  return { manifest, probeResults, requestOutcomes };
 }
+
+/** Test helper: seed a period from known bytes without remote fetch. */
+export async function seedNormalizedFromBytes(args: {
+  cwd: string;
+  tldAsciiLabel: string;
+  reportingPeriod: ReportingPeriod;
+  sourceUrl: string;
+  resourcePageUrl: string;
+  rawBytes: Uint8Array;
+  rawText: string;
+  asOfDate?: string;
+  revisionOfRawSha256?: string | null;
+}): Promise<{ snapshotSha: string; rawSha: string }> {
+  const current = await readPeriodCurrent(args.tldAsciiLabel, args.reportingPeriod, args.cwd);
+  const rawSha = sha256Hex(args.rawBytes);
+  const revisionOf =
+    args.revisionOfRawSha256 !== undefined
+      ? args.revisionOfRawSha256
+      : current && current.currentRawSha256 !== rawSha
+        ? current.currentRawSha256
+        : null;
+  await writeRawImmutable(args.tldAsciiLabel, args.reportingPeriod, rawSha, args.rawBytes, args.cwd);
+  const norm = normalizeTransactions({
+    rawText: args.rawText,
+    rawBytes: args.rawBytes,
+    tldAsciiLabel: args.tldAsciiLabel,
+    reportingPeriod: args.reportingPeriod,
+    sourceUrl: args.sourceUrl,
+    resourcePageUrl: args.resourcePageUrl,
+    revisionOfRawSha256: revisionOf,
+  });
+  if (norm.outcome !== "SUCCESS") throw new Error(norm.error);
+  const retrievedAt = new Date().toISOString();
+  await writeNormalizedEnvelope(
+    { snapshot: norm.snapshot, retrievedAt, asOfDate: args.asOfDate },
+    args.cwd,
+  );
+  await writePeriodCurrent(
+    {
+      tldAsciiLabel: args.tldAsciiLabel,
+      reportingPeriod: args.reportingPeriod,
+      sourceUrl: args.sourceUrl,
+      currentRawSha256: rawSha,
+      currentNormalizedSha256: norm.snapshot.normalizedContentSha256,
+      previousRawSha256: revisionOf,
+      retrievedAt,
+    },
+    args.cwd,
+  );
+  return { snapshotSha: norm.snapshot.normalizedContentSha256, rawSha };
+}
+
+export { readRawBytes };

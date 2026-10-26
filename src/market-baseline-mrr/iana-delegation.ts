@@ -26,5 +26,8 @@ export async function loadDelegatedTldLabels(options?: {
   if (!res.ok) {
     throw new Error(`Failed to fetch IANA TLD list: ${res.error}`);
   }
+  if (res.status === 304 || !("text" in res)) {
+    throw new Error("Unexpected HTTP 304 for IANA TLD list");
+  }
   return { labels: parseIanaTldListText(res.text), sourceUrl: url };
 }
