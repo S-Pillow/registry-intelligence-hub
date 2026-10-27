@@ -60,10 +60,8 @@ export function CommandCenterIntelligencePulse({
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
-  useEffect(() => {
-    if (total === 0) return;
-    setIndex((current) => (current >= total ? 0 : current));
-  }, [total]);
+  // Derive a safe display index — avoid setState-in-effect clamping cascades.
+  const displayIndex = total > 0 ? index % total : 0;
 
   useEffect(() => {
     if (!rotating) return;
@@ -72,7 +70,7 @@ export function CommandCenterIntelligencePulse({
       setProgressEpoch((epoch) => epoch + 1);
     }, INTELLIGENCE_PULSE_INTERVAL_MS);
     return () => window.clearTimeout(timer);
-  }, [rotating, index, total, progressEpoch]);
+  }, [rotating, displayIndex, total, progressEpoch]);
 
   const bumpProgress = useCallback(() => {
     setProgressEpoch((epoch) => epoch + 1);
@@ -106,7 +104,7 @@ export function CommandCenterIntelligencePulse({
 
   if (total === 0) return null;
 
-  const insight = insights[Math.min(index, total - 1)]!;
+  const insight = insights[displayIndex]!;
   const progressPaused = !rotating;
 
   return (
@@ -137,9 +135,9 @@ export function CommandCenterIntelligencePulse({
             <p
               className="text-xs font-semibold tabular-nums text-slate-500"
               data-testid="cc-pulse-counter"
-              aria-label={`Insight ${index + 1} of ${total}`}
+              aria-label={`Insight ${displayIndex + 1} of ${total}`}
             >
-              {formatPulseIndex(index, total)}
+              {formatPulseIndex(displayIndex, total)}
             </p>
             <button
               type="button"
@@ -159,7 +157,7 @@ export function CommandCenterIntelligencePulse({
           aria-live="off"
         >
           <article
-            key={`${insight.id}-${index}`}
+            key={`${insight.id}-${displayIndex}`}
             data-testid="cc-pulse-message"
             className={reducedMotion ? undefined : "cc-pulse-enter"}
           >

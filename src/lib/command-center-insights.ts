@@ -21,12 +21,19 @@ export type CommandCenterInsightsInput = {
   godaddyUniqueContentionSets: number | null;
 };
 
-/** Whole-percent absolute decline from a positive baseline. */
-export function wholePercentDecline(baseline: number, active: number): number {
-  if (baseline <= 0) {
+/**
+ * Whole-percent decline from a positive baseline.
+ * Returns null when active is not strictly below baseline (equal/increase).
+ * Never uses absolute difference — direction is explicit.
+ */
+export function wholePercentDecline(baseline: number, active: number): number | null {
+  if (!(baseline > 0)) {
     throw new Error("wholePercentDecline requires a positive baseline");
   }
-  return Math.round((Math.abs(active - baseline) / baseline) * 100);
+  if (!(active < baseline)) {
+    return null;
+  }
+  return Math.round(((baseline - active) / baseline) * 100);
 }
 
 function formatCount(n: number): string {
@@ -64,8 +71,10 @@ function buildStructuralChange(
   const idn = intelligence.crossRound.idn;
   if (apps == null || idn == null) return null;
 
+  // Decline-only template: omit unless BOTH comparisons are actual declines.
   const appDeclinePct = wholePercentDecline(apps.baseline2012, apps.active2026);
   const idnDeclinePct = wholePercentDecline(idn.baseline2012, idn.active2026);
+  if (appDeclinePct == null || idnDeclinePct == null) return null;
 
   return {
     id: "structural-change-2012-2026",
@@ -89,6 +98,8 @@ function buildCoverageDisclosure(
   const { coverage } = intelligence;
   if (coverage.officialApplications <= 0) return null;
   if (coverage.observedApplicationRecords <= 0) return null;
+  // "nearly complete … exception is explicit" requires a known excluded record.
+  if (coverage.knownExcludedCount <= 0) return null;
 
   const excluded = coverage.knownExcludedCount;
   const excludedPhrase =

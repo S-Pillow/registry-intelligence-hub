@@ -92,6 +92,19 @@ describe("wholePercentDecline", () => {
     expect(wholePercentDecline(1930, 1615)).toBe(16);
     expect(wholePercentDecline(116, 21)).toBe(82);
   });
+
+  it("returns null for increases (never describes them as decline)", () => {
+    expect(wholePercentDecline(100, 110)).toBeNull();
+  });
+
+  it("returns null for equality", () => {
+    expect(wholePercentDecline(100, 100)).toBeNull();
+  });
+
+  it("fails closed on non-positive baseline", () => {
+    expect(() => wholePercentDecline(0, 10)).toThrow(/positive baseline/);
+    expect(() => wholePercentDecline(-5, 1)).toThrow(/positive baseline/);
+  });
 });
 
 describe("buildCommandCenterInsights", () => {
@@ -138,6 +151,109 @@ describe("buildCommandCenterInsights", () => {
       "applications are down 16%, while IDN applications are down 82%.",
     );
     expect(structural?.href).toBe("/cross-round");
+  });
+
+  it("omits structural insight when applications increase above baseline", () => {
+    const insights = buildCommandCenterInsights({
+      intelligence: baseIntelligence({
+        crossRound: {
+          applications: {
+            metricId: "application-count",
+            baseline2012: 100,
+            active2026: 110,
+            difference: 10,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          idn: {
+            metricId: "idn-applications",
+            baseline2012: 116,
+            active2026: 21,
+            difference: -95,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          omittedBlocked: [],
+        },
+      }),
+      godaddyUniqueContentionSets: 66,
+    });
+    expect(insights.some((insight) => insight.id === "structural-change-2012-2026")).toBe(false);
+    expect(insights.map((i) => `${i.lead} ${i.body}`).join(" ")).not.toMatch(/down\s+-?\d+%/i);
+  });
+
+  it("omits structural insight when IDN increases above baseline", () => {
+    const insights = buildCommandCenterInsights({
+      intelligence: baseIntelligence({
+        crossRound: {
+          applications: {
+            metricId: "application-count",
+            baseline2012: 1930,
+            active2026: 1615,
+            difference: -315,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          idn: {
+            metricId: "idn-applications",
+            baseline2012: 100,
+            active2026: 110,
+            difference: 10,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          omittedBlocked: [],
+        },
+      }),
+      godaddyUniqueContentionSets: 66,
+    });
+    expect(insights.some((insight) => insight.id === "structural-change-2012-2026")).toBe(false);
+    expect(insights.map((i) => `${i.lead} ${i.body}`).join(" ")).not.toMatch(/down\s+-?\d+%/i);
+  });
+
+  it("omits structural insight when either comparison is equal to baseline", () => {
+    const insights = buildCommandCenterInsights({
+      intelligence: baseIntelligence({
+        crossRound: {
+          applications: {
+            metricId: "application-count",
+            baseline2012: 1615,
+            active2026: 1615,
+            difference: 0,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          idn: {
+            metricId: "idn-applications",
+            baseline2012: 116,
+            active2026: 21,
+            difference: -95,
+            limitationLabel: "official totals",
+            disclosureKeys: [],
+          },
+          omittedBlocked: [],
+        },
+      }),
+      godaddyUniqueContentionSets: 66,
+    });
+    expect(insights.some((insight) => insight.id === "structural-change-2012-2026")).toBe(false);
+  });
+
+  it("omits coverage insight when knownExcludedCount is zero", () => {
+    const insights = buildCommandCenterInsights({
+      intelligence: baseIntelligence({
+        coverage: {
+          officialApplications: 1615,
+          observedApplicationRecords: 1615,
+          completeness: "complete",
+          knownExcludedCount: 0,
+          knownExcludedIsCoverageMetadataOnly: true,
+          dataHealthHref: "/data-health",
+        },
+      }),
+      godaddyUniqueContentionSets: 66,
+    });
+    expect(insights.some((insight) => insight.id === "coverage-disclosure")).toBe(false);
   });
 
   it("builds coverage message with singular excluded-record grammar", () => {
