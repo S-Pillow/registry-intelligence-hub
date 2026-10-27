@@ -13,6 +13,8 @@ Related contracts (historical / mechanical; still valid as contracts):
 - Activation mechanics: `docs/2026-publication-2x-activation.md`
 - Metric eligibility: `docs/2026-metric-eligibility-rebaseline.md`
 
+**Note (2026-10-27):** Command Center application source has subsequently advanced beyond the Reveal Day promotion SHA recorded in this closeout. For current Command Center intelligence architecture (including Intelligence Pulse production acceptance), see `docs/2026-command-center-intelligence.md`. This note does not revise the 2026-10-08 Reveal Day infrastructure/promotion event below.
+
 ---
 
 ## Live production event
