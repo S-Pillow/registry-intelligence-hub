@@ -146,6 +146,11 @@ import {
   CommandCenterRecentChangesCard,
 } from "@/components/registry/changes-content";
 import { ContentionContent } from "@/components/registry/contention-content";
+import { MarketBaselineContent } from "@/components/registry/market-baseline-content";
+import type {
+  RegistryMarketDetailModel,
+  RegistryMarketOverviewModel,
+} from "@/lib/market-baseline-ui";
 import { buildParticipantIntelligence } from "@/lib/participant-intelligence";
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import type {
@@ -205,6 +210,7 @@ const primaryNavItems = [
   { label: "Command Center", href: "/" },
   { label: "Explore", href: "/explore" },
   { label: "Competitive Landscape", href: "/competitive-landscape" },
+  { label: "Registry Market", href: "/market" },
   { label: "Contention", href: "/contention" },
   { label: "Changes", href: "/changes" },
 ] as const;
@@ -218,6 +224,7 @@ type HubView =
   | "saved"
   | "briefings"
   | "competitive-landscape"
+  | "market"
   | "contention"
   | "data-health"
   | "changes";
@@ -225,6 +232,7 @@ type HubView =
 function hubNavActiveLabel(view: HubView): string {
   if (view === "explore") return "Explore";
   if (view === "competitive-landscape") return "Competitive Landscape";
+  if (view === "market") return "Registry Market";
   if (view === "contention") return "Contention";
   if (view === "changes") return "Changes";
   if (view === "command") return "Command Center";
@@ -324,7 +332,7 @@ function HubNav({ active = "Command Center", presentation }: { active?: string; 
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-end justify-between gap-2 px-2 sm:px-6">
         <nav
           aria-label="Hub business navigation"
-          className="grid flex-1 grid-cols-2 gap-x-0 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto md:grid-cols-4"
+          className="grid flex-1 grid-cols-2 gap-x-0 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto md:grid-cols-3 lg:flex"
         >
           {primaryNavItems.map((item) => (
             <Link
@@ -2252,6 +2260,8 @@ function CommandCenterFailClosedShell({
   contentionParams,
   organizationConcentration,
   organizationContentionPairs,
+  marketOverview = null,
+  marketDetail = null,
 }: {
   view: HubView;
   presentation: ProductPresentation;
@@ -2260,7 +2270,22 @@ function CommandCenterFailClosedShell({
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
   organizationContentionPairs?: OrganizationContentionPairModel | null;
+  marketOverview?: RegistryMarketOverviewModel | null;
+  marketDetail?: RegistryMarketDetailModel | null;
 }) {
+  if (view === "market") {
+    return (
+      <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
+        <ShellHeader presentation={presentation} />
+        <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+        <MarketBaselineContent
+          overview={marketOverview}
+          detail={marketDetail}
+          presentation={presentation}
+        />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900">
       <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
@@ -2312,6 +2337,8 @@ function CommandCenterActiveV2({
   contentionParams,
   organizationConcentration = null,
   organizationContentionPairs = null,
+  marketOverview = null,
+  marketDetail = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2327,6 +2354,8 @@ function CommandCenterActiveV2({
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
   organizationContentionPairs?: OrganizationContentionPairModel | null;
+  marketOverview?: RegistryMarketOverviewModel | null;
+  marketDetail?: RegistryMarketDetailModel | null;
 }) {
   const participantIntel = useMemo(
     () => buildParticipantIntelligence(document, overlays),
@@ -2334,6 +2363,21 @@ function CommandCenterActiveV2({
   );
   const godaddyUniqueContentionSets =
     participantIntel.focal?.row.officialContentionSetsTouched ?? null;
+
+  if (view === "market") {
+    return (
+      <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
+        <ShellHeader presentation={presentation} />
+        <PresentationModeBanner presentation={presentation} promoted />
+        <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+        <MarketBaselineContent
+          overview={marketOverview}
+          detail={marketDetail}
+          presentation={presentation}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f7f6] text-slate-900" data-testid="command-center-active-v2">
@@ -2432,6 +2476,8 @@ export function CommandCenter(props: {
   contentionParams?: ContentionPageParams;
   organizationConcentration?: OrganizationConcentrationModel | null;
   organizationContentionPairs?: OrganizationContentionPairModel | null;
+  marketOverview?: RegistryMarketOverviewModel | null;
+  marketDetail?: RegistryMarketDetailModel | null;
 }) {
   const resolution = useHubRegistryData();
   const claimActualityState = useHubClaimActualityState();
@@ -2445,6 +2491,8 @@ export function CommandCenter(props: {
         contentionParams={props.contentionParams}
         organizationConcentration={props.organizationConcentration}
         organizationContentionPairs={props.organizationContentionPairs}
+        marketOverview={props.marketOverview}
+        marketDetail={props.marketDetail}
       />
     );
   }
@@ -2477,6 +2525,8 @@ function CommandCenterV1({
   changeFeed = { initialized: false },
   organizationConcentration = null,
   organizationContentionPairs = null,
+  marketOverview = null,
+  marketDetail = null,
 }: {
   state?: ViewState;
   view?: HubView;
@@ -2489,6 +2539,8 @@ function CommandCenterV1({
   changeFeed?: ChangeFeedProp;
   organizationConcentration?: OrganizationConcentrationModel | null;
   organizationContentionPairs?: OrganizationContentionPairModel | null;
+  marketOverview?: RegistryMarketOverviewModel | null;
+  marketDetail?: RegistryMarketDetailModel | null;
 }) {
   const claimActualityState = useHubClaimActualityState();
   const registryResolution = useHubRegistryData();
@@ -2610,6 +2662,21 @@ function CommandCenterV1({
     savedWork,
     presentation,
   };
+
+  if (view === "market") {
+    return (
+      <div className="min-h-screen bg-[#f4f6f8] pb-28 text-slate-950">
+        <ShellHeader presentation={presentation} />
+        <PresentationModeBanner presentation={presentation} promoted={publicationIsPromoted} />
+        <HubNav presentation={presentation} active={hubNavActiveLabel(view)} />
+        <MarketBaselineContent
+          overview={marketOverview}
+          detail={marketDetail}
+          presentation={presentation}
+        />
+      </div>
+    );
+  }
 
   return (
     <InvestigationContext.Provider value={controls}>

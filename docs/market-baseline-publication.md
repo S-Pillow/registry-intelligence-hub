@@ -289,9 +289,15 @@ Merged code baseline: `origin/main` @
 (`fix(market): scale publication identity by shard`).
 
 **Readiness:** Market-baseline acquisition + publication foundation is
-**CLOSED** and ready for product consumption. Prompt Agent may open
-`RIH-MARKET-BASELINE-UI-1` separately. This does **not** authorize deployment,
-scheduler installation, new data sources, or additional identity joins.
+**CLOSED** and ready for product consumption.
+
+### UI-1 (product consumer)
+
+User-facing surface: **Registry Market** at `/market` (detail `/market/[tld]`).
+UI-1 consumes the **product publication only** (pointer → verified index →
+optional verified TLD shard). It does not read the MRR raw/normalized archive.
+Production deployment of market publication artifacts is still **not**
+started by UI-1 alone.
 
 ## Accepted development baseline
 
