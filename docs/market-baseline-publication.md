@@ -251,23 +251,24 @@ Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
 
 ## Non-goals / limits (retained)
 
-- UI / routes / charts — **not implemented** (UI-1 is a separate ticket only)  
-- Activity report bodies — **not ingested**  
-- `renewalRate` — **unsupported** from Transactions alone  
-- Registry Operator identity — **not modeled**  
-- Registrar → Confirmed Organization — **not modeled**  
-- RSP → TLD — **not modeled**  
-- Applicant → Registrar — **not modeled**  
-- DNMI context / Domain Metrica — **not integrated**  
-- MRR acquisition/publication scheduler — **not installed**  
-- Production deployment of market-baseline — **not started**  
-- Committing or redistributing the raw MRR corpus — **forbidden**  
+- Charts / market-opportunity scoring / HHI / pricing — **not provided**
+- Activity report bodies — **not ingested**
+- `renewalRate` — **unsupported** from Transactions alone
+- Registry Operator identity — **not modeled**
+- Registrar → Confirmed Organization — **not modeled**
+- RSP → TLD — **not modeled**
+- Applicant → Registrar — **not modeled**
+- GoDaddy customer relationships — **not inferred**
+- DNMI context / Domain Metrica — **not integrated**
+- MRR acquisition/publication scheduler — **not installed**
+  (production holds a **static** accepted publication baseline only)
+- Committing or redistributing the raw MRR corpus — **forbidden**
 
-Do **not** label MRR registrar concentration as “customer concentration.”  
+Do **not** label MRR registrar concentration as “customer concentration.”
 Do **not** label descriptive TLD domain totals as “market share” unless the
 denominator and competitive context actually support that claim.
 
-## Status — PUBLICATION-CLOSURE-1
+## Status — PRODUCTION-DEPLOY-1 closed
 
 | Unit | Status |
 | --- | --- |
@@ -282,16 +283,20 @@ denominator and competitive context actually support that claim.
 | PUBLISH-1D | **CLOSED** |
 | Market-baseline acquisition + publication foundation | **CLOSED** |
 | UI-1 | **MERGED / POST-MERGE VERIFIED / CLOSED** |
-| Production market data | **NOT INSTALLED** |
-| Production deployment | **NOT STARTED** |
+| Production market data | **INSTALLED / VERIFIED** |
+| Production deployment | **DEPLOYED / VERIFIED / CLOSED** |
+| Registry Market | **LIVE** |
 
-Merged foundation tip (pre-UI): `b4697fa…`  
+Merged foundation tip (pre-UI): `b4697fa…`
 UI-1 merged code: `e3d7db62841c16ed1ef1478bed2776571c74e444`
 (`feat(market): add registry market intelligence UI`).
+Accepted production source: `54765cbb1bb725f26da5647f746c31538713b8bf`.
 
 **Readiness:** Market-baseline acquisition + publication foundation is
-**CLOSED**. Registry Market UI-1 is **CLOSED** on merged main after
-post-merge verification. Production install/deploy remains a separate unit.
+**CLOSED**. Registry Market UI-1 is **CLOSED**. Production deployment
+(**RIH-MARKET-BASELINE-PRODUCTION-DEPLOY-1**) is **DEPLOYED / VERIFIED /
+CLOSED**. Registry Market is **LIVE** on the accepted static publication
+baseline. MRR acquisition/publication scheduler remains **NOT INSTALLED**.
 
 ### UI-1 (product consumer) — closed
 
@@ -302,15 +307,115 @@ post-merge verification. Production install/deploy remains a separate unit.
 | Routes | `/market`, `/market/[tld]` |
 | User-facing label | Registry Market |
 | Source | publication-only consumer (pointer → verified index → optional verified shard) |
-| Accepted development publication | `ff7816b8a59823aeced2d76430b977c898ff23963b7434df71e0fd4b398f1c4d` |
+| Accepted publication | `ff7816b8a59823aeced2d76430b977c898ff23963b7434df71e0fd4b398f1c4d` |
 | Real-data smoke baseline | 1319 / 1113 AVAILABLE / 206 MISSING (June 2026) |
-| Production market data | **NOT INSTALLED** |
-| Production deployment | **NOT STARTED** |
-| Visual browser acceptance | **VERIFIED** (Chromium desktop + mobile post-merge) |
+| Production market data | **INSTALLED / VERIFIED** |
+| Production deployment | **DEPLOYED / VERIFIED / CLOSED** |
+| Visual browser acceptance | **VERIFIED** (Chromium desktop + mobile; post-merge and production) |
 
 UI-1 still does **not** provide Registry Operator identity, Registrar→Organization,
 RSP→TLD, Applicant→Registrar, GoDaddy customer inference, renewal rate, Activity,
 DNMI, Domain Metrica, pricing, HHI, market-opportunity scoring, or charts.
+
+### Production deployment acceptance (PRODUCTION-DEPLOY-1)
+
+| Field | Value |
+| --- | --- |
+| Status | **DEPLOYED / VERIFIED / CLOSED** |
+| Production source | `54765cbb1bb725f26da5647f746c31538713b8bf` |
+| Prior production source | `88ff99e03708997156d3c3497249156b70051d23` |
+| Production mode | detached HEAD |
+| PM2 process | `registry-intelligence-hub` |
+| Listener | `127.0.0.1:43123` |
+| Production base path | `/tools/registry-intelligence-hub` |
+| Nginx change / reload | **none** |
+| Scheduler installed | **no** |
+| MRR acquisition during deploy | **no** |
+| Dependency reinstall (`npm ci`) | **no** (dependency graph unchanged) |
+| Environment changes | **none** |
+| Change Intelligence mutated | **no** |
+| Rollback | **NOT REQUIRED** |
+| Rollback backup | `/root/backups/rih-market-deploy-20261027T091333Z/` (pre-deploy `.next` + bounded evidence; not MRR archive / not full `.data`) |
+
+#### Publication install
+
+| Field | Value |
+| --- | --- |
+| Production path | `/root/registry_hub/.data/market-baseline/publication/` |
+| Accepted SHA directory | `ff7816b8a59823aeced2d76430b977c898ff23963b7434df71e0fd4b398f1c4d` |
+| Pointer | `current.json` → accepted SHA |
+| Files transferred | 1321 total (SHA-tree 1320 + `current.json`) |
+| TLD shards | 1319 |
+| Installed bytes | `2,192,263,792` |
+| `current.json` byte SHA-256 | `6f27bd0b3a8ee2327934f120e5b302b06e80ec67104e64ec670cd23f9b7096e9` |
+| `index.json` byte SHA-256 | `18bce0df1d75b99105980f175f9390956b8e9006f2abd891966d1341552c4d22` |
+| Transfer manifest SHA-256 | `57e11aab5e331dd109c658c3d82f57df66a9a69334eeda3d07dc7e6f9151399b` |
+| Final transfer verification | **1321 / 1321 PASS** |
+| Semantic publication verification | **PASS** |
+| Schema / builder | `market-baseline-publication/1.1.0` / `market-baseline-publication-builder/1.1.0` |
+| Source period | `2026-06` |
+| Governing run | `mrr-stage-d-2026-10-27-2026-10-27T05-43-34-305Z` |
+| Outcomes SHA | `2844672b81a1abd119bd09729951a616f5fb4858fa8ba22a0676509097bf3a56` |
+| Coverage | 1319 total / 1113 AVAILABLE / 206 MISSING |
+
+Only the product publication was installed. MRR raw/normalized archives,
+manifests, outcomes, discovery cache, other publication SHA directories, and
+`.staging` were **not** copied to production.
+
+#### Accepted deployment sequence
+
+1. Verified transfer manifest (1321 records).
+2. Staged product publication only.
+3. Verified all staged publication files.
+4. Installed immutable publication SHA tree.
+5. Committed `current.json` atomically **last**.
+6. Verified Phase A while prior production source remained live (`/market` still 404).
+7. Transitioned production detached HEAD to `54765cb…`.
+8. Skipped `npm ci` (unchanged dependency graph).
+9. Built successfully with Node `22.23.2`.
+10. Restarted only `registry-intelligence-hub`.
+11. Verified existing product surfaces.
+12. Verified Registry Market HTTP behavior.
+13. Completed desktop/mobile Chromium acceptance.
+14. Reverified **1321 / 1321** publication files.
+
+#### Production smoke — existing product
+
+**PASS:** Command Center, Explore, Competitive Landscape, Contention, Changes,
+Data Health. Reveal Day state remained intact (no actuality mutation).
+
+#### Production smoke — Registry Market
+
+| Route | Result |
+| --- | --- |
+| `/market` | **200** — June 2026; baseline **1319 / 1113 / 206** |
+| `/market/com` | AVAILABLE / 24 reporting periods |
+| `/market/xyz` | AVAILABLE / 24 reporting periods |
+| `/market/xn--3ds443g` | AVAILABLE / 24 reporting periods |
+| `/market/1998` | Report unavailable; source-period-only coverage; no fabricated history |
+
+**MISSING ≠ zero** verification: **PASS**.
+
+#### Browser acceptance (production Chromium)
+
+| Viewport | Routes | Status |
+| --- | --- | --- |
+| Desktop | `/market`, `/market/com`, `/market/1998` | **VERIFIED** |
+| Mobile | `/market`, `/market/1998` | **VERIFIED** |
+
+Accepted checks: Registry Market navigation + active state, table overflow,
+search/filter usability, registrar readability, MISSING-state clarity,
+provenance disclosure, basic keyboard/focus behavior.
+
+#### Production git / disk (informational)
+
+Production remained **DETACHED** and **TRACKED CLEAN** at
+`54765cbb1bb725f26da5647f746c31538713b8bf`. Five pre-existing untracked
+operator/visual scripts remained byte-identical. Post-deploy disk context:
+~24G available / ~76% used / inodes ~11%; publication
+`2,192,263,792` bytes; deployment backup `277,833,640` bytes. Adequate
+headroom existed; separate VPS storage cleanup is out of scope for this
+closure.
 
 ## Accepted development baseline
 
