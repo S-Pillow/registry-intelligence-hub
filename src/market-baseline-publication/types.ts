@@ -93,11 +93,13 @@ export type PublicationCoverage = {
   tldHistoryPeriodCounts: Record<string, number>;
 };
 
-/** Semantic publication body — excludes generatedAt. */
+/**
+ * Semantic publication body — product-fact identity.
+ * Excludes generatedAt and asOfDate (build/provenance envelope metadata).
+ */
 export type MarketBaselinePublicationSemantic = {
   schemaVersion: typeof MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION;
   builderVersion: typeof MARKET_BASELINE_PUBLICATION_BUILDER_VERSION;
-  asOfDate: string;
   sourceReportingPeriod: ReportingPeriod;
   coverage: PublicationCoverage;
   /** Current-period TLD facts only (AVAILABLE + MISSING for universe). */
@@ -112,7 +114,10 @@ export type MarketBaselinePublicationSemantic = {
 export type MarketBaselinePublicationIndex = {
   semantic: MarketBaselinePublicationSemantic;
   publicationContentSha256: string;
+  /** Build/provenance metadata — outside semantic content identity. */
   generatedAt: string;
+  /** Calendar as-of used to derive sourceReportingPeriod — outside semantic hash. */
+  asOfDate: string;
 };
 
 export type MarketBaselineTldShard = {

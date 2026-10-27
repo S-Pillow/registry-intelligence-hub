@@ -9,8 +9,9 @@ function usage(): never {
 
 Options:
   --as-of YYYY-MM-DD     Required. Derives source reporting period (withhold rule).
-  --tlds com,xyz         Optional allowlist (comma-separated).
+  --tlds com,xyz         Optional allowlist of probe-universe TLDs (comma-separated).
   --history-periods N    History window length ending at probe (default 24).
+  --run-id ID            Explicit MRR acquisition run when coverage is ambiguous.
   --cwd PATH             Working directory (default process.cwd()).
 `);
   process.exit(2);
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
     : undefined;
   const historyRaw = argValue(argv, "--history-periods");
   const historyPeriodCount = historyRaw ? Number(historyRaw) : 24;
+  const runId = argValue(argv, "--run-id");
 
   console.log(`RIH market-baseline publication`);
   console.log(`asOfDate=${asOf} root=${publicationRoot(cwd)}`);
@@ -45,6 +47,7 @@ async function main(): Promise<void> {
     asOfDate: asOf,
     tldAllowlist,
     historyPeriodCount,
+    runId,
   });
   const written = await writePublicationArtifacts(built, cwd);
 

@@ -5,7 +5,13 @@ import { describe, expect, it } from "vitest";
 import { CORE_TRANSACTION_HEADERS } from "@/market-baseline-mrr/schema-profiles";
 import { normalizeTransactions } from "@/market-baseline-mrr/normalize";
 import { seedNormalizedFromBytes } from "@/market-baseline-mrr/acquire";
-import type { NormalizedTransactionsSnapshot } from "@/market-baseline-mrr/types";
+import { MRR_OUTCOMES_SCHEMA_VERSION } from "@/market-baseline-mrr/types";
+import type {
+  AcquisitionOutcomesArtifact,
+  AcquisitionRequestOutcome,
+  NormalizedTransactionsSnapshot,
+  ReportingPeriod,
+} from "@/market-baseline-mrr/types";
 import {
   buildMarketBaselinePublication,
   snapshotKey,
@@ -55,6 +61,128 @@ function normalizePeriod(
   return r.snapshot;
 }
 
+function req(partial: {
+  tldAsciiLabel: string;
+  reportingPeriod: ReportingPeriod;
+  phase: AcquisitionRequestOutcome["phase"];
+  outcome: AcquisitionRequestOutcome["outcome"];
+  rawSha256?: string;
+  error?: string;
+}): AcquisitionRequestOutcome {
+  return {
+    tldAsciiLabel: partial.tldAsciiLabel,
+    reportingPeriod: partial.reportingPeriod,
+    phase: partial.phase,
+    outcome: partial.outcome,
+    resourcePageUrl: `https://example.test/${partial.tldAsciiLabel}`,
+    rawSha256: partial.rawSha256,
+    error: partial.error,
+    reusedFromCache: false,
+    revalidated: false,
+    revisionDetected: false,
+    bytesDownloaded: partial.outcome === "SUCCESS" ? 100 : 0,
+  };
+}
+
+async function writeAcquisitionEvidence(args: {
+  cwd: string;
+  runId: string;
+  asOfDate: string;
+  probeReportingPeriod: ReportingPeriod;
+  requests: AcquisitionRequestOutcome[];
+  setCurrentIndex?: boolean;
+}): Promise<void> {
+  const outcomes: AcquisitionOutcomesArtifact = {
+    schemaVersion: MRR_OUTCOMES_SCHEMA_VERSION,
+    runId: args.runId,
+    asOfDate: args.asOfDate,
+    probeReportingPeriod: args.probeReportingPeriod,
+    requests: args.requests,
+  };
+  const manifestsDir = join(args.cwd, ".data/market-baseline/mrr/manifests");
+  mkdirSync(manifestsDir, { recursive: true });
+  const outcomesRel = `.data/market-baseline/mrr/manifests/${args.runId}.outcomes.json`;
+  writeFileSync(
+    join(args.cwd, outcomesRel),
+    `${JSON.stringify(outcomes, null, 2)}\n`,
+    "utf8",
+  );
+  const manifest = {
+    schemaVersion: "market-baseline-mrr-run-manifest/1.0.0",
+    runId: args.runId,
+    startedAt: "2026-10-26T00:00:00.000Z",
+    completedAt: "2026-10-26T00:01:00.000Z",
+    asOfDate: args.asOfDate,
+    probeReportingPeriod: args.probeReportingPeriod,
+    discoveredTldCount: new Set(args.requests.filter((r) => r.phase === "PROBE").map((r) => r.tldAsciiLabel)).size,
+    probe: {
+      success: 0,
+      missing: 0,
+      downloadFailed: 0,
+      unsupportedSchema: 0,
+      parseFailed: 0,
+      validationFailed: 0,
+      normalizationFailed: 0,
+    },
+    history: {
+      success: 0,
+      missing: 0,
+      downloadFailed: 0,
+      unsupportedSchema: 0,
+      parseFailed: 0,
+      validationFailed: 0,
+      normalizationFailed: 0,
+    },
+    top100: [],
+    controlSet: [],
+    delegatedOverlaps: [],
+    historyUniverse: [],
+    historyPeriodCount: 24,
+    filesRequested: args.requests.length,
+    filesDownloaded: 0,
+    filesReusedFromCache: 0,
+    missingReports: 0,
+    schemaFailures: 0,
+    validationFailures: 0,
+    normalizationFailures: 0,
+    bytesDownloaded: 0,
+    rawHashes: [],
+    normalizedHashes: [],
+    sourceRevisionsDetected: 0,
+    outcomesArtifactPath: outcomesRel,
+    outcomesArtifactSha256: "0".repeat(64),
+    resultStatus: "PARTIAL",
+    throttlingObserved: false,
+    durationMs: 1,
+    notes: [],
+  };
+  writeFileSync(
+    join(manifestsDir, `${args.runId}.json`),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
+  if (args.setCurrentIndex !== false) {
+    const indexesDir = join(args.cwd, ".data/market-baseline/mrr/indexes");
+    mkdirSync(indexesDir, { recursive: true });
+    writeFileSync(
+      join(indexesDir, "current.json"),
+      `${JSON.stringify(
+        {
+          updatedAt: "2026-10-26T00:01:00.000Z",
+          latestRunId: args.runId,
+          asOfDate: args.asOfDate,
+          probeReportingPeriod: args.probeReportingPeriod,
+          outcomesArtifactPath: outcomesRel,
+          outcomesArtifactSha256: "0".repeat(64),
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+  }
+}
+
 describe("market-baseline publication", () => {
   it("is deterministic for identical accepted inputs (generatedAt excluded from content hash)", () => {
     const snaps = new Map([
@@ -78,6 +206,76 @@ describe("market-baseline publication", () => {
     });
     expect(a.index.publicationContentSha256).toBe(b.index.publicationContentSha256);
     expect(a.index.generatedAt).not.toBe(b.index.generatedAt);
+  });
+
+  it("keeps semantic SHA stable across asOfDate within the same source reporting period", () => {
+    const snaps = new Map([
+      [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 157)],
+      [snapshotKey("demo", "2026-05"), normalizePeriod("demo", "2026-05", 150)],
+      [snapshotKey("demo", "2025-06"), normalizePeriod("demo", "2025-06", 100)],
+    ]);
+    const a = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      historyPeriodsByTld: new Map([["demo", ["2026-06", "2026-05", "2025-06"]]]),
+      generatedAt: "2026-10-26T00:00:00.000Z",
+    });
+    const b = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      historyPeriodsByTld: new Map([["demo", ["2026-06", "2026-05", "2025-06"]]]),
+      generatedAt: "2026-10-26T00:00:00.000Z",
+    });
+    expect(a.index.semantic.sourceReportingPeriod).toBe("2026-06");
+    expect(b.index.semantic.sourceReportingPeriod).toBe("2026-06");
+    expect(a.index.publicationContentSha256).toBe(b.index.publicationContentSha256);
+    expect(a.index.asOfDate).toBe("2026-10-26");
+    expect(b.index.asOfDate).toBe("2026-10-27");
+    expect(a.index.semantic).not.toHaveProperty("asOfDate");
+  });
+
+  it("changes semantic SHA when source reporting period advances", () => {
+    const snaps = new Map([
+      [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 157)],
+      [snapshotKey("demo", "2026-07"), normalizePeriod("demo", "2026-07", 160)],
+    ]);
+    const june = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      historyPeriodsByTld: new Map([["demo", ["2026-06", "2026-07"]]]),
+    });
+    const july = buildMarketBaselinePublication({
+      asOfDate: "2026-11-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      historyPeriodsByTld: new Map([["demo", ["2026-06", "2026-07"]]]),
+    });
+    expect(june.index.semantic.sourceReportingPeriod).toBe("2026-06");
+    expect(july.index.semantic.sourceReportingPeriod).toBe("2026-07");
+    expect(june.index.publicationContentSha256).not.toBe(
+      july.index.publicationContentSha256,
+    );
+  });
+
+  it("changes semantic SHA when an accepted fact changes", () => {
+    const a = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: new Map([
+        [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 100)],
+      ]),
+      universeTlds: ["demo"],
+    });
+    const b = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: new Map([
+        [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 101)],
+      ]),
+      universeTlds: ["demo"],
+    });
+    expect(a.index.publicationContentSha256).not.toBe(b.index.publicationContentSha256);
   });
 
   it("derives temporal metrics with exact-period semantics and no gap bridging", () => {
@@ -183,7 +381,6 @@ describe("market-baseline publication", () => {
         hashes.push(seeded.rawSha);
       }
 
-      // Lexically reorder pointers would not matter — current must be C (last seed).
       const current = JSON.parse(
         readFileSync(
           join(dir, `.data/market-baseline/mrr/indexes/periods/${tld}/${period}.json`),
@@ -193,9 +390,6 @@ describe("market-baseline publication", () => {
       expect(current.currentRawSha256).toBe(hashes[2]);
       expect(current.previousRawSha256).toBe(hashes[1]);
 
-      // Poison: write a fake pointer file name order distraction by adding empty
-      // normalized sibling with lexicographically greater hash name — publish must
-      // still follow period-current.
       const poisonSha = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
       const poisonDir = join(dir, `.data/market-baseline/mrr/normalized/${tld}/${period}`);
       mkdirSync(poisonDir, { recursive: true });
@@ -210,6 +404,22 @@ describe("market-baseline publication", () => {
           retrievedAt: "2099-01-01T00:00:00.000Z",
         }),
       );
+
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-test-rev-1",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        requests: [
+          req({
+            tldAsciiLabel: tld,
+            reportingPeriod: period,
+            phase: "PROBE",
+            outcome: "SUCCESS",
+            rawSha256: hashes[2],
+          }),
+        ],
+      });
 
       const built = await publishFromMrrArchive({
         cwd: dir,
@@ -244,17 +454,21 @@ describe("market-baseline publication", () => {
       const written = await writePublicationArtifacts(built, dir);
       const pointer = await loadCurrentPublicationPointer(dir);
       expect(pointer?.publicationContentSha256).toBe(written.contentSha256);
+      expect(pointer?.asOfDate).toBe("2026-10-26");
       const index = await loadPublicationIndex(written.contentSha256, dir);
+      expect(index.asOfDate).toBe("2026-10-26");
       expect(index.semantic.coverage.tldCountInPublication).toBe(2);
       const shard = await loadTldShard(written.contentSha256, "alpha", dir);
       expect(shard.tldAsciiLabel).toBe("alpha");
       expect(shard.periods["2026-06"]?.availability).toBe("AVAILABLE");
-      // Provenance present
       const fact = shard.periods["2026-06"]!;
       if (fact.availability === "AVAILABLE") {
         expect(fact.provenance.sourceSystem).toBe("icann-mrr-transactions");
         expect(fact.provenance.normalizedContentSha256).toMatch(/^[a-f0-9]{64}$/);
       }
+      await expect(
+        loadTldShard(written.contentSha256, "../etc/passwd", dir),
+      ).rejects.toThrow(/Invalid TLD/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -273,5 +487,276 @@ describe("market-baseline publication", () => {
     expect(fact.provenance.rawSha256).toBe(snap.rawSha256);
     expect(fact.provenance.normalizedContentSha256).toBe(snap.normalizedContentSha256);
     expect(fact.provenance.sourceUrl).toContain("demo-transactions-202606");
+  });
+
+  it("A: missing probe identity survives archive publication", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-cov-a-"));
+    try {
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(100)),
+        rawText: syntheticCsv(100),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-cov-a",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "MISSING_REPORT",
+            error: "No Transactions link for 2026-06",
+          }),
+        ],
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      const labels = built.index.semantic.currentPeriod.map((f) => f.tldAsciiLabel).sort();
+      expect(labels).toEqual(["alpha", "beta"]);
+      const alpha = built.index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === "alpha")!;
+      const beta = built.index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === "beta")!;
+      expect(alpha.availability).toBe("AVAILABLE");
+      expect(beta.availability).toBe("MISSING");
+      if (beta.availability === "MISSING") {
+        expect(beta.reason).toBe("acquisition_outcome:MISSING_REPORT");
+      }
+      expect(built.index.semantic.coverage.availableAtSourcePeriod).toBe(1);
+      expect(built.index.semantic.coverage.missingAtSourcePeriod).toBe(1);
+      expect(built.index.semantic.coverage.tldCountInPublication).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("B: non-history TLD does not receive fabricated historical MISSING facts", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-cov-b-"));
+    try {
+      for (const period of ["2026-06", "2026-05", "2026-04"] as const) {
+        await seedNormalizedFromBytes({
+          cwd: dir,
+          tldAsciiLabel: "alpha",
+          reportingPeriod: period,
+          sourceUrl: `https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-${period.replace("-", "")}-en.csv`,
+          resourcePageUrl: "https://example.test/alpha",
+          rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+          rawText: syntheticCsv(10),
+          asOfDate: "2026-10-26",
+        });
+      }
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "beta",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/beta/beta-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/beta",
+        rawBytes: new TextEncoder().encode(syntheticCsv(5)),
+        rawText: syntheticCsv(5),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-cov-b",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-05",
+            phase: "HISTORY",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-04",
+            phase: "HISTORY",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      const alphaShard = built.shards.find((s) => s.tldAsciiLabel === "alpha")!;
+      const betaShard = built.shards.find((s) => s.tldAsciiLabel === "beta")!;
+      expect(Object.keys(alphaShard.periods).sort()).toEqual([
+        "2026-04",
+        "2026-05",
+        "2026-06",
+      ]);
+      expect(Object.keys(betaShard.periods)).toEqual(["2026-06"]);
+      expect(betaShard.periods["2026-05"]).toBeUndefined();
+      expect(betaShard.periods["2026-04"]).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("C: requested historical MISSING remains explicit", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-cov-c-"));
+    try {
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+        rawText: syntheticCsv(10),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-cov-c",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-05",
+            phase: "HISTORY",
+            outcome: "MISSING_REPORT",
+            error: "No Transactions link for 2026-05",
+          }),
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-04",
+            phase: "HISTORY",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+      // Seed only 2026-04 history success (2026-05 intentionally absent).
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-04",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202604-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(8)),
+        rawText: syntheticCsv(8),
+        asOfDate: "2026-10-26",
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      const shard = built.shards.find((s) => s.tldAsciiLabel === "alpha")!;
+      expect(shard.periods["2026-05"]?.availability).toBe("MISSING");
+      if (shard.periods["2026-05"]?.availability === "MISSING") {
+        expect(shard.periods["2026-05"].reason).toBe(
+          "acquisition_outcome:MISSING_REPORT",
+        );
+      }
+      expect(shard.periods["2026-04"]?.availability).toBe("AVAILABLE");
+      expect(shard.periods["2026-06"]?.availability).toBe("AVAILABLE");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("D: allowlist retains missing probe identity without period-current", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-cov-d-"));
+    try {
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(100)),
+        rawText: syntheticCsv(100),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-cov-d",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "MISSING_REPORT",
+          }),
+          req({
+            tldAsciiLabel: "gamma",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        tldAllowlist: ["alpha", "beta"],
+        historyPeriodCount: 1,
+      });
+      const labels = built.index.semantic.currentPeriod.map((f) => f.tldAsciiLabel).sort();
+      expect(labels).toEqual(["alpha", "beta"]);
+      expect(
+        built.index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === "beta")
+          ?.availability,
+      ).toBe("MISSING");
+      expect(
+        built.index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === "gamma"),
+      ).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -1,4 +1,4 @@
-# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1)
+# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A)
 
 Deterministic, provenance-bearing product publication derived from accepted
 ICANN MRR Transactions snapshots.
@@ -37,7 +37,7 @@ Inspected RIH patterns:
 - content-addressed publication directory (semantic SHA);
 - compact `index.json` for cross-TLD current rankings;
 - per-TLD shards for history / registrar distribution;
-- `generatedAt` outside semantic content identity;
+- `generatedAt` and `asOfDate` outside semantic content identity;
 - CLI generation (`npm run market-publish`).
 
 Rationale: matches existing RIH `.data` publication discipline; avoids
@@ -82,8 +82,51 @@ No registrar → Confirmed Organization mapping.
     tlds/<tld>.json                         # history + registrarsByPeriod
 ```
 
-Semantic identity hashes `{ index.semantic, shard bodies }` and **excludes**
-`generatedAt`.
+## Semantic identity
+
+Content SHA hashes `{ index.semantic, shard bodies }` and **excludes**:
+
+- `generatedAt`
+- `asOfDate` (index envelope / current pointer only)
+
+`sourceReportingPeriod` remains inside semantic identity. Same accepted facts +
+same source period + same coverage yield the same SHA even when calendar
+`asOfDate` differs inside the same withhold window.
+
+## Acquisition coverage (PUBLISH-1A)
+
+Publication universe and historical period maps come from **accepted MRR
+request-outcomes evidence**, not from period-index directory presence alone.
+
+### Selection (deterministic)
+
+1. `--run-id` when provided (must match publication probe period);
+2. else `indexes/current.json` when its `probeReportingPeriod` matches;
+3. else exactly one manifest/outcomes pair for that probe period;
+4. zero matches → error; multiple matches → error (pass `--run-id`).
+
+Do not use “largest manifest wins.”
+
+### Current-period universe
+
+PROBE-phase requests define the publication universe. Each probed TLD remains
+represented even when no period-current snapshot exists (`MISSING`, with
+`acquisition_outcome:…` reason when known).
+
+`--tlds` filters the probe universe; it does not drop allowlisted identities
+that lack a normalized pointer.
+
+### Historical coverage
+
+Only TLD×periods present in outcomes as PROBE or HISTORY requests (and inside
+the publication history window) appear in a shard’s `periods` map.
+
+| Representation | Meaning |
+| --- | --- |
+| Period key absent from shard `periods` | Outside publication/acquisition coverage (never requested for this publish) |
+| `availability: "MISSING"` | Requested/acquired attempt, but no accepted product fact |
+
+Do **not** fabricate 24 months of `MISSING` for probe-only TLDs.
 
 ## Provenance
 
@@ -97,7 +140,7 @@ Each AVAILABLE fact carries:
 
 ## Missingness
 
-- Unavailable TLD×period → `MISSING` with reason
+- Requested but unavailable TLD×period → `MISSING` with reason
 - Temporal prior missing → OptionalMetric `{ available: false, reason }`
 - Zero prior denominator → `{ available: false, reason: "prior_denominator_zero" }`
 - Available `totalDomains === 0` remains AVAILABLE (distinct from MISSING)
@@ -121,10 +164,14 @@ npm run market-publish -- --as-of 2026-10-26
 
 # Bounded smoke
 npm run market-publish -- --as-of 2026-10-26 --tlds com,xyz,net --history-periods 3
+
+# Disambiguate acquisition evidence
+npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-…
 ```
 
 Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
-`loadTldShard` (single TLD) — no archive scan required for product reads.
+`loadTldShard` (single TLD; label normalized) — no archive scan required for
+product reads.
 
 ## Non-goals
 
@@ -137,4 +184,5 @@ Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
 
 ## Status
 
-RIH-MARKET-BASELINE-PUBLISH-1 — implemented on feature branch; see RETURN report.
+RIH-MARKET-BASELINE-PUBLISH-1 — implemented.  
+RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction.

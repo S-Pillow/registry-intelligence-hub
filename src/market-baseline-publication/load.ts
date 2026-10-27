@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { normalizeTldAsciiLabel } from "@/market-baseline-mrr/period";
 import {
   publicationCurrentPointerPath,
   publicationDir,
@@ -39,8 +40,9 @@ export async function loadTldShard(
   tldAsciiLabel: string,
   cwd = process.cwd(),
 ): Promise<MarketBaselineTldShard> {
+  const tld = normalizeTldAsciiLabel(tldAsciiLabel);
   const text = await readFile(
-    publicationTldShardPath(contentSha256, tldAsciiLabel, cwd),
+    publicationTldShardPath(contentSha256, tld, cwd),
     "utf8",
   );
   return JSON.parse(text) as MarketBaselineTldShard;
@@ -50,11 +52,12 @@ export async function loadCurrentTldPeriod(
   tldAsciiLabel: string,
   cwd = process.cwd(),
 ): Promise<PublishedTldPeriodFact | null> {
+  const tld = normalizeTldAsciiLabel(tldAsciiLabel);
   const pointer = await loadCurrentPublicationPointer(cwd);
   if (!pointer) return null;
   const index = await loadPublicationIndex(pointer.publicationContentSha256, cwd);
   return (
-    index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === tldAsciiLabel) ?? null
+    index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === tld) ?? null
   );
 }
 

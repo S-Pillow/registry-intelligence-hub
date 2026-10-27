@@ -42,7 +42,7 @@ export async function writePublicationArtifacts(
     publicationContentSha256: sha,
     indexRelativePath: relative(cwd, indexPath),
     generatedAt: built.index.generatedAt,
-    asOfDate: built.index.semantic.asOfDate,
+    asOfDate: built.index.asOfDate,
     sourceReportingPeriod: built.index.semantic.sourceReportingPeriod,
   };
   const currentPointerPath = publicationCurrentPointerPath(cwd);

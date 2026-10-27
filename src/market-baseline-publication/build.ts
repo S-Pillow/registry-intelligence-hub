@@ -1,7 +1,8 @@
 import { hashNormalizedContent } from "@/market-baseline-mrr/hash";
-import { probeReportingPeriodFromAsOf } from "@/market-baseline-mrr/period";
+import { normalizeTldAsciiLabel, probeReportingPeriodFromAsOf } from "@/market-baseline-mrr/period";
 import type { NormalizedTransactionsSnapshot, ReportingPeriod } from "@/market-baseline-mrr/types";
 import { previousPeriod, yearAgoPeriod } from "@/market-baseline-mrr/period";
+import { snapshotKey, type SnapshotKey } from "./keys";
 import { tldShardRelativePath } from "./paths";
 import {
   projectAvailableTldPeriod,
@@ -21,11 +22,8 @@ import {
   MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
 } from "./types";
 
-export type SnapshotKey = `${string}@${ReportingPeriod}`;
-
-export function snapshotKey(tld: string, period: ReportingPeriod): SnapshotKey {
-  return `${tld}@${period}`;
-}
+export type { SnapshotKey } from "./keys";
+export { snapshotKey } from "./keys";
 
 export type BuildPublicationInput = {
   asOfDate: string;
@@ -37,10 +35,18 @@ export type BuildPublicationInput = {
    */
   universeTlds?: string[];
   /**
-   * History periods to materialize per TLD (newest-first or any order).
+   * History periods to materialize per TLD (requested acquisition coverage).
    * Defaults to all periods observed for that TLD in snapshots.
+   * Absence of a period from this map means outside publication/acquisition coverage
+   * (omit from shard). Explicit MISSING facts are only emitted for listed periods
+   * lacking an accepted snapshot.
    */
   historyPeriodsByTld?: Map<string, ReportingPeriod[]>;
+  /**
+   * Optional acquisition-outcome reasons for requested periods without snapshots.
+   * Keyed by tld@period.
+   */
+  missingReasonsByKey?: Map<SnapshotKey, string>;
   generatedAt?: string;
 };
 
@@ -61,9 +67,15 @@ function projectFact(
   map: Map<SnapshotKey, NormalizedTransactionsSnapshot>,
   tld: string,
   period: ReportingPeriod,
+  missingReasonsByKey?: Map<SnapshotKey, string>,
 ): PublishedTldPeriodFact {
   const snap = resolveSnapshot(map, tld, period);
-  if (!snap) return projectMissingTldPeriod(tld, period);
+  if (!snap) {
+    const reason =
+      missingReasonsByKey?.get(snapshotKey(tld, period))
+      ?? "normalized_snapshot_unavailable";
+    return projectMissingTldPeriod(tld, period, reason);
+  }
   return projectAvailableTldPeriod({
     snapshot: snap,
     previousSnapshot: resolveSnapshot(map, tld, previousPeriod(period)),
@@ -91,10 +103,17 @@ export function buildMarketBaselinePublication(
     set.add(snap.reportingPeriod);
   }
 
-  const universe = (input.universeTlds ?? [...tldsFromSnaps]).map((t) => t.toLowerCase()).sort();
+  const universe = (input.universeTlds ?? [...tldsFromSnaps])
+    .map((t) => normalizeTldAsciiLabel(t))
+    .sort();
 
   const currentPeriod: PublishedTldPeriodFact[] = universe.map((tld) =>
-    projectFact(input.snapshots, tld, sourceReportingPeriod),
+    projectFact(
+      input.snapshots,
+      tld,
+      sourceReportingPeriod,
+      input.missingReasonsByKey,
+    ),
   );
 
   const availableCurrent = currentPeriod.filter(
@@ -142,7 +161,7 @@ export function buildMarketBaselinePublication(
       input.historyPeriodsByTld?.get(tld)
       ?? [...(periodsByTld.get(tld) ?? new Set<ReportingPeriod>())].sort().reverse();
 
-    // Always include source period in history even if missing.
+    // Always include source period for probe-universe members (requested at probe).
     const periodSet = new Set<ReportingPeriod>([...historyPeriods, sourceReportingPeriod]);
     const ordered = [...periodSet].sort().reverse();
 
@@ -151,7 +170,12 @@ export function buildMarketBaselinePublication(
     let availableHistory = 0;
 
     for (const period of ordered) {
-      const fact = projectFact(input.snapshots, tld, period);
+      const fact = projectFact(
+        input.snapshots,
+        tld,
+        period,
+        input.missingReasonsByKey,
+      );
       periods[period] = fact;
       if (fact.availability === "AVAILABLE") {
         availableHistory += 1;
@@ -175,7 +199,6 @@ export function buildMarketBaselinePublication(
   const semanticWithoutHash: MarketBaselinePublicationSemantic = {
     schemaVersion: MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
     builderVersion: MARKET_BASELINE_PUBLICATION_BUILDER_VERSION,
-    asOfDate: input.asOfDate,
     sourceReportingPeriod,
     coverage: {
       sourceReportingPeriod,
@@ -211,6 +234,7 @@ export function buildMarketBaselinePublication(
     semantic: semanticWithoutHash,
     publicationContentSha256,
     generatedAt,
+    asOfDate: input.asOfDate,
   };
 
   return { index, shards };

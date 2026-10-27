@@ -1,35 +1,30 @@
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { historyWindowEndingAt, probeReportingPeriodFromAsOf } from "@/market-baseline-mrr/period";
-import { mrrRoot, readNormalizedForPeriod, readPeriodCurrent } from "@/market-baseline-mrr/storage";
+import { readNormalizedForPeriod, readPeriodCurrent } from "@/market-baseline-mrr/storage";
 import type { NormalizedTransactionsSnapshot, ReportingPeriod } from "@/market-baseline-mrr/types";
 import {
   buildMarketBaselinePublication,
-  snapshotKey,
   type BuildPublicationInput,
   type BuiltPublication,
   type SnapshotKey,
 } from "./build";
+import {
+  filterUniverseByAllowlist,
+  missingReasonFromOutcome,
+  resolveAcquisitionCoverage,
+} from "./coverage";
+import { snapshotKey } from "./keys";
 
 export type LoadArchiveOptions = {
   cwd?: string;
   asOfDate: string;
-  /** Limit TLDs (smoke / tests). */
+  /** Limit TLDs to a subset of the accepted probe universe (smoke / tests). */
   tldAllowlist?: string[];
-  /** History window length ending at probe (default 24). */
+  /** History window length ending at probe (default 24). Filters requested history. */
   historyPeriodCount?: number;
+  /** Explicit acquisition run id when archive coverage would otherwise be ambiguous. */
+  runId?: string;
   generatedAt?: string;
 };
-
-async function listPeriodIndexTlds(cwd: string): Promise<string[]> {
-  const dir = join(mrrRoot(cwd), "indexes", "periods");
-  try {
-    const names = await readdir(dir);
-    return names.filter((n) => !n.startsWith(".")).sort();
-  } catch {
-    return [];
-  }
-}
 
 /**
  * Load current accepted normalized snapshots from the MRR archive
@@ -38,11 +33,12 @@ async function listPeriodIndexTlds(cwd: string): Promise<string[]> {
 export async function loadCurrentSnapshotsFromArchive(args: {
   cwd: string;
   tlds: string[];
-  periods: ReportingPeriod[];
+  periodsByTld: Map<string, ReportingPeriod[]>;
 }): Promise<Map<SnapshotKey, NormalizedTransactionsSnapshot>> {
   const map = new Map<SnapshotKey, NormalizedTransactionsSnapshot>();
   for (const tld of args.tlds) {
-    for (const period of args.periods) {
+    const periods = args.periodsByTld.get(tld) ?? [];
+    for (const period of periods) {
       const current = await readPeriodCurrent(tld, period, args.cwd);
       if (!current) continue;
       const snap = await readNormalizedForPeriod(tld, period, args.cwd);
@@ -71,31 +67,53 @@ export async function publishFromMrrArchive(
   const asOfDate = options.asOfDate;
   const probe = probeReportingPeriodFromAsOf(asOfDate);
   const historyCount = options.historyPeriodCount ?? 24;
-  const historyWindow = historyWindowEndingAt(probe, historyCount);
+  // Ensure window helper remains exercised for CLI bounds (coverage uses same window).
+  void historyWindowEndingAt(probe, historyCount);
 
-  let tlds = await listPeriodIndexTlds(cwd);
-  if (options.tldAllowlist?.length) {
-    const allow = new Set(options.tldAllowlist.map((t) => t.toLowerCase()));
-    tlds = tlds.filter((t) => allow.has(t));
-  }
+  const coverage = await resolveAcquisitionCoverage({
+    cwd,
+    asOfDate,
+    historyPeriodCount: historyCount,
+    runId: options.runId,
+  });
+
+  const universeTlds = filterUniverseByAllowlist(
+    coverage.probeUniverseTlds,
+    options.tldAllowlist,
+  );
 
   const historyPeriodsByTld = new Map<string, ReportingPeriod[]>();
-  for (const tld of tlds) {
-    // Full window so MISSING months remain distinguishable from zero.
-    historyPeriodsByTld.set(tld, historyWindow);
+  for (const tld of universeTlds) {
+    historyPeriodsByTld.set(
+      tld,
+      coverage.requestedPeriodsByTld.get(tld) ?? [probe],
+    );
   }
 
   const snapshots = await loadCurrentSnapshotsFromArchive({
     cwd,
-    tlds,
-    periods: historyWindow,
+    tlds: universeTlds,
+    periodsByTld: historyPeriodsByTld,
   });
+
+  const missingReasonsByKey = new Map<SnapshotKey, string>();
+  for (const tld of universeTlds) {
+    for (const period of historyPeriodsByTld.get(tld) ?? []) {
+      const key = snapshotKey(tld, period);
+      if (snapshots.has(key)) continue;
+      const req = coverage.requestOutcomesByKey.get(key);
+      if (req) {
+        missingReasonsByKey.set(key, missingReasonFromOutcome(req.outcome));
+      }
+    }
+  }
 
   const input: BuildPublicationInput = {
     asOfDate,
     snapshots,
-    universeTlds: tlds,
+    universeTlds,
     historyPeriodsByTld,
+    missingReasonsByKey,
     generatedAt: options.generatedAt,
   };
 
