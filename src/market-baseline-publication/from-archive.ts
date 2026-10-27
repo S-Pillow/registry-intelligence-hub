@@ -115,6 +115,13 @@ export async function publishFromMrrArchive(
     historyPeriodsByTld,
     missingReasonsByKey,
     generatedAt: options.generatedAt,
+    acquisitionAudit: {
+      sourceAcquisitionRunId: coverage.audit.sourceAcquisitionRunId,
+      sourceOutcomesArtifactSha256: coverage.audit.sourceOutcomesArtifactSha256,
+      operationalCurrentRunId: coverage.audit.operationalCurrentRunId,
+      operationalCurrentDiffersFromGoverning:
+        coverage.audit.operationalCurrentDiffersFromGoverning,
+    },
   };
 
   const built = buildMarketBaselinePublication(input);

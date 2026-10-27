@@ -58,6 +58,11 @@ async function main(): Promise<void> {
         indexPath: written.indexPath,
         shardCount: written.shardPaths.length,
         sourceReportingPeriod: built.index.semantic.sourceReportingPeriod,
+        sourceAcquisitionRunId: built.index.sourceAcquisitionRunId,
+        sourceOutcomesArtifactSha256: built.index.sourceOutcomesArtifactSha256,
+        operationalCurrentRunId: built.index.operationalCurrentRunId,
+        operationalCurrentDiffersFromGoverning:
+          built.index.operationalCurrentDiffersFromGoverning,
         coverage: built.index.semantic.coverage,
         domainBaseTop5: built.index.semantic.domainBaseRanking.slice(0, 5),
         momTop5: built.index.semantic.monthOverMonthGrowthRanking.slice(0, 5),

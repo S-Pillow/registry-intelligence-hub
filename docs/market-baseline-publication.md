@@ -1,4 +1,4 @@
-# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A)
+# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A / 1B)
 
 Deterministic, provenance-bearing product publication derived from accepted
 ICANN MRR Transactions snapshots.
@@ -37,7 +37,8 @@ Inspected RIH patterns:
 - content-addressed publication directory (semantic SHA);
 - compact `index.json` for cross-TLD current rankings;
 - per-TLD shards for history / registrar distribution;
-- `generatedAt` and `asOfDate` outside semantic content identity;
+- `generatedAt`, `asOfDate`, and governing acquisition audit metadata outside
+  semantic content identity;
 - CLI generation (`npm run market-publish`).
 
 Rationale: matches existing RIH `.data` publication discipline; avoids
@@ -88,26 +89,83 @@ Content SHA hashes `{ index.semantic, shard bodies }` and **excludes**:
 
 - `generatedAt`
 - `asOfDate` (index envelope / current pointer only)
+- `sourceAcquisitionRunId` / `sourceOutcomesArtifactSha256` / operational-current
+  audit fields (envelope / pointer only)
 
 `sourceReportingPeriod` remains inside semantic identity. Same accepted facts +
 same source period + same coverage yield the same SHA even when calendar
-`asOfDate` differs inside the same withhold window.
+`asOfDate` or governing run id differs without product-fact change.
 
-## Acquisition coverage (PUBLISH-1A)
+## Governing acquisition evidence (PUBLISH-1B)
 
-Publication universe and historical period maps come from **accepted MRR
-request-outcomes evidence**, not from period-index directory presence alone.
+`indexes/current.json` is **operational metadata** (latest completed acquisition
+run). It is **not** sufficient authority that the run is publication-governing.
 
-### Selection (deterministic)
+The durable receipt is the acquisition **manifest** + SHA-verified **outcomes**
+artifact.
 
-1. `--run-id` when provided (must match publication probe period);
-2. else `indexes/current.json` when its `probeReportingPeriod` matches;
-3. else exactly one manifest/outcomes pair for that probe period;
-4. zero matches → error; multiple matches → error (pass `--run-id`).
+### Default selection (`npm run market-publish -- --as-of …`)
 
-Do not use “largest manifest wins.”
+1. Evaluate all manifests whose `probeReportingPeriod` matches the publication
+   source reporting period.
+2. Load each outcomes artifact and verify bytes against
+   `manifest.outcomesArtifactSha256` **before** parsing.
+3. Auto-qualify only **full Stage-D** candidates (see below).
+4. Exactly one full-qualified candidate → use it (even if `current.json` points
+   elsewhere).
+5. Zero or multiple full-qualified candidates → **fail closed**; pass `--run-id`.
 
-### Current-period universe
+Do **not** select by latest timestamp, filesystem recency, largest manifest,
+lexical filename, or `current.json` alone.
+
+### Explicit `--run-id`
+
+Operator authority. The run may be bounded/debug/smoke. Still requires:
+
+- matching source reporting period;
+- valid manifest receipt fields;
+- SHA-verified outcomes bytes;
+- probe/history aggregate reconciliation to request detail.
+
+Do not relabel an explicit bounded run as full Stage-D; coverage remains truthful
+to the selected outcomes.
+
+### Full Stage-D auto-qualification
+
+All required:
+
+| Check | Rule |
+| --- | --- |
+| Period | `manifest.probeReportingPeriod` matches publication source period |
+| Result | `SUCCESS` or `PARTIAL` only (`FAILED` / `STOPPED_THROTTLED` disqualified) |
+| Outcomes receipt | path + SHA present; bytes verify |
+| Probe completeness | PROBE count and distinct PROBE TLDs == `discoveredTldCount`; no duplicate PROBE TLD; every PROBE uses probe period |
+| Probe aggregates | detailed PROBE outcomes reconcile exactly to `manifest.probe` |
+| History completeness | HISTORY count == `historyUniverse.length × (historyPeriodCount − 1)` |
+| History aggregates | detailed HISTORY outcomes reconcile exactly to `manifest.history` |
+| Request total | `filesRequested` == PROBE + HISTORY counts |
+
+This disqualifies `probeLimit` and `--skip-history` / incomplete history runs
+when discovery/history universe imply a larger request set.
+
+### Outcomes artifact integrity
+
+Read raw bytes → SHA-256 (MRR `sha256Hex`) → compare to
+`manifest.outcomesArtifactSha256` → only then parse JSON.
+
+Mismatch → fail closed (`outcomes artifact integrity mismatch`).
+
+When `indexes/current.json` refers to the **same** selected run, its path/SHA/
+period must agree with the manifest. When it refers to a **different** run,
+that is not an integrity failure — operational current ≠ governing publication
+run (recorded in audit metadata).
+
+### Acquisition coverage grains (PUBLISH-1A, preserved)
+
+Publication universe and historical period maps come from the **selected**
+outcomes evidence, not from period-index directory presence alone.
+
+#### Current-period universe
 
 PROBE-phase requests define the publication universe. Each probed TLD remains
 represented even when no period-current snapshot exists (`MISSING`, with
@@ -116,7 +174,7 @@ represented even when no period-current snapshot exists (`MISSING`, with
 `--tlds` filters the probe universe; it does not drop allowlisted identities
 that lack a normalized pointer.
 
-### Historical coverage
+#### Historical coverage
 
 Only TLD×periods present in outcomes as PROBE or HISTORY requests (and inside
 the publication history window) appear in a shard’s `periods` map.
@@ -127,6 +185,17 @@ the publication history window) appear in a shard’s `periods` map.
 | `availability: "MISSING"` | Requested/acquired attempt, but no accepted product fact |
 
 Do **not** fabricate 24 months of `MISSING` for probe-only TLDs.
+
+### Publication audit metadata
+
+Index envelope / current pointer retain (nonsemantic):
+
+- `sourceAcquisitionRunId`
+- `sourceOutcomesArtifactSha256`
+- `operationalCurrentRunId`
+- `operationalCurrentDiffersFromGoverning`
+
+These answer: which acquisition receipt governed this publication?
 
 ## Provenance
 
@@ -159,14 +228,14 @@ iff product-semantic facts change.
 ## Consumption examples
 
 ```bash
-# Build from accepted local MRR archive
+# Default: unique full-qualified acquisition run for the as-of probe period
 npm run market-publish -- --as-of 2026-10-26
 
-# Bounded smoke
-npm run market-publish -- --as-of 2026-10-26 --tlds com,xyz,net --history-periods 3
-
-# Disambiguate acquisition evidence
+# Bounded / explicit governing receipt (required when ambiguous or only bounded runs exist)
 npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-…
+
+# Allowlisted subset of the selected probe universe
+npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-… --tlds com,xyz,net --history-periods 3
 ```
 
 Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
@@ -184,5 +253,6 @@ product reads.
 
 ## Status
 
-RIH-MARKET-BASELINE-PUBLISH-1 — implemented.  
-RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction.
+RIH-MARKET-BASELINE-PUBLISH-1 — implemented / merged.  
+RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction / merged.  
+RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity.

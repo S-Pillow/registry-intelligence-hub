@@ -5,11 +5,14 @@ import { describe, expect, it } from "vitest";
 import { CORE_TRANSACTION_HEADERS } from "@/market-baseline-mrr/schema-profiles";
 import { normalizeTransactions } from "@/market-baseline-mrr/normalize";
 import { seedNormalizedFromBytes } from "@/market-baseline-mrr/acquire";
+import { sha256Hex } from "@/market-baseline-mrr/hash";
 import { MRR_OUTCOMES_SCHEMA_VERSION } from "@/market-baseline-mrr/types";
 import type {
   AcquisitionOutcomesArtifact,
   AcquisitionRequestOutcome,
+  AcquisitionRunManifest,
   NormalizedTransactionsSnapshot,
+  OutcomeCountBucket,
   ReportingPeriod,
 } from "@/market-baseline-mrr/types";
 import {
@@ -84,6 +87,52 @@ function req(partial: {
   };
 }
 
+function emptyBucket(): OutcomeCountBucket {
+  return {
+    success: 0,
+    missing: 0,
+    downloadFailed: 0,
+    unsupportedSchema: 0,
+    parseFailed: 0,
+    validationFailed: 0,
+    normalizationFailed: 0,
+  };
+}
+
+function bucketFromRequests(
+  requests: AcquisitionRequestOutcome[],
+  phase: "PROBE" | "HISTORY",
+): OutcomeCountBucket {
+  const bucket = emptyBucket();
+  for (const r of requests) {
+    if (r.phase !== phase) continue;
+    switch (r.outcome) {
+      case "SUCCESS":
+        bucket.success += 1;
+        break;
+      case "MISSING_REPORT":
+        bucket.missing += 1;
+        break;
+      case "DOWNLOAD_FAILED":
+        bucket.downloadFailed += 1;
+        break;
+      case "UNSUPPORTED_SCHEMA":
+        bucket.unsupportedSchema += 1;
+        break;
+      case "PARSE_FAILED":
+        bucket.parseFailed += 1;
+        break;
+      case "VALIDATION_FAILED":
+        bucket.validationFailed += 1;
+        break;
+      case "NORMALIZATION_FAILED":
+        bucket.normalizationFailed += 1;
+        break;
+    }
+  }
+  return bucket;
+}
+
 async function writeAcquisitionEvidence(args: {
   cwd: string;
   runId: string;
@@ -91,7 +140,16 @@ async function writeAcquisitionEvidence(args: {
   probeReportingPeriod: ReportingPeriod;
   requests: AcquisitionRequestOutcome[];
   setCurrentIndex?: boolean;
-}): Promise<void> {
+  /** Override discoveredTldCount (probeLimit-style mismatch). */
+  discoveredTldCount?: number;
+  historyUniverseTlds?: string[];
+  historyPeriodCount?: number;
+  resultStatus?: AcquisitionRunManifest["resultStatus"];
+  /** Corrupt outcomes bytes after writing without updating SHA. */
+  tamperOutcomes?: (outcomes: AcquisitionOutcomesArtifact) => AcquisitionOutcomesArtifact;
+  /** Override current-index recorded SHA while keeping manifest SHA correct. */
+  currentIndexShaOverride?: string;
+}): Promise<{ outcomesSha256: string; outcomesRel: string }> {
   const outcomes: AcquisitionOutcomesArtifact = {
     schemaVersion: MRR_OUTCOMES_SCHEMA_VERSION,
     runId: args.runId,
@@ -102,42 +160,44 @@ async function writeAcquisitionEvidence(args: {
   const manifestsDir = join(args.cwd, ".data/market-baseline/mrr/manifests");
   mkdirSync(manifestsDir, { recursive: true });
   const outcomesRel = `.data/market-baseline/mrr/manifests/${args.runId}.outcomes.json`;
-  writeFileSync(
-    join(args.cwd, outcomesRel),
-    `${JSON.stringify(outcomes, null, 2)}\n`,
-    "utf8",
-  );
-  const manifest = {
+  const outcomesBody = `${JSON.stringify(outcomes, null, 2)}\n`;
+  const outcomesSha256 = sha256Hex(outcomesBody);
+  writeFileSync(join(args.cwd, outcomesRel), outcomesBody, "utf8");
+
+  if (args.tamperOutcomes) {
+    const tampered = args.tamperOutcomes(structuredClone(outcomes));
+    writeFileSync(
+      join(args.cwd, outcomesRel),
+      `${JSON.stringify(tampered, null, 2)}\n`,
+      "utf8",
+    );
+  }
+
+  const probeTlds = [
+    ...new Set(
+      args.requests.filter((r) => r.phase === "PROBE").map((r) => r.tldAsciiLabel),
+    ),
+  ];
+  const historyUniverseTlds = args.historyUniverseTlds ?? [];
+  const historyPeriodCount = args.historyPeriodCount ?? 24;
+  const manifest: AcquisitionRunManifest = {
     schemaVersion: "market-baseline-mrr-run-manifest/1.0.0",
     runId: args.runId,
     startedAt: "2026-10-26T00:00:00.000Z",
     completedAt: "2026-10-26T00:01:00.000Z",
     asOfDate: args.asOfDate,
     probeReportingPeriod: args.probeReportingPeriod,
-    discoveredTldCount: new Set(args.requests.filter((r) => r.phase === "PROBE").map((r) => r.tldAsciiLabel)).size,
-    probe: {
-      success: 0,
-      missing: 0,
-      downloadFailed: 0,
-      unsupportedSchema: 0,
-      parseFailed: 0,
-      validationFailed: 0,
-      normalizationFailed: 0,
-    },
-    history: {
-      success: 0,
-      missing: 0,
-      downloadFailed: 0,
-      unsupportedSchema: 0,
-      parseFailed: 0,
-      validationFailed: 0,
-      normalizationFailed: 0,
-    },
+    discoveredTldCount: args.discoveredTldCount ?? probeTlds.length,
+    probe: bucketFromRequests(args.requests, "PROBE"),
+    history: bucketFromRequests(args.requests, "HISTORY"),
     top100: [],
     controlSet: [],
     delegatedOverlaps: [],
-    historyUniverse: [],
-    historyPeriodCount: 24,
+    historyUniverse: historyUniverseTlds.map((tldAsciiLabel) => ({
+      tldAsciiLabel,
+      reasons: ["CONTROL_SET"],
+    })),
+    historyPeriodCount,
     filesRequested: args.requests.length,
     filesDownloaded: 0,
     filesReusedFromCache: 0,
@@ -150,9 +210,9 @@ async function writeAcquisitionEvidence(args: {
     normalizedHashes: [],
     sourceRevisionsDetected: 0,
     outcomesArtifactPath: outcomesRel,
-    outcomesArtifactSha256: "0".repeat(64),
-    resultStatus: "PARTIAL",
-    throttlingObserved: false,
+    outcomesArtifactSha256: outcomesSha256,
+    resultStatus: args.resultStatus ?? "PARTIAL",
+    throttlingObserved: args.resultStatus === "STOPPED_THROTTLED",
     durationMs: 1,
     notes: [],
   };
@@ -173,7 +233,7 @@ async function writeAcquisitionEvidence(args: {
           asOfDate: args.asOfDate,
           probeReportingPeriod: args.probeReportingPeriod,
           outcomesArtifactPath: outcomesRel,
-          outcomesArtifactSha256: "0".repeat(64),
+          outcomesArtifactSha256: args.currentIndexShaOverride ?? outcomesSha256,
         },
         null,
         2,
@@ -181,6 +241,65 @@ async function writeAcquisitionEvidence(args: {
       "utf8",
     );
   }
+  return { outcomesSha256, outcomesRel };
+}
+
+function historyPeriodsForCount(
+  probe: ReportingPeriod,
+  historyPeriodCount: number,
+): ReportingPeriod[] {
+  // newest-first excluding probe itself for HISTORY phase
+  const [ys, ms] = probe.split("-").map(Number) as [number, number];
+  const out: ReportingPeriod[] = [];
+  let y = ys;
+  let m = ms;
+  for (let i = 0; i < historyPeriodCount - 1; i++) {
+    m -= 1;
+    if (m <= 0) {
+      m = 12;
+      y -= 1;
+    }
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+function fullStageDRequests(args: {
+  tlds: string[];
+  probe: ReportingPeriod;
+  historyPeriodCount: number;
+  missingHistory?: Array<{ tld: string; period: ReportingPeriod }>;
+}): AcquisitionRequestOutcome[] {
+  const missing = new Set(
+    (args.missingHistory ?? []).map((x) => `${x.tld}@${x.period}`),
+  );
+  const requests: AcquisitionRequestOutcome[] = [];
+  for (const tld of args.tlds) {
+    requests.push(
+      req({
+        tldAsciiLabel: tld,
+        reportingPeriod: args.probe,
+        phase: "PROBE",
+        outcome: "SUCCESS",
+      }),
+    );
+  }
+  const histPeriods = historyPeriodsForCount(args.probe, args.historyPeriodCount);
+  for (const tld of args.tlds) {
+    for (const period of histPeriods) {
+      const key = `${tld}@${period}`;
+      requests.push(
+        req({
+          tldAsciiLabel: tld,
+          reportingPeriod: period,
+          phase: "HISTORY",
+          outcome: missing.has(key) ? "MISSING_REPORT" : "SUCCESS",
+          error: missing.has(key) ? `No Transactions link for ${period}` : undefined,
+        }),
+      );
+    }
+  }
+  return requests;
 }
 
 describe("market-baseline publication", () => {
@@ -578,6 +697,8 @@ describe("market-baseline publication", () => {
         runId: "mrr-cov-b",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
         requests: [
           req({
             tldAsciiLabel: "alpha",
@@ -645,6 +766,8 @@ describe("market-baseline publication", () => {
         runId: "mrr-cov-c",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
         requests: [
           req({
             tldAsciiLabel: "alpha",
@@ -758,5 +881,503 @@ describe("market-baseline publication", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("1B: full run wins over later bounded current smoke", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-full-"));
+    try {
+      const tlds = ["alpha", "beta", "gamma", "delta"];
+      for (const tld of tlds) {
+        await seedNormalizedFromBytes({
+          cwd: dir,
+          tldAsciiLabel: tld,
+          reportingPeriod: "2026-06",
+          sourceUrl: `https://www.icann.org/sites/default/files/mrr/${tld}/${tld}-transactions-202606-en.csv`,
+          resourcePageUrl: `https://example.test/${tld}`,
+          rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+          rawText: syntheticCsv(10),
+          asOfDate: "2026-10-26",
+        });
+      }
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-full-4",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: tlds,
+        historyPeriodCount: 3,
+        setCurrentIndex: false,
+        requests: fullStageDRequests({
+          tlds,
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-bounded-2",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        discoveredTldCount: 4,
+        historyUniverseTlds: [],
+        historyPeriodCount: 3,
+        setCurrentIndex: true,
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      expect(built.index.sourceAcquisitionRunId).toBe("mrr-full-4");
+      expect(built.index.operationalCurrentDiffersFromGoverning).toBe(true);
+      expect(built.index.operationalCurrentRunId).toBe("mrr-bounded-2");
+      expect(
+        built.index.semantic.currentPeriod.map((f) => f.tldAsciiLabel).sort(),
+      ).toEqual(["alpha", "beta", "delta", "gamma"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: explicit --run-id may select bounded run with integrity", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-explicit-"));
+    try {
+      const tlds = ["alpha", "beta", "gamma", "delta"];
+      for (const tld of ["alpha", "beta"] as const) {
+        await seedNormalizedFromBytes({
+          cwd: dir,
+          tldAsciiLabel: tld,
+          reportingPeriod: "2026-06",
+          sourceUrl: `https://www.icann.org/sites/default/files/mrr/${tld}/${tld}-transactions-202606-en.csv`,
+          resourcePageUrl: `https://example.test/${tld}`,
+          rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+          rawText: syntheticCsv(10),
+          asOfDate: "2026-10-26",
+        });
+      }
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-full-4",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: tlds,
+        historyPeriodCount: 3,
+        setCurrentIndex: false,
+        requests: fullStageDRequests({
+          tlds,
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-bounded-2",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        discoveredTldCount: 4,
+        historyUniverseTlds: [],
+        historyPeriodCount: 3,
+        setCurrentIndex: true,
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        runId: "mrr-bounded-2",
+        historyPeriodCount: 3,
+      });
+      expect(built.index.sourceAcquisitionRunId).toBe("mrr-bounded-2");
+      expect(
+        built.index.semantic.currentPeriod.map((f) => f.tldAsciiLabel).sort(),
+      ).toEqual(["alpha", "beta"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: multiple full-qualified runs fail closed without --run-id", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-multi-"));
+    try {
+      const tlds = ["alpha", "beta"];
+      for (const runId of ["mrr-full-a", "mrr-full-b"] as const) {
+        await writeAcquisitionEvidence({
+          cwd: dir,
+          runId,
+          asOfDate: "2026-10-26",
+          probeReportingPeriod: "2026-06",
+          historyUniverseTlds: tlds,
+          historyPeriodCount: 3,
+          setCurrentIndex: runId === "mrr-full-b",
+          requests: fullStageDRequests({
+            tlds,
+            probe: "2026-06",
+            historyPeriodCount: 3,
+          }),
+        });
+      }
+      await expect(
+        publishFromMrrArchive({
+          cwd: dir,
+          asOfDate: "2026-10-26",
+          historyPeriodCount: 3,
+        }),
+      ).rejects.toThrow(/multiple full-qualified/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: zero full-qualified runs fail closed without --run-id", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-zero-"));
+    try {
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-only-bounded",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        discoveredTldCount: 4,
+        historyUniverseTlds: [],
+        historyPeriodCount: 3,
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+      await expect(
+        publishFromMrrArchive({
+          cwd: dir,
+          asOfDate: "2026-10-26",
+          historyPeriodCount: 3,
+        }),
+      ).rejects.toThrow(/no full-qualified/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: probeLimit-style and skipHistory-style runs do not auto-qualify", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-qual-"));
+    try {
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-probe-limit",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        discoveredTldCount: 4,
+        historyUniverseTlds: [],
+        historyPeriodCount: 3,
+        setCurrentIndex: false,
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-skip-history",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha", "beta"],
+        historyPeriodCount: 3,
+        setCurrentIndex: true,
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+          req({
+            tldAsciiLabel: "beta",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/no full-qualified/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: STOPPED_THROTTLED does not auto-qualify", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-throttle-"));
+    try {
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-throttled",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
+        resultStatus: "STOPPED_THROTTLED",
+        requests: fullStageDRequests({
+          tlds: ["alpha"],
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/no full-qualified/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: PARTIAL with complete coverage and MISSING_REPORT may qualify", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-partial-"));
+    try {
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+        rawText: syntheticCsv(10),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-partial-ok",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
+        resultStatus: "PARTIAL",
+        requests: fullStageDRequests({
+          tlds: ["alpha"],
+          probe: "2026-06",
+          historyPeriodCount: 3,
+          missingHistory: [{ tld: "alpha", period: "2026-05" }],
+        }),
+      });
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      expect(built.index.sourceAcquisitionRunId).toBe("mrr-partial-ok");
+      expect(built.shards[0]!.periods["2026-05"]?.availability).toBe("MISSING");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: tampered outcomes artifact fails closed before projection", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-tamper-"));
+    try {
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-tamper",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
+        requests: fullStageDRequests({
+          tlds: ["alpha"],
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+        tamperOutcomes: (o) => {
+          o.requests = o.requests.map((r) =>
+            r.phase === "PROBE"
+              ? { ...r, tldAsciiLabel: "evil" }
+              : r,
+          );
+          return o;
+        },
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/outcomes artifact integrity mismatch/);
+      await expect(
+        publishFromMrrArchive({
+          cwd: dir,
+          asOfDate: "2026-10-26",
+          runId: "mrr-tamper",
+        }),
+      ).rejects.toThrow(/outcomes artifact integrity mismatch/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: same-run current-index SHA mismatch fails closed", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-cursha-"));
+    try {
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-cur-mismatch",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: ["alpha"],
+        historyPeriodCount: 3,
+        currentIndexShaOverride: "a".repeat(64),
+        requests: fullStageDRequests({
+          tlds: ["alpha"],
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/current-index outcomes SHA mismatches/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: different current run does not compare its SHA against governing run", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1b-diffcur-"));
+    try {
+      const tlds = ["alpha", "beta"];
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "alpha",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/alpha/alpha-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/alpha",
+        rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+        rawText: syntheticCsv(10),
+        asOfDate: "2026-10-26",
+      });
+      await seedNormalizedFromBytes({
+        cwd: dir,
+        tldAsciiLabel: "beta",
+        reportingPeriod: "2026-06",
+        sourceUrl:
+          "https://www.icann.org/sites/default/files/mrr/beta/beta-transactions-202606-en.csv",
+        resourcePageUrl: "https://example.test/beta",
+        rawBytes: new TextEncoder().encode(syntheticCsv(10)),
+        rawText: syntheticCsv(10),
+        asOfDate: "2026-10-26",
+      });
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-full-gov",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: tlds,
+        historyPeriodCount: 3,
+        setCurrentIndex: false,
+        requests: fullStageDRequests({
+          tlds,
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      // Bounded current with deliberately wrong SHA — must not affect governing A.
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-bounded-cur",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        discoveredTldCount: 4,
+        historyUniverseTlds: [],
+        historyPeriodCount: 3,
+        setCurrentIndex: true,
+        currentIndexShaOverride: "b".repeat(64),
+        requests: [
+          req({
+            tldAsciiLabel: "alpha",
+            reportingPeriod: "2026-06",
+            phase: "PROBE",
+            outcome: "SUCCESS",
+          }),
+        ],
+      });
+      const built = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        historyPeriodCount: 3,
+      });
+      expect(built.index.sourceAcquisitionRunId).toBe("mrr-full-gov");
+      expect(built.index.operationalCurrentDiffersFromGoverning).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1B: acquisition audit metadata is outside semantic content hash", () => {
+    const snaps = new Map([
+      [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 10)],
+    ]);
+    const a = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      acquisitionAudit: {
+        sourceAcquisitionRunId: "run-a",
+        sourceOutcomesArtifactSha256: "a".repeat(64),
+      },
+    });
+    const b = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      acquisitionAudit: {
+        sourceAcquisitionRunId: "run-b",
+        sourceOutcomesArtifactSha256: "b".repeat(64),
+      },
+    });
+    expect(a.index.publicationContentSha256).toBe(b.index.publicationContentSha256);
+    expect(a.index.sourceAcquisitionRunId).toBe("run-a");
+    expect(b.index.sourceAcquisitionRunId).toBe("run-b");
   });
 });

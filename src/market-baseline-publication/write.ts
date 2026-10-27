@@ -44,6 +44,11 @@ export async function writePublicationArtifacts(
     generatedAt: built.index.generatedAt,
     asOfDate: built.index.asOfDate,
     sourceReportingPeriod: built.index.semantic.sourceReportingPeriod,
+    sourceAcquisitionRunId: built.index.sourceAcquisitionRunId,
+    sourceOutcomesArtifactSha256: built.index.sourceOutcomesArtifactSha256,
+    operationalCurrentRunId: built.index.operationalCurrentRunId,
+    operationalCurrentDiffersFromGoverning:
+      built.index.operationalCurrentDiffersFromGoverning,
   };
   const currentPointerPath = publicationCurrentPointerPath(cwd);
   await ensureParent(currentPointerPath);

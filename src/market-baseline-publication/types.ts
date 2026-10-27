@@ -118,6 +118,14 @@ export type MarketBaselinePublicationIndex = {
   generatedAt: string;
   /** Calendar as-of used to derive sourceReportingPeriod — outside semantic hash. */
   asOfDate: string;
+  /** Governing acquisition run — outside semantic content identity. */
+  sourceAcquisitionRunId?: string;
+  /** Verified outcomes artifact SHA — outside semantic content identity. */
+  sourceOutcomesArtifactSha256?: string;
+  /** Operational indexes/current.json run when present. */
+  operationalCurrentRunId?: string | null;
+  /** True when operational current differs from governing publication run. */
+  operationalCurrentDiffersFromGoverning?: boolean;
 };
 
 export type MarketBaselineTldShard = {
@@ -136,4 +144,8 @@ export type MarketBaselinePublicationCurrentPointer = {
   generatedAt: string;
   asOfDate: string;
   sourceReportingPeriod: ReportingPeriod;
+  sourceAcquisitionRunId?: string;
+  sourceOutcomesArtifactSha256?: string;
+  operationalCurrentRunId?: string | null;
+  operationalCurrentDiffersFromGoverning?: boolean;
 };

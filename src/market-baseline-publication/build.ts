@@ -48,6 +48,13 @@ export type BuildPublicationInput = {
    */
   missingReasonsByKey?: Map<SnapshotKey, string>;
   generatedAt?: string;
+  /** Nonsemantic acquisition audit (run id / outcomes SHA). */
+  acquisitionAudit?: {
+    sourceAcquisitionRunId: string;
+    sourceOutcomesArtifactSha256: string;
+    operationalCurrentRunId?: string | null;
+    operationalCurrentDiffersFromGoverning?: boolean;
+  };
 };
 
 export type BuiltPublication = {
@@ -235,6 +242,11 @@ export function buildMarketBaselinePublication(
     publicationContentSha256,
     generatedAt,
     asOfDate: input.asOfDate,
+    sourceAcquisitionRunId: input.acquisitionAudit?.sourceAcquisitionRunId,
+    sourceOutcomesArtifactSha256: input.acquisitionAudit?.sourceOutcomesArtifactSha256,
+    operationalCurrentRunId: input.acquisitionAudit?.operationalCurrentRunId,
+    operationalCurrentDiffersFromGoverning:
+      input.acquisitionAudit?.operationalCurrentDiffersFromGoverning,
   };
 
   return { index, shards };
