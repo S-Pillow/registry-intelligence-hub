@@ -9,7 +9,9 @@ import {
   type CrossRoundDeltaVm,
 } from "@/lib/command-center-intelligence-v2";
 import { CommandCenterRecentChangesCard } from "@/components/registry/changes-content";
+import { CommandCenterIntelligencePulse } from "@/components/registry/command-center-intelligence-pulse";
 import type { ChangeIntelFeedState } from "@/change-intel/types";
+import { buildCommandCenterInsights } from "@/lib/command-center-insights";
 import { crossRoundStructuralHref } from "@/lib/cross-round-structural-intelligence";
 import { historicalCohortsHref } from "@/lib/historical-cohort-intelligence";
 
@@ -205,6 +207,10 @@ function IntelligenceSections({
 }) {
   const { roundPosture, crossRound, competitiveStructure, roundComposition, coverage, drilldown } =
     intelligence;
+  const pulseInsights = buildCommandCenterInsights({
+    intelligence,
+    godaddyUniqueContentionSets,
+  });
 
   return (
     <div className="space-y-8" data-testid="command-center-intelligence-v2">
@@ -249,6 +255,9 @@ function IntelligenceSections({
           />
         </div>
       </section>
+
+      {/* Section 1b — Intelligence Pulse (WHAT IT MEANS) */}
+      <CommandCenterIntelligencePulse insights={pulseInsights} />
 
       {/* Section 2 — What deserves attention */}
       <AttentionStrip

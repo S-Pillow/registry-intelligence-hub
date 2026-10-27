@@ -348,6 +348,7 @@ describe("Command Center intelligence-first 2.x IA", () => {
     const root = screen.getByTestId("command-center-intelligence-v2");
     const order = [
       "cc-section-round-posture",
+      "cc-intelligence-pulse",
       "cc-section-attention",
       "cc-recent-changes",
       "cc-section-cross-round",
