@@ -200,6 +200,10 @@ Explicit non-actions for this closure:
 
 **DEPLOYMENT: NOT STARTED**
 
+Product publication contract (derived facts for future UI):
+[`market-baseline-publication.md`](./market-baseline-publication.md)
+(`RIH-MARKET-BASELINE-PUBLISH-1`).
+
 ## Limitations
 
 - Activity bodies not acquired  

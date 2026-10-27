@@ -472,4 +472,5 @@ Local research only (not production, not Git):
 
 Final `main` tip of the accepted sequence: `071d3bdecf790fb7a428bc27fd8296aa96618a5f`.
 Acquisition tooling docs: [`market-baseline-mrr.md`](./market-baseline-mrr.md).
+Product publication contract: [`market-baseline-publication.md`](./market-baseline-publication.md).
 No production deployment performed as part of MARKET-BASELINE closure.
