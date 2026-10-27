@@ -281,23 +281,36 @@ denominator and competitive context actually support that claim.
 | PUBLISH-1C | **CLOSED** |
 | PUBLISH-1D | **CLOSED** |
 | Market-baseline acquisition + publication foundation | **CLOSED** |
+| UI-1 | **MERGED / POST-MERGE VERIFIED / CLOSED** |
+| Production market data | **NOT INSTALLED** |
 | Production deployment | **NOT STARTED** |
-| UI-1 | **AUTHORIZED FOR NEXT SEPARATE TICKET** (do not auto-start) |
 
-Merged code baseline: `origin/main` @
-`b4697fa6814a84241119ff1c2d847c72c8521fd2`
-(`fix(market): scale publication identity by shard`).
+Merged foundation tip (pre-UI): `b4697fa…`  
+UI-1 merged code: `e3d7db62841c16ed1ef1478bed2776571c74e444`
+(`feat(market): add registry market intelligence UI`).
 
 **Readiness:** Market-baseline acquisition + publication foundation is
-**CLOSED** and ready for product consumption.
+**CLOSED**. Registry Market UI-1 is **CLOSED** on merged main after
+post-merge verification. Production install/deploy remains a separate unit.
 
-### UI-1 (product consumer)
+### UI-1 (product consumer) — closed
 
-User-facing surface: **Registry Market** at `/market` (detail `/market/[tld]`).
-UI-1 consumes the **product publication only** (pointer → verified index →
-optional verified TLD shard). It does not read the MRR raw/normalized archive.
-Production deployment of market publication artifacts is still **not**
-started by UI-1 alone.
+| Field | Value |
+| --- | --- |
+| Status | **MERGED / POST-MERGE VERIFIED / CLOSED** |
+| Merged code | `e3d7db62841c16ed1ef1478bed2776571c74e444` |
+| Routes | `/market`, `/market/[tld]` |
+| User-facing label | Registry Market |
+| Source | publication-only consumer (pointer → verified index → optional verified shard) |
+| Accepted development publication | `ff7816b8a59823aeced2d76430b977c898ff23963b7434df71e0fd4b398f1c4d` |
+| Real-data smoke baseline | 1319 / 1113 AVAILABLE / 206 MISSING (June 2026) |
+| Production market data | **NOT INSTALLED** |
+| Production deployment | **NOT STARTED** |
+| Visual browser acceptance | **VERIFIED** (Chromium desktop + mobile post-merge) |
+
+UI-1 still does **not** provide Registry Operator identity, Registrar→Organization,
+RSP→TLD, Applicant→Registrar, GoDaddy customer inference, renewal rate, Activity,
+DNMI, Domain Metrica, pricing, HHI, market-opportunity scoring, or charts.
 
 ## Accepted development baseline
 
