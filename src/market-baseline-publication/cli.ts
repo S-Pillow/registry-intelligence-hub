@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { publishFromMrrArchive } from "./from-archive";
 import { publicationRoot } from "./paths";
-import { writePublicationArtifacts } from "./write";
 
 function usage(): never {
   console.error(`Usage:
@@ -42,31 +41,30 @@ async function main(): Promise<void> {
   console.log(`RIH market-baseline publication`);
   console.log(`asOfDate=${asOf} root=${publicationRoot(cwd)}`);
 
-  const built = await publishFromMrrArchive({
+  const published = await publishFromMrrArchive({
     cwd,
     asOfDate: asOf,
     tldAllowlist,
     historyPeriodCount,
     runId,
   });
-  const written = await writePublicationArtifacts(built, cwd);
 
   console.log(
     JSON.stringify(
       {
-        publicationContentSha256: written.contentSha256,
-        indexPath: written.indexPath,
-        shardCount: written.shardPaths.length,
-        sourceReportingPeriod: built.index.semantic.sourceReportingPeriod,
-        sourceAcquisitionRunId: built.index.sourceAcquisitionRunId,
-        sourceOutcomesArtifactSha256: built.index.sourceOutcomesArtifactSha256,
-        sourceAcquisitionRunScope: built.index.sourceAcquisitionRunScope,
-        operationalCurrentRunId: built.index.operationalCurrentRunId,
+        publicationContentSha256: published.contentSha256,
+        indexPath: published.indexPath,
+        shardCount: published.shardPaths.length,
+        sourceReportingPeriod: published.index.semantic.sourceReportingPeriod,
+        sourceAcquisitionRunId: published.index.sourceAcquisitionRunId,
+        sourceOutcomesArtifactSha256: published.index.sourceOutcomesArtifactSha256,
+        sourceAcquisitionRunScope: published.index.sourceAcquisitionRunScope,
+        operationalCurrentRunId: published.index.operationalCurrentRunId,
         operationalCurrentDiffersFromGoverning:
-          built.index.operationalCurrentDiffersFromGoverning,
-        coverage: built.index.semantic.coverage,
-        domainBaseTop5: built.index.semantic.domainBaseRanking.slice(0, 5),
-        momTop5: built.index.semantic.monthOverMonthGrowthRanking.slice(0, 5),
+          published.index.operationalCurrentDiffersFromGoverning,
+        coverage: published.index.semantic.coverage,
+        domainBaseTop5: published.index.semantic.domainBaseRanking.slice(0, 5),
+        momTop5: published.index.semantic.monthOverMonthGrowthRanking.slice(0, 5),
       },
       null,
       2,

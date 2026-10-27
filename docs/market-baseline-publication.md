@@ -1,4 +1,4 @@
-# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A / 1B / 1C)
+# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 … 1D)
 
 Deterministic, provenance-bearing product publication derived from accepted
 ICANN MRR Transactions snapshots.
@@ -27,7 +27,7 @@ Inspected RIH patterns:
 
 | Pattern | Location | Notes |
 | --- | --- | --- |
-| Reveal Day publications | `.data/reveal-2026/publications/*.snapshot.json` | Versioned, content-hashed, gitignored, CLI-built |
+| Reveal Day publications | `.data/reveal-2026/publications/*.snapshot.json` | Versioned, content-hashed, gitignored |
 | Browser payload projection | `.data/reveal-2026/browser/` | UI-oriented projection separate from source publication |
 | Org resolution snapshot | `.data/reveal-2026/organization-resolution/` | Derived product snapshot under `.data/` |
 
@@ -35,22 +35,37 @@ Inspected RIH patterns:
 `.data/market-baseline/publication/`, with:
 
 - content-addressed publication directory (semantic SHA);
-- compact `index.json` for cross-TLD current rankings;
+- compact `index.json` for cross-TLD current rankings + shard digest manifest;
 - per-TLD shards for history / registrar distribution;
 - `generatedAt`, `asOfDate`, and governing acquisition audit metadata outside
   semantic content identity;
 - CLI generation (`npm run market-publish`).
 
-Rationale: matches existing RIH `.data` publication discipline; avoids
-committing bulk corpus; enables single-TLD reads without loading the archive.
-
 ## Schema / version
 
 | Field | Value |
 | --- | --- |
-| Publication schema | `market-baseline-publication/1.0.0` |
-| Builder | `market-baseline-publication-builder/1.0.0` |
+| Publication schema | `market-baseline-publication/1.1.0` |
+| Builder | `market-baseline-publication-builder/1.1.0` |
 | Source | ICANN MRR Transactions (accepted normalized snapshots only) |
+
+### Migration from 1.0.0 → 1.1.0 (PUBLISH-1D)
+
+`1.0.0` hashed `{ index.semantic, all shard bodies }` via one `JSON.stringify`.
+At full Stage-D scale (~1319 TLDs with registrar grains) that exceeded V8 string
+limits (`RangeError: Invalid string length`) even with a larger heap.
+
+`1.1.0` uses **compositional** identity:
+
+1. Each shard body hashes independently → `shardContentSha256`
+2. Index semantic commits to a sorted `tldShards[]` digest manifest
+3. `publicationContentSha256` hashes only the compact index semantic
+
+MRR `hashNormalizedContent` / normalized archive hashes are unchanged.
+Publication-specific helpers live under `src/market-baseline-publication/hash.ts`.
+
+Rebuild publications after upgrading; prior `1.0.0` content SHAs are not
+comparable.
 
 ## Grains
 
@@ -77,25 +92,78 @@ No registrar → Confirmed Organization mapping.
 
 ```text
 .data/market-baseline/publication/          # gitignored via /.data/
-  current.json                              # pointer to active publication
+  current.json                              # pointer — advances last
+  .staging/<id>/                            # ephemeral bounded build staging
+    tlds/<tld>.json
   <publicationContentSha256>/
-    index.json                              # rankings + current-period facts
+    index.json                              # rankings + digest manifest
     tlds/<tld>.json                         # history + registrarsByPeriod
 ```
 
-## Semantic identity
+## Compositional semantic identity (1.1.0)
 
-Content SHA hashes `{ index.semantic, shard bodies }` and **excludes**:
+### Shard digest
+
+`ShardSemantic = { schemaVersion, tldAsciiLabel, periods, registrarsByPeriod }`
+
+`shardContentSha256 = SHA256(canonical JSON of ShardSemantic)`
+
+Excludes `publicationContentSha256` and `shardContentSha256` (no circular hash).
+
+### Publication digest
+
+Index semantic includes compact product facts plus:
+
+```text
+tldShards: [ { tldAsciiLabel, path, shardContentSha256 }, ... ]
+```
+
+sorted by `tldAsciiLabel` ASC.
+
+`publicationContentSha256 = SHA256(canonical JSON of index.semantic)`
+
+Transitively commits to every shard without concatenating shard bodies.
+
+### Semantic exclusions (envelope / audit)
 
 - `generatedAt`
-- `asOfDate` (index envelope / current pointer only)
+- `asOfDate`
 - `sourceAcquisitionRunId` / `sourceOutcomesArtifactSha256` /
   `sourceAcquisitionRunScope` / operational-current audit fields
-  (envelope / pointer only)
 
-`sourceReportingPeriod` remains inside semantic identity. Same accepted facts +
-same source period + same coverage yield the same SHA even when calendar
-`asOfDate` or governing run id differs without product-fact change.
+### Semantic inclusions
+
+- `schemaVersion` / `builderVersion`
+- `sourceReportingPeriod`
+- `coverage` / current-period facts / rankings / history counts
+- every `tldShards[].shardContentSha256`
+
+## Bounded-memory construction
+
+Full-archive `publishFromMrrArchive`:
+
+1. Resolve governing acquisition coverage (PUBLISH-1B / 1C).
+2. **Per TLD**: load only that TLD’s requested (+ temporal prior) snapshots;
+   project; hash shard; stage compact record; retain ranking/coverage grains;
+   release the TLD working set.
+3. Compose publication identity from digests (never all shard bodies).
+4. Materialize final content-addressed artifacts from staging.
+5. **Commit `current.json` last**; clean staging.
+
+Peak memory is bounded primarily by one TLD’s working set plus compact
+cross-TLD index state — not the sum of all shards.
+
+A pure in-memory `buildMarketBaselinePublication` remains for tests/small inputs.
+
+Failed builds leave the previous current pointer unchanged.
+
+## Shard / index verification
+
+- Recompute shard digest from semantic body; require match to
+  `shard.shardContentSha256` and the index digest entry.
+- Require `shard.publicationContentSha256` equals containing publication SHA.
+- Recompute publication digest from `index.semantic` alone (compact digests).
+- Fail closed on mismatch.
 
 ## Governing acquisition evidence (PUBLISH-1B / 1C)
 
@@ -117,98 +185,31 @@ artifact. Manifest `1.1.0` also records authoritative `runScope`.
    elsewhere).
 5. Zero or multiple full-qualified candidates → **fail closed**; pass `--run-id`.
 
-Do **not** select by latest timestamp, filesystem recency, largest manifest,
-lexical filename, or `current.json` alone.
-
-A self-consistent 3-TLD smoke with `PROBE == discoveredTldCount` is **not**
-full Stage-D unless `runScope.mode` was recorded as `FULL_STAGE_D` at
-acquisition time. Legacy `…/1.0.0` manifests without `runScope` are
-`LEGACY_UNKNOWN` and never auto-qualify.
-
 ### Explicit `--run-id`
 
 Operator authority. The run may be `FULL_STAGE_D`, `BOUNDED`, or legacy.
-Still requires:
-
-- matching source reporting period;
-- valid manifest receipt fields;
-- SHA-verified outcomes bytes;
-- probe/history aggregate reconciliation to request detail.
-
-Audit metadata exposes `sourceAcquisitionRunScope` truthfully
-(`FULL_STAGE_D` | `BOUNDED` | `LEGACY_UNKNOWN`). Do not relabel an explicit
-bounded run as governing-full.
+Still requires matching period, valid receipt fields, SHA-verified outcomes,
+and probe/history aggregate reconciliation.
 
 ### Full Stage-D auto-qualification
 
-All required:
-
 | Check | Rule |
 | --- | --- |
-| **Scope authority (1C)** | `runScope.mode === FULL_STAGE_D` (legacy/missing → fail) |
+| **Scope authority (1C)** | `runScope.mode === FULL_STAGE_D` |
 | Period | `manifest.probeReportingPeriod` matches publication source period |
-| Result | `SUCCESS` or `PARTIAL` only (`FAILED` / `STOPPED_THROTTLED` disqualified) |
+| Result | `SUCCESS` or `PARTIAL` only |
 | Outcomes receipt | path + SHA present; bytes verify |
-| Probe completeness | PROBE count and distinct PROBE TLDs == `discoveredTldCount`; no duplicate PROBE TLD; every PROBE uses probe period |
-| Probe aggregates | detailed PROBE outcomes reconcile exactly to `manifest.probe` |
+| Probe completeness | PROBE count and distinct TLDs == `discoveredTldCount` |
+| Probe aggregates | detailed PROBE outcomes reconcile to `manifest.probe` |
 | History completeness | HISTORY count == `historyUniverse.length × (historyPeriodCount − 1)` |
-| History aggregates | detailed HISTORY outcomes reconcile exactly to `manifest.history` |
+| History aggregates | detailed HISTORY outcomes reconcile to `manifest.history` |
 | Request total | `filesRequested` == PROBE + HISTORY counts |
-
-This disqualifies `probeLimit`, `--skip-history`, caller `pages`, unqualified
-discovery caches, and incomplete history — even when subset reconciliation
-passes.
-
-### Outcomes artifact integrity
-
-Read raw bytes → SHA-256 (MRR `sha256Hex`) → compare to
-`manifest.outcomesArtifactSha256` → only then parse JSON.
-
-Mismatch → fail closed (`outcomes artifact integrity mismatch`).
-
-When `indexes/current.json` refers to the **same** selected run, its path/SHA/
-period must agree with the manifest. When it refers to a **different** run,
-that is not an integrity failure — operational current ≠ governing publication
-run (recorded in audit metadata).
 
 ### Acquisition coverage grains (PUBLISH-1A, preserved)
 
-Publication universe and historical period maps come from the **selected**
-outcomes evidence, not from period-index directory presence alone.
-
-#### Current-period universe
-
-PROBE-phase requests define the publication universe. Each probed TLD remains
-represented even when no period-current snapshot exists (`MISSING`, with
-`acquisition_outcome:…` reason when known).
-
-`--tlds` filters the probe universe; it does not drop allowlisted identities
-that lack a normalized pointer.
-
-#### Historical coverage
-
-Only TLD×periods present in outcomes as PROBE or HISTORY requests (and inside
-the publication history window) appear in a shard’s `periods` map.
-
-| Representation | Meaning |
-| --- | --- |
-| Period key absent from shard `periods` | Outside publication/acquisition coverage (never requested for this publish) |
-| `availability: "MISSING"` | Requested/acquired attempt, but no accepted product fact |
-
+PROBE-phase requests define the publication universe. Missing probe identities
+remain `MISSING`. Historical periods appear only when requested in outcomes.
 Do **not** fabricate 24 months of `MISSING` for probe-only TLDs.
-
-### Publication audit metadata
-
-Index envelope / current pointer retain (nonsemantic):
-
-- `sourceAcquisitionRunId`
-- `sourceOutcomesArtifactSha256`
-- `sourceAcquisitionRunScope`
-- `operationalCurrentRunId`
-- `operationalCurrentDiffersFromGoverning`
-
-These answer: which acquisition receipt governed this publication, and whether
-it was full Stage-D, bounded, or legacy?
 
 ## Provenance
 
@@ -227,33 +228,26 @@ Each AVAILABLE fact carries:
 - Zero prior denominator → `{ available: false, reason: "prior_denominator_zero" }`
 - Available `totalDomains === 0` remains AVAILABLE (distinct from MISSING)
 
-No common-period substitution with an older month.
-
 ## Revision behavior
 
 Publication rebuild reads **explicit period-current pointers** from the MRR
-archive (`indexes/periods/<tld>/<YYYY-MM>.json`). Lexical normalized filename
-order is never used.
-
-After ICANN source revisions A→B→C, publication uses C. Content SHA changes
-iff product-semantic facts change.
+archive. Lexical normalized filename order is never used.
 
 ## Consumption examples
 
 ```bash
 # Default: unique full-qualified acquisition run for the as-of probe period
-npm run market-publish -- --as-of 2026-10-26
+npm run market-publish -- --as-of 2026-10-27
 
-# Bounded / explicit governing receipt (required when ambiguous or only bounded runs exist)
+# Bounded / explicit governing receipt
 npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-…
 
-# Allowlisted subset of the selected probe universe
+# Allowlisted subset
 npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-… --tlds com,xyz,net --history-periods 3
 ```
 
 Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
-`loadTldShard` (single TLD; label normalized) — no archive scan required for
-product reads.
+`loadTldShard` / `verifyTldShard` — no archive scan required for product reads.
 
 ## Non-goals
 
@@ -268,5 +262,30 @@ product reads.
 
 RIH-MARKET-BASELINE-PUBLISH-1 — implemented / merged.  
 RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity.  
-RIH-MARKET-BASELINE-PUBLISH-1C — authoritative `runScope` (complete ≠ full-universe).
+RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity / merged.  
+RIH-MARKET-BASELINE-PUBLISH-1C — authoritative `runScope` / merged.  
+RIH-MARKET-BASELINE-PUBLISH-1D — compositional identity + bounded-memory full-universe publish / pending merge.
+
+## Full-universe acceptance (development)
+
+Governing receipt:
+`mrr-stage-d-2026-10-27-2026-10-27T05-43-34-305Z` (`FULL_STAGE_D`, probe `2026-06`).
+
+Default authority path (no `--run-id`, no custom Node heap):
+
+`npm run market-publish -- --as-of 2026-10-27 --cwd <DATA_CWD>`
+
+Observed (PUBLISH-1D):
+
+| Check | Result |
+| --- | --- |
+| Selected run | governing `…305Z` / `FULL_STAGE_D` |
+| Coverage | 1319 / 1113 AVAILABLE / 206 MISSING |
+| Shard files | 1319 |
+| Duration | ~2m12s |
+| Peak RSS | ~876 MiB (`Maximum resident set size` ≈ 897456 KiB) |
+| OOM / Invalid string length | none |
+| Sample digests | com/net/org/xyz/IDN + one MISSING verified |
+
+Prior whole-publication path failed under default heap (OOM) and at 6 GiB
+(`Invalid string length`). Compositional identity removes that bottleneck.

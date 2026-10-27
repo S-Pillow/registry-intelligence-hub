@@ -31,3 +31,12 @@ export function publicationCurrentPointerPath(cwd = process.cwd()): string {
 export function tldShardRelativePath(tldAsciiLabel: string): string {
   return `tlds/${tldAsciiLabel}.json`;
 }
+
+/** Staging root for bounded full-universe builds (gitignored via /.data/). */
+export function publicationStagingRoot(cwd = process.cwd()): string {
+  return join(publicationRoot(cwd), ".staging");
+}
+
+export function publicationStagingDir(stagingId: string, cwd = process.cwd()): string {
+  return join(publicationStagingRoot(cwd), stagingId);
+}

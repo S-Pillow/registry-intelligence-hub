@@ -1,7 +1,12 @@
-import { hashNormalizedContent } from "@/market-baseline-mrr/hash";
 import { normalizeTldAsciiLabel, probeReportingPeriodFromAsOf } from "@/market-baseline-mrr/period";
 import type { NormalizedTransactionsSnapshot, ReportingPeriod } from "@/market-baseline-mrr/types";
 import { previousPeriod, yearAgoPeriod } from "@/market-baseline-mrr/period";
+import {
+  hashPublicationContent,
+  hashShardContent,
+  shardSemanticFromParts,
+  type ShardSemantic,
+} from "./hash";
 import { snapshotKey, type SnapshotKey } from "./keys";
 import { tldShardRelativePath } from "./paths";
 import {
@@ -16,6 +21,7 @@ import type {
   PublishedTldPeriodFact,
   TldDomainBaseRankEntry,
   TldGrowthRankEntry,
+  TldShardDigestEntry,
 } from "./types";
 import {
   MARKET_BASELINE_PUBLICATION_BUILDER_VERSION,
@@ -63,6 +69,16 @@ export type BuiltPublication = {
   shards: MarketBaselineTldShard[];
 };
 
+/** Compact ranking/coverage inputs retained after per-TLD projection. */
+export type ProjectedTldPublicationGrain = {
+  tldAsciiLabel: string;
+  currentFact: PublishedTldPeriodFact;
+  availableHistoryCount: number;
+  shardSemantic: ShardSemantic;
+  shardContentSha256: string;
+  digestEntry: TldShardDigestEntry;
+};
+
 function resolveSnapshot(
   map: Map<SnapshotKey, NormalizedTransactionsSnapshot>,
   tld: string,
@@ -71,7 +87,7 @@ function resolveSnapshot(
   return map.get(snapshotKey(tld, period)) ?? null;
 }
 
-function projectFact(
+export function projectFact(
   map: Map<SnapshotKey, NormalizedTransactionsSnapshot>,
   tld: string,
   period: ReportingPeriod,
@@ -91,39 +107,72 @@ function projectFact(
   });
 }
 
-export function buildMarketBaselinePublication(
-  input: BuildPublicationInput,
-): BuiltPublication {
-  const sourceReportingPeriod = probeReportingPeriodFromAsOf(input.asOfDate);
-  const generatedAt = input.generatedAt ?? new Date().toISOString();
+/**
+ * Project one TLD's shard semantic + compact index contributions.
+ * Callers should release the snapshot Map after this returns.
+ */
+export function projectTldPublicationGrain(args: {
+  tldAsciiLabel: string;
+  sourceReportingPeriod: ReportingPeriod;
+  snapshots: Map<SnapshotKey, NormalizedTransactionsSnapshot>;
+  historyPeriods: ReportingPeriod[];
+  missingReasonsByKey?: Map<SnapshotKey, string>;
+}): ProjectedTldPublicationGrain {
+  const tld = normalizeTldAsciiLabel(args.tldAsciiLabel);
+  const periodSet = new Set<ReportingPeriod>([
+    ...args.historyPeriods,
+    args.sourceReportingPeriod,
+  ]);
+  const ordered = [...periodSet].sort().reverse();
 
-  const tldsFromSnaps = new Set<string>();
-  const periodsByTld = new Map<string, Set<ReportingPeriod>>();
-  for (const [key, snap] of input.snapshots) {
-    const [tld] = key.split("@");
-    if (!tld) continue;
-    tldsFromSnaps.add(tld);
-    let set = periodsByTld.get(tld);
-    if (!set) {
-      set = new Set();
-      periodsByTld.set(tld, set);
+  const periods: Record<ReportingPeriod, PublishedTldPeriodFact> = {};
+  const registrarsByPeriod: ShardSemantic["registrarsByPeriod"] = {};
+  let availableHistory = 0;
+
+  for (const period of ordered) {
+    const fact = projectFact(
+      args.snapshots,
+      tld,
+      period,
+      args.missingReasonsByKey,
+    );
+    periods[period] = fact;
+    if (fact.availability === "AVAILABLE") {
+      availableHistory += 1;
+      const snap = resolveSnapshot(args.snapshots, tld, period)!;
+      registrarsByPeriod[period] = projectRegistrarPeriodFacts(snap);
     }
-    set.add(snap.reportingPeriod);
   }
 
-  const universe = (input.universeTlds ?? [...tldsFromSnaps])
-    .map((t) => normalizeTldAsciiLabel(t))
-    .sort();
+  const shardSemantic = shardSemanticFromParts({
+    tldAsciiLabel: tld,
+    periods,
+    registrarsByPeriod,
+  });
+  const shardContentSha256 = hashShardContent(shardSemantic);
+  const path = tldShardRelativePath(tld);
 
-  const currentPeriod: PublishedTldPeriodFact[] = universe.map((tld) =>
-    projectFact(
-      input.snapshots,
-      tld,
-      sourceReportingPeriod,
-      input.missingReasonsByKey,
-    ),
-  );
+  return {
+    tldAsciiLabel: tld,
+    currentFact: periods[args.sourceReportingPeriod]!,
+    availableHistoryCount: availableHistory,
+    shardSemantic,
+    shardContentSha256,
+    digestEntry: {
+      tldAsciiLabel: tld,
+      path,
+      shardContentSha256,
+    },
+  };
+}
 
+export function buildRankingsFromCurrentFacts(
+  currentPeriod: PublishedTldPeriodFact[],
+): {
+  availableCurrent: Extract<PublishedTldPeriodFact, { availability: "AVAILABLE" }>[];
+  domainBaseRanking: TldDomainBaseRankEntry[];
+  monthOverMonthGrowthRanking: TldGrowthRankEntry[];
+} {
   const availableCurrent = currentPeriod.filter(
     (f): f is Extract<PublishedTldPeriodFact, { availability: "AVAILABLE" }> =>
       f.availability === "AVAILABLE",
@@ -161,85 +210,125 @@ export function buildMarketBaselinePublication(
       totalDomains: f.totalDomains,
     }));
 
-  const shards: MarketBaselineTldShard[] = [];
-  const tldHistoryPeriodCounts: Record<string, number> = {};
+  return { availableCurrent, domainBaseRanking, monthOverMonthGrowthRanking };
+}
 
+/** Sort digest manifest canonically (tldAsciiLabel ASC). */
+export function sortTldShardDigestManifest(
+  entries: TldShardDigestEntry[],
+): TldShardDigestEntry[] {
+  return [...entries].sort((a, b) => a.tldAsciiLabel.localeCompare(b.tldAsciiLabel));
+}
+
+/**
+ * Compose publication semantic + content SHA from compact grains.
+ * Identity input contains shard digests only — never full shard bodies.
+ */
+export function composePublicationIdentity(args: {
+  sourceReportingPeriod: ReportingPeriod;
+  currentPeriod: PublishedTldPeriodFact[];
+  tldHistoryPeriodCounts: Record<string, number>;
+  digestEntries: TldShardDigestEntry[];
+}): {
+  semantic: MarketBaselinePublicationSemantic;
+  publicationContentSha256: string;
+} {
+  const { availableCurrent, domainBaseRanking, monthOverMonthGrowthRanking } =
+    buildRankingsFromCurrentFacts(args.currentPeriod);
+  const tldShards = sortTldShardDigestManifest(args.digestEntries);
+
+  const semantic: MarketBaselinePublicationSemantic = {
+    schemaVersion: MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
+    builderVersion: MARKET_BASELINE_PUBLICATION_BUILDER_VERSION,
+    sourceReportingPeriod: args.sourceReportingPeriod,
+    coverage: {
+      sourceReportingPeriod: args.sourceReportingPeriod,
+      tldCountInPublication: args.currentPeriod.length,
+      availableAtSourcePeriod: availableCurrent.length,
+      missingAtSourcePeriod: args.currentPeriod.length - availableCurrent.length,
+      tldHistoryPeriodCounts: args.tldHistoryPeriodCounts,
+    },
+    currentPeriod: args.currentPeriod,
+    domainBaseRanking,
+    monthOverMonthGrowthRanking,
+    tldShards,
+  };
+
+  return {
+    semantic,
+    publicationContentSha256: hashPublicationContent(semantic),
+  };
+}
+
+/**
+ * In-memory builder for tests / small inputs.
+ * Full-archive publication must use the bounded streaming path instead.
+ */
+export function buildMarketBaselinePublication(
+  input: BuildPublicationInput,
+): BuiltPublication {
+  const sourceReportingPeriod = probeReportingPeriodFromAsOf(input.asOfDate);
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+
+  const tldsFromSnaps = new Set<string>();
+  const periodsByTld = new Map<string, Set<ReportingPeriod>>();
+  for (const [key, snap] of input.snapshots) {
+    const [tld] = key.split("@");
+    if (!tld) continue;
+    tldsFromSnaps.add(tld);
+    let set = periodsByTld.get(tld);
+    if (!set) {
+      set = new Set();
+      periodsByTld.set(tld, set);
+    }
+    set.add(snap.reportingPeriod);
+  }
+
+  const universe = (input.universeTlds ?? [...tldsFromSnaps])
+    .map((t) => normalizeTldAsciiLabel(t))
+    .sort();
+
+  const grains: ProjectedTldPublicationGrain[] = [];
   for (const tld of universe) {
     const historyPeriods =
       input.historyPeriodsByTld?.get(tld)
       ?? [...(periodsByTld.get(tld) ?? new Set<ReportingPeriod>())].sort().reverse();
-
-    // Always include source period for probe-universe members (requested at probe).
-    const periodSet = new Set<ReportingPeriod>([...historyPeriods, sourceReportingPeriod]);
-    const ordered = [...periodSet].sort().reverse();
-
-    const periods: Record<ReportingPeriod, PublishedTldPeriodFact> = {};
-    const registrarsByPeriod: MarketBaselineTldShard["registrarsByPeriod"] = {};
-    let availableHistory = 0;
-
-    for (const period of ordered) {
-      const fact = projectFact(
-        input.snapshots,
-        tld,
-        period,
-        input.missingReasonsByKey,
-      );
-      periods[period] = fact;
-      if (fact.availability === "AVAILABLE") {
-        availableHistory += 1;
-        const snap = resolveSnapshot(input.snapshots, tld, period)!;
-        registrarsByPeriod[period] = projectRegistrarPeriodFacts(snap);
-      }
-    }
-
-    tldHistoryPeriodCounts[tld] = availableHistory;
-    shards.push({
-      schemaVersion: MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
-      tldAsciiLabel: tld,
-      publicationContentSha256: "", // filled after semantic hash
-      periods,
-      registrarsByPeriod,
-    });
+    grains.push(
+      projectTldPublicationGrain({
+        tldAsciiLabel: tld,
+        sourceReportingPeriod,
+        snapshots: input.snapshots,
+        historyPeriods,
+        missingReasonsByKey: input.missingReasonsByKey,
+      }),
+    );
   }
 
-  const tldShardPaths = universe.map((t) => tldShardRelativePath(t));
+  // Deterministic index currentPeriod order follows sorted universe (not Map insertion).
+  const currentPeriod = grains.map((g) => g.currentFact);
+  const tldHistoryPeriodCounts: Record<string, number> = {};
+  for (const g of grains) {
+    tldHistoryPeriodCounts[g.tldAsciiLabel] = g.availableHistoryCount;
+  }
 
-  const semanticWithoutHash: MarketBaselinePublicationSemantic = {
-    schemaVersion: MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
-    builderVersion: MARKET_BASELINE_PUBLICATION_BUILDER_VERSION,
+  const { semantic, publicationContentSha256 } = composePublicationIdentity({
     sourceReportingPeriod,
-    coverage: {
-      sourceReportingPeriod,
-      tldCountInPublication: universe.length,
-      availableAtSourcePeriod: availableCurrent.length,
-      missingAtSourcePeriod: currentPeriod.length - availableCurrent.length,
-      tldHistoryPeriodCounts,
-    },
     currentPeriod,
-    domainBaseRanking,
-    monthOverMonthGrowthRanking,
-    tldShardPaths,
-  };
-
-  // Shard semantic bodies (without publicationContentSha256) participate in identity.
-  const shardSemantics = shards.map((s) => ({
-    schemaVersion: s.schemaVersion,
-    tldAsciiLabel: s.tldAsciiLabel,
-    periods: s.periods,
-    registrarsByPeriod: s.registrarsByPeriod,
-  }));
-
-  const publicationContentSha256 = hashNormalizedContent({
-    index: semanticWithoutHash,
-    shards: shardSemantics,
+    tldHistoryPeriodCounts,
+    digestEntries: grains.map((g) => g.digestEntry),
   });
 
-  for (const s of shards) {
-    s.publicationContentSha256 = publicationContentSha256;
-  }
+  const shards: MarketBaselineTldShard[] = grains.map((g) => ({
+    schemaVersion: MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION,
+    tldAsciiLabel: g.tldAsciiLabel,
+    publicationContentSha256,
+    shardContentSha256: g.shardContentSha256,
+    periods: g.shardSemantic.periods,
+    registrarsByPeriod: g.shardSemantic.registrarsByPeriod,
+  }));
 
   const index: MarketBaselinePublicationIndex = {
-    semantic: semanticWithoutHash,
+    semantic,
     publicationContentSha256,
     generatedAt,
     asOfDate: input.asOfDate,

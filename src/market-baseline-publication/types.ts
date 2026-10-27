@@ -9,11 +9,12 @@ import {
   MRR_TRANSACTIONS_SCHEMA_VERSION,
 } from "@/market-baseline-mrr/types";
 
+/** Compositional publication identity (PUBLISH-1D). Prior 1.0.0 used one giant hash. */
 export const MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION =
-  "market-baseline-publication/1.0.0" as const;
+  "market-baseline-publication/1.1.0" as const;
 
 export const MARKET_BASELINE_PUBLICATION_BUILDER_VERSION =
-  "market-baseline-publication-builder/1.0.0" as const;
+  "market-baseline-publication-builder/1.1.0" as const;
 
 export type FactAvailability = "AVAILABLE" | "MISSING";
 
@@ -93,9 +94,17 @@ export type PublicationCoverage = {
   tldHistoryPeriodCounts: Record<string, number>;
 };
 
+/** Compact per-TLD shard commitment inside the publication index. */
+export type TldShardDigestEntry = {
+  tldAsciiLabel: string;
+  path: string;
+  shardContentSha256: string;
+};
+
 /**
  * Semantic publication body — product-fact identity.
  * Excludes generatedAt and asOfDate (build/provenance envelope metadata).
+ * Commits to every shard via sorted tldShards digests (compositional identity).
  */
 export type MarketBaselinePublicationSemantic = {
   schemaVersion: typeof MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION;
@@ -107,8 +116,11 @@ export type MarketBaselinePublicationSemantic = {
   domainBaseRanking: TldDomainBaseRankEntry[];
   /** MoM growth ranking among TLDs with available MoM at source period. */
   monthOverMonthGrowthRanking: TldGrowthRankEntry[];
-  /** Relative paths of per-TLD shards included in this publication. */
-  tldShardPaths: string[];
+  /**
+   * Canonical shard digest manifest (tldAsciiLabel ASC).
+   * publicationContentSha256 hashes this index; each entry commits to one shard body.
+   */
+  tldShards: TldShardDigestEntry[];
 };
 
 export type MarketBaselinePublicationIndex = {
@@ -134,6 +146,8 @@ export type MarketBaselineTldShard = {
   schemaVersion: typeof MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION;
   tldAsciiLabel: string;
   publicationContentSha256: string;
+  /** Digest of ShardSemantic (excludes this field and publicationContentSha256). */
+  shardContentSha256: string;
   /** Period → TLD-month fact (history). */
   periods: Record<ReportingPeriod, PublishedTldPeriodFact>;
   /** Period → registrar rows (Totals excluded). */

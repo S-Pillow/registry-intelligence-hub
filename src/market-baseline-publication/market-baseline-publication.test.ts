@@ -23,11 +23,21 @@ import type {
 } from "@/market-baseline-mrr/types";
 import {
   buildMarketBaselinePublication,
+  composePublicationIdentity,
+  projectTldPublicationGrain,
   snapshotKey,
 } from "./build";
+import { hashPublicationContent, hashShardContent, shardSemanticFromParts } from "./hash";
 import { loadCurrentPublicationPointer, loadPublicationIndex, loadTldShard } from "./load";
+import {
+  assertPublicationIndexVerified,
+  assertShardVerified,
+  verifyPublicationIndexContentSha,
+  verifyTldShard,
+} from "./verify";
 import { writePublicationArtifacts } from "./write";
 import { publishFromMrrArchive } from "./from-archive";
+import { MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION } from "./types";
 
 function syntheticCsv(totalDomains: number): string {
   const headers = [...CORE_TRANSACTION_HEADERS];
@@ -785,8 +795,8 @@ describe("market-baseline publication", () => {
         asOfDate: "2026-10-26",
         historyPeriodCount: 3,
       });
-      const alphaShard = built.shards.find((s) => s.tldAsciiLabel === "alpha")!;
-      const betaShard = built.shards.find((s) => s.tldAsciiLabel === "beta")!;
+      const alphaShard = await loadTldShard(built.contentSha256, "alpha", dir);
+      const betaShard = await loadTldShard(built.contentSha256, "beta", dir);
       expect(Object.keys(alphaShard.periods).sort()).toEqual([
         "2026-04",
         "2026-05",
@@ -862,7 +872,7 @@ describe("market-baseline publication", () => {
         asOfDate: "2026-10-26",
         historyPeriodCount: 3,
       });
-      const shard = built.shards.find((s) => s.tldAsciiLabel === "alpha")!;
+      const shard = await loadTldShard(built.contentSha256, "alpha", dir);
       expect(shard.periods["2026-05"]?.availability).toBe("MISSING");
       if (shard.periods["2026-05"]?.availability === "MISSING") {
         expect(shard.periods["2026-05"].reason).toBe(
@@ -1272,7 +1282,8 @@ describe("market-baseline publication", () => {
         historyPeriodCount: 3,
       });
       expect(built.index.sourceAcquisitionRunId).toBe("mrr-partial-ok");
-      expect(built.shards[0]!.periods["2026-05"]?.availability).toBe("MISSING");
+      const partialShard = await loadTldShard(built.contentSha256, "alpha", dir);
+      expect(partialShard.periods["2026-05"]?.availability).toBe("MISSING");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1514,5 +1525,345 @@ describe("market-baseline publication", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("1D: order independence — processing order does not change digests", () => {
+    const snaps = new Map([
+      [snapshotKey("zeta", "2026-06"), normalizePeriod("zeta", "2026-06", 30)],
+      [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 10)],
+      [snapshotKey("mu", "2026-06"), normalizePeriod("mu", "2026-06", 20)],
+    ]);
+    const forward = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["alpha", "mu", "zeta"],
+      generatedAt: "2026-10-27T00:00:00.000Z",
+    });
+    const reverse = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["zeta", "mu", "alpha"],
+      generatedAt: "2026-10-27T00:00:00.000Z",
+    });
+    expect(forward.index.publicationContentSha256).toBe(
+      reverse.index.publicationContentSha256,
+    );
+    const fwdDigests = Object.fromEntries(
+      forward.shards.map((s) => [s.tldAsciiLabel, s.shardContentSha256]),
+    );
+    const revDigests = Object.fromEntries(
+      reverse.shards.map((s) => [s.tldAsciiLabel, s.shardContentSha256]),
+    );
+    expect(fwdDigests).toEqual(revDigests);
+    expect(forward.index.semantic.tldShards.map((e) => e.tldAsciiLabel)).toEqual([
+      "alpha",
+      "mu",
+      "zeta",
+    ]);
+  });
+
+  it("1D: single shard fact change alters that digest and publication hash only", () => {
+    const baseSnaps = new Map([
+      [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 100)],
+      [snapshotKey("beta", "2026-06"), normalizePeriod("beta", "2026-06", 50)],
+    ]);
+    const changed = new Map([
+      [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 101)],
+      [snapshotKey("beta", "2026-06"), normalizePeriod("beta", "2026-06", 50)],
+    ]);
+    const a = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: baseSnaps,
+      universeTlds: ["alpha", "beta"],
+    });
+    const b = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: changed,
+      universeTlds: ["alpha", "beta"],
+    });
+    const aAlpha = a.shards.find((s) => s.tldAsciiLabel === "alpha")!;
+    const bAlpha = b.shards.find((s) => s.tldAsciiLabel === "alpha")!;
+    const aBeta = a.shards.find((s) => s.tldAsciiLabel === "beta")!;
+    const bBeta = b.shards.find((s) => s.tldAsciiLabel === "beta")!;
+    expect(aAlpha.shardContentSha256).not.toBe(bAlpha.shardContentSha256);
+    expect(aBeta.shardContentSha256).toBe(bBeta.shardContentSha256);
+    expect(a.index.publicationContentSha256).not.toBe(b.index.publicationContentSha256);
+  });
+
+  it("1D: audit metadata excluded; sourceReportingPeriod included", () => {
+    const snaps = new Map([
+      [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 10)],
+      [snapshotKey("demo", "2026-07"), normalizePeriod("demo", "2026-07", 11)],
+    ]);
+    const a = buildMarketBaselinePublication({
+      asOfDate: "2026-10-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      generatedAt: "2026-10-26T00:00:00.000Z",
+      acquisitionAudit: {
+        sourceAcquisitionRunId: "run-a",
+        sourceOutcomesArtifactSha256: "a".repeat(64),
+        sourceAcquisitionRunScope: "FULL_STAGE_D",
+      },
+    });
+    const b = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      generatedAt: "2099-01-01T00:00:00.000Z",
+      acquisitionAudit: {
+        sourceAcquisitionRunId: "run-b",
+        sourceOutcomesArtifactSha256: "b".repeat(64),
+        sourceAcquisitionRunScope: "BOUNDED",
+      },
+    });
+    expect(a.index.semantic.sourceReportingPeriod).toBe("2026-06");
+    expect(b.index.semantic.sourceReportingPeriod).toBe("2026-06");
+    expect(a.index.publicationContentSha256).toBe(b.index.publicationContentSha256);
+
+    const july = buildMarketBaselinePublication({
+      asOfDate: "2026-11-26",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+    });
+    expect(july.index.semantic.sourceReportingPeriod).toBe("2026-07");
+    expect(july.index.publicationContentSha256).not.toBe(a.index.publicationContentSha256);
+  });
+
+  it("1D: coverage change (add/remove TLD or MISSING) changes publication hash", () => {
+    const snaps = new Map([
+      [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 10)],
+      [snapshotKey("beta", "2026-06"), normalizePeriod("beta", "2026-06", 20)],
+    ]);
+    const two = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["alpha", "beta"],
+    });
+    const one = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["alpha"],
+    });
+    const withMissing = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["alpha", "beta", "gamma"],
+    });
+    expect(two.index.publicationContentSha256).not.toBe(one.index.publicationContentSha256);
+    expect(two.index.publicationContentSha256).not.toBe(
+      withMissing.index.publicationContentSha256,
+    );
+    expect(
+      withMissing.index.semantic.currentPeriod.find((f) => f.tldAsciiLabel === "gamma")
+        ?.availability,
+    ).toBe("MISSING");
+  });
+
+  it("1D: shard integrity — valid PASS; tampered fact/digest/pub linkage FAIL", () => {
+    const built = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: new Map([
+        [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 42)],
+      ]),
+      universeTlds: ["demo"],
+    });
+    const shard = structuredClone(built.shards[0]!);
+    const entry = built.index.semantic.tldShards[0]!;
+    expect(
+      verifyTldShard({
+        shard,
+        publicationContentSha256: built.index.publicationContentSha256,
+        indexDigestEntry: entry,
+      }).ok,
+    ).toBe(true);
+    assertShardVerified({
+      shard,
+      publicationContentSha256: built.index.publicationContentSha256,
+      indexDigestEntry: entry,
+    });
+    assertPublicationIndexVerified(built.index);
+
+    const tamperedFact = structuredClone(shard);
+    const fact = tamperedFact.periods["2026-06"];
+    if (fact?.availability === "AVAILABLE") {
+      fact.totalDomains = 999;
+    }
+    expect(
+      verifyTldShard({
+        shard: tamperedFact,
+        publicationContentSha256: built.index.publicationContentSha256,
+        indexDigestEntry: entry,
+      }).ok,
+    ).toBe(false);
+
+    const badIndexEntry = {
+      ...entry,
+      shardContentSha256: "0".repeat(64),
+    };
+    expect(
+      verifyTldShard({
+        shard,
+        publicationContentSha256: built.index.publicationContentSha256,
+        indexDigestEntry: badIndexEntry,
+      }).ok,
+    ).toBe(false);
+
+    expect(
+      verifyTldShard({
+        shard,
+        publicationContentSha256: "f".repeat(64),
+        indexDigestEntry: entry,
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("1D: pointer does not advance when finalization fails before commit", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1d-ptr-"));
+    try {
+      const snaps = new Map([
+        [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 10)],
+      ]);
+      const first = buildMarketBaselinePublication({
+        asOfDate: "2026-10-27",
+        snapshots: snaps,
+        universeTlds: ["alpha"],
+        generatedAt: "2026-10-27T00:00:00.000Z",
+      });
+      const written = await writePublicationArtifacts(first, dir);
+      const before = await loadCurrentPublicationPointer(dir);
+      expect(before?.publicationContentSha256).toBe(written.contentSha256);
+
+      const secondSnaps = new Map([
+        [snapshotKey("alpha", "2026-06"), normalizePeriod("alpha", "2026-06", 11)],
+      ]);
+      const second = buildMarketBaselinePublication({
+        asOfDate: "2026-10-27",
+        snapshots: secondSnaps,
+        universeTlds: ["alpha"],
+        generatedAt: "2026-10-27T01:00:00.000Z",
+      });
+      await expect(
+        writePublicationArtifacts(second, dir, { failBeforePointerCommit: true }),
+      ).rejects.toThrow(/simulated finalization failure/);
+      const after = await loadCurrentPublicationPointer(dir);
+      expect(after?.publicationContentSha256).toBe(written.contentSha256);
+      expect(after?.publicationContentSha256).not.toBe(second.index.publicationContentSha256);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1D: compositional identity never stringifies all shard bodies together", () => {
+    const digestEntries = [];
+    const currentPeriod = [];
+    const historyCounts: Record<string, number> = {};
+    // Synthetic scale: many TLDs with fat registrar rows hashed independently.
+    for (let i = 0; i < 80; i++) {
+      const tld = `t${String(i).padStart(3, "0")}`;
+      const registrars = Array.from({ length: 40 }, (_, r) => ({
+        tldAsciiLabel: tld,
+        reportingPeriod: "2026-06" as const,
+        ianaRegistrarId: String(1000 + r),
+        registrarName: `Registrar ${r}`,
+        classification: "ACCREDITED_OR_STANDARD" as const,
+        totalDomains: 1000 - r,
+        shareOfTldTotal: { available: true as const, value: (1000 - r) / 20000 },
+        provenance: {
+          sourceSystem: "icann-mrr-transactions" as const,
+          sourceUrl: `https://example.test/${tld}`,
+          rawSha256: "a".repeat(64),
+          normalizedContentSha256: "b".repeat(64),
+          normalizedSchemaVersion: "market-baseline-mrr-transactions/1.0.0" as const,
+          parserVersion: "market-baseline-mrr-transactions-parser/1.0.0" as const,
+          schemaProfileVersion: "spec3-core-39" as const,
+        },
+      }));
+      const periods = {
+        "2026-06": {
+          availability: "AVAILABLE" as const,
+          tldAsciiLabel: tld,
+          reportingPeriod: "2026-06" as const,
+          totalDomains: 20000,
+          netAddsCount: 1,
+          netRenewCount: 1,
+          deleteCount: 0,
+          transferGainingCount: 0,
+          transferLosingCount: 0,
+          registrarBreadth: 40,
+          topRegistrarShare: { available: true as const, value: 0.05 },
+          top5RegistrarShare: { available: true as const, value: 0.2 },
+          accreditedRegistrarDomains: 20000,
+          specialOrSystemDomains: 0,
+          netDomainBaseChange: { available: false as const, reason: "prior_period_unavailable" },
+          monthOverMonthGrowth: { available: false as const, reason: "prior_period_unavailable" },
+          yearOverYearGrowth: { available: false as const, reason: "prior_period_unavailable" },
+          provenance: registrars[0]!.provenance,
+        },
+      };
+      const semantic = shardSemanticFromParts({
+        tldAsciiLabel: tld,
+        periods,
+        registrarsByPeriod: { "2026-06": registrars },
+      });
+      const shardContentSha256 = hashShardContent(semantic);
+      digestEntries.push({
+        tldAsciiLabel: tld,
+        path: `tlds/${tld}.json`,
+        shardContentSha256,
+      });
+      currentPeriod.push(periods["2026-06"]);
+      historyCounts[tld] = 1;
+    }
+
+    const { semantic, publicationContentSha256 } = composePublicationIdentity({
+      sourceReportingPeriod: "2026-06",
+      currentPeriod,
+      tldHistoryPeriodCounts: historyCounts,
+      digestEntries,
+    });
+
+    // Identity input commits only to compact digests — no nested registrar bodies.
+    expect(semantic.tldShards).toHaveLength(80);
+    for (const entry of semantic.tldShards) {
+      expect(entry.shardContentSha256).toMatch(/^[a-f0-9]{64}$/);
+      expect(entry).not.toHaveProperty("periods");
+      expect(entry).not.toHaveProperty("registrarsByPeriod");
+    }
+    const identityJson = JSON.stringify(semantic);
+    expect(identityJson).not.toContain("Registrar 0");
+    expect(identityJson).not.toContain("shareOfTldTotal");
+    expect(publicationContentSha256).toBe(hashPublicationContent(semantic));
+    expect(verifyPublicationIndexContentSha({
+      semantic,
+      publicationContentSha256,
+      generatedAt: "x",
+      asOfDate: "2026-10-27",
+    }).ok).toBe(true);
+    expect(MARKET_BASELINE_PUBLICATION_SCHEMA_VERSION).toBe(
+      "market-baseline-publication/1.1.0",
+    );
+  });
+
+  it("1D: projectTldPublicationGrain matches in-memory builder digests", () => {
+    const snaps = new Map([
+      [snapshotKey("demo", "2026-06"), normalizePeriod("demo", "2026-06", 55)],
+      [snapshotKey("demo", "2026-05"), normalizePeriod("demo", "2026-05", 50)],
+    ]);
+    const built = buildMarketBaselinePublication({
+      asOfDate: "2026-10-27",
+      snapshots: snaps,
+      universeTlds: ["demo"],
+      historyPeriodsByTld: new Map([["demo", ["2026-06", "2026-05"]]]),
+    });
+    const grain = projectTldPublicationGrain({
+      tldAsciiLabel: "demo",
+      sourceReportingPeriod: "2026-06",
+      snapshots: snaps,
+      historyPeriods: ["2026-06", "2026-05"],
+    });
+    expect(grain.shardContentSha256).toBe(built.shards[0]!.shardContentSha256);
+    expect(built.shards[0]!.schemaVersion).toBe("market-baseline-publication/1.1.0");
+    expect(built.index.semantic.schemaVersion).toBe("market-baseline-publication/1.1.0");
   });
 });
