@@ -178,6 +178,28 @@ Recorded under `.data/market-baseline/mrr/manifests/` (gitignored).
 MRR-1A does **not** re-run the full corpus; correctness is proven with mocked
 revision/outcome tests plus optional bounded public smoke.
 
+## Acceptance status (post-merge closure)
+
+| Unit | Status | Commit |
+| --- | --- | --- |
+| MARKET-BASELINE-SOURCE-1 | **MERGED / ACCEPTED / CLOSED** | `abe5d5d1fb3dfa686ac37e99046073167f89fb9a` |
+| MARKET-BASELINE-MRR-1 | **MERGED / ACCEPTED / CLOSED** | `e50e6d5b89c86cb1504fccfe578060b3260cef4a` |
+| MARKET-BASELINE-MRR-1A | **MERGED / ACCEPTED / CLOSED** | `071d3bdecf790fb7a428bc27fd8296aa96618a5f` |
+
+Merged on `main` via fast-forward through `071d3bd…` (no merge commit).
+Post-merge verification on `main` @ `071d3bd`: focused MRR tests **29/29**, lint, typecheck, and build all exit `0`.
+
+Explicit non-actions for this closure:
+
+- no production deployment
+- no scheduler enabled
+- no UI/routes added by closure
+- no full corpus re-download
+- no credentials / private data
+- bulk `.data` corpus remains uncommitted
+
+**DEPLOYMENT: NOT STARTED**
+
 ## Limitations
 
 - Activity bodies not acquired  

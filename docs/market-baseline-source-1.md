@@ -462,6 +462,14 @@ Local research only (not production, not Git):
 - `/tmp/rih-market-baseline-source-1/dnmi/...`
 - `/tmp/rih-market-baseline-source-1/notes/sample-manifest.json`
 
-## 21. Implementation status
+## 21. Implementation / acceptance status
 
-Transactions Stage-D acquisition tooling: see [`market-baseline-mrr.md`](./market-baseline-mrr.md) (`RIH-MARKET-BASELINE-MRR-1`).
+| Unit | Status | Commit |
+| --- | --- | --- |
+| MARKET-BASELINE-SOURCE-1 | **MERGED / ACCEPTED / CLOSED** | `abe5d5d1fb3dfa686ac37e99046073167f89fb9a` |
+| MARKET-BASELINE-MRR-1 | **MERGED / ACCEPTED / CLOSED** | `e50e6d5b89c86cb1504fccfe578060b3260cef4a` |
+| MARKET-BASELINE-MRR-1A | **MERGED / ACCEPTED / CLOSED** | `071d3bdecf790fb7a428bc27fd8296aa96618a5f` |
+
+Final `main` tip of the accepted sequence: `071d3bdecf790fb7a428bc27fd8296aa96618a5f`.
+Acquisition tooling docs: [`market-baseline-mrr.md`](./market-baseline-mrr.md).
+No production deployment performed as part of MARKET-BASELINE closure.
