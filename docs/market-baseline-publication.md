@@ -249,43 +249,72 @@ npm run market-publish -- --as-of 2026-10-26 --run-id mrr-stage-d-… --tlds com
 Programmatic: `loadCurrentPublicationPointer` → `loadPublicationIndex` /
 `loadTldShard` / `verifyTldShard` — no archive scan required for product reads.
 
-## Non-goals
+## Non-goals / limits (retained)
 
-- UI / routes / charts  
-- Activity, DNMI, Domain Metrica, pricing  
-- Renewal rates, HHI, market-opportunity scores  
-- Registry Operator / registrar→Organization / RSP joins  
-- Committing or redistributing the raw MRR corpus  
-- Scheduler / production deploy  
+- UI / routes / charts — **not implemented** (UI-1 is a separate ticket only)  
+- Activity report bodies — **not ingested**  
+- `renewalRate` — **unsupported** from Transactions alone  
+- Registry Operator identity — **not modeled**  
+- Registrar → Confirmed Organization — **not modeled**  
+- RSP → TLD — **not modeled**  
+- Applicant → Registrar — **not modeled**  
+- DNMI context / Domain Metrica — **not integrated**  
+- MRR acquisition/publication scheduler — **not installed**  
+- Production deployment of market-baseline — **not started**  
+- Committing or redistributing the raw MRR corpus — **forbidden**  
 
-## Status
+Do **not** label MRR registrar concentration as “customer concentration.”  
+Do **not** label descriptive TLD domain totals as “market share” unless the
+denominator and competitive context actually support that claim.
 
-RIH-MARKET-BASELINE-PUBLISH-1 — implemented / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1C — authoritative `runScope` / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1D — compositional identity + bounded-memory full-universe publish / pending merge.
+## Status — PUBLICATION-CLOSURE-1
 
-## Full-universe acceptance (development)
-
-Governing receipt:
-`mrr-stage-d-2026-10-27-2026-10-27T05-43-34-305Z` (`FULL_STAGE_D`, probe `2026-06`).
-
-Default authority path (no `--run-id`, no custom Node heap):
-
-`npm run market-publish -- --as-of 2026-10-27 --cwd <DATA_CWD>`
-
-Observed (PUBLISH-1D):
-
-| Check | Result |
+| Unit | Status |
 | --- | --- |
-| Selected run | governing `…305Z` / `FULL_STAGE_D` |
-| Coverage | 1319 / 1113 AVAILABLE / 206 MISSING |
-| Shard files | 1319 |
-| Duration | ~2m12s |
-| Peak RSS | ~876 MiB (`Maximum resident set size` ≈ 897456 KiB) |
-| OOM / Invalid string length | none |
-| Sample digests | com/net/org/xyz/IDN + one MISSING verified |
+| SOURCE-1 | **CLOSED** |
+| MRR-1 | **CLOSED** |
+| MRR-1A | **CLOSED** |
+| GOVERNING-RUN-1 | **COMPLETE / ACCEPTED** |
+| PUBLISH-1 | **CLOSED** |
+| PUBLISH-1A | **CLOSED** |
+| PUBLISH-1B | **CLOSED** |
+| PUBLISH-1C | **CLOSED** |
+| PUBLISH-1D | **CLOSED** |
+| Market-baseline acquisition + publication foundation | **CLOSED** |
+| Production deployment | **NOT STARTED** |
+| UI-1 | **AUTHORIZED FOR NEXT SEPARATE TICKET** (do not auto-start) |
 
-Prior whole-publication path failed under default heap (OOM) and at 6 GiB
-(`Invalid string length`). Compositional identity removes that bottleneck.
+Merged code baseline: `origin/main` @
+`b4697fa6814a84241119ff1c2d847c72c8521fd2`
+(`fix(market): scale publication identity by shard`).
+
+**Readiness:** Market-baseline acquisition + publication foundation is
+**CLOSED** and ready for product consumption. Prompt Agent may open
+`RIH-MARKET-BASELINE-UI-1` separately. This does **not** authorize deployment,
+scheduler installation, new data sources, or additional identity joins.
+
+## Accepted development baseline
+
+| Field | Value |
+| --- | --- |
+| Publication SHA | `ff7816b8a59823aeced2d76430b977c898ff23963b7434df71e0fd4b398f1c4d` |
+| Schema | `market-baseline-publication/1.1.0` |
+| Builder | `market-baseline-publication-builder/1.1.0` |
+| Source reporting period | `2026-06` |
+| Governing run | `mrr-stage-d-2026-10-27-2026-10-27T05-43-34-305Z` |
+| Run scope | `FULL_STAGE_D` / `ICANN_FULL_DISCOVERY` |
+| Outcomes SHA | `2844672b81a1abd119bd09729951a616f5fb4858fa8ba22a0676509097bf3a56` |
+| Coverage | 1319 total / 1113 AVAILABLE / 206 MISSING |
+| History universe | 106 (Top100=100, controls=8, delegated overlaps=6) |
+| Controls | com, net, org, xyz, online, shop, top, site |
+| Overlaps | `xn--3ds443g`, `xn--czr694b`, `xn--fiq228c5hs`, `xn--g2xx48c`, `xn--imr513n`, `xn--io0a7i` |
+| Full publish duration | 2m11.74s |
+| Peak RSS | 897456 KiB (~876 MiB); no custom heap; no OOM; no Invalid string length |
+
+Default authority path (no `--run-id`): selects the unique FULL_STAGE_D
+governing receipt for the as-of probe period. Legacy 3-TLD and pre-hardened
+1319 runs do not auto-qualify.
+
+Selection labels (Top100 / controls / overlaps) are **acquisition universe
+membership reasons only** — not application ownership, RSP relationship,
+Registry Operator identity, or registrar relationship.

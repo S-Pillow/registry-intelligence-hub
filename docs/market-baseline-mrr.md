@@ -203,33 +203,39 @@ revision/outcome tests plus optional bounded public smoke.
 
 ## Acceptance status (post-merge closure)
 
-| Unit | Status | Commit |
+| Unit | Status | Notes |
 | --- | --- | --- |
-| MARKET-BASELINE-SOURCE-1 | **MERGED / ACCEPTED / CLOSED** | `abe5d5d1fb3dfa686ac37e99046073167f89fb9a` |
-| MARKET-BASELINE-MRR-1 | **MERGED / ACCEPTED / CLOSED** | `e50e6d5b89c86cb1504fccfe578060b3260cef4a` |
-| MARKET-BASELINE-MRR-1A | **MERGED / ACCEPTED / CLOSED** | `071d3bdecf790fb7a428bc27fd8296aa96618a5f` |
+| MARKET-BASELINE-SOURCE-1 | **CLOSED** | merged |
+| MARKET-BASELINE-MRR-1 | **CLOSED** | merged |
+| MARKET-BASELINE-MRR-1A | **CLOSED** | merged |
+| GOVERNING-RUN-1 | **COMPLETE / ACCEPTED** | `mrr-stage-d-2026-10-27-…305Z` FULL_STAGE_D |
+| PUBLISH-1 … 1D | **CLOSED** | see publication doc |
+| Acquisition + publication foundation | **CLOSED** | ready for product consumption |
+| Production deployment | **NOT STARTED** | |
+| UI-1 | separate ticket only | not auto-started |
 
-Merged on `main` via fast-forward through `071d3bd…` (no merge commit).
-Post-merge verification on `main` @ `071d3bd`: focused MRR tests **29/29**, lint, typecheck, and build all exit `0`.
+Authoritative governing receipt (development):
+`mrr-stage-d-2026-10-27-2026-10-27T05-43-34-305Z`
+(`market-baseline-mrr-run-manifest/1.1.0`, `FULL_STAGE_D`,
+`ICANN_FULL_DISCOVERY`, probe `2026-06`, 1319/1113/206, history universe 106).
 
-Explicit non-actions for this closure:
-
-- no production deployment
-- no scheduler enabled
-- no UI/routes added by closure
-- no full corpus re-download
-- no credentials / private data
-- bulk `.data` corpus remains uncommitted
-
-**DEPLOYMENT: NOT STARTED**
-
-Product publication contract (derived facts for future UI):
+Product publication contract and closed baseline:
 [`market-baseline-publication.md`](./market-baseline-publication.md)
-(`RIH-MARKET-BASELINE-PUBLISH-1`).
+(PUBLICATION-CLOSURE-1). Merged code tip at publication closure:
+`b4697fa6814a84241119ff1c2d847c72c8521fd2`.
+
+Explicit non-actions retained:
+
+- no production deployment / no scheduler / no UI from this foundation alone  
+- no full corpus re-download for closure  
+- bulk `.data` corpus remains uncommitted  
+- no Registrar→Organization / RSP→TLD / Registry Operator product joins  
 
 ## Limitations
 
 - Activity bodies not acquired  
+- `renewalRate` unsupported from Transactions alone  
 - IDN applied-string overlap deferred unless already ASCII/A-label  
 - No operator identity, no product UI, no scheduler  
 - Registrar names may drift; identity key remains `iana-id`  
+- DNMI / Domain Metrica not integrated  
