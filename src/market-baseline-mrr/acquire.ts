@@ -29,18 +29,26 @@ import {
 } from "./storage";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, relative } from "node:path";
+import { buildAcquisitionRunScope } from "./run-scope";
 import type {
+  AcquisitionDiscoverySource,
   AcquisitionOutcome,
   AcquisitionPhase,
   AcquisitionRequestOutcome,
   AcquisitionRunManifest,
   DiscoveredTldPage,
+  DiscoveryCacheProvenance,
   NormalizedTransactionsEnvelope,
   OutcomeCountBucket,
   ProbeTldResult,
   ReportingPeriod,
 } from "./types";
-import { MRR_OUTCOMES_SCHEMA_VERSION } from "./types";
+import {
+  MRR_DISCOVERY_CACHE_SCHEMA_VERSION,
+  MRR_OUTCOMES_SCHEMA_VERSION,
+  MRR_RUN_MANIFEST_SCHEMA_VERSION,
+  STAGE_D_HISTORY_PERIOD_COUNT,
+} from "./types";
 
 export type AcquireStageDOptions = {
   asOfDate: string;
@@ -372,24 +380,40 @@ export async function runStageDAcquisition(
 
   log(`asOfDate=${asOfDate} probeReportingPeriod=${probeReportingPeriod}`);
 
+  const callerSuppliedPages = options.pages != null;
+  let discoverySource: AcquisitionDiscoverySource = callerSuppliedPages
+    ? "CALLER_SUPPLIED"
+    : "ICANN_FULL_DISCOVERY";
+
   let pages: DiscoveredTldPage[] = options.pages ?? [];
   if (!options.pages) {
     const cachePath = discoveryCachePath(cwd);
     let loaded: DiscoveredTldPage[] | null = null;
+    let cacheQualified = false;
     try {
       const cached = JSON.parse(await readFile(cachePath, "utf8")) as {
         asOfDate?: string;
         pages: DiscoveredTldPage[];
+        discoveryProvenance?: DiscoveryCacheProvenance;
       };
       if (cached.pages?.length && cached.asOfDate === asOfDate) {
         loaded = cached.pages;
-        log(`Reusing discovery cache (${loaded.length} TLD pages)`);
+        cacheQualified =
+          cached.discoveryProvenance?.schemaVersion === MRR_DISCOVERY_CACHE_SCHEMA_VERSION
+          && cached.discoveryProvenance.source === "ICANN_FULL_DISCOVERY"
+          && cached.discoveryProvenance.qualifiedForFullStageD === true;
+        log(
+          `Reusing discovery cache (${loaded.length} TLD pages; ${cacheQualified ? "qualified full" : "legacy/unqualified"})`,
+        );
       }
     } catch {
       // no cache
     }
     if (loaded) {
       pages = loaded;
+      discoverySource = cacheQualified
+        ? "QUALIFIED_DISCOVERY_CACHE"
+        : "LEGACY_UNQUALIFIED_CACHE";
     } else {
       log("Discovering TLD report pages…");
       const discovered = await discoverAllTldPages({
@@ -402,15 +426,27 @@ export async function runStageDAcquisition(
         throw new Error(`Index fetch failed: ${discovered.indexFetchError}`);
       }
       pages = discovered.pages;
+      discoverySource = "ICANN_FULL_DISCOVERY";
+      const discoveryProvenance: DiscoveryCacheProvenance = {
+        schemaVersion: MRR_DISCOVERY_CACHE_SCHEMA_VERSION,
+        source: "ICANN_FULL_DISCOVERY",
+        qualifiedForFullStageD: true,
+      };
       await mkdir(dirname(cachePath), { recursive: true });
       await writeFile(
         cachePath,
-        `${JSON.stringify({ asOfDate, probeReportingPeriod, pages, cachedAt: new Date().toISOString() })}\n`,
+        `${JSON.stringify({
+          asOfDate,
+          probeReportingPeriod,
+          pages,
+          cachedAt: new Date().toISOString(),
+          discoveryProvenance,
+        })}\n`,
         "utf8",
       );
     }
   }
-  log(`Discovered ${pages.length} TLD pages`);
+  log(`Discovered ${pages.length} TLD pages (discoverySource=${discoverySource})`);
 
   const pageByTld = new Map(pages.map((p) => [p.tldAsciiLabel, p]));
   const discoveredLabels = new Set(pages.map((p) => p.tldAsciiLabel));
@@ -546,7 +582,10 @@ export async function runStageDAcquisition(
   );
 
   const historyUniverse = buildHistoryUniverse({ top100, controlSet, delegatedOverlaps });
-  const historyPeriods = historyWindowEndingAt(probeReportingPeriod, 24);
+  const historyPeriods = historyWindowEndingAt(
+    probeReportingPeriod,
+    STAGE_D_HISTORY_PERIOD_COUNT,
+  );
 
   if (!options.skipHistory && !stopBulk) {
     const jobs: Array<{ tld: string; period: ReportingPeriod }> = [];
@@ -606,8 +645,18 @@ export async function runStageDAcquisition(
     resultStatus = "PARTIAL";
   }
 
+  const runScope = buildAcquisitionRunScope({
+    callerSuppliedPages,
+    probeLimit: options.probeLimit,
+    skipHistory: options.skipHistory === true,
+    discoverySource,
+    discoveredTldCount: pages.length,
+    probedTldCount: probePages.length,
+    historyPeriodCount: historyPeriods.length,
+  });
+
   const manifest: AcquisitionRunManifest = {
-    schemaVersion: "market-baseline-mrr-run-manifest/1.0.0",
+    schemaVersion: MRR_RUN_MANIFEST_SCHEMA_VERSION,
     runId,
     startedAt,
     completedAt,
@@ -643,7 +692,9 @@ export async function runStageDAcquisition(
       "renewalRate is intentionally unsupported",
       "normalized snapshots are intrinsic-only; temporal metrics are series derivations",
       "authoritative acquisition revalidates remote source URLs by default",
+      `runScope.mode=${runScope.mode}; discoverySource=${runScope.discoverySource}`,
     ],
+    runScope,
   };
 
   await writeManifest(manifest, cwd);

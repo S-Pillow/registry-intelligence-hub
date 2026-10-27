@@ -118,6 +118,7 @@ export async function publishFromMrrArchive(
     acquisitionAudit: {
       sourceAcquisitionRunId: coverage.audit.sourceAcquisitionRunId,
       sourceOutcomesArtifactSha256: coverage.audit.sourceOutcomesArtifactSha256,
+      sourceAcquisitionRunScope: coverage.audit.sourceAcquisitionRunScope,
       operationalCurrentRunId: coverage.audit.operationalCurrentRunId,
       operationalCurrentDiffersFromGoverning:
         coverage.audit.operationalCurrentDiffersFromGoverning,

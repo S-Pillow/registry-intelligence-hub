@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseRfc4180Csv } from "./csv";
 import { classifyRegistrarRow, isBreadthEligible } from "./classify";
@@ -591,6 +590,9 @@ describe("persistent request outcomes", () => {
       expect(manifest.outcomesArtifactPath).toContain(".outcomes.json");
       expect(manifest.outcomesArtifactSha256).toMatch(/^[a-f0-9]{64}$/);
       expect(requestOutcomes.length).toBeGreaterThan(0);
+      expect(manifest.schemaVersion).toBe("market-baseline-mrr-run-manifest/1.1.0");
+      expect(manifest.runScope?.mode).toBe("BOUNDED");
+      expect(manifest.runScope?.discoverySource).toBe("CALLER_SUPPLIED");
 
       const probeFromDetail = reconcileOutcomeCounts(requestOutcomes, "PROBE");
       expect(probeFromDetail).toEqual(manifest.probe);
@@ -604,6 +606,166 @@ describe("persistent request outcomes", () => {
 
       const historyFromDetail = reconcileOutcomeCounts(requestOutcomes, "HISTORY");
       expect(historyFromDetail).toEqual(manifest.history);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("acquisition runScope", () => {
+  const basePage = (
+    tld: string,
+    periods: string[],
+  ): DiscoveredTldPage => ({
+    tldAsciiLabel: tld,
+    resourcePageUrl: `https://example.test/${tld}`,
+    transactionsPeriods: periods,
+    activityPeriods: [],
+    transactionsByPeriod: Object.fromEntries(
+      periods.map((p) => [
+        p,
+        `https://www.icann.org/sites/default/files/mrr/${tld}/${tld}-transactions-${p.replace("-", "")}-en.csv`,
+      ]),
+    ),
+    activityByPeriod: {},
+  });
+
+  function mockFetch(bodies: Record<string, string>): FetchImpl {
+    return async (url) => {
+      const text = bodies[url];
+      if (!text) return { ok: false, status: 404, error: "HTTP 404" };
+      const bytes = new TextEncoder().encode(text);
+      return { ok: true, status: 200, text, bytes };
+    };
+  }
+
+  it("marks caller-supplied pages as BOUNDED even when internally complete", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-scope-pages-"));
+    try {
+      const pages = [basePage("alpha", ["2026-06", "2026-05"])];
+      const url = pages[0]!.transactionsByPeriod["2026-06"]!;
+      const { manifest } = await runStageDAcquisition({
+        asOfDate: "2026-10-26",
+        cwd: dir,
+        pages,
+        delegatedLabels: new Set(["alpha"]),
+        appliedLabels: [],
+        concurrency: 1,
+        fetchImpl: mockFetch({
+          [url]: syntheticCsv(10),
+          [pages[0]!.transactionsByPeriod["2026-05"]!]: syntheticCsv(9),
+        }),
+      });
+      expect(manifest.runScope?.mode).toBe("BOUNDED");
+      expect(manifest.runScope?.discoverySource).toBe("CALLER_SUPPLIED");
+      expect(manifest.runScope?.intendedProbeUniverse).toBe("BOUNDED");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("marks probeLimit runs as BOUNDED", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-scope-limit-"));
+    try {
+      const pages = [
+        basePage("alpha", ["2026-06"]),
+        basePage("beta", ["2026-06"]),
+        basePage("gamma", ["2026-06"]),
+      ];
+      const bodies: Record<string, string> = {};
+      for (const p of pages) {
+        bodies[p.transactionsByPeriod["2026-06"]!] = syntheticCsv(10);
+      }
+      // Seed a legacy-unqualified cache so discovery path is not used; still BOUNDED via probeLimit.
+      // Use pages override + probeLimit to prove probeLimit classification.
+      const { manifest } = await runStageDAcquisition({
+        asOfDate: "2026-10-26",
+        cwd: dir,
+        pages,
+        probeLimit: 1,
+        skipHistory: true,
+        delegatedLabels: new Set(["alpha", "beta", "gamma"]),
+        appliedLabels: [],
+        concurrency: 1,
+        fetchImpl: mockFetch(bodies),
+      });
+      expect(manifest.runScope?.mode).toBe("BOUNDED");
+      expect(manifest.runScope?.probeLimit).toBe(1);
+      expect(manifest.runScope?.probedTldCount).toBe(1);
+      expect(manifest.runScope?.discoveredTldCount).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("marks skipHistory runs as BOUNDED", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-scope-skip-"));
+    try {
+      const pages = [basePage("alpha", ["2026-06"])];
+      const { manifest } = await runStageDAcquisition({
+        asOfDate: "2026-10-26",
+        cwd: dir,
+        pages,
+        skipHistory: true,
+        delegatedLabels: new Set(["alpha"]),
+        appliedLabels: [],
+        concurrency: 1,
+        fetchImpl: mockFetch({
+          [pages[0]!.transactionsByPeriod["2026-06"]!]: syntheticCsv(10),
+        }),
+      });
+      expect(manifest.runScope?.mode).toBe("BOUNDED");
+      expect(manifest.runScope?.historyMode).toBe("SKIPPED_OR_BOUNDED");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("records FULL_STAGE_D for ordinary full invocation via qualified discovery cache", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-scope-full-"));
+    try {
+      const pages = [
+        basePage("alpha", ["2026-06", "2026-05"]),
+        basePage("com", ["2026-06", "2026-05"]),
+      ];
+      const cachePath = join(dir, ".data/market-baseline/mrr/indexes/discovery-cache.json");
+      mkdirSync(dirname(cachePath), { recursive: true });
+      writeFileSync(
+        cachePath,
+        `${JSON.stringify({
+          asOfDate: "2026-10-26",
+          probeReportingPeriod: "2026-06",
+          pages,
+          cachedAt: "2026-10-26T00:00:00.000Z",
+          discoveryProvenance: {
+            schemaVersion: "market-baseline-mrr-discovery-cache/1.0.0",
+            source: "ICANN_FULL_DISCOVERY",
+            qualifiedForFullStageD: true,
+          },
+        })}\n`,
+        "utf8",
+      );
+      const bodies: Record<string, string> = {};
+      for (const p of pages) {
+        for (const period of Object.keys(p.transactionsByPeriod)) {
+          bodies[p.transactionsByPeriod[period]!] = syntheticCsv(10);
+        }
+      }
+      const { manifest } = await runStageDAcquisition({
+        asOfDate: "2026-10-26",
+        cwd: dir,
+        // no pages, no probeLimit, no skipHistory
+        delegatedLabels: new Set(["alpha", "com"]),
+        appliedLabels: [],
+        concurrency: 2,
+        fetchImpl: mockFetch(bodies),
+      });
+      expect(manifest.runScope?.mode).toBe("FULL_STAGE_D");
+      expect(manifest.runScope?.discoverySource).toBe("QUALIFIED_DISCOVERY_CACHE");
+      expect(manifest.runScope?.historyMode).toBe("FULL_24_MONTH");
+      expect(manifest.runScope?.intendedProbeUniverse).toBe("ALL_DISCOVERED_TLDS");
+      expect(manifest.runScope?.probeLimit).toBeNull();
+      expect(manifest.historyPeriodCount).toBe(24);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

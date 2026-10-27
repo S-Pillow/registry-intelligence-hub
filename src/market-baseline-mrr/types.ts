@@ -3,6 +3,48 @@ export const MRR_PARSER_VERSION = "market-baseline-mrr-transactions-parser/1.0.0
 export const MRR_INDEX_URL = "https://www.icann.org/resources/pages/registry-reports";
 export const MRR_USER_AGENT = "RIH-market-baseline-mrr/1.0 (+research; read-only)";
 export const MRR_OUTCOMES_SCHEMA_VERSION = "market-baseline-mrr-request-outcomes/1.0.0";
+/** Legacy durable receipt without explicit runScope. */
+export const MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0 =
+  "market-baseline-mrr-run-manifest/1.0.0" as const;
+/** Current durable receipt including authoritative acquisition runScope. */
+export const MRR_RUN_MANIFEST_SCHEMA_VERSION =
+  "market-baseline-mrr-run-manifest/1.1.0" as const;
+export const MRR_DISCOVERY_CACHE_SCHEMA_VERSION =
+  "market-baseline-mrr-discovery-cache/1.0.0" as const;
+/** Stage-D history contract: probe period + 23 prior calendar months. */
+export const STAGE_D_HISTORY_PERIOD_COUNT = 24;
+
+export type AcquisitionRunScopeMode = "FULL_STAGE_D" | "BOUNDED";
+
+export type AcquisitionDiscoverySource =
+  | "ICANN_FULL_DISCOVERY"
+  | "QUALIFIED_DISCOVERY_CACHE"
+  | "LEGACY_UNQUALIFIED_CACHE"
+  | "CALLER_SUPPLIED";
+
+export type AcquisitionHistoryMode = "FULL_24_MONTH" | "SKIPPED_OR_BOUNDED";
+
+export type AcquisitionIntendedProbeUniverse = "ALL_DISCOVERED_TLDS" | "BOUNDED";
+
+/**
+ * Authoritative acquisition scope recorded at orchestration time.
+ * Internal completeness against discoveredTldCount does not imply FULL_STAGE_D.
+ */
+export type AcquisitionRunScope = {
+  mode: AcquisitionRunScopeMode;
+  discoverySource: AcquisitionDiscoverySource;
+  probeLimit: number | null;
+  historyMode: AcquisitionHistoryMode;
+  intendedProbeUniverse: AcquisitionIntendedProbeUniverse;
+  discoveredTldCount: number;
+  probedTldCount: number;
+};
+
+export type DiscoveryCacheProvenance = {
+  schemaVersion: typeof MRR_DISCOVERY_CACHE_SCHEMA_VERSION;
+  source: "ICANN_FULL_DISCOVERY";
+  qualifiedForFullStageD: true;
+};
 
 export type ReportingPeriod = string; // YYYY-MM
 
@@ -227,7 +269,9 @@ export type OutcomeCountBucket = {
 };
 
 export type AcquisitionRunManifest = {
-  schemaVersion: "market-baseline-mrr-run-manifest/1.0.0";
+  schemaVersion:
+    | typeof MRR_RUN_MANIFEST_SCHEMA_VERSION
+    | typeof MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0;
   runId: string;
   startedAt: string;
   completedAt: string;
@@ -258,4 +302,9 @@ export type AcquisitionRunManifest = {
   throttlingObserved: boolean;
   durationMs: number;
   notes: string[];
+  /**
+   * Required for schema 1.1.0+. Absent on legacy 1.0.0 manifests
+   * (treated as LEGACY_UNKNOWN for publication auto-selection).
+   */
+  runScope?: AcquisitionRunScope;
 };

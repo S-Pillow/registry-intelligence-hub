@@ -60,6 +60,7 @@ async function main(): Promise<void> {
         sourceReportingPeriod: built.index.semantic.sourceReportingPeriod,
         sourceAcquisitionRunId: built.index.sourceAcquisitionRunId,
         sourceOutcomesArtifactSha256: built.index.sourceOutcomesArtifactSha256,
+        sourceAcquisitionRunScope: built.index.sourceAcquisitionRunScope,
         operationalCurrentRunId: built.index.operationalCurrentRunId,
         operationalCurrentDiffersFromGoverning:
           built.index.operationalCurrentDiffersFromGoverning,

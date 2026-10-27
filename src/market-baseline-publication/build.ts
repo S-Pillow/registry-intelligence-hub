@@ -48,10 +48,11 @@ export type BuildPublicationInput = {
    */
   missingReasonsByKey?: Map<SnapshotKey, string>;
   generatedAt?: string;
-  /** Nonsemantic acquisition audit (run id / outcomes SHA). */
+  /** Nonsemantic acquisition audit (run id / outcomes SHA / scope). */
   acquisitionAudit?: {
     sourceAcquisitionRunId: string;
     sourceOutcomesArtifactSha256: string;
+    sourceAcquisitionRunScope?: "FULL_STAGE_D" | "BOUNDED" | "LEGACY_UNKNOWN";
     operationalCurrentRunId?: string | null;
     operationalCurrentDiffersFromGoverning?: boolean;
   };
@@ -244,6 +245,7 @@ export function buildMarketBaselinePublication(
     asOfDate: input.asOfDate,
     sourceAcquisitionRunId: input.acquisitionAudit?.sourceAcquisitionRunId,
     sourceOutcomesArtifactSha256: input.acquisitionAudit?.sourceOutcomesArtifactSha256,
+    sourceAcquisitionRunScope: input.acquisitionAudit?.sourceAcquisitionRunScope,
     operationalCurrentRunId: input.acquisitionAudit?.operationalCurrentRunId,
     operationalCurrentDiffersFromGoverning:
       input.acquisitionAudit?.operationalCurrentDiffersFromGoverning,

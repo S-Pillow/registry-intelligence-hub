@@ -1,4 +1,4 @@
-# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A / 1B)
+# Market baseline publication (RIH-MARKET-BASELINE-PUBLISH-1 / 1A / 1B / 1C)
 
 Deterministic, provenance-bearing product publication derived from accepted
 ICANN MRR Transactions snapshots.
@@ -89,20 +89,21 @@ Content SHA hashes `{ index.semantic, shard bodies }` and **excludes**:
 
 - `generatedAt`
 - `asOfDate` (index envelope / current pointer only)
-- `sourceAcquisitionRunId` / `sourceOutcomesArtifactSha256` / operational-current
-  audit fields (envelope / pointer only)
+- `sourceAcquisitionRunId` / `sourceOutcomesArtifactSha256` /
+  `sourceAcquisitionRunScope` / operational-current audit fields
+  (envelope / pointer only)
 
 `sourceReportingPeriod` remains inside semantic identity. Same accepted facts +
 same source period + same coverage yield the same SHA even when calendar
 `asOfDate` or governing run id differs without product-fact change.
 
-## Governing acquisition evidence (PUBLISH-1B)
+## Governing acquisition evidence (PUBLISH-1B / 1C)
 
 `indexes/current.json` is **operational metadata** (latest completed acquisition
 run). It is **not** sufficient authority that the run is publication-governing.
 
 The durable receipt is the acquisition **manifest** + SHA-verified **outcomes**
-artifact.
+artifact. Manifest `1.1.0` also records authoritative `runScope`.
 
 ### Default selection (`npm run market-publish -- --as-of …`)
 
@@ -110,7 +111,8 @@ artifact.
    source reporting period.
 2. Load each outcomes artifact and verify bytes against
    `manifest.outcomesArtifactSha256` **before** parsing.
-3. Auto-qualify only **full Stage-D** candidates (see below).
+3. Auto-qualify only candidates with `runScope.mode === FULL_STAGE_D` **and**
+   internal completeness (below).
 4. Exactly one full-qualified candidate → use it (even if `current.json` points
    elsewhere).
 5. Zero or multiple full-qualified candidates → **fail closed**; pass `--run-id`.
@@ -118,17 +120,24 @@ artifact.
 Do **not** select by latest timestamp, filesystem recency, largest manifest,
 lexical filename, or `current.json` alone.
 
+A self-consistent 3-TLD smoke with `PROBE == discoveredTldCount` is **not**
+full Stage-D unless `runScope.mode` was recorded as `FULL_STAGE_D` at
+acquisition time. Legacy `…/1.0.0` manifests without `runScope` are
+`LEGACY_UNKNOWN` and never auto-qualify.
+
 ### Explicit `--run-id`
 
-Operator authority. The run may be bounded/debug/smoke. Still requires:
+Operator authority. The run may be `FULL_STAGE_D`, `BOUNDED`, or legacy.
+Still requires:
 
 - matching source reporting period;
 - valid manifest receipt fields;
 - SHA-verified outcomes bytes;
 - probe/history aggregate reconciliation to request detail.
 
-Do not relabel an explicit bounded run as full Stage-D; coverage remains truthful
-to the selected outcomes.
+Audit metadata exposes `sourceAcquisitionRunScope` truthfully
+(`FULL_STAGE_D` | `BOUNDED` | `LEGACY_UNKNOWN`). Do not relabel an explicit
+bounded run as governing-full.
 
 ### Full Stage-D auto-qualification
 
@@ -136,6 +145,7 @@ All required:
 
 | Check | Rule |
 | --- | --- |
+| **Scope authority (1C)** | `runScope.mode === FULL_STAGE_D` (legacy/missing → fail) |
 | Period | `manifest.probeReportingPeriod` matches publication source period |
 | Result | `SUCCESS` or `PARTIAL` only (`FAILED` / `STOPPED_THROTTLED` disqualified) |
 | Outcomes receipt | path + SHA present; bytes verify |
@@ -145,8 +155,9 @@ All required:
 | History aggregates | detailed HISTORY outcomes reconcile exactly to `manifest.history` |
 | Request total | `filesRequested` == PROBE + HISTORY counts |
 
-This disqualifies `probeLimit` and `--skip-history` / incomplete history runs
-when discovery/history universe imply a larger request set.
+This disqualifies `probeLimit`, `--skip-history`, caller `pages`, unqualified
+discovery caches, and incomplete history — even when subset reconciliation
+passes.
 
 ### Outcomes artifact integrity
 
@@ -192,10 +203,12 @@ Index envelope / current pointer retain (nonsemantic):
 
 - `sourceAcquisitionRunId`
 - `sourceOutcomesArtifactSha256`
+- `sourceAcquisitionRunScope`
 - `operationalCurrentRunId`
 - `operationalCurrentDiffersFromGoverning`
 
-These answer: which acquisition receipt governed this publication?
+These answer: which acquisition receipt governed this publication, and whether
+it was full Stage-D, bounded, or legacy?
 
 ## Provenance
 
@@ -255,4 +268,5 @@ product reads.
 
 RIH-MARKET-BASELINE-PUBLISH-1 — implemented / merged.  
 RIH-MARKET-BASELINE-PUBLISH-1A — coverage truth + semantic identity correction / merged.  
-RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity.
+RIH-MARKET-BASELINE-PUBLISH-1B — governing-run qualification + outcomes integrity.  
+RIH-MARKET-BASELINE-PUBLISH-1C — authoritative `runScope` (complete ≠ full-universe).

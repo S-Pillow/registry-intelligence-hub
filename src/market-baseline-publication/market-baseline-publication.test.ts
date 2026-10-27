@@ -6,11 +6,17 @@ import { CORE_TRANSACTION_HEADERS } from "@/market-baseline-mrr/schema-profiles"
 import { normalizeTransactions } from "@/market-baseline-mrr/normalize";
 import { seedNormalizedFromBytes } from "@/market-baseline-mrr/acquire";
 import { sha256Hex } from "@/market-baseline-mrr/hash";
-import { MRR_OUTCOMES_SCHEMA_VERSION } from "@/market-baseline-mrr/types";
+import {
+  MRR_OUTCOMES_SCHEMA_VERSION,
+  MRR_RUN_MANIFEST_SCHEMA_VERSION,
+  MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0,
+  STAGE_D_HISTORY_PERIOD_COUNT,
+} from "@/market-baseline-mrr/types";
 import type {
   AcquisitionOutcomesArtifact,
   AcquisitionRequestOutcome,
   AcquisitionRunManifest,
+  AcquisitionRunScope,
   NormalizedTransactionsSnapshot,
   OutcomeCountBucket,
   ReportingPeriod,
@@ -133,6 +139,30 @@ function bucketFromRequests(
   return bucket;
 }
 
+function makeRunScope(args: {
+  mode: AcquisitionRunScope["mode"];
+  discoveredTldCount: number;
+  probedTldCount: number;
+  historyPeriodCount: number;
+  probeLimit?: number | null;
+}): AcquisitionRunScope {
+  const probeLimit = args.probeLimit ?? null;
+  return {
+    mode: args.mode,
+    discoverySource:
+      args.mode === "FULL_STAGE_D" ? "ICANN_FULL_DISCOVERY" : "CALLER_SUPPLIED",
+    probeLimit,
+    historyMode:
+      args.historyPeriodCount === STAGE_D_HISTORY_PERIOD_COUNT
+        ? "FULL_24_MONTH"
+        : "SKIPPED_OR_BOUNDED",
+    intendedProbeUniverse:
+      args.mode === "FULL_STAGE_D" ? "ALL_DISCOVERED_TLDS" : "BOUNDED",
+    discoveredTldCount: args.discoveredTldCount,
+    probedTldCount: args.probedTldCount,
+  };
+}
+
 async function writeAcquisitionEvidence(args: {
   cwd: string;
   runId: string;
@@ -149,6 +179,10 @@ async function writeAcquisitionEvidence(args: {
   tamperOutcomes?: (outcomes: AcquisitionOutcomesArtifact) => AcquisitionOutcomesArtifact;
   /** Override current-index recorded SHA while keeping manifest SHA correct. */
   currentIndexShaOverride?: string;
+  /** Authoritative scope mode. Defaults to BOUNDED. */
+  runScopeMode?: AcquisitionRunScope["mode"];
+  /** Emit legacy 1.0.0 manifest without runScope. */
+  legacyManifest?: boolean;
 }): Promise<{ outcomesSha256: string; outcomesRel: string }> {
   const outcomes: AcquisitionOutcomesArtifact = {
     schemaVersion: MRR_OUTCOMES_SCHEMA_VERSION,
@@ -180,14 +214,18 @@ async function writeAcquisitionEvidence(args: {
   ];
   const historyUniverseTlds = args.historyUniverseTlds ?? [];
   const historyPeriodCount = args.historyPeriodCount ?? 24;
+  const discoveredTldCount = args.discoveredTldCount ?? probeTlds.length;
+  const runScopeMode = args.runScopeMode ?? "BOUNDED";
   const manifest: AcquisitionRunManifest = {
-    schemaVersion: "market-baseline-mrr-run-manifest/1.0.0",
+    schemaVersion: args.legacyManifest
+      ? MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0
+      : MRR_RUN_MANIFEST_SCHEMA_VERSION,
     runId: args.runId,
     startedAt: "2026-10-26T00:00:00.000Z",
     completedAt: "2026-10-26T00:01:00.000Z",
     asOfDate: args.asOfDate,
     probeReportingPeriod: args.probeReportingPeriod,
-    discoveredTldCount: args.discoveredTldCount ?? probeTlds.length,
+    discoveredTldCount,
     probe: bucketFromRequests(args.requests, "PROBE"),
     history: bucketFromRequests(args.requests, "HISTORY"),
     top100: [],
@@ -215,6 +253,18 @@ async function writeAcquisitionEvidence(args: {
     throttlingObserved: args.resultStatus === "STOPPED_THROTTLED",
     durationMs: 1,
     notes: [],
+    ...(args.legacyManifest
+      ? {}
+      : {
+          runScope: makeRunScope({
+            mode: runScopeMode,
+            discoveredTldCount,
+            probedTldCount: probeTlds.length,
+            historyPeriodCount,
+            probeLimit:
+              discoveredTldCount !== probeTlds.length ? probeTlds.length : null,
+          }),
+        }),
   };
   writeFileSync(
     join(manifestsDir, `${args.runId}.json`),
@@ -527,6 +577,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-test-rev-1",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         requests: [
@@ -625,6 +676,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-cov-a",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         requests: [
@@ -695,6 +747,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-cov-b",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -764,6 +817,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-cov-c",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -839,6 +893,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-cov-d",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         requests: [
@@ -902,6 +957,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-full-4",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: tlds,
@@ -973,6 +1029,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-full-4",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: tlds,
@@ -1032,6 +1089,7 @@ describe("market-baseline publication", () => {
         await writeAcquisitionEvidence({
           cwd: dir,
           runId,
+          runScopeMode: "FULL_STAGE_D",
           asOfDate: "2026-10-26",
           probeReportingPeriod: "2026-06",
           historyUniverseTlds: tlds,
@@ -1158,6 +1216,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-throttled",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -1194,6 +1253,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-partial-ok",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -1224,6 +1284,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-tamper",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -1263,6 +1324,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-cur-mismatch",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: ["alpha"],
@@ -1311,6 +1373,7 @@ describe("market-baseline publication", () => {
       await writeAcquisitionEvidence({
         cwd: dir,
         runId: "mrr-full-gov",
+        runScopeMode: "FULL_STAGE_D",
         asOfDate: "2026-10-26",
         probeReportingPeriod: "2026-06",
         historyUniverseTlds: tlds,
@@ -1365,6 +1428,7 @@ describe("market-baseline publication", () => {
       acquisitionAudit: {
         sourceAcquisitionRunId: "run-a",
         sourceOutcomesArtifactSha256: "a".repeat(64),
+        sourceAcquisitionRunScope: "FULL_STAGE_D",
       },
     });
     const b = buildMarketBaselinePublication({
@@ -1374,10 +1438,81 @@ describe("market-baseline publication", () => {
       acquisitionAudit: {
         sourceAcquisitionRunId: "run-b",
         sourceOutcomesArtifactSha256: "b".repeat(64),
+        sourceAcquisitionRunScope: "BOUNDED",
       },
     });
     expect(a.index.publicationContentSha256).toBe(b.index.publicationContentSha256);
     expect(a.index.sourceAcquisitionRunId).toBe("run-a");
     expect(b.index.sourceAcquisitionRunId).toBe("run-b");
+    expect(a.index.sourceAcquisitionRunScope).toBe("FULL_STAGE_D");
+    expect(b.index.sourceAcquisitionRunScope).toBe("BOUNDED");
+  });
+
+  it("1C: self-consistent 3-TLD BOUNDED run does not auto-qualify", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1c-3tld-"));
+    try {
+      const tlds = ["alpha", "beta", "gamma"];
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-bounded-3-complete",
+        runScopeMode: "BOUNDED",
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: tlds,
+        historyPeriodCount: STAGE_D_HISTORY_PERIOD_COUNT,
+        requests: fullStageDRequests({
+          tlds,
+          probe: "2026-06",
+          historyPeriodCount: STAGE_D_HISTORY_PERIOD_COUNT,
+        }),
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/no full-qualified/);
+      const explicit = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        runId: "mrr-bounded-3-complete",
+        historyPeriodCount: 3,
+      });
+      expect(explicit.index.sourceAcquisitionRunScope).toBe("BOUNDED");
+      expect(explicit.index.sourceAcquisitionRunId).toBe("mrr-bounded-3-complete");
+      expect(explicit.index.semantic.coverage.tldCountInPublication).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("1C: legacy 1.0.0 manifest without runScope does not auto-qualify", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "mrr-pub-1c-legacy-"));
+    try {
+      const tlds = ["alpha", "beta"];
+      await writeAcquisitionEvidence({
+        cwd: dir,
+        runId: "mrr-legacy-1319-style",
+        legacyManifest: true,
+        asOfDate: "2026-10-26",
+        probeReportingPeriod: "2026-06",
+        historyUniverseTlds: tlds,
+        historyPeriodCount: 3,
+        requests: fullStageDRequests({
+          tlds,
+          probe: "2026-06",
+          historyPeriodCount: 3,
+        }),
+      });
+      await expect(
+        publishFromMrrArchive({ cwd: dir, asOfDate: "2026-10-26" }),
+      ).rejects.toThrow(/no full-qualified/);
+      const explicit = await publishFromMrrArchive({
+        cwd: dir,
+        asOfDate: "2026-10-26",
+        runId: "mrr-legacy-1319-style",
+        historyPeriodCount: 3,
+      });
+      expect(explicit.index.sourceAcquisitionRunScope).toBe("LEGACY_UNKNOWN");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

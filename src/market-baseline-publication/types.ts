@@ -122,6 +122,8 @@ export type MarketBaselinePublicationIndex = {
   sourceAcquisitionRunId?: string;
   /** Verified outcomes artifact SHA — outside semantic content identity. */
   sourceOutcomesArtifactSha256?: string;
+  /** Truthful acquisition scope authority — outside semantic content identity. */
+  sourceAcquisitionRunScope?: "FULL_STAGE_D" | "BOUNDED" | "LEGACY_UNKNOWN";
   /** Operational indexes/current.json run when present. */
   operationalCurrentRunId?: string | null;
   /** True when operational current differs from governing publication run. */
@@ -146,6 +148,7 @@ export type MarketBaselinePublicationCurrentPointer = {
   sourceReportingPeriod: ReportingPeriod;
   sourceAcquisitionRunId?: string;
   sourceOutcomesArtifactSha256?: string;
+  sourceAcquisitionRunScope?: "FULL_STAGE_D" | "BOUNDED" | "LEGACY_UNKNOWN";
   operationalCurrentRunId?: string | null;
   operationalCurrentDiffersFromGoverning?: boolean;
 };

@@ -19,7 +19,32 @@ import type {
   OutcomeCountBucket,
   ReportingPeriod,
 } from "@/market-baseline-mrr/types";
+import {
+  MRR_RUN_MANIFEST_SCHEMA_VERSION,
+  MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0,
+} from "@/market-baseline-mrr/types";
 import { snapshotKey, type SnapshotKey } from "./keys";
+
+/** Publication-facing authority label for the governing acquisition receipt. */
+export type PublicationRunScopeAuthority =
+  | "FULL_STAGE_D"
+  | "BOUNDED"
+  | "LEGACY_UNKNOWN";
+
+export function resolveManifestRunScopeAuthority(
+  manifest: AcquisitionRunManifest,
+): PublicationRunScopeAuthority {
+  if (
+    manifest.schemaVersion === MRR_RUN_MANIFEST_SCHEMA_VERSION_V1_0
+    || !manifest.runScope
+  ) {
+    return "LEGACY_UNKNOWN";
+  }
+  if (manifest.schemaVersion === MRR_RUN_MANIFEST_SCHEMA_VERSION) {
+    return manifest.runScope.mode;
+  }
+  return "LEGACY_UNKNOWN";
+}
 
 /** Subset of MRR indexes/current.json used as operational reference only. */
 export type MrrArchiveCurrentIndex = {
@@ -33,6 +58,8 @@ export type MrrArchiveCurrentIndex = {
 export type PublicationAcquisitionAudit = {
   sourceAcquisitionRunId: string;
   sourceOutcomesArtifactSha256: string;
+  /** Truthful scope authority for the selected receipt. */
+  sourceAcquisitionRunScope: PublicationRunScopeAuthority;
   /** Operational indexes/current.json run when present; may differ from governing. */
   operationalCurrentRunId: string | null;
   operationalCurrentDiffersFromGoverning: boolean;
@@ -293,6 +320,8 @@ function reconcileRequestDetails(
 
 /**
  * Full Stage-D automatic-qualification checks.
+ * Requires authoritative runScope.mode === FULL_STAGE_D first, then
+ * internal completeness/reconciliation (PUBLISH-1B).
  * Explicit `--run-id` uses a lighter integrity/reconciliation gate and may be bounded.
  */
 export function evaluateFullStageDQualification(
@@ -301,6 +330,13 @@ export function evaluateFullStageDQualification(
 ): { ok: true } | { ok: false; reasons: string[] } {
   const { manifest, outcomes } = evidence;
   const reasons: string[] = [];
+
+  const scopeAuthority = resolveManifestRunScopeAuthority(manifest);
+  if (scopeAuthority !== "FULL_STAGE_D") {
+    reasons.push(
+      `runScope authority is ${scopeAuthority}, not FULL_STAGE_D (internally complete bounded/legacy runs do not auto-qualify)`,
+    );
+  }
 
   if (manifest.probeReportingPeriod !== requiredProbePeriod) {
     reasons.push(
@@ -436,6 +472,7 @@ export async function resolveAcquisitionCoverage(args: {
 
   let evidence: LoadedRunEvidence;
   let selectedAsFullQualified = false;
+  let sourceAcquisitionRunScope: PublicationRunScopeAuthority = "LEGACY_UNKNOWN";
 
   if (args.runId) {
     evidence = await loadRunEvidence(cwd, args.runId);
@@ -445,6 +482,7 @@ export async function resolveAcquisitionCoverage(args: {
         `Publication coverage: explicit run ${args.runId} failed integrity/reconciliation: ${integrity.reasons.join("; ")}`,
       );
     }
+    sourceAcquisitionRunScope = resolveManifestRunScopeAuthority(evidence.manifest);
     const full = evaluateFullStageDQualification(evidence, probeReportingPeriod);
     selectedAsFullQualified = full.ok;
   } else {
@@ -493,6 +531,7 @@ export async function resolveAcquisitionCoverage(args: {
     }
     evidence = candidates[0]!;
     selectedAsFullQualified = true;
+    sourceAcquisitionRunScope = resolveManifestRunScopeAuthority(evidence.manifest);
   }
 
   if (current && current.latestRunId === evidence.runId) {
@@ -512,6 +551,7 @@ export async function resolveAcquisitionCoverage(args: {
     audit: {
       sourceAcquisitionRunId: evidence.runId,
       sourceOutcomesArtifactSha256: evidence.outcomesArtifactSha256,
+      sourceAcquisitionRunScope,
       operationalCurrentRunId,
       operationalCurrentDiffersFromGoverning,
       selectedAsFullQualified,

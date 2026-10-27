@@ -2,9 +2,14 @@
 
 Implementation of the first round-neutral registry lifecycle acquisition slice.
 Controlling discovery contract: [`market-baseline-source-1.md`](./market-baseline-source-1.md).
+Product publication: [`market-baseline-publication.md`](./market-baseline-publication.md).
 
 MRR-1A corrects temporal purity, remote revision revalidation, and per-request
 coverage evidence.
+
+PUBLISH-1C adds authoritative **`runScope`** on the acquisition manifest
+(`market-baseline-mrr-run-manifest/1.1.0`) so internally complete bounded runs
+are not mistaken for full Stage-D governing evidence.
 
 ## Source
 
@@ -140,6 +145,24 @@ outcome, URLs, hashes, reuse/revalidation/revision flags, bytes, and errors.
 The run manifest references the artifact path + SHA-256.
 Detail counts must reconcile exactly to `manifest.probe` / `manifest.history`.
 `PARTIAL` remains valid for legitimate `MISSING_REPORT` identities.
+
+## Acquisition runScope (manifest 1.1.0)
+
+Durable receipt field `runScope` is recorded at orchestration time from
+invocation facts (not inferred later from observed counts alone).
+
+| `mode` | Meaning |
+| --- | --- |
+| `FULL_STAGE_D` | Ordinary full ICANN discovery, no `pages` override, no `probeLimit`, history not skipped, 24-month Stage-D history contract, probe all discovered TLDs |
+| `BOUNDED` | Any of: caller `pages`, `probeLimit`, `skipHistory`, short history, unqualified/legacy discovery cache, fixture/smoke subset |
+
+`discoveredTldCount == PROBE count` proves **internal completeness**, not
+full-universe authority. Legacy manifests (`…/1.0.0` without `runScope`) are
+`LEGACY_UNKNOWN` for publication auto-selection.
+
+Fresh ordinary discovery writes `indexes/discovery-cache.json` with
+`discoveryProvenance.qualifiedForFullStageD=true`. Legacy caches without that
+provenance cannot support `FULL_STAGE_D`.
 
 ## CLI
 
