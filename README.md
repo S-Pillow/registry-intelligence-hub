@@ -50,7 +50,7 @@ These are official aggregates, coverage disclosures, and publication-availabilit
 ## What RIH Answers
 
 - How concentrated is the 2026 application landscape?
-- Which confirmed Organizations control multiple Applicant identities?
+- Which confirmed Organizations map across multiple Applicant legal entities?
 - Which Organizations repeatedly meet each other in official contention?
 - Where does GoDaddy Registry Services appear in the competitive landscape?
 - How does the 2026 round structurally differ from 2012?
@@ -79,7 +79,7 @@ Hub base path in deployed environments: `/tools/registry-intelligence-hub`.
 | --- | --- |
 | **Applicant ≠ Organization** | Legal-name Applicants are not automatically corporate parents or portfolios |
 | **MISSING ≠ zero** | An unavailable report or blocked metric is not treated as zero activity |
-| **Official contention ≠ exact-string grouping** | Official initial contention is ICANN’s membership structure, not a string-equality invent |
+| **Official contention ≠ exact-string grouping** | Official initial contention is ICANN’s membership structure, not a string-equality inference |
 | **Candidate mapping ≠ confirmed Organization** | Only steward-accepted mappings enter confirmed Organization intelligence |
 | **Public RSP capability ≠ selected RSP** | Public Main-RSP signals never imply a selected or contracted provider |
 | **Unmatched ≠ new** | Lack of a cross-round match is not proof of a new participant |
@@ -97,13 +97,15 @@ flowchart LR
   ACQ --> NORM["Normalized evidence"]
   NORM --> ELIG["Eligibility and actuality gates"]
   ELIG --> APP["Application intelligence"]
-  ELIG --> APPLICANT["Applicant intelligence"]
-  ELIG --> ORG["Confirmed Organization overlay"]
+  APP --> APPLICANT["Applicant intelligence"]
+  APPLICANT --> ORG["Confirmed Organization overlay"]
+  ORG --> CROSSORG["Cross-round Organization overlay"]
   ELIG --> CHANGE["Change Intelligence"]
   ELIG --> MARKET["Registry Market"]
   APP --> UI["RIH investigative surfaces"]
   APPLICANT --> UI
   ORG --> UI
+  CROSSORG --> UI
   CHANGE --> UI
   MARKET --> UI
 ```
@@ -116,7 +118,7 @@ Organization resolution **enriches** Applicant intelligence; it is not a prerequ
 
 | Layer | Status |
 | --- | --- |
-| GitHub `main` | `9e18b15a149c05c69b987bbc3798f86c782b8321` (Pulse docs closure; docs-only ahead of production) |
+| Repository | Product README and operational docs may advance independently of deployed application source |
 | Production application source | `a1124b71093333fc8492299885871d0bd0345aca` (detached) |
 | Reveal Day applications + official contention | **LIVE** (`REAL_SOURCE_READY`) |
 | Competitive Landscape | **LIVE** |
@@ -128,7 +130,9 @@ Organization resolution **enriches** Applicant intelligence; it is not a prerequ
 
 Production URL prefix: `/tools/registry-intelligence-hub` (Next.js on loopback `127.0.0.1:43123`).
 
-> The one-commit difference between GitHub `main` and production is **documentation only**. Production does **not** run `9e18b15`.
+README showcase based on documentation checkpoint `9e18b15a149c05c69b987bbc3798f86c782b8321`.
+
+> Repository documentation/presentation commits may be ahead of the deployed application source. Production remains explicitly pinned to the accepted detached application SHA shown above; docs-only README changes do not require redeployment.
 
 ### Visual status
 
