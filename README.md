@@ -119,7 +119,7 @@ Organization resolution **enriches** Applicant intelligence; it is not a prerequ
 | Layer | Status |
 | --- | --- |
 | Repository | Product README and operational docs may advance independently of deployed application source |
-| Production application source | `cb974f1eab27d52a270393f7a2dbbbc7f8c1773d` (detached; verified 2026-10-28) |
+| Production application source | `2a6abd4c6d57e7135cc811b2e987984cabe0a64b` (detached; verified 2026-10-28) |
 | Reveal Day applications + official contention | **LIVE** (`REAL_SOURCE_READY`) |
 | Competitive Landscape | **LIVE** |
 | Organization concentration / contention-pair intelligence | **LIVE** (confirmed-subset disclosed) |
