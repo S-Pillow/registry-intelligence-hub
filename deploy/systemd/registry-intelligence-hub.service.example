@@ -1,5 +1,5 @@
 # Example systemd unit — Registry Intelligence Hub (optional alternate hosts)
-# srv766238 uses PM2 (deploy/ecosystem.config.cjs.example, cwd /root/registry_hub), not systemd.
+# Many shared-VPS deployments prefer PM2 (`deploy/ecosystem.config.cjs.example`) instead of systemd.
 # Install on Ubuntu hosts that prefer systemd (adjust User, WorkingDirectory, EnvironmentFile).
 #
 #   sudo cp deploy/systemd/registry-intelligence-hub.service.example \
@@ -16,10 +16,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=forgeforward
-Group=forgeforward
+User=registry-hub
+Group=registry-hub
 WorkingDirectory=/opt/registry-intelligence-hub
-# srv766238: use /root/registry_hub under PM2 instead — do not assume /opt on that VPS.
+# Prefer the same host-local deploy cwd used for `npm run build`.
 EnvironmentFile=-/etc/registry-intelligence-hub/env
 Environment=NODE_ENV=production
 Environment=HUB_HOST=127.0.0.1

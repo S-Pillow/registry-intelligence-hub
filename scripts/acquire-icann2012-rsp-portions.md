@@ -1,6 +1,6 @@
 # Acquire ICANN 2012 RSP public application portions
 
-Documents the **offline-first** acquisition tooling for `icann2012-rsp-public-portions-v1`. **No bulk gtldresult fetch is authorized** until steward/legal sign-off ([Project source inventory](../../cursor/stores/bc-e04e6cc5-a825-4e04-8ec0-9262ee0fe1cb/docs/source-inventory.md) blocker #1).
+Documents the **offline-first** acquisition tooling for `icann2012-rsp-public-portions-v1`. **No bulk gtldresult fetch is authorized** until steward/legal sign-off (source-inventory blocker #1 — details live in **internal/operator documentation not included in this repository**).
 
 ## Product constraints
 
@@ -65,7 +65,7 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
   npm run acquire-rsp-portions -- pilot-live \
   --staging /var/tmp/icann2012-rsp-staging \
   --approved-mapping /path/to/steward-approved-mapping.json \
-  --evidence-index /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22
+  --evidence-index /path/to/persistent-rsp-evidence/icann2012-rsp-mapping/<run-id>
 ```
 
 `--evidence-index` is the mapping-live run directory (`mapping-live-checkpoint.json` plus `sources/index/<run-id>/page-NNNN.html` and fetch metadata). Pilot-live verifies each approved row's `evidenceSnapshotId` and content hash against those bytes. A checkout `raw-snapshots.json`, including one filled in by hand, is not evidence and is not read for this preflight. Missing pages, hash mismatches, and unknown snapshot ids fail closed.
@@ -76,7 +76,7 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
 
 ```bash
 npm run acquire-rsp-portions -- mapping-live-plan \
-  --staging /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22
+  --staging /path/to/persistent-rsp-evidence/icann2012-rsp-mapping/<run-id>
 npm run acquire-rsp-portions -- mapping-live --preflight-only --staging <same>
 ```
 
@@ -94,8 +94,8 @@ Evidence-bundle manifest schema: `registry-hub-rsp-mapping-evidence-bundle/1.0.0
 REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1 \
   npm run acquire-rsp-portions -- mapping-live \
   --workspace /path/to/isolated-clone \
-  --staging /var/lib/registry-hub-evidence/icann2012-rsp-mapping/run-2026-09-22 \
-  --run-id mapping-2026-09-22-vps-01
+  --staging /path/to/persistent-rsp-evidence/icann2012-rsp-mapping/<run-id> \
+  --run-id mapping-<date>-<host-label>
 unset REGISTRY_HUB_RSP_MAPPING_AUTHORIZED
 ```
 

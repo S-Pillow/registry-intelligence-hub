@@ -1,25 +1,29 @@
 /**
- * PM2 example — Registry Intelligence Hub (srv766238 / shared VPS pattern)
+ * PM2 example — Registry Intelligence Hub (shared VPS / reverse-proxy pattern)
  *
- * Matches url-activity-scanner: build separately, then `npm run start` with loopback bind.
+ * Build separately, then `npm run start` with loopback bind.
  * Do NOT use `npm run hub:production` under PM2 (that script builds and kills port 43123).
  *
  * Node 22 (NVM): use the same major as `npm run verify` on the host — devDependencies warn on 20.x.
  * Replace NODE_BIN with your `nvm which node` after `nvm use 22` (example path below).
  *
- *   cd /root/registry_hub   # or your deploy path
+ *   cd /path/to/registry-intelligence-hub-deploy   # host-local deploy path
  *   nvm use 22
  *   npm ci && npm run build
  *   pm2 start deploy/ecosystem.config.cjs.example --only registry-intelligence-hub
  *   pm2 save
+ *
+ * Adjust `cwd` and `REGISTRY_HUB_NODE_BIN` / `NODE_BIN` for the host. Do not commit
+ * host-specific secrets; use `env_file` for operator-local environment.
  */
-const NODE_BIN = process.env.REGISTRY_HUB_NODE_BIN ?? "/root/.nvm/versions/node/v22.19.0/bin/node";
+const NODE_BIN =
+  process.env.REGISTRY_HUB_NODE_BIN ?? "/usr/local/bin/node"; /* or nvm node path */
 
 module.exports = {
   apps: [
     {
       name: "registry-intelligence-hub",
-      cwd: "/root/registry_hub",
+      cwd: process.env.REGISTRY_HUB_DEPLOY_CWD ?? "/opt/registry-intelligence-hub",
       interpreter: NODE_BIN,
       script: "npm",
       args: "run start -- -H 127.0.0.1 -p 43123",

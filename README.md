@@ -181,7 +181,7 @@ npm run smoke
 
 > **Operational warning:** a stale `next-server` left running across `next build` otherwise 404s chunks and triggers the isolated Hub error boundary. Restart preview after build (`npm run hub:production`) so HTML and `/tools/registry-intelligence-hub/_next/static` stay in sync.
 
-On hosts without the Cursor Project Store, Project Store markdown-contract tests are **skipped** (not failed). To require them, set `REGISTRY_HUB_PROJECT_DOCS_ROOT` and run `npm run verify:project-docs`.
+Some optional markdown-contract checks refer to **internal/operator documentation not included in this repository**. Those checks are **skipped** (not failed) unless `REGISTRY_HUB_PROJECT_DOCS_ROOT` points at an operator-provided docs root and you run `npm run verify:project-docs`.
 
 ---
 
@@ -204,7 +204,7 @@ Then open `http://127.0.0.1:43123/tools/registry-intelligence-hub`.
 
 ### Production rehearsal deploy (ForgeForward / Ubuntu)
 
-Full operator contract (PM2, nginx, ToolsPage catalog, env, smoke): Project store `docs/production-rehearsal-hub-deploy.md` and `docs/rih-basepath-shared-vps-deploy.md`.
+Full shared-VPS operator contract (PM2, nginx, ToolsPage catalog, env, smoke) lives in **internal/operator documentation not included in this repository**. In-repo starting points: `deploy/ecosystem.config.cjs.example`, `deploy/systemd/registry-intelligence-hub.service.example`, and `.env.production.rehearsal.example`.
 
 Minimal rehearsal:
 
@@ -216,9 +216,9 @@ rm -f .data/reveal-2026/claim-actuality-state.json
 npm run smoke
 ```
 
-Run the Hub behind ForgeForward at `/tools/registry-intelligence-hub` after loopback smoke passes. **Live Tools catalog:** add a card in ForgeForward `ToolsPage.jsx` and rebuild the Vite frontend — not `features.registryIntelligenceHubCatalog` (repo `src/config/features.ts` is Hub-internal only).
+Run the Hub behind your reverse proxy at `/tools/registry-intelligence-hub` after loopback smoke passes. **Live Tools catalog** (when embedded in a host portal): add a card in that portal’s tools list and rebuild as required — not `features.registryIntelligenceHubCatalog` (repo `src/config/features.ts` is Hub-internal only).
 
-**srv766238:** PM2 via `deploy/ecosystem.config.cjs.example`, cwd `/root/registry_hub`. Run `npm run build` then `npm run start -- -H 127.0.0.1 -p 43123` under PM2 — do not use `hub:production` under a process manager. Run **`npm run smoke` before first PM2 start** (or stop PM2 before later smoke — smoke uses port 43123).
+**Production-style process manager:** PM2 via `deploy/ecosystem.config.cjs.example` with a host-local deploy cwd. Run `npm run build` then `npm run start -- -H 127.0.0.1 -p 43123` under PM2 — do not use `hub:production` under a process manager. Run **`npm run smoke` before first PM2 start** (or stop the process manager before later smoke — smoke uses port `43123` by default; override with `SMOKE_PORT` if needed).
 
 </details>
 
@@ -304,3 +304,11 @@ Acquisition notes: `scripts/acquire-icann2012-reveal-day.md`
 | **Operations** | [`docs/2026-publication-2x-activation.md`](docs/2026-publication-2x-activation.md) · [`docs/2026-publication-2x-promotion-contract.md`](docs/2026-publication-2x-promotion-contract.md) |
 
 > This repository documents a live intelligence platform. It does **not** claim the broader RIH product roadmap is complete.
+
+## License
+
+License: **Apache-2.0** for original RIH source code. Third-party source data and materials retain their original terms. See [`LICENSE`](LICENSE) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+Apache-2.0 does **not** grant rights to ICANN, IANA, or other third-party materials beyond those materials’ original terms.
+
+Security reports: see [`SECURITY.md`](SECURITY.md). Contribution expectations: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
