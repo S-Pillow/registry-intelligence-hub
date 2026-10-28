@@ -8,6 +8,7 @@ Documents the **offline-first** acquisition tooling for `icann2012-rsp-public-po
 - **Forbidden for RSP assignment:** applicant legal name, contact, email, fuzzy matching.
 - **Join key:** Reveal Day **`Application ID`**; fetch uses **`gtldresultAcId`** from index/mapping pass.
 - **Staging:** raw downloads land under the fixture workspace on the acquisition host — **do not auto-commit** HTML to git without steward review.
+- **Offline Q23–Q25 evidence extraction (RIH-2012-RSP-VISIBILITY-1A):** after a public-portion document validates, `extractHistoricalRspEvidenceFromPublicPortionHtml` may emit **reviewable historical RSP evidence candidates** from already-acquired HTML. Candidates preserve provider wording as stated, use `PUBLIC_ICANN` + `current_public_portion`, and remain `REQUIRES_STEWARD_REVIEW` — they do **not** assign `rspKey`, confirm relationships, compute provider counts, or authorize live acquisition.
 
 ## Fixture bundle
 
