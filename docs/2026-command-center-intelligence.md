@@ -107,6 +107,7 @@ Pulse deployment did **not** change Registry Market publication.
 | --- | --- |
 | Official Applications / Applicants | READY |
 | Official initial contention sets / memberships | READY (contention actuality + overlay) |
+| Confirmed Organization profiles / concentration / contention co-membership | READY_WITH_LIMITATION — confirmed subset only; coverage disclosed; not a round-wide Organization census |
 | Applications 2012→2026 | READY_WITH_LIMITATION |
 | IDN 2012→2026 | READY_WITH_LIMITATION |
 | Brand / Community / Geographic (self-identified) / Variants | 2026 orientation |
@@ -115,17 +116,33 @@ Pulse deployment did **not** change Registry Market publication.
 ## Blocked (omitted — not shown as zero)
 
 - Complete unique applied strings / exact-string competition  
-- Resolved Organizations / portfolios / concentration  
-- Returning / new / expanded / contracted  
+- Round-wide complete Organization count / complete portfolio concentration remain blocked; confirmed-subset Organization profiles and concentration are live with explicit coverage limitations  
+- Round-wide returning / new / expanded / contracted classification  
 - Category / sector taxonomy  
 - Cross-round Community, Geographic, official contention-set deltas  
 - Applicant concentration presented as Organization intelligence  
+
+Unresolved Applicants remain Applicants. They must **not** be converted into “Unknown Organization” or other fabricated Organization entities.
 
 ## Current expansion direction
 
 Command Center hierarchy is live and is the operational intelligence landing surface (posture → Intelligence Pulse → attention → monitoring → structural change → contention depth → composition → coverage → investigation actions).
 
-Organization resolution and Organization / Applicant intelligence are already active where evidence supports them (partial: 145 Confirmed Applicant mappings / 89 Confirmed Organizations / 2 Candidate / 2 Ambiguous / 331 Unresolved — see `docs/2026-organization-resolution.md`). Confirmed cross-round Organization identity overlays are available for accepted mappings (including Microsoft and Google) and remain evidence-gated rather than broadly complete.
+**Architecture:** Application intelligence → Applicant intelligence → confirmed Organization overlay → cross-round Organization overlay. Organization resolution **enriches** Applicant intelligence; it is not a prerequisite for Applicant intelligence.
+
+Organization posture (accepted baseline — see `docs/2026-organization-resolution.md`, `docs/organization-concentration.md`, `docs/organization-contention-pairs.md`, `docs/intelligence-priority-2.md`):
+
+| Metric | Value |
+| --- | ---: |
+| Confirmed Applicant mappings | **161** |
+| Confirmed Organizations | **104** |
+| Unresolved Applicant mappings | **315** |
+| Confirmed Applications | **1,129** |
+| Confirmed Brand Applications | **160** |
+| Confirmed contention memberships | **724** |
+| Official contention-set coverage (≥1 Confirmed Org) | **256 / 263** |
+
+Applicant intelligence is live independently. Confirmed Organization Profiles, confirmed-subset Organization concentration, and Organization-aware contention intelligence are live where steward-confirmed evidence supports them — always with **confirmed subset ≠ complete round** disclosure. Round-wide complete Organization count and round-wide complete portfolio concentration remain blocked. Confirmed cross-round Organization identity overlays exist for accepted mappings (including Microsoft and Google) and remain evidence-gated rather than a broad returning/new/expanded/contracted census (`Unmatched ≠ new`).
 
 Contention intelligence, Compare, cross-round structural intelligence, historical cohorts (HIST-COHORT-1 / 2A), and scheduled Change Intelligence are live. Historical cohort expansion can proceed incrementally without treating Organization resolution as a prerequisite.
 
