@@ -353,6 +353,14 @@ export function MarketBaselineOverviewContent({
             Data &amp; methodology
           </Link>
         </p>
+        <p
+          className="mt-3 max-w-3xl text-sm leading-6 text-slate-600"
+          data-testid="registry-market-source-rights-note"
+        >
+          Registry Market metrics are derived from ICANN Monthly Registry Reports and related public
+          registry data. Source material retains its original ownership and terms. RIH publishes
+          derived intelligence and provenance rather than relicensing the underlying reports.
+        </p>
       </header>
 
       <section

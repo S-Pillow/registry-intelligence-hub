@@ -499,6 +499,125 @@ export function DataHealthContent({
           </CardContent>
         </Card>
       </section>
+
+      <section
+        aria-labelledby="sources-licensing-heading"
+        className="mt-10"
+        data-testid="data-health-sources-licensing"
+      >
+        <h2 id="sources-licensing-heading" className="mb-4 text-lg font-semibold">
+          Sources, licensing &amp; third-party materials
+        </h2>
+        <Card>
+          <CardContent className="space-y-5 pt-6 text-sm leading-6 text-slate-700">
+            <p>
+              Registry Intelligence Hub combines and analyzes information derived from public sources,
+              including ICANN application and contention publications, IANA registry information, ICANN
+              Monthly Registry Reports, and other identified public-source materials.
+            </p>
+            <p>
+              RIH&apos;s software, analysis logic, normalization methods, evidence models, and original
+              presentation are separate from the underlying third-party source material. Public
+              availability of a source does not mean that RIH owns that material or that the source
+              material is licensed under the same terms as RIH software.
+            </p>
+            <p data-testid="data-health-apache-license">
+              Original RIH source code is licensed under Apache-2.0. Third-party source materials
+              retain their respective terms.
+            </p>
+            <p>
+              Third-party datasets, source documents, trademarks, logos, screenshots, HTML fixtures, and
+              other source materials remain subject to their respective ownership, copyright, licensing,
+              attribution requirements, and terms of use. Inclusion, reference, transformation, or
+              analysis within RIH does not transfer ownership or relicense third-party materials.
+            </p>
+            <p data-testid="data-health-evidence-maturity">
+              Where RIH publishes derived metrics or intelligence, the underlying source, coverage,
+              provenance, and evidence maturity should be considered alongside the result. RIH
+              distinguishes unavailable, partial, inferred, confirmed, and source-published facts and
+              does not treat missing source data as zero.
+            </p>
+            <p data-testid="data-health-independence">
+              Registry Intelligence Hub is an independent project and is not affiliated with or
+              endorsed by ICANN, IANA, or any other referenced registry-industry organization unless
+              expressly stated otherwise.
+            </p>
+
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">Primary source classes</h3>
+              <p className="mb-3 text-xs text-slate-600">
+                This table summarizes primary source classes used by RIH. It is not an exhaustive legal
+                inventory of every third-party material that may appear in documentation, fixtures, or
+                screenshots.
+              </p>
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th scope="col" className="px-3 py-2">
+                        Source
+                      </th>
+                      <th scope="col" className="px-3 py-2">
+                        RIH use
+                      </th>
+                      <th scope="col" className="px-3 py-2">
+                        Rights posture
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+                    <tr>
+                      <th scope="row" className="px-3 py-3 align-top font-semibold text-slate-900">
+                        ICANN / APS
+                      </th>
+                      <td className="px-3 py-3 align-top">
+                        Application, Applicant, designation, contention, and public program evidence
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        Third-party public source; original terms retained
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row" className="px-3 py-3 align-top font-semibold text-slate-900">
+                        IANA
+                      </th>
+                      <td className="px-3 py-3 align-top">
+                        TLD / root-zone / delegation context
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        Third-party public source; original terms retained
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row" className="px-3 py-3 align-top font-semibold text-slate-900">
+                        ICANN Monthly Registry Reports
+                      </th>
+                      <td className="px-3 py-3 align-top">
+                        Registry Market operational baselines and derived metrics
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        Third-party source; RIH publishes derived intelligence and provenance rather
+                        than asserting ownership of underlying reports
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row" className="px-3 py-3 align-top font-semibold text-slate-900">
+                        Other identified public sources
+                      </th>
+                      <td className="px-3 py-3 align-top">
+                        Evidence or corroboration where explicitly cited
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        Original ownership and source terms retained
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
     </main>
   );
 }
