@@ -304,3 +304,9 @@ Acquisition notes: `scripts/acquire-icann2012-reveal-day.md`
 | **Operations** | [`docs/2026-publication-2x-activation.md`](docs/2026-publication-2x-activation.md) · [`docs/2026-publication-2x-promotion-contract.md`](docs/2026-publication-2x-promotion-contract.md) |
 
 > This repository documents a live intelligence platform. It does **not** claim the broader RIH product roadmap is complete.
+
+## License
+
+License: **Apache-2.0** for original RIH source code. Third-party source data and materials retain their original terms. See [`LICENSE`](LICENSE) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
+Apache-2.0 does **not** grant rights to ICANN, IANA, or other third-party materials beyond those materials’ original terms.
