@@ -119,13 +119,14 @@ Organization resolution **enriches** Applicant intelligence; it is not a prerequ
 | Layer | Status |
 | --- | --- |
 | Repository | Product README and operational docs may advance independently of deployed application source |
-| Production application source | `a1124b71093333fc8492299885871d0bd0345aca` (detached) |
+| Production application source | `cb974f1eab27d52a270393f7a2dbbbc7f8c1773d` (detached; verified 2026-10-28) |
 | Reveal Day applications + official contention | **LIVE** (`REAL_SOURCE_READY`) |
 | Competitive Landscape | **LIVE** |
 | Organization concentration / contention-pair intelligence | **LIVE** (confirmed-subset disclosed) |
 | Change Intelligence | **LIVE** |
 | Registry Market publication | **LIVE** — baseline **1,319 / 1,113 / 206** |
 | Command Center Intelligence Pulse | **LIVE** |
+| Source / licensing notices | **LIVE** — independence, third-party rights, methodology, and Apache-2.0 boundary |
 | MRR refresh automation | **NOT INSTALLED** |
 
 Production URL prefix: `/tools/registry-intelligence-hub` (Next.js on loopback `127.0.0.1:43123`).
@@ -143,6 +144,7 @@ README showcase based on documentation checkpoint `9e18b15a149c05c69b987bbc3798f
 - ✅ Change Intelligence live
 - ✅ Registry Market live
 - ✅ Intelligence Pulse live
+- ✅ Third-party source / independence notices live
 - ⚠️ MRR refresh automation not installed
 
 Historical Reveal Day promotion event (2026-10-08) remains documented in [`docs/2026-reveal-day-production-closeout.md`](docs/2026-reveal-day-production-closeout.md); that document’s original promotion SHA is historical, not current application HEAD.
