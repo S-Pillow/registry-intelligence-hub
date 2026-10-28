@@ -158,6 +158,7 @@ import type {
   ContentionSizeFilter,
 } from "@/lib/contention-intelligence";
 import { DataHealthContent } from "@/components/registry/data-health-content";
+import { HubLegalFooter } from "@/components/registry/hub-legal-footer";
 import type {
   ChangeIntelFeedState,
   ChangeIntelPresentationFeedState,
@@ -2283,6 +2284,7 @@ function CommandCenterFailClosedShell({
           detail={marketDetail}
           presentation={presentation}
         />
+        <HubLegalFooter presentation={presentation} />
       </div>
     );
   }
@@ -2313,6 +2315,7 @@ function CommandCenterFailClosedShell({
           <ActiveSourceFailClosed resolution={resolution} />
         )}
       </main>
+      <HubLegalFooter presentation={presentation} />
     </div>
   );
 }
@@ -2375,6 +2378,7 @@ function CommandCenterActiveV2({
           detail={marketDetail}
           presentation={presentation}
         />
+        <HubLegalFooter presentation={presentation} />
       </div>
     );
   }
@@ -2459,6 +2463,7 @@ function CommandCenterActiveV2({
           />
         )}
       </main>
+      <HubLegalFooter presentation={presentation} />
     </div>
   );
 }
@@ -2674,6 +2679,7 @@ function CommandCenterV1({
           detail={marketDetail}
           presentation={presentation}
         />
+        <HubLegalFooter presentation={presentation} />
       </div>
     );
   }
@@ -3283,6 +3289,7 @@ function CommandCenterV1({
         )}
       </main>
       )}
+      <HubLegalFooter presentation={presentation} />
       <IntelligenceDrawer item={investigation} onClose={() => setInvestigation(null)} />
       <ComparisonTray />
     </div>
