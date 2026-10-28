@@ -19,6 +19,8 @@ import {
   type ExplorePageSize,
 } from "@/lib/explore-pagination";
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
+import { hubPath } from "@/lib/hub-paths";
+import { ExploreDatasetSwitcher } from "@/components/registry/explore-dataset-shell";
 
 export function ExploreContentV2({
   document,
@@ -69,7 +71,7 @@ export function ExploreContentV2({
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
           Explore
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">Explore registry applications</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Explore registry intelligence</h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-700">
           Search all {document.observedApplicationRecords.toLocaleString("en-US")} application
           records currently represented in RIH. ICANN reports{" "}
@@ -83,6 +85,12 @@ export function ExploreContentV2({
           </Link>
         </p>
       </div>
+
+      <ExploreDatasetSwitcher
+        selected="2026"
+        href2026={hubPath("/explore")}
+        href2012={`${hubPath("/explore")}?dataset=2012-historical`}
+      />
 
       <div className="flex flex-wrap gap-2">
         <input

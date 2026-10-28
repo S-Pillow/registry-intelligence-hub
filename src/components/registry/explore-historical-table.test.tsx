@@ -42,18 +42,17 @@ afterEach(() => {
 });
 
 describe("Explore 2012 historical — application table columns (D1)", () => {
-  it("shows participation filter as unavailable for the 2012 corpus", () => {
+  it("omits Category and Participation filters for the 2012 corpus", () => {
     renderHistoricalExplore({
       dataset: "2012-historical",
       entity: "applications",
       ids: "1-1386-27446",
     });
 
-    const participation = screen.getByLabelText("Filter by participation");
-    expect(participation).toBeDisabled();
-    expect(participation).toHaveValue("unsupported");
-    expect(screen.getByRole("option", { name: "Not in 2012 corpus" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Filter by participation")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Filter by category")).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "New + returning" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Unclassified — not a market sector" })).not.toBeInTheDocument();
   });
 
   it("does not apply returning-only URL status against 2012 rows", () => {
@@ -102,9 +101,11 @@ describe("Explore 2012 historical — application table columns (D1)", () => {
     expect(within(table).queryByRole("columnheader", { name: "Type" })).not.toBeInTheDocument();
     expect(screen.queryByText("Confidence: 1")).not.toBeInTheDocument();
     expect(screen.queryByText("New only")).not.toBeInTheDocument();
-    const category = screen.getByLabelText("Filter by category");
-    expect(category).toBeDisabled();
-    expect(screen.getByRole("option", { name: "Unclassified — not a market sector" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Filter by category")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Brief this view" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save this view" })).toBeInTheDocument();
   });
 
   it("keeps one row per application when the same applied string repeats (.APP)", () => {

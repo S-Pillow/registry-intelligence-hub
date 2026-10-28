@@ -103,8 +103,8 @@ describe("Explore 2012 confirmed portfolios — intelligence drawer provenance (
     expect(within(drawer).getByText("1-1013-47551")).toBeInTheDocument();
     expect(within(drawer).getByText(/SUPPORTING RECORDS · 31/)).toBeInTheDocument();
 
-    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
-    const href = viewFull.getAttribute("href") ?? "";
+    const viewApplications = within(drawer).getByRole("link", { name: /View applications/i });
+    const href = viewApplications.getAttribute("href") ?? "";
     expect(href).toContain("entity=applications");
     expect(href).toContain("ids=");
     const afiliasPortfolio = sidecarJson.portfolios.find((row: { organizationKey: string }) => row.organizationKey === "afilias");
@@ -114,8 +114,8 @@ describe("Explore 2012 confirmed portfolios — intelligence drawer provenance (
       expect(href).toContain(appId);
     }
 
-    expect(within(drawer).getByRole("button", { name: "+ Compare" })).toBeDisabled();
-    expect(within(drawer).getByRole("button", { name: "Watch" })).toBeDisabled();
+    expect(within(drawer).queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
   });
 
   it("does not imply CSV established organization identity in drawer copy", async () => {

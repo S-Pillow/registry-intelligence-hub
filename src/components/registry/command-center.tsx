@@ -35,7 +35,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   HISTORICAL_2012_APPLICATION_EXPLORE_COLUMN_HEADERS,
   HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS,
-  HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED,
   HISTORICAL_2012_CONTENTION_FIELD_PROVENANCE,
   HISTORICAL_2012_INTERNAL_CONTENTION_SET_ID_NOTE,
   HISTORICAL_2012_TRUST_REVEAL_DAY_CSV,
@@ -54,7 +53,6 @@ import {
   filterHistorical2012StringAggregates,
   formatHistorical2012ApplicationResultsSummary,
   formatHistorical2012StringAggregateResultsSummary,
-  HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED,
   isHistorical2012ApplicationBrowse,
   isHistorical2012StringBrowse,
   underlyingApplicationsInHistorical2012StringAggregates,
@@ -116,10 +114,9 @@ import {
   exploreEntityResearchHref,
   exploreFullHrefForInvestigation,
   exploreHistorical2012ApplicationsHref,
-  exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref,
   exploreHistorical2012ContentionApplicationsHref,
   exploreHistorical2012IdnApplicationsHref,
-  exploreHistorical2012StringResearchHref,
+  exploreHistorical2012MemberApplicationsHref,
   exploreHistorical2012StringsHref,
   exploreResearchHref,
   exploreSavedResearchParams,
@@ -178,7 +175,15 @@ import { ExploreContentV2 } from "@/components/registry/explore-content-v2";
 import { CommandCenterOrientationV2 } from "@/components/registry/command-center-orientation-v2";
 import { hubPath } from "@/lib/hub-paths";
 import { shouldRenderHistoricalExploreSurface } from "@/lib/explore-dataset-routing";
+import {
+  EXPLORE_DEFAULT_PAGE_SIZE,
+  clampExplorePage,
+  explorePageWindow,
+  type ExplorePageSize,
+} from "@/lib/explore-pagination";
 import { rehearsalRegistryApplicationsDocument } from "@/lib/registry-application-payload-shared";
+import { ExploreDatasetSwitcher } from "@/components/registry/explore-dataset-shell";
+import { ExplorePaginationControls } from "@/components/registry/explore-pagination-controls";
 import type { ParticipantOverlays } from "@/lib/participant-intelligence";
 import {
   isHttpSourceUrl,
@@ -432,12 +437,6 @@ function QuickCompareButton({ item, className = "" }: { item: InvestigationItem;
 const EXPLORE_STRINGS_ACTION_UNAVAILABLE =
   "Strings browse groups by applied string. Switch to Applications, Organizations, or Categories to compare or watch entities.";
 
-const EXPLORE_2012_COMPARE_DEFERRED =
-  "Cross-round Compare is deferred for Ticket D1 — historical 2012 Explore is read-only research.";
-
-const EXPLORE_2012_BRIEF_UNAVAILABLE =
-  "Historical briefings not yet available — Brief uses the 2026 rehearsal generator only.";
-
 function investigationDrawerKindLabel(kind: InvestigationKind): string {
   if (kind === "confirmed-portfolio") return "CONFIRMED PORTFOLIO";
   return kind.toUpperCase();
@@ -477,12 +476,12 @@ function ExploreEntityActions({
           <QuickCompareButton item={investigationItem} />
           <QuickWatchButton item={investigationItem} />
         </>
-      ) : (
+      ) : compareWatchDisabled ? null : (
         <>
           <button
             type="button"
             disabled
-            title={compareWatchDisabled ? EXPLORE_2012_COMPARE_DEFERRED : EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
             className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
           >
             <GitCompareArrows className="size-3.5" />+ Compare
@@ -490,7 +489,7 @@ function ExploreEntityActions({
           <button
             type="button"
             disabled
-            title={compareWatchDisabled ? EXPLORE_2012_COMPARE_DEFERRED : EXPLORE_STRINGS_ACTION_UNAVAILABLE}
+            title={EXPLORE_STRINGS_ACTION_UNAVAILABLE}
             className="inline-flex h-8 cursor-not-allowed items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-400"
           >
             <Star className="size-3.5" />Watch
@@ -635,23 +634,44 @@ function IntelligenceDrawer({
     ?? historicalContentionCorpusHref;
   const confirmedPortfolioFullHref =
     item?.kind === "confirmed-portfolio" && item.records.length > 0
-      ? exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(item.records.map((record) => record.id))
+      ? exploreHistorical2012MemberApplicationsHref(item.records.map((record) => record.id))
+      : undefined;
+  const historicalCollectionApplicationsHref =
+    isHistoricalExplore
+    && item
+    && item.records.length > 0
+    && (item.kind === "string" || item.kind === "confirmed-portfolio" || item.kind === "applicant")
+      ? (item.exploreFullHref
+        ?? (item.kind === "confirmed-portfolio"
+          ? confirmedPortfolioFullHref
+          : exploreHistorical2012MemberApplicationsHref(item.records.map((record) => record.id))))
       : undefined;
   const fullHref = item
     ? exploreFullHrefForInvestigation({
         ...item,
-        exploreFullHref: item.exploreFullHref ?? confirmedPortfolioFullHref ?? historicalCorpusHref ?? undefined,
-        exploreDataset: item.exploreDataset ?? (historicalCorpusHref || confirmedPortfolioFullHref ? "2012-historical" : undefined),
+        exploreFullHref:
+          item.exploreFullHref
+          ?? historicalCollectionApplicationsHref
+          ?? confirmedPortfolioFullHref
+          ?? historicalCorpusHref
+          ?? undefined,
+        exploreDataset: item.exploreDataset ?? (historicalCorpusHref || confirmedPortfolioFullHref || historicalCollectionApplicationsHref ? "2012-historical" : undefined),
       })
     : "#";
+  const isHistoricalApplicationDrawer = Boolean(isHistoricalExplore && item?.kind === "application");
+  const showViewApplications = Boolean(
+    historicalCollectionApplicationsHref
+    && canAct
+    && (historicalProvenanceLoaded || item?.kind === "confirmed-portfolio"),
+  );
   const showViewFull = Boolean(
-    item && canAct
+    item && canAct && !isHistoricalExplore && !isHistoricalApplicationDrawer
       && (
         (!item.historicalFact && (item.records.length > 0 || item.exploreFullHref))
         || Boolean(historicalCorpusHref || (item.historicalFact && item.exploreFullHref))
-      )
-      && (!historicalActionsDisabled || historicalProvenanceLoaded || historicalCorpusHref),
+      ),
   );
+  const showHistoricalCorpusLink = Boolean(historicalCorpusHref && canAct && item?.historicalFact);
   const isConfirmedPortfolioDrawer = item?.kind === "confirmed-portfolio";
   const confirmedPortfolioSidecarDocument =
     confirmedPortfoliosSidecar.status === "loaded" ? confirmedPortfoliosSidecar.document : null;
@@ -768,9 +788,27 @@ function IntelligenceDrawer({
 
               {drawerProvenance ? <TechnicalProvenanceDetail provenance={drawerProvenance} /> : null}
 
-              {canAct && (
-                <div className={`grid gap-2 ${canCompareEntity && showViewFull ? "grid-cols-3" : canCompareEntity || showViewFull ? "grid-cols-2" : "grid-cols-1"}`}>
-                  {showViewFull && <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>}
+              {canAct && (showViewApplications || showViewFull || showHistoricalCorpusLink || canCompareEntity || !historicalActionsDisabled) && (
+                <div className={`grid gap-2 ${
+                  [showViewApplications || showViewFull || showHistoricalCorpusLink, canCompareEntity, !historicalActionsDisabled].filter(Boolean).length >= 3
+                    ? "grid-cols-3"
+                    : [showViewApplications || showViewFull || showHistoricalCorpusLink, canCompareEntity, !historicalActionsDisabled].filter(Boolean).length === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-1"
+                }`}>
+                  {showViewApplications ? (
+                    <Link
+                      href={fullHref}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"
+                      data-testid="explore-drawer-view-applications"
+                    >
+                      <Eye className="size-4" />View applications
+                    </Link>
+                  ) : showHistoricalCorpusLink ? (
+                    <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View applications</Link>
+                  ) : showViewFull ? (
+                    <Link href={fullHref} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium hover:bg-slate-100"><Eye className="size-4" />View full</Link>
+                  ) : null}
                   {canCompareEntity ? (
                     <Button
                       variant="outline"
@@ -780,14 +818,10 @@ function IntelligenceDrawer({
                     >
                       <GitCompareArrows />+ Compare
                     </Button>
-                  ) : historicalActionsDisabled ? (
-                    <Button variant="outline" disabled title={EXPLORE_2012_COMPARE_DEFERRED}><GitCompareArrows />+ Compare</Button>
                   ) : null}
-                  {historicalActionsDisabled ? (
-                    <Button variant="outline" disabled title={EXPLORE_2012_COMPARE_DEFERRED}><Star />Watch</Button>
-                  ) : (
+                  {!historicalActionsDisabled ? (
                     <Button variant={isWatching ? "secondary" : "outline"} onClick={onToggleWatch}><Star />{isWatching ? "Watching" : "Watch"}</Button>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -795,7 +829,7 @@ function IntelligenceDrawer({
                 <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">Compare, Watch, and View full are not available for dataset health and coverage summaries. Use supporting sections below for provenance.</p>
               )}
 
-              {canCompareEntity && item.entityKey && (
+              {canCompareEntity && item.entityKey && !historicalActionsDisabled && (
                 <BriefThisButton
                   scope={{ kind: "entity", entityType: item.entityType!, entityKey: item.entityKey, label: item.label }}
                   label="Brief this"
@@ -803,10 +837,6 @@ function IntelligenceDrawer({
                   entryPath="current-view"
                   className="w-full"
                 />
-              )}
-
-              {historicalActionsDisabled && canAct && item.entityKey && (
-                <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{EXPLORE_2012_BRIEF_UNAVAILABLE}</p>
               )}
 
               {canCompareEntity && isWatching && (
@@ -1291,6 +1321,8 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
     sort: initial.sort ?? "applications-desc",
     ids: initial.ids ?? "",
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<ExplorePageSize>(EXPLORE_DEFAULT_PAGE_SIZE);
   const searchRef = useRef<HTMLInputElement>(null);
   const categories = useMemo(() => [...new Set(activeDocument.applications.map((item) => item.category))].sort(), [activeDocument.applications]);
   const regions = useMemo(() => [...new Set(activeDocument.applications.map((item) => item.region))].sort(), [activeDocument.applications]);
@@ -1413,9 +1445,24 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
     });
   }, [applications, filters.entity, filters.sort, historicalStringAggregateRows, historicalConfirmedPortfolioRows]);
 
-  const update = (key: keyof typeof filters, value: string) => setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
-  const clear = () => setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
+  const update = (key: keyof typeof filters, value: string) => {
+    setFilters((current) => ({ ...current, [key]: value, ...(key !== "ids" ? { ids: "" } : {}) }));
+    setPage(1);
+  };
+  const clear = () => {
+    setFilters({ q: "", entity: "applications", category: "all", region: "all", status: "all", contention: "all", idn: "all", sort: "applications-desc", ids: "" });
+    setPage(1);
+  };
   const selectClass = "h-9 w-full rounded-lg border border-slate-400 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#007d65]";
+  const safePage = clampExplorePage(page, rows.length, pageSize);
+  if (safePage !== page) {
+    setPage(safePage);
+  }
+  const pageWindow = explorePageWindow(rows.length, safePage, pageSize);
+  const pageRows = useMemo(
+    () => rows.slice(pageWindow.startIndex, pageWindow.endIndex),
+    [rows, pageWindow.startIndex, pageWindow.endIndex],
+  );
   const exploreHistoricalDisclosure = exploreHistoricalComparisonDisclosure(claimActualityState);
   const datasetBadge = is2012Historical
     ? historical2012.status === "loaded"
@@ -1438,7 +1485,6 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
   const historicalConfirmedPortfolioBrowse =
     historicalConfirmedPortfolioBrowseActive && historical2012Loaded && confirmedPortfoliosLoaded;
   const historicalApplicantLegalNameBrowse = historicalApplicantLegalNameBrowseActive && historical2012Loaded;
-  const historicalCategoryFilterDisabled = is2012Historical;
   const exploreSaveResearchEnabled =
     !is2012Historical
     || (historicalConfirmedPortfolioBrowseActive
@@ -1464,7 +1510,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
         label: row.name,
         records: row.records,
         entityKey: row.organizationKey,
-        exploreFullHref: exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(
+        exploreFullHref: exploreHistorical2012MemberApplicationsHref(
           portfolio.memberApplicationIds,
         ),
         exploreDataset: "2012-historical",
@@ -1495,7 +1541,15 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
         : filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
           ? "organizations"
           : filters.entity as CompareEntityType;
-    const stringKey = row.stringKey ?? row.records[0]?.string;
+    const memberApplicationHref =
+      is2012Historical
+      && row.records.length > 0
+      && (
+        filters.entity === "strings"
+        || filters.entity === HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY
+      )
+        ? exploreHistorical2012MemberApplicationsHref(row.records.map((record) => record.id))
+        : undefined;
     return {
       id: `${idPrefix}-${row.id}`,
       kind,
@@ -1503,10 +1557,8 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
       records: row.records,
       entityType,
       entityKey: filters.entity === "applications" ? row.records[0].id : entityType ? row.name : undefined,
-      exploreFullHref:
-        is2012Historical && filters.entity === "strings" && stringKey
-          ? exploreHistorical2012StringResearchHref(stringKey)
-          : undefined,
+      // Historical applications have no deeper dedicated destination beyond the drawer.
+      exploreFullHref: memberApplicationHref,
       exploreDataset: is2012Historical ? "2012-historical" : "2026-rehearsal",
     };
   };
@@ -1519,11 +1571,11 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
           <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Explore registry intelligence</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">2026 application rows are not available until Reveal Day data is promoted. Historical 2012 browse stays separate and does not fall back to a synthetic cohort.</p>
         </div>
-        <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
-          <span className="text-slate-600">Dataset:</span>
-          <Link href={explore2026Href} className="rounded-lg bg-[#007d65] px-3 py-1.5 text-white">2026 Reveal Day</Link>
-          <Link href={explore2012Href} className="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-50">2012 historical corpus</Link>
-        </div>
+        <ExploreDatasetSwitcher
+          selected="2026"
+          href2026={explore2026Href}
+          href2012={explore2012Href}
+        />
         <PreRevealNotice
           title="2026 Explore is waiting for publication"
           detail="No 2026 application list has been promoted into RIH. This is not an ingestion failure. Historical 2012 rows appear here only when that payload is configured."
@@ -1545,17 +1597,21 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
         <div className="flex flex-col items-start gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-950 sm:items-end" data-testid="explore-dataset-badge"><span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" />{datasetBadge}</span>{is2012Historical && historicalStringBrowse && historical2012Loaded ? <span className="font-medium text-amber-900/90">Derived from validated {historical2012.document.applications.length}-application payload</span> : null}</div>
       </div>
 
-      <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3 text-xs font-semibold text-slate-800">
-        <span className="text-slate-600">Dataset:</span>
-        <Link href={explore2026Href} className={`rounded-lg px-3 py-1.5 ${!is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2026 rehearsal / promoted</Link>
-        <Link href={explore2012Href} className={`rounded-lg px-3 py-1.5 ${is2012Historical ? "bg-[#007d65] text-white" : "border border-slate-300 hover:bg-slate-50"}`}>2012 historical corpus</Link>
-      </div>
+      <ExploreDatasetSwitcher
+        selected={is2012Historical ? "2012-historical" : "2026"}
+        href2026={explore2026Href}
+        href2012={explore2012Href}
+      />
 
-      {!is2012Historical ? (
+      {is2012Historical ? (
+        <p className="mb-5 text-xs leading-5 text-slate-600" data-testid="explore-historical-dimension-note">
+          Available filters and browse grains differ by dataset. Historical 2012 Explore exposes only evidence-supported dimensions from the Reveal Day corpus — not 2026 participation or market-sector category facets.
+        </p>
+      ) : (
         <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-800">
           {exploreHistoricalDisclosure}
         </div>
-      ) : null}
+      )}
 
       {is2012Historical && !historical2012Loaded ? (
         <Card className="mb-5 border-amber-200 bg-amber-50">
@@ -1605,39 +1661,13 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
           <input ref={searchRef} value={filters.q} onChange={(event) => update("q", event.target.value)} aria-label="Search all registry records" aria-keyshortcuts="/ Control+K Meta+K" placeholder={exploreSearchPlaceholder} className="h-10 w-full rounded-lg border border-slate-400 pl-9 pr-20 text-sm outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-[#007d65]" />
           <kbd className="pointer-events-none absolute right-2 top-2.5 rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">/ · ⌘K</kbd>
         </label>
-        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+        <div className={`mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 ${is2012Historical ? "xl:grid-cols-5" : "xl:grid-cols-7"}`}>
           <label className="text-xs font-bold text-slate-700">Browse by<select aria-label="Browse by" value={filters.entity} onChange={(event) => update("entity", event.target.value)} className={`${selectClass} mt-1`}>{is2012Historical ? <><option value="applications">Applications</option><option value="strings">Strings</option><option value={HISTORICAL_2012_CONFIRMED_PORTFOLIO_EXPLORE_ENTITY}>Confirmed portfolios</option><option value={HISTORICAL_2012_APPLICANT_LEGAL_NAMES_EXPLORE_ENTITY}>Applicant legal names</option></> : <><option value="applications">Applications</option><option value="organizations">Organizations</option><option value="strings">Strings</option><option value="categories">Categories</option></>}</select></label>
-          {historicalCategoryFilterDisabled ? (
-            <label className="text-xs font-bold text-slate-700">
-              Category
-              <select
-                aria-label="Filter by category"
-                value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}
-                disabled
-                title="2012 category is unclassified. Community 84 and geographic 66 stay on the approved aggregates, including 11 applications with both flags. Derived type is not a geographic count."
-                className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                <option value={HISTORICAL_2012_CATEGORY_FILTER_UNSUPPORTED}>Unclassified — not a market sector</option>
-              </select>
-            </label>
-          ) : (
+          {!is2012Historical ? (
             <label className="text-xs font-bold text-slate-700">Category<select aria-label="Filter by category" value={filters.category} onChange={(event) => update("category", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label>
-          )}
+          ) : null}
           <label className="text-xs font-bold text-slate-700">Region<select aria-label="Filter by region" value={filters.region} onChange={(event) => update("region", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select></label>
-          {is2012Historical ? (
-            <label className="text-xs font-bold text-slate-700">
-              Participation
-              <select
-                aria-label="Filter by participation"
-                value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}
-                disabled
-                title="Returning is not a measured 2012 participation fact. The corpus does not record new versus returning applicants."
-                className={`${selectClass} mt-1 disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                <option value={HISTORICAL_2012_PARTICIPATION_FILTER_UNSUPPORTED}>Not in 2012 corpus</option>
-              </select>
-            </label>
-          ) : (
+          {!is2012Historical ? (
             <label className="text-xs font-bold text-slate-700">
               Participation
               <select aria-label="Filter by participation" value={filters.status} onChange={(event) => update("status", event.target.value)} className={`${selectClass} mt-1`}>
@@ -1646,7 +1676,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                 <option value="returning">Returning</option>
               </select>
             </label>
-          )}
+          ) : null}
           <label className="text-xs font-bold text-slate-700">Contention<select aria-label="Filter by contention" value={filters.contention} onChange={(event) => update("contention", event.target.value)} className={`${selectClass} mt-1`}><option value="all">All states</option><option value="in">In initial contention</option><option value="out">Not in contention</option></select></label>
           <label className="text-xs font-bold text-slate-700">IDN<select aria-label="Filter by IDN" value={filters.idn} onChange={(event) => update("idn", event.target.value)} className={`${selectClass} mt-1`}><option value="all">IDN + non-IDN</option><option value="idn">IDN only</option><option value="non-idn">Non-IDN</option></select></label>
           <label className="text-xs font-bold text-slate-700">Sort<select aria-label="Sort records" value={filters.sort} onChange={(event) => update("sort", event.target.value)} className={`${selectClass} mt-1`}><option value="applications-desc">Applications, high to low</option><option value="name-asc">Name, A–Z</option><option value="contention-desc">Contention first</option></select></label>
@@ -1670,17 +1700,18 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
               exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined)
             }
           />
-          <BriefThisButton
-            scope={{
-              kind: "explore-view",
-              params: exploreSavedResearchParams(filters, is2012Historical ? { dataset: "2012-historical" } : undefined),
-            }}
-            label="Brief this view"
-            defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
-            disabled={(historicalStringBrowse ? rows.length === 0 : applications.length === 0) || is2012Historical}
-            disabledTitle={is2012Historical ? EXPLORE_2012_BRIEF_UNAVAILABLE : undefined}
-            entryPath="current-view"
-          />
+          {!is2012Historical ? (
+            <BriefThisButton
+              scope={{
+                kind: "explore-view",
+                params: exploreSavedResearchParams(filters),
+              }}
+              label="Brief this view"
+              defaultName={`Briefing: Explore — ${describeExploreFilters(filters)}`.slice(0, 80)}
+              disabled={historicalStringBrowse ? rows.length === 0 : applications.length === 0}
+              entryPath="current-view"
+            />
+          ) : null}
           <Button variant="outline" onClick={clear}>Clear filters</Button>
         </div>
       </div>
@@ -1702,7 +1733,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
+                  {pageRows.map((row) => {
                     const application = row.records[0];
                     const investigationItem = buildExploreInvestigationItem(row, "explore");
                     return (
@@ -1749,7 +1780,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
+                  {pageRows.map((row) => {
                     const investigationItem = buildExploreInvestigationItem(row, "explore");
                     return (
                       <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50">
@@ -1787,7 +1818,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
+                  {pageRows.map((row) => {
                     const investigationItem = buildExploreInvestigationItem(row, "explore");
                     return (
                       <tr key={row.id} className="border-b last:border-0 hover:bg-emerald-50/50">
@@ -1817,7 +1848,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
             ) : (
               <table className="w-full min-w-[900px] text-sm">
                 <thead><tr className="border-b bg-slate-100 text-left text-xs uppercase tracking-wider text-slate-700"><th className="p-3">Record</th><th className="p-3">Applications</th><th className="p-3">Regions</th><th className="p-3">Participation</th><th className="p-3">Initial contention</th><th className="p-3">IDN</th><th className="p-3">Trust</th><th className="p-3">Actions</th></tr></thead>
-                <tbody>{rows.map((row) => {
+                <tbody>{pageRows.map((row) => {
                   const returning = row.records.filter((item) => item.returning).length;
                   const contention = row.records.filter((item) => item.contentionSet).length;
                   const idn = row.records.filter((item) => item.idn).length;
@@ -1827,7 +1858,7 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
               </table>
             )}
           </div>
-          <div className="divide-y md:hidden">{rows.map((row) => {
+          <div className="divide-y md:hidden">{pageRows.map((row) => {
             const investigationItem = buildExploreInvestigationItem(row, "explore-mobile");
             if (historicalApplicationBrowse) {
               const application = row.records[0];
@@ -1902,6 +1933,16 @@ function ExploreContent({ state, initial, presentation }: { state: ViewState; in
             }
             return <div key={row.id} className="p-4"><ProvenanceSheet {...investigationItem} triggerClassName="group block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007d65]" trigger={<><span className="flex items-center justify-between"><strong>{row.name}</strong><ChevronRight className="size-4 text-[#007d65]" /></span><span className="mt-1 block text-xs text-slate-600">{row.detail}</span><span className="mt-3 flex gap-2 text-xs text-slate-700"><Badge variant="secondary">{row.records.length} applications</Badge><Badge variant="outline">{row.records.filter((item) => item.contentionSet).length} contested</Badge></span></>} /><ExploreEntityActions investigationItem={investigationItem} compareWatchDisabled={is2012Historical} className="mt-3 flex-wrap [&_button]:flex-1" /></div>;
           })}</div>
+          <ExplorePaginationControls
+            window={pageWindow}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            testIdPrefix="explore-historical-pagination"
+          />
         </section>
       )}
 

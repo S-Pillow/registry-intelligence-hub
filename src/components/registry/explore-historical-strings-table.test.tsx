@@ -50,15 +50,14 @@ afterEach(() => {
 });
 
 describe("Explore 2012 historical — Strings browse (D2.1)", () => {
-  it("shows 1409 string rows with dedicated columns and no Participation header", { timeout: 45_000 }, () => {
+  it("shows 1409 string results with dedicated columns, first page only, and no Category/Participation", { timeout: 45_000 }, () => {
     renderHistoricalStringsExplore();
 
     const resultsLine = screen.getByText(new RegExp(`${HISTORICAL_2012_UNIQUE_STRING_COUNT} strings results`, "i"));
     expect(resultsLine).toHaveTextContent(/1930 underlying applications/i);
 
-    const category = screen.getByLabelText("Filter by category");
-    expect(category).toBeDisabled();
-    expect(screen.getByRole("option", { name: "Unclassified — not a market sector" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Filter by category")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Filter by participation")).not.toBeInTheDocument();
 
     const table = screen.getByRole("table");
     HISTORICAL_2012_STRING_EXPLORE_COLUMN_HEADERS.forEach((header) => {
@@ -66,6 +65,9 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     });
     expect(within(table).queryByRole("columnheader", { name: "Participation" })).not.toBeInTheDocument();
     expect(within(table).queryByText("2012 Reveal Day")).not.toBeInTheDocument();
+    // Full-result pagination: page 1 shows 100 of 1,409 (header + 100 body rows).
+    expect(within(table).getAllByRole("row")).toHaveLength(101);
+    expect(screen.getByTestId("explore-historical-pagination-status")).toHaveTextContent(/Showing 1–100 of 1,409/);
   });
 
   it("collapses .APP to one row with application count greater than one", () => {
@@ -93,7 +95,7 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     expect(screen.getByText(/1 string result · 1 underlying application/i)).toBeInTheDocument();
   });
 
-  it("opens string drawer with member records and disabled Compare/Watch/Brief", async () => {
+  it("opens string drawer with member records, no Compare/Watch/Brief, and View applications by exact ids", async () => {
     const user = userEvent.setup();
     renderHistoricalStringsExplore({ q: "APP" });
 
@@ -108,13 +110,16 @@ describe("Explore 2012 historical — Strings browse (D2.1)", () => {
     expect(within(drawer).getByText("historical-2012-browser/1.0.0")).toBeInTheDocument();
     expect(within(drawer).queryByText(/snap-rehearsal-2026/)).not.toBeInTheDocument();
     expect(within(drawer).getByText(/SUPPORTING RECORDS · 13/)).toBeInTheDocument();
-    expect(within(drawer).getByRole("button", { name: "+ Compare" })).toBeDisabled();
-    expect(within(drawer).getByRole("button", { name: "Watch" })).toBeDisabled();
+    expect(within(drawer).queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: /Brief this/i })).not.toBeInTheDocument();
 
-    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
-    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
-    expect(viewFull.getAttribute("href")).toContain("entity=strings");
-    expect(viewFull.getAttribute("href")).toContain("q=APP");
+    const viewApplications = within(drawer).getByRole("link", { name: /View applications/i });
+    const href = viewApplications.getAttribute("href") ?? "";
+    expect(href).toContain("dataset=2012-historical");
+    expect(href).toContain("entity=applications");
+    expect(href).toContain("ids=");
+    expect(href).not.toContain("entity=strings");
   });
 
   it("matches Command Center strings handoff href", () => {

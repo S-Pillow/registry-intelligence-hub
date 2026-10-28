@@ -223,15 +223,20 @@ export function exploreHistorical2012ConfirmedPortfoliosHref() {
   return `${hubPath("/explore")}?${params}`;
 }
 
-/** View full — exact confirmed member application ids (no fuzzy applicant query). */
-export function exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(
-  applicationIds: readonly string[],
-) {
+/** Exact member application ids at application grain (no fuzzy search). */
+export function exploreHistorical2012MemberApplicationsHref(applicationIds: readonly string[]) {
   const params = new URLSearchParams();
   params.set("dataset", "2012-historical");
   params.set("entity", "applications");
   params.set("ids", applicationIds.join(","));
   return `${hubPath("/explore")}?${params}`;
+}
+
+/** @deprecated Prefer exploreHistorical2012MemberApplicationsHref — same exact-id contract. */
+export function exploreHistorical2012ConfirmedPortfolioMemberApplicationsHref(
+  applicationIds: readonly string[],
+) {
+  return exploreHistorical2012MemberApplicationsHref(applicationIds);
 }
 
 export function roundPulseHistoricalCardExploreFooterLabel(metricId: string): string | null {

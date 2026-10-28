@@ -107,16 +107,16 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(contentionLink.getAttribute("href")).toContain("contention=in");
   });
 
-  it("opens IDN aggregate drawer View full to historical Explore with IDN filter", async () => {
+  it("opens IDN aggregate drawer View applications to historical Explore with IDN filter", async () => {
     const user = userEvent.setup();
     renderCommandCenter(historical2012Loaded);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for IDN applications: 116" }));
-    const viewFull = await screen.findByRole("link", { name: "View full" });
-    expect(viewFull.getAttribute("href")).toBe(exploreHistorical2012IdnApplicationsHref());
-    expect(viewFull.getAttribute("href")).not.toContain("snap-rehearsal");
-    expect(screen.getByRole("button", { name: "+ Compare" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Watch" })).toBeDisabled();
+    const viewApplications = await screen.findByRole("link", { name: "View applications" });
+    expect(viewApplications.getAttribute("href")).toBe(exploreHistorical2012IdnApplicationsHref());
+    expect(viewApplications.getAttribute("href")).not.toContain("snap-rehearsal");
+    expect(screen.queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
   });
 
   it("shows membership round provenance band on contention card only (D2.3 closeout)", () => {
@@ -129,28 +129,28 @@ describe("Command Center — D2.0 historical Explore handoff", () => {
     expect(aggregateBands).toHaveLength(3);
   });
 
-  it("opens contention aggregate drawer View full to historical Explore with contention filter (D2.3)", async () => {
+  it("opens contention aggregate drawer View applications to historical Explore with contention filter (D2.3)", async () => {
     const user = userEvent.setup();
     renderCommandCenter(historical2012Loaded);
 
     await user.click(
       screen.getByRole("button", { name: "View intelligence for Applications in initial contention: 754" }),
     );
-    const viewFull = await screen.findByRole("link", { name: "View full" });
-    expect(viewFull.getAttribute("href")).toBe(exploreHistorical2012ContentionApplicationsHref());
-    expect(viewFull.getAttribute("href")).not.toContain("snap-rehearsal");
-    expect(screen.getByRole("button", { name: "+ Compare" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Watch" })).toBeDisabled();
+    const viewApplications = await screen.findByRole("link", { name: "View applications" });
+    expect(viewApplications.getAttribute("href")).toBe(exploreHistorical2012ContentionApplicationsHref());
+    expect(viewApplications.getAttribute("href")).not.toContain("snap-rehearsal");
+    expect(screen.queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
   });
 
-  it("opens Applications drawer View full to historical Explore without rehearsal fallback", async () => {
+  it("opens Applications drawer View applications to historical Explore without rehearsal fallback", async () => {
     const user = userEvent.setup();
     renderCommandCenter(historical2012Loaded);
 
     await user.click(screen.getByRole("button", { name: "View intelligence for Applications: 1930" }));
-    const viewFull = await screen.findByRole("link", { name: "View full" });
-    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
-    expect(viewFull.getAttribute("href")).not.toContain("snap-rehearsal");
+    const viewApplications = await screen.findByRole("link", { name: "View applications" });
+    expect(viewApplications.getAttribute("href")).toContain("dataset=2012-historical");
+    expect(viewApplications.getAttribute("href")).not.toContain("snap-rehearsal");
     expect(screen.queryByText(/SUPPORTING RECORDS · 12/)).not.toBeInTheDocument();
   });
 

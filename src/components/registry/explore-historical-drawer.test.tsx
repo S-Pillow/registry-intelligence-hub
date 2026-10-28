@@ -49,7 +49,7 @@ afterEach(() => {
 });
 
 describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
-  it("shows 2012 provenance and disables Compare, Watch, and Brief for .AAA", async () => {
+  it("shows 2012 provenance and hides Compare, Watch, Brief, and misleading View full for .AAA", async () => {
     const user = userEvent.setup();
     renderExploreHistorical();
 
@@ -69,12 +69,12 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     expect(within(drawer).queryByText(/snap-rehearsal-2026/)).not.toBeInTheDocument();
     expect(within(drawer).queryByText(/round-pulse\/1\.0\.0/)).not.toBeInTheDocument();
     expect(within(drawer).queryByText(/Rehearsal data only/i)).not.toBeInTheDocument();
-    expect(within(drawer).getByRole("button", { name: "+ Compare" })).toBeDisabled();
-    expect(within(drawer).getByRole("button", { name: "Watch" })).toBeDisabled();
-    expect(screen.getByText(/Historical briefings not yet available/i)).toBeInTheDocument();
-
-    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
-    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
+    expect(within(drawer).queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: /Brief this/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Historical briefings not yet available/i)).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("link", { name: /View full/i })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("link", { name: /View applications/i })).not.toBeInTheDocument();
   });
 
   it("opens .AAA string drawer with single supporting record and historical provenance", async () => {
@@ -94,9 +94,11 @@ describe("Explore 2012 historical — intelligence drawer context (D1)", () => {
     expect(within(drawer).getByText(/SUPPORTING RECORDS · 1/)).toBeInTheDocument();
     expect(within(drawer).getByText("1-1386-27446")).toBeInTheDocument();
     expect(within(drawer).getByText(/American Automobile Association, Inc\./)).toBeInTheDocument();
-    const viewFull = within(drawer).getByRole("link", { name: /View full/i });
-    expect(viewFull.getAttribute("href")).toContain("entity=strings");
-    expect(viewFull.getAttribute("href")).toContain("dataset=2012-historical");
+    const viewApplications = within(drawer).getByRole("link", { name: /View applications/i });
+    const href = viewApplications.getAttribute("href") ?? "";
+    expect(href).toContain("entity=applications");
+    expect(href).toContain("ids=1-1386-27446");
+    expect(href).toContain("dataset=2012-historical");
   });
 
   it("preserves dataset=2012-historical in View full href helper", () => {

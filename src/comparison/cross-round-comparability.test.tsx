@@ -504,7 +504,7 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
     expect(screen.getByRole("button", { name: "Reveal Day" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("40 — 2012 entity Compare, Watch, and Brief stay unavailable", () => {
+  it("40 — 2012 entity Compare, Watch, and Brief are not rendered", () => {
     const historical = resolveHistorical2012BrowserPayload(
       parse2012ApplicationPayloadJson(
         readFileSync(join(process.cwd(), "src/data/fixtures/registry-2012-applications.payload.json"), "utf8"),
@@ -529,13 +529,10 @@ describe("CC-COMPARE-1 cross-round comparability", () => {
         </HubRegistryDataProvider>
       </HubClaimActualityProvider>,
     );
-    const compares = screen.getAllByRole("button", { name: "+ Compare" });
-    const watches = screen.getAllByRole("button", { name: "Watch" });
-    expect(compares.length).toBeGreaterThan(0);
-    expect(watches.length).toBeGreaterThan(0);
-    for (const button of compares) expect(button).toBeDisabled();
-    for (const button of watches) expect(button).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Brief this view" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "+ Compare" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Watch" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Brief this view" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("explore-dataset-switcher")).toBeInTheDocument();
   }, 60_000);
 
   it("41 — Data Health still shows both contention set figures", () => {
