@@ -4,11 +4,11 @@
   "roundProgramYear": 2012,
   "fixtureId": "icann2012-reveal-day-v1",
   "snapshotId": "snap-2012-reveal-day-browser-v1",
-  "corpusContentHash": "b92c640a43bdd42101f55f15645e44a889b082923c786c005e1ebfe512dc2a27",
+  "corpusContentHash": "e5472f980444e6c3e850ecc2aa257c2b85cc0e50e129a36ca48f5a58395b405c",
   "provenance": {
     "normalizationBundleId": "icann2012-reveal-day-v1",
     "normalizationBundleVersion": 1,
-    "inputContentHash": "0d7e0a86ac8370fa71d20c9672e05fc268463577bacf93d41a4bc4e3d4ee990f",
+    "inputContentHash": "214010486cd29dd89b61cd2ee73ccd48afc48e8c3dd6ed271e2150f2ec4580c6",
     "csvSnapshotId": "snap-2012-reveal-day-csv-v1",
     "csvContentSha256": "7f9951c048989725df0aa5d2a02dfd5f9849dab5fe52e1ad8512cddb7c3ed74d",
     "roundProgramYear": 2012,

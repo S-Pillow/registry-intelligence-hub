@@ -25,6 +25,10 @@ import {
 import type { EvaluatedMainRspArtifact } from "@/lib/icann-evaluated-rsp";
 import { contentionSetHref } from "@/lib/contention-intelligence";
 import type { OrganizationResolutionSnapshot } from "@/organization-resolution-2026/types";
+import {
+  lineagesForCurrentOrganizationKey,
+  relationshipTypeLabel,
+} from "@/historical-organization-lineage/load-lineage";
 
 export type OrganizationApplicantMember = {
   applicantLegalName: string;
@@ -103,6 +107,19 @@ export type OrganizationIntelligenceProfile = {
     applicationDelta: number;
     portfolioChange: string;
   } | null;
+  /** Steward-approved historical Organization lineage (not SAME_ORGANIZATION returning). */
+  historicalLineages: Array<{
+    lineageId: string;
+    historicalOrganizationKey: string;
+    historicalCanonicalName: string;
+    historicalRoundYear: 2012;
+    relationshipType: string;
+    relationshipTypeLabel: string;
+    effectiveDateOrYear: string | null;
+    displayLabel: string;
+    displaySummary: string;
+    nonClaims: string[];
+  }>;
   rspAmongMappedApplicants: {
     publicMainRspCapableCount: number;
     noPublicMainRspCount: number;
@@ -365,6 +382,19 @@ export function buildOrganizationIntelligenceProfile(
     };
   }
 
+  const historicalLineages = lineagesForCurrentOrganizationKey(org.organizationKey).map((lineage) => ({
+    lineageId: lineage.lineageId,
+    historicalOrganizationKey: lineage.historicalOrganizationKey,
+    historicalCanonicalName: lineage.historicalCanonicalName,
+    historicalRoundYear: lineage.historicalRoundYear,
+    relationshipType: lineage.relationshipType,
+    relationshipTypeLabel: relationshipTypeLabel(lineage.relationshipType),
+    effectiveDateOrYear: lineage.effectiveDateOrYear,
+    displayLabel: lineage.displayLabel,
+    displaySummary: lineage.displaySummary,
+    nonClaims: [...lineage.nonClaims],
+  }));
+
   const rspIntel = buildRspOpportunityIntelligence(participantIntel, evaluatedRsp);
   const memberPostures = rspIntel.postures.filter((p) => memberNames.has(p.applicantLegalName));
   const rspAmongMappedApplicants = {
@@ -409,6 +439,7 @@ export function buildOrganizationIntelligenceProfile(
     counterparts,
     evidenceSummary,
     confirmedReturning,
+    historicalLineages,
     rspAmongMappedApplicants,
     changeSummary: {
       hasMaterialChanges: false,

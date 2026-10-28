@@ -120,18 +120,18 @@ describe("committed 2012 corpus default (PR-5)", () => {
     const sidecar = await loadCommitted2012ConfirmedPortfoliosSidecar();
     expect(sidecar.confirmedPortfolioCount).toBe(CONFIRMED_2012_PORTFOLIO_COUNT);
     expect(sidecar.confirmedMappedApplicationCount).toBe(CONFIRMED_2012_MAPPED_APPLICATION_COUNT);
-    expect(sidecar.portfolios).toHaveLength(16);
+    expect(sidecar.portfolios).toHaveLength(17);
     expect(sidecar.portfolios.every((portfolio) => portfolio.promotionState === "CONFIRMED")).toBe(true);
-    expect(OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS).toBe(1429);
-    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("1,429");
-    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("16");
-    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("466");
+    expect(OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS).toBe(1428);
+    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("1,428");
+    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("17");
+    expect(HISTORICAL_2012_CONFIRMED_PORTFOLIO_COVERAGE_BANNER).toContain("467");
 
     const resolution = await loadHistorical2012ConfirmedPortfoliosResolution();
     expect(resolution.status).toBe("loaded");
     if (resolution.status !== "loaded") return;
     const memberIds = resolution.document.portfolios.flatMap((portfolio) => portfolio.memberApplicationIds);
-    expect(new Set(memberIds).size).toBe(466);
+    expect(new Set(memberIds).size).toBe(467);
   });
 
   it("fails closed when an explicit sidecar override is missing", async () => {

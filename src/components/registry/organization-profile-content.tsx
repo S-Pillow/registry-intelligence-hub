@@ -188,6 +188,45 @@ function ProfileFound({
         {profile.canonicalName}.
       </p>
 
+      {profile.historicalLineages.length > 0 ? (
+        <section
+          className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+          aria-labelledby="org-historical-lineage-heading"
+          data-testid="organization-historical-lineage"
+        >
+          <h2 id="org-historical-lineage-heading" className="text-sm font-semibold text-slate-900">
+            Historical registry lineage
+          </h2>
+          <ul className="mt-3 space-y-3">
+            {profile.historicalLineages.map((lineage) => (
+              <li
+                key={lineage.lineageId}
+                className="text-sm leading-6 text-slate-700"
+                data-testid={`organization-historical-lineage-${lineage.historicalOrganizationKey}`}
+              >
+                <p className="font-semibold text-slate-900">{lineage.displayLabel}</p>
+                <p className="mt-1">
+                  <span className="font-medium text-slate-800">{lineage.historicalCanonicalName}</span>
+                  <span className="text-slate-500"> ({lineage.historicalRoundYear})</span>
+                  {" · "}
+                  <span data-testid="organization-historical-lineage-relationship">
+                    {lineage.relationshipTypeLabel}
+                  </span>
+                  {lineage.effectiveDateOrYear ? (
+                    <span className="text-slate-500"> · {lineage.effectiveDateOrYear}</span>
+                  ) : null}
+                </p>
+                <p className="mt-1">{lineage.displaySummary}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Distinct from same-Organization returning identity. Does not rewrite 2012 Applicant
+                  records and does not merge Go Daddy East, LLC into this lineage.
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {organizationConcentration ? (
         <div className="mt-4">
           <OrganizationConcentrationProfileContext

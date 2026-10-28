@@ -238,9 +238,9 @@ describe("PR-6 Command Center 2012 structure", () => {
     expect(section).not.toHaveTextContent(/market share/i);
     expect(section).not.toHaveTextContent(/confirmed portfolio/i);
     expect(section).not.toHaveTextContent("Technology");
-    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(16);
-    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(466);
-    expect(OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS).toBe(1429);
+    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(17);
+    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(467);
+    expect(OFFLINE_2012_ORG_UNRESOLVED_APPLICATIONS).toBe(1428);
     expect(screen.getByTestId("category-mix-comparison")).toHaveTextContent("Category comparison unavailable");
     expect(screen.queryByText(/biggest change/i)).not.toBeInTheDocument();
   });

@@ -288,9 +288,9 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
   });
 });
 
-describe("D2.4B confirmed portfolio regression (16 / 466)", () => {
+describe("D2.4B confirmed portfolio regression (17 / 467)", () => {
   it("pins steward-confirmed portfolio slice counts", () => {
-    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(16);
-    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(466);
+    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(17);
+    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(467);
   });
 });

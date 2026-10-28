@@ -17,7 +17,7 @@ Ship read-only confirmed portfolio index separately from the 1,930-application b
 
 ## Required pins
 
-- `baseApplicationPayloadCorpusContentHash` — must match loaded application payload (`b92c640a…` on baseline)
+- `baseApplicationPayloadCorpusContentHash` — must match loaded application payload (`e5472f98…` on baseline)
 - `organizationPromotionRegistryVersion` — `organization-promotion-registry/1.0.0`
 - `organizationPromotionMethodVersion` — `organization-promotion/1.0.0`
 - `sourcePromotionRegistryContentHash` — SHA-256 of canonical `organization-promotions.json`

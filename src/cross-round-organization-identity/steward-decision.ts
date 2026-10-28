@@ -28,11 +28,11 @@ export const EXPECTED_CONFIRMED_CROSS_ROUND_APPS_2012 = 112;
 
 /** Accepted CROSS-ROUND-ID-1 pre-steward semantic hash. */
 export const PRE_STEWARD_CROSS_ROUND_SEMANTIC_HASH =
-  "2d66e19aaabf5323293cf0aced79b2223ca7d497f91e6ff70c09e28d75179bb2";
+  "3468c8b60c482f2187cd7bca70173d7f418c739c16ffd0fa6925f10333736255";
 
 /** Deterministic hash after applying RIH-CROSS-ROUND-ID-1-BOTH-20261009. */
 export const POST_STEWARD_CROSS_ROUND_SEMANTIC_HASH =
-  "87f5aad91fb1c59a0082ae046c4d3017408f18c79253f78ef162ba3f9c4b9621";
+  "c44e8035c1f20de7f37c06d9bdc8668c407d53d9c5e3ae3cdede0e5bb6b364eb";
 
 export type CrossRoundStewardDecisionProvenance = {
   decisionId: typeof CROSS_ROUND_STEWARD_DECISION_ID;

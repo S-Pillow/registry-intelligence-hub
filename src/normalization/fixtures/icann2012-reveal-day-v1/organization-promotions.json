@@ -785,6 +785,26 @@
       "createdAt": "2012-06-13T12:00:00.000Z"
     },
     {
+      "opId": "org-prom-2012-neustar",
+      "opVersion": 1,
+      "organizationKey": "neustar",
+      "canonicalOrganizationName": "NeuStar, Inc.",
+      "promotionState": "CONFIRMED",
+      "confidence": "high",
+      "reviewState": "steward-approved",
+      "methodVersion": "organization-promotion/1.0.0",
+      "evidence": [
+        "Reveal Day CSV — Application ID 1-863-45071; String NEUSTAR; Applicant NeuStar, Inc.; Website http://www.neustar.biz",
+        "Operator-authorized historical Organization promotion for registry-business lineage (RIH-HIST-ORG-LINEAGE-1); Applicant legal name preserved exactly"
+      ],
+      "applicationIds": [
+        "1-863-45071"
+      ],
+      "reason": "Historical registry-operator identity required for GoDaddy Registry business-line succession lineage; single attributable 2012 application is sufficient",
+      "author": "registry-intelligence-hub/offline-steward",
+      "createdAt": "2012-06-13T12:00:00.000Z"
+    },
+    {
       "opId": "org-prom-2012-merchant-law",
       "opVersion": 1,
       "organizationKey": "merchant-law",

@@ -263,4 +263,27 @@ describe("organization profile derivation (live)", () => {
         profile.rspAmongMappedApplicants.identityReviewCount,
     ).toBe(profile.applicantEntityCount);
   });
+
+  it("GoDaddy Registry keeps 77 apps and surfaces NeuStar BUSINESS_LINE_SUCCESSION lineage", async () => {
+    const [document, overlays, snapshot] = await Promise.all([
+      loadLiveDocument(),
+      loadParticipantOverlays(WORKSPACE),
+      loadOrganizationResolutionSnapshot(WORKSPACE),
+    ]);
+    const profile = buildOrganizationIntelligenceProfile(
+      document,
+      overlays,
+      loadEvaluatedMainRspArtifact(),
+      snapshot,
+      "godaddy-registry-services",
+    );
+    expect(profile.found).toBe(true);
+    if (!profile.found) return;
+    expect(profile.canonicalName).toBe("GoDaddy (Registry Services, LLC)");
+    expect(profile.applicationCount).toBe(77);
+    expect(profile.historicalLineages).toHaveLength(1);
+    expect(profile.historicalLineages[0]?.historicalCanonicalName).toBe("NeuStar, Inc.");
+    expect(profile.historicalLineages[0]?.relationshipType).toBe("BUSINESS_LINE_SUCCESSION");
+    expect(profile.historicalLineages[0]?.relationshipType).not.toBe("SAME_ENTITY_RENAME");
+  });
 });

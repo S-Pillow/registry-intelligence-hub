@@ -37,12 +37,12 @@ describe("CROSS-ROUND-ID-1 organization identity", () => {
   it("loads only CONFIRMED 2012 Organizations into the historical universe", async () => {
     const universe = await loadConfirmed2012OrganizationUniverse(workspaceRoot);
     expect(universe.pin.contentSha256).toBe(PINNED_2012_ORG_PROMOTION_REGISTRY_CONTENT_SHA256);
-    expect(universe.organizations).toHaveLength(16);
-    expect(universe.pin.confirmedApplicationCount).toBe(466);
+    expect(universe.organizations).toHaveLength(17);
+    expect(universe.pin.confirmedApplicationCount).toBe(467);
     expect(universe.excludedCandidateOrganizationKeys.length).toBe(2);
     expect(universe.excludedAmbiguousOrganizationKeys.length).toBe(1);
-    expect(universe.offlinePromotedOrganizationCount).toBe(19);
-    expect(universe.offlinePromotedApplicationCount).toBe(501);
+    expect(universe.offlinePromotedOrganizationCount).toBe(20);
+    expect(universe.offlinePromotedApplicationCount).toBe(502);
     for (const org of universe.organizations) {
       expect(org.organizationId.startsWith("organization:promoted:")).toBe(true);
       expect(org.reviewState).toBe("steward-approved");

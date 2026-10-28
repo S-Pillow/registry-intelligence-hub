@@ -213,8 +213,8 @@ try {
   const portfolios = await fetch(`${base}${withBasePath("/explore?dataset=2012-historical&entity=confirmed-portfolios")}`);
   if (!portfolios.ok) throw new Error(`confirmed portfolios returned HTTP ${portfolios.status}`);
   const portfolioHtml = await portfolios.text();
-  if (!portfolioHtml.includes("1,429") || !portfolioHtml.includes("Afilias")) {
-    throw new Error("Confirmed portfolios must disclose 1,429 unresolved applications and a committed portfolio");
+  if (!portfolioHtml.includes("1,428") || !portfolioHtml.includes("Afilias")) {
+    throw new Error("Confirmed portfolios must disclose 1,428 unresolved applications and a committed portfolio");
   }
   if (portfolioHtml.includes("Atlas Digital")) {
     const visible = portfolioHtml.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");

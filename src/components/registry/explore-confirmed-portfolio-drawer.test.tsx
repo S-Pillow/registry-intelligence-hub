@@ -132,8 +132,8 @@ describe("Explore 2012 confirmed portfolios — intelligence drawer provenance (
 
 describe("confirmed portfolio counts (regression)", () => {
   it("matches pinned 16 / 466 totals", () => {
-    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(16);
-    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(466);
-    expect(confirmedPortfolios.document.portfolios).toHaveLength(16);
+    expect(CONFIRMED_2012_PORTFOLIO_COUNT).toBe(17);
+    expect(CONFIRMED_2012_MAPPED_APPLICATION_COUNT).toBe(467);
+    expect(confirmedPortfolios.document.portfolios).toHaveLength(17);
   });
 });

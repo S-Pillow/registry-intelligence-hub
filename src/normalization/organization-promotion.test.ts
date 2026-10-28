@@ -84,8 +84,8 @@ describe("organization promotion", () => {
       const promoted = first.entities.filter(
         (e) => e.entityKind === "organization" && e.promotion,
       );
-      expect(promoted.length).toBe(19);
-      expect(first.entities.filter((e) => e.entityKind === "applicant" && e.organizationPromotion).length).toBe(501);
+      expect(promoted.length).toBe(20);
+      expect(first.entities.filter((e) => e.entityKind === "applicant" && e.organizationPromotion).length).toBe(502);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -111,9 +111,9 @@ describe("organization promotion", () => {
   it("reports promotion states and high-impact coverage for reveal day", async () => {
     const report = await buildOrganizationPromotionReportForBundle(fullRoundBundleId, workspaceRoot);
     expect(report.methodVersion).toBe(ORGANIZATION_PROMOTION_METHOD_VERSION);
-    expect(report.promotionOperationCount).toBe(19);
-    expect(report.promotedApplicationCount).toBe(501);
-    expect(report.unresolvedApplicationCount).toBe(1930 - 501);
+    expect(report.promotionOperationCount).toBe(20);
+    expect(report.promotedApplicationCount).toBe(502);
+    expect(report.unresolvedApplicationCount).toBe(1930 - 502);
     expect(report.applicationsByPromotionState.CONFIRMED).toBeGreaterThan(400);
     expect(report.applicationsByPromotionState.CANDIDATE).toBe(18);
     expect(report.applicationsByPromotionState.AMBIGUOUS).toBe(17);

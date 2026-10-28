@@ -30,7 +30,7 @@ Record acquisitions, divestitures, renames, mergers, reorganizations, parent cha
 
 | Round | Confirmed Organizations | Confirmed Applications | Notes |
 | --- | --- | --- | --- |
-| 2012 | 16 | 466 | Browser-confirmed portfolios. Offline registry has 19/501 including candidate/ambiguous — **excluded** from identity matching. |
+| 2012 | 17 | 467 | Browser-confirmed portfolios (includes NeuStar, Inc.). Offline registry has 20/502 including candidate/ambiguous — **excluded** from identity matching. |
 | 2026 | 14 | 669 | ORG-RES-2026-2A steward-confirmed subset. CANDIDATE/AMBIGUOUS/UNRESOLVED stay outside this universe. |
 
 Complete-round Organization metrics remain blocked while both layers are partial.
@@ -70,6 +70,8 @@ Operator decision: **Approve both** `recommendation=CONFIRM` mappings from accep
 | AMBIGUOUS | EchoStar ↔ Dish DBS — `SUCCESSOR_ENTITY_REVIEW_REQUIRED` |
 | UNMATCHED | 10 remaining confirmed 2026 Organizations |
 
+Separately from returning-identity mappings, steward-approved **historical Organization lineage** may link NeuStar, Inc. (2012) to GoDaddy Registry via registry-business succession (`historical-organization-lineage/1.0.0`). That lineage is **not** `SAME_ORGANIZATION` returning identity and does not replace the Uniregistry rejection.
+
 ## Unmatched ≠ NEW
 
 Absence of a confirmed 2012 match is **not** proof that a 2026 Organization is NEW. The 2012 confirmed layer is partial.
@@ -86,7 +88,7 @@ Only relationship types accepted as true analytical continuity may become CONFIR
 
 Snapshot pins (unchanged by steward application):
 
-- 2012 promotion registry content hash: `b080c6e7c02b7c0f32c9e781dff4660c842b9d228ac2e6a6f9177d2a5924c286`
+- 2012 promotion registry content hash: `f024f75d5283f46244578ace6a8b3eb5a56c16589a5a0f8daff6592a36f5a69b`
 - 2026 Organization-resolution semantic hash: `d19b5773dc72a95ba624441b1961762a15e76624ca3dff37bc4646ec4c1d0cdd`
 - 2026 Application graph: `09e75b1c83baa2a7466033de991332f396b108dc3d8c0775d3c17d99ec6b45d2`
 
@@ -94,8 +96,8 @@ Cross-round semantic hashes:
 
 | Stage | Hash |
 | --- | --- |
-| Pre-steward (CROSS-ROUND-ID-1) | `2d66e19aaabf5323293cf0aced79b2223ca7d497f91e6ff70c09e28d75179bb2` |
-| Post-steward (CROSS-ROUND-ID-1A) | `87f5aad91fb1c59a0082ae046c4d3017408f18c79253f78ef162ba3f9c4b9621` |
+| Pre-steward (CROSS-ROUND-ID-1) | `3468c8b60c482f2187cd7bca70173d7f418c739c16ffd0fa6925f10333736255` |
+| Post-steward (CROSS-ROUND-ID-1A) | `c44e8035c1f20de7f37c06d9bdc8668c407d53d9c5e3ae3cdede0e5bb6b364eb` |
 
 Semantic hash is order-invariant and includes pins, Organization IDs, relationship types, mapping states, evidence refs, and steward decisions. Wrong pins fail closed.
 
