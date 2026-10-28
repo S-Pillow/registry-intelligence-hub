@@ -13,7 +13,7 @@ Implemented in this ticket (not a discovery candidate):
 
 Preserved separately: GoDaddy ↔ Uniregistry remains `ACQUIRED_AFTER_2012` / REJECTED for returning identity.
 
-## Candidates
+## Actionable lineage backlog (5)
 
 ### 1. Dish DBS Corporation → EchoStar / ECHO Domain Co
 - **2012:** Dish DBS Corporation (`organization:promoted:dish`, CONFIRMED)
@@ -43,7 +43,8 @@ Preserved separately: GoDaddy ↔ Uniregistry remains `ACQUIRED_AFTER_2012` / RE
 - **Suspected type:** ACQUISITION / OTHER_EVIDENCE_BACKED_SUCCESSION
 - **Repository evidence:** 2012 CONFIRMED portfolio; no steward-approved continuity
 - **Public evidence:** Post-2012 registry roll-ups (needs filing-level confirmation)
-- **Maturity:** WEAK–PLAUSIBLE
+- **Maturity:** WEAK
+- **Reason for WEAK:** the exact 2026 successor is not yet resolved; current note only identifies possible Identity Digital / other operators and requires exact legal-successor mapping before promotion.
 - **Steward review:** yes
 - **Next action:** Map exact legal successors before any promotion
 - **NO PRODUCT MAPPING CHANGED IN THIS TICKET**
@@ -70,6 +71,8 @@ Preserved separately: GoDaddy ↔ Uniregistry remains `ACQUIRED_AFTER_2012` / RE
 - **Next action:** Do not conflate with NeuStar lineage or Go Daddy East Applicant records
 - **NO PRODUCT MAPPING CHANGED IN THIS TICKET**
 
+## Positive controls (2)
+
 ### 6. Charleston Road / Google continuity (already CONFIRMED SAME_ORGANIZATION)
 - **Status:** Already steward-confirmed returning identity — listed only as a positive control, not a backlog item
 - **NO PRODUCT MAPPING CHANGED IN THIS TICKET**
@@ -78,22 +81,33 @@ Preserved separately: GoDaddy ↔ Uniregistry remains `ACQUIRED_AFTER_2012` / RE
 - **Status:** Already steward-confirmed returning identity — positive control
 - **NO PRODUCT MAPPING CHANGED IN THIS TICKET**
 
-### 8. Verisign 2012 ↔ Verisign 2026 (if/when 2026 Verisign Org is confirmed)
-- **2012:** Verisign (`organization:promoted:verisign`)
-- **2026:** May lack a confirmed Verisign Organization in the current 14-org subset
-- **Suspected type:** SAME_ENTITY_RENAME / SAME_ORGANIZATION (if both ends confirmed)
-- **Maturity:** PLAUSIBLE once 2026 Org exists
-- **Steward review:** yes
-- **Next action:** Blocked on 2026 confirmed Organization coverage
+## Coverage-blocked future candidate (1)
+
+### Verisign 2012 ↔ Verisign 2026
+- **2012:** Verisign Organization exists (`organization:promoted:verisign`)
+- **2026:** A corresponding confirmed Verisign Organization is not currently available in the accepted 14-org subset
+- **Status:** Preconditions not yet met
+- **Blocker:** lineage/continuity review is blocked on 2026 Organization coverage
+- **Accounting:** not assigned to the actionable STRONG / PLAUSIBLE / WEAK backlog until that prerequisite exists
 - **NO PRODUCT MAPPING CHANGED IN THIS TICKET**
 
 ## Summary counts
 
-| Maturity | Count (excluding already-confirmed controls) |
+| Category | Count |
 | --- | --- |
-| STRONG | 0 additional |
-| PLAUSIBLE | 3 (EchoStar/Dish, Afilias→Identity Digital, TLDH roll-up) |
-| WEAK | 2 (Nu Dot Co; United TLD Holdco perimeter) |
+| Actionable lineage backlog | **5** |
+| Positive controls | **2** |
+| Coverage-blocked future candidates | **1** |
+
+Maturity among actionable backlog only:
+
+| Maturity | Count | Candidates |
+| --- | --- | --- |
+| STRONG | **0** | — |
+| PLAUSIBLE | **2** | EchoStar / Dish; Afilias → Identity Digital |
+| WEAK | **3** | TLDH / Minds + Machines roll-up; Nu Dot Co; United TLD Holdco perimeter |
+
+STRONG + PLAUSIBLE + WEAK = **5** (matches actionable backlog).
 
 Additional product mappings in this ticket: **0**  
 Additional Organization promotions beyond NeuStar: **0**
