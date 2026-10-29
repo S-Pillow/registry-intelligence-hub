@@ -9,6 +9,11 @@ import {
 import { formatMappingDryRun, runMappingDryRun } from "./mapping-dry-run";
 import { formatMappingReviewReport, runMappingReview } from "./mapping-review";
 import {
+  formatMappingApplyReviewReceipt,
+  MappingApplyReviewError,
+  runMappingApplyReview,
+} from "./mapping-apply-review";
+import {
   buildMappingLiveOperatorPlan,
   formatMappingLiveOperatorPlan,
   formatMappingLiveOperatorPlanJson,
@@ -54,6 +59,7 @@ Usage:
   npm run acquire-rsp-portions -- mapping-live [--workspace <dir>] [--staging <dir>] [--run-id <id>] [--resume] [--force-new-run] [--preflight-only]
   npm run acquire-rsp-portions -- mapping-live-plan [--workspace <dir>] [--staging <dir>] [--json]
   npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
+  npm run acquire-rsp-portions -- mapping-apply-review --run-dir <staging dir> --review-packet <packet.json> [--output <approved-mapping.json>] [--workspace <dir>]
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- pager-live-diagnostic
   npm run acquire-rsp-portions -- portion-live-diagnostic
@@ -92,6 +98,8 @@ async function main(): Promise<void> {
       "preflight-only": { type: "boolean", default: false },
       json: { type: "boolean", default: false },
       "run-dir": { type: "string" },
+      "review-packet": { type: "string" },
+      output: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -196,6 +204,35 @@ async function main(): Promise<void> {
       `mapping-review exit trace: exitCode=${exitCode} roundWideExact=${report.roundWideExact} mappingReviewPass=${report.mappingReviewPass} failureClassification=${report.failureClassification} pilotResolvedCount=${report.pilotResolvedCount}/${report.pilotExpectedCount}`,
     );
     process.exit(exitCode);
+  }
+
+  if (command === "mapping-apply-review") {
+    const runDir = values["run-dir"] as string | undefined;
+    const reviewPacket = values["review-packet"] as string | undefined;
+    if (!runDir || !reviewPacket) {
+      console.error(
+        "--run-dir and --review-packet are required for mapping-apply-review (zero HTTP; applies human packet only)\n",
+      );
+      console.log(usage());
+      process.exit(1);
+    }
+    try {
+      const receipt = await runMappingApplyReview({
+        workspaceRoot,
+        runDir,
+        reviewPacketPath: reviewPacket,
+        outputPath: values.output as string | undefined,
+      });
+      console.log(formatMappingApplyReviewReceipt(receipt));
+      console.log(JSON.stringify(receipt, null, 2));
+      return;
+    } catch (err) {
+      if (err instanceof MappingApplyReviewError && err.receipt) {
+        console.log(formatMappingApplyReviewReceipt(err.receipt));
+        console.log(JSON.stringify(err.receipt, null, 2));
+      }
+      throw err;
+    }
   }
 
   if (command === "pager-live-diagnostic") {

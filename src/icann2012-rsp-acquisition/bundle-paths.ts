@@ -63,6 +63,11 @@ export function stagingMappingArtifactPath(stagingRoot: string, runId: string): 
   return join(stagingRoot, "registry-2012-rsp-mapping", runId, "mapping.json");
 }
 
+/** Approved derivative sibling — never overwrites DRAFT mapping.json. */
+export function stagingMappingApprovedArtifactPath(stagingRoot: string, runId: string): string {
+  return join(stagingRoot, "registry-2012-rsp-mapping", runId, "mapping.approved.json");
+}
+
 export function stagingMappingReviewReportPath(stagingRoot: string, runId: string): string {
   return join(stagingRoot, "registry-hub-rsp-mapping-review-report", runId, "mapping-review-report.json");
 }

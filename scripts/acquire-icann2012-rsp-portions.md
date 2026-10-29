@@ -57,6 +57,28 @@ Checks (non-exhaustive): mapping artifact SHA-256, Reveal Day corpus pin (1,930 
 
 Relationship taxonomy (Applicant vs Registry Operator vs RSP vs DNS): Project doc `registry-operator-vs-rsp-relationship-contract.md`.
 
+## Mapping apply-review (zero HTTP — human packet → approved derivative)
+
+**Not live acquisition. Not itself a steward decision.** Applies an external human `rsp-mapping-review/1.0.0` decision packet against a **freshly computed** offline `mapping-review` of a completed staging run. Reuses `mapping-review-approval.ts` (`assertRspMappingReviewPacket`, `validateMappingApprovalPacket`, `applyMechanicalMappingApproval`). Zero HTTP. Does not mutate DRAFT `mapping.json`.
+
+```bash
+npm run acquire-rsp-portions -- mapping-apply-review \
+  --workspace /path/to/checkout \
+  --run-dir /path/to/persistent-rsp-evidence \
+  --review-packet /path/to/steward-packet.json \
+  --output /path/to/mapping.approved.json
+```
+
+`--output` is optional; default sibling path is `registry-2012-rsp-mapping/<run-id>/mapping.approved.json`.
+
+| Decision | Behavior |
+| --- | --- |
+| **APPROVE** | Only when mechanical eligibility passes (SHA + runId match, `mappingReviewPass`, no hold, no integrity failures, `roundWideExact`). Writes **approved derivative** only. |
+| **HOLD** | Reports `HOLD — NO PROMOTION`. Exit success. No write. |
+| **REJECT** | Reports `REJECT — NO PROMOTION`. Exit success. No write. |
+
+Fail-closed on wrong SHA, wrong runId, review failure, hold, integrity failure, or non-exact round-wide. Packet path is outside Git (steward storage). Do not commit real APPROVE packets.
+
 ## Live pilot (after written approval only)
 
 **Do not run in CI or during implementation.** Requires steward **`EVIDENCE` + `APPROVED`** mapping with referential snapshot rows. Legacy `REGISTRY_HUB_RSP_ACQUISITION_AUTHORIZED` **does not** authorize HTTP.
