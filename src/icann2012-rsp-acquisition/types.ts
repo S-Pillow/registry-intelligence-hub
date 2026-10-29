@@ -106,7 +106,12 @@ export type QuarantineReason =
   | "incomplete-portion-q23"
   | "checksum-unstable"
   | "application-id-mismatch"
-  | "mapping-required";
+  | "mapping-required"
+  | "missing-download-link"
+  | "ambiguous-download-link"
+  | "cross-host-link"
+  | "non-https-link"
+  | "details-http-failed";
 
 export interface QuarantineRecord {
   applicationId: string;

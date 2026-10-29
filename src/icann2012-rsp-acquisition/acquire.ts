@@ -1,10 +1,19 @@
+/**
+ * Pilot acquisition (offline dry-run + authorized pilot-live).
+ *
+ * Upstream evidence (AIPF 21.2F) informing the live path — no live ICANN contact
+ * in this module's tests:
+ * - Host Node: engines.node >=22; runtime may report v20.x. Fetch uses undici.
+ * - Node/undici default redirect:"follow" does not expose intermediate Set-Cookie
+ *   for session continuity; createNodeGtldresultFetcher uses redirect:"manual"
+ *   and GtldresultSessionTransport validates each same-origin hop (max 5).
+ * - ICANN route grammar matches portion-live-diagnostic: details GET →
+ *   parseApplicationDetailsDownload → GET server-provided href only.
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { hostname } from "node:os";
-import {
-  RSP_ACQUISITION_LIMITS,
-  RETRY_BACKOFF_MS,
-} from "./constants";
+import { RSP_ACQUISITION_LIMITS } from "./constants";
 import {
   appendCheckpointEntry,
   createEmptyCheckpoint,
@@ -19,16 +28,32 @@ import {
   loadRspMappingArtifact,
   resolveGtldresultAcId,
 } from "./load-manifest";
-import { validatePortionHtml, writeQuarantineRecord } from "./quarantine";
+import { writeQuarantineRecord } from "./quarantine";
 import { sha256Hex } from "@/normalization/hashes";
 import { buildDetailsUrl, buildPortionUrl, buildPortionUrlPlaceholder } from "./urls";
-import type { DryRunFetchPlan, DryRunReport } from "./types";
-import { assertAllowedGtldresultRequestUrl } from "./network-target-policy";
+import type { DryRunFetchPlan, DryRunReport, QuarantineReason } from "./types";
 import { assertPilotLiveAuthGate } from "./auth-gates";
 import { buildPortionFetchMetadata } from "./fetch-metadata-contract";
 import { buildPreflightReport } from "./preflight-report";
 import { assertLiveStagingOutsideWorkspace, defaultLiveStagingRoot } from "./staging-containment";
 import { pilotMappingPath } from "./bundle-paths";
+import {
+  ApplicationDetailsDownloadError,
+  parseApplicationDetailsDownload,
+} from "./application-details-download";
+import {
+  createNodeGtldresultFetcher,
+  defaultSleep,
+  GtldresultSessionTransport,
+  type GtldresultFetcher,
+  type SleepFn,
+} from "./gtldresult-session-transport";
+import { NetworkTargetPolicyError } from "./network-target-policy";
+import {
+  PUBLIC_PORTION_VERSION_BASIS,
+  validatePublicPortionDocument,
+} from "./public-portion-validation";
+import { classifyViewstatusPageHtml } from "./viewstatus-page-classification";
 
 export interface AcquirePilotOptions {
   workspaceRoot: string;
@@ -39,6 +64,8 @@ export interface AcquirePilotOptions {
   mappingArtifactPath?: string;
   /** Mapping-live run directory. Required before pilot-live HTTP on an APPROVED artifact. */
   evidenceIndexPath?: string;
+  /** Injected sleep for pacing / backoff (tests use a no-op). */
+  sleep?: SleepFn;
 }
 
 function stagingPortionPath(stagingRoot: string, applicationId: string): string {
@@ -61,6 +88,10 @@ export async function buildDryRunReport(options: AcquirePilotOptions): Promise<D
     const notes: string[] = [];
     if (mappingRequired) {
       notes.push("mapping required — gtldresultAcId not in pilot manifest or static mapping file");
+    } else {
+      notes.push(
+        "live pilot-live discovers the public-portion URL from the application-details page; portionUrl below is planning-only and must not be fetched as a manufactured URL",
+      );
     }
     return {
       applicationId: entry.applicationId,
@@ -106,22 +137,16 @@ export function formatDryRunReport(report: DryRunReport): string {
   return lines.join("\n");
 }
 
+/** @deprecated Prefer GtldresultFetcher — kept for type compatibility during migration. */
 export type HttpFetcher = (url: string) => Promise<{ status: number; body: Uint8Array }>;
-
-async function defaultFetcher(url: string): Promise<{ status: number; body: Uint8Array }> {
-  assertAllowedGtldresultRequestUrl(url);
-  const response = await fetch(url, {
-    headers: { Accept: "text/html,*/*" },
-  });
-  const body = new Uint8Array(await response.arrayBuffer());
-  return { status: response.status, body };
-}
 
 export interface LiveAcquireResult {
   mode: "live";
   completed: string[];
   skipped: string[];
   quarantined: string[];
+  /** Outbound ICANN request count (redirects counted separately inside transport). */
+  httpRequestCount: number;
 }
 
 async function loadMappingForOperation(options: AcquirePilotOptions) {
@@ -145,21 +170,56 @@ async function assertPilotLivePreflight(options: AcquirePilotOptions): Promise<v
   }
 }
 
+function mapDetailsDownloadError(err: ApplicationDetailsDownloadError): QuarantineReason {
+  switch (err.code) {
+    case "WRONG_APPLICATION_ID":
+    case "MISSING_APPLICATION_ID":
+      return "application-id-mismatch";
+    case "MISSING_DOWNLOAD_LINK":
+      return "missing-download-link";
+    case "AMBIGUOUS_DOWNLOAD_LINK":
+      return "ambiguous-download-link";
+    case "CROSS_HOST_LINK":
+      return "cross-host-link";
+    case "NON_HTTPS_LINK":
+      return "non-https-link";
+    default: {
+      const _exhaustive: never = err.code;
+      return _exhaustive;
+    }
+  }
+}
+
 export async function acquirePilotPortions(
   options: AcquirePilotOptions,
 ): Promise<DryRunReport> {
   return buildDryRunReport(options);
 }
 
+/**
+ * Authorized pilot-live: details-first discovery → server-provided public-portion
+ * href → exact Application-ID + Q23 validation. Uses GtldresultSessionTransport
+ * (same-origin redirects, in-memory cookies, paced requests). Never manufactures
+ * a download URL via buildPortionUrl for live HTTP.
+ */
 export async function acquirePilotLivePortions(
   options: AcquirePilotOptions,
-  fetcher: HttpFetcher = defaultFetcher,
+  fetcher: GtldresultFetcher = createNodeGtldresultFetcher(),
 ): Promise<LiveAcquireResult> {
   assertPilotLiveAuthGate();
 
   const stagingRoot = options.stagingRoot ?? defaultLiveStagingRoot();
   await assertLiveStagingOutsideWorkspace(stagingRoot, options.workspaceRoot);
   await assertPilotLivePreflight({ ...options, stagingRoot });
+
+  const sleep = options.sleep ?? defaultSleep;
+  const transport = new GtldresultSessionTransport(fetcher, sleep);
+  let httpRequestCount = 0;
+  const countGet = async (url: string) => {
+    const response = await transport.get(url);
+    httpRequestCount += 1 + (transport.getLastExchange()?.redirectCount ?? 0);
+    return response;
+  };
 
   const batchId = options.batchId ?? `pilot-${new Date().toISOString().slice(0, 10)}`;
   const manifest = await loadPilotManifest(options.workspaceRoot);
@@ -176,21 +236,23 @@ export async function acquirePilotLivePortions(
 
   const batch = manifest.entries.slice(0, RSP_ACQUISITION_LIMITS.pilotBatchSize);
 
-  for (const entry of batch) {
+  const quarantineApp = async (applicationId: string, reason: QuarantineReason, detail: string) => {
+    await writeQuarantineRecord(join(stagingRoot, "quarantine"), applicationId, reason, detail);
+    quarantined.push(applicationId);
+  };
+
+  for (let i = 0; i < batch.length; i++) {
+    const entry = batch[i]!;
     const acId = resolveGtldresultAcId(entry.applicationId, entry, mappingByApp);
     if (acId == null) {
-      await writeQuarantineRecord(
-        join(stagingRoot, "quarantine"),
+      await quarantineApp(
         entry.applicationId,
         "mapping-required",
         "gtldresultAcId missing from pilot manifest and static mapping",
       );
-      quarantined.push(entry.applicationId);
       continue;
     }
 
-    const portionUrl = buildPortionUrl(acId);
-    assertAllowedGtldresultRequestUrl(portionUrl);
     const destPath = stagingPortionPath(stagingRoot, entry.applicationId);
     const metaPath = stagingMetadataPath(stagingRoot, entry.applicationId);
 
@@ -207,101 +269,196 @@ export async function acquirePilotLivePortions(
       }
     }
 
-    let lastStatus = 0;
-    let body: Uint8Array | null = null;
-    for (let attempt = 0; attempt < RSP_ACQUISITION_LIMITS.maxRetriesPerUrl; attempt++) {
-      const result = await fetcher(portionUrl);
-      lastStatus = result.status;
-      if (result.status === 429 || result.status === 403) {
-        throw new Error(`Run halted: HTTP ${result.status} on ${entry.applicationId}`);
-      }
-      if (result.status === 404) {
-        await writeQuarantineRecord(
-          join(stagingRoot, "quarantine"),
-          entry.applicationId,
-          "missing-public-portion",
-          `HTTP 404 for ${portionUrl}`,
-        );
-        quarantined.push(entry.applicationId);
-        body = null;
-        break;
-      }
-      if (result.status >= 500) {
-        const delay = RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)];
-        await new Promise((r) => setTimeout(r, delay));
-        continue;
-      }
-      if (result.status >= 200 && result.status < 300) {
-        body = result.body;
-        break;
-      }
+    const detailsUrl = buildDetailsUrl(acId);
+    let details;
+    try {
+      details = await countGet(detailsUrl);
+    } catch (err) {
+      // 403/429 halt the entire run (transport throws Run halted).
+      throw err;
     }
 
-    if (body == null) {
-      if (!quarantined.includes(entry.applicationId)) {
-        await writeQuarantineRecord(
-          join(stagingRoot, "quarantine"),
-          entry.applicationId,
-          "transport-exhausted",
-          `Failed after retries (last HTTP ${lastStatus})`,
-        );
-        quarantined.push(entry.applicationId);
-      }
+    // Pace after every outbound exchange, including failures classified below.
+    await transport.waitBetweenRequests();
+
+    if (details.status === 404) {
+      await quarantineApp(
+        entry.applicationId,
+        "missing-public-portion",
+        `HTTP 404 for details ${detailsUrl}`,
+      );
+      continue;
+    }
+    if (details.status < 200 || details.status >= 300) {
+      await quarantineApp(
+        entry.applicationId,
+        "details-http-failed",
+        `details HTTP ${details.status}`,
+      );
       continue;
     }
 
+    const detailsHtml = Buffer.from(details.body).toString("utf8");
+    const detailsKind = classifyViewstatusPageHtml(detailsHtml);
+    if (detailsKind === "ICANN_ERROR_PAGE") {
+      await quarantineApp(
+        entry.applicationId,
+        "incomplete-portion-q23",
+        "details page is ICANN_ERROR_PAGE",
+      );
+      continue;
+    }
+    if (detailsKind === "STATUS_GRID") {
+      await quarantineApp(
+        entry.applicationId,
+        "incomplete-portion-q23",
+        "details response is a status-grid hub",
+      );
+      continue;
+    }
+
+    let parsed;
+    try {
+      parsed = parseApplicationDetailsDownload(detailsHtml, {
+        expectedApplicationId: entry.applicationId,
+        detailsPageUrl: details.finalUrl || detailsUrl,
+      });
+    } catch (err) {
+      if (err instanceof ApplicationDetailsDownloadError) {
+        await quarantineApp(entry.applicationId, mapDetailsDownloadError(err), err.message);
+        continue;
+      }
+      if (err instanceof NetworkTargetPolicyError) {
+        await quarantineApp(entry.applicationId, "cross-host-link", err.message);
+        continue;
+      }
+      throw err;
+    }
+
+    let portion;
+    try {
+      portion = await countGet(parsed.resolvedPortionUrl);
+    } catch (err) {
+      throw err;
+    }
+    await transport.waitBetweenRequests();
+
+    if (portion.status === 404) {
+      await quarantineApp(
+        entry.applicationId,
+        "missing-public-portion",
+        `HTTP 404 for server-provided portion URL`,
+      );
+      continue;
+    }
+    if (portion.status < 200 || portion.status >= 300) {
+      await quarantineApp(
+        entry.applicationId,
+        "transport-exhausted",
+        `public portion HTTP ${portion.status}`,
+      );
+      continue;
+    }
+
+    const body = portion.body;
     if (body.byteLength > RSP_ACQUISITION_LIMITS.maxPortionBytes) {
-      await writeQuarantineRecord(
-        join(stagingRoot, "quarantine"),
+      await quarantineApp(
         entry.applicationId,
         "oversize-response",
         `${body.byteLength} bytes exceeds cap ${RSP_ACQUISITION_LIMITS.maxPortionBytes}`,
       );
-      quarantined.push(entry.applicationId);
       continue;
     }
 
     const html = Buffer.from(body).toString("utf8");
-    const qCheck = validatePortionHtml(html);
-    const hash = sha256Hex(body);
+    const portionKind = classifyViewstatusPageHtml(html);
+    if (portionKind === "ICANN_ERROR_PAGE") {
+      await quarantineApp(
+        entry.applicationId,
+        "incomplete-portion-q23",
+        "public portion is ICANN_ERROR_PAGE",
+      );
+      continue;
+    }
+    if (portionKind === "STATUS_GRID") {
+      await quarantineApp(
+        entry.applicationId,
+        "incomplete-portion-q23",
+        "public portion response is a status-grid hub",
+      );
+      continue;
+    }
 
+    const validation = validatePublicPortionDocument(html, {
+      expectedApplicationId: entry.applicationId,
+    });
+    if (!validation.ok) {
+      // Retain bytes for steward forensics but do not checkpoint as completed.
+      const hash = sha256Hex(body);
+      await mkdir(join(stagingRoot, "sources/portions", entry.applicationId), { recursive: true });
+      await writeFile(destPath, body);
+      await writeFile(
+        join(stagingRoot, "sources/portions", entry.applicationId, "public-portion.sha256"),
+        `${hash}\n`,
+      );
+      const metadata = buildPortionFetchMetadata({
+        applicationId: entry.applicationId,
+        gtldresultAcId: acId,
+        detailsUrl,
+        serverProvidedHref: parsed.serverProvidedHref,
+        resolvedUrl: parsed.resolvedPortionUrl,
+        finalUrl: portion.finalUrl,
+        httpStatus: portion.status,
+        contentLength: body.byteLength,
+        contentSha256: hash,
+        retrievedAt: new Date().toISOString(),
+        runId: batchId,
+        applicationVersionBasis: PUBLIC_PORTION_VERSION_BASIS,
+      });
+      await writeFile(metaPath, `${JSON.stringify(metadata, null, 2)}\n`);
+      await quarantineApp(
+        entry.applicationId,
+        validation.reason,
+        `public-portion validation failed: ${validation.reason}`,
+      );
+      continue;
+    }
+
+    const hash = sha256Hex(body);
+    const retrievedAt = new Date().toISOString();
     await mkdir(join(stagingRoot, "sources/portions", entry.applicationId), { recursive: true });
     await writeFile(destPath, body);
-    await writeFile(join(stagingRoot, "sources/portions", entry.applicationId, "public-portion.sha256"), `${hash}\n`);
+    await writeFile(
+      join(stagingRoot, "sources/portions", entry.applicationId, "public-portion.sha256"),
+      `${hash}\n`,
+    );
 
     const metadata = buildPortionFetchMetadata({
       applicationId: entry.applicationId,
       gtldresultAcId: acId,
-      resolvedUrl: portionUrl,
-      httpStatus: lastStatus,
+      detailsUrl,
+      serverProvidedHref: parsed.serverProvidedHref,
+      resolvedUrl: parsed.resolvedPortionUrl,
+      finalUrl: portion.finalUrl,
+      httpStatus: portion.status,
       contentLength: body.byteLength,
       contentSha256: hash,
-      retrievedAt: new Date().toISOString(),
+      retrievedAt,
       runId: batchId,
+      applicationVersionBasis: validation.applicationVersionBasis,
     });
     await writeFile(metaPath, `${JSON.stringify(metadata, null, 2)}\n`);
 
-    if (!qCheck.ok) {
-      await writeQuarantineRecord(
-        join(stagingRoot, "quarantine"),
-        entry.applicationId,
-        qCheck.reason,
-        "Retained raw bytes; Q23 anchor missing",
-      );
-      quarantined.push(entry.applicationId);
-    }
-
+    // Checkpoint only after validated server-provided portion + exact Application ID + Q23.
     checkpoint = appendCheckpointEntry(checkpoint, {
       applicationId: entry.applicationId,
       contentSha256: hash,
-      completedAt: metadata.retrievedAt,
+      completedAt: retrievedAt,
       gtldresultAcId: acId,
     });
     await writeCheckpoint(ckPath, checkpoint);
     completed.push(entry.applicationId);
-
-    await new Promise((r) => setTimeout(r, RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests));
   }
 
-  return { mode: "live", completed, skipped, quarantined };
+  return { mode: "live", completed, skipped, quarantined, httpRequestCount };
 }

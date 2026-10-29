@@ -28,7 +28,8 @@ import {
   writeMappingLiveCheckpoint,
 } from "./mapping-checkpoint";
 import { sha256Hex } from "@/normalization/hashes";
-import { absoluteGtldresultUrl, buildPortionUrl } from "./urls";
+import { absoluteGtldresultUrl, buildDetailsUrl, buildPortionUrl } from "./urls";
+import type { GtldresultFetcher } from "./gtldresult-session-transport";
 import { CONFIRMED_2012_MAPPED_APPLICATION_COUNT, CONFIRMED_2012_PORTFOLIO_COUNT } from "@/historical-2012/confirmed-portfolios-constants";
 
 const workspaceRoot = join(process.cwd());
@@ -257,10 +258,35 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
       )}\n`,
     );
 
-    const fetcher = vi.fn(async () => ({
-      status: 200,
-      body: Buffer.from('<div class="response" id="q23">backend</div>'),
-    }));
+    const detailsUrl = buildDetailsUrl(170);
+    const portionUrl = buildPortionUrl(170);
+    const detailsHtml = `<html><body>
+<div>Application ID: 1-1945-29108</div>
+<a href="/applicationstatus/applicationdetails:downloadapplication/170?t:ac=170">Download public portion of application</a>
+</body></html>`;
+    const portionHtml = `<html><body>
+<p>Application ID: 1-1945-29108</p>
+<div class="response" id="q23">backend</div>
+</body></html>`;
+    const fetcher: GtldresultFetcher = vi.fn(async (url) => {
+      if (url === detailsUrl || url.includes("/applicationdetails/170")) {
+        return {
+          status: 200,
+          body: Buffer.from(detailsHtml),
+          headers: {},
+          finalUrl: detailsUrl,
+        };
+      }
+      if (url.includes("downloadapplication")) {
+        return {
+          status: 200,
+          body: Buffer.from(portionHtml),
+          headers: {},
+          finalUrl: url,
+        };
+      }
+      return { status: 404, body: new Uint8Array(), headers: {}, finalUrl: url };
+    });
 
     const prevLegacy = process.env[RSP_ACQUISITION_AUTH_ENV];
     const prevPilot = process.env[RSP_PILOT_LIVE_AUTH_ENV];
@@ -274,6 +300,7 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
         mappingArtifactPath: mappingPath,
         evidenceIndexPath: runRoot,
         batchId: "eligibility-test",
+        sleep: async () => undefined,
       },
       fetcher,
     );
@@ -281,7 +308,13 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
     expect(result.mode).toBe("live");
     expect(result.completed).toContain("1-1945-29108");
     expect(fetcher).toHaveBeenCalled();
-    expect(fetcher).toHaveBeenCalledWith(buildPortionUrl(170));
+    const calledUrls = (fetcher as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as string);
+    expect(calledUrls.some((u) => u === detailsUrl || u.includes("/applicationdetails/170"))).toBe(
+      true,
+    );
+    expect(calledUrls.some((u) => u.includes("downloadapplication"))).toBe(true);
+    // Must not manufacture a portion URL before details discovery.
+    expect(calledUrls[0]).not.toBe(portionUrl);
 
     process.env[RSP_ACQUISITION_AUTH_ENV] = prevLegacy;
     process.env[RSP_PILOT_LIVE_AUTH_ENV] = prevPilot;

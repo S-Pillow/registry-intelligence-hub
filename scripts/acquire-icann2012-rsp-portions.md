@@ -93,6 +93,8 @@ REGISTRY_HUB_RSP_PILOT_LIVE_AUTHORIZED=1 \
 
 `--evidence-index` is the mapping-live run directory (`mapping-live-checkpoint.json` plus `sources/index/<run-id>/page-NNNN.html` and fetch metadata). Pilot-live verifies each approved row's `evidenceSnapshotId` and content hash against those bytes. A checkout `raw-snapshots.json`, including one filled in by hand, is not evidence and is not read for this preflight. Missing pages, hash mismatches, and unknown snapshot ids fail closed.
 
+**Transport (parity with portion-live-diagnostic):** for each pilot Application ID, `pilot-live` (1) GETs the Application Details page for the mapped AC ID via `GtldresultSessionTransport` (manual same-origin redirects ≤5, in-memory cookies), (2) requires the labeled Application ID to match exactly, (3) uses only the official server-provided “download public portion of application” href (never manufactures `buildPortionUrl` for live HTTP), (4) GETs that href in the same session, (5) validates exact Application ID + Q23 via `validatePublicPortionDocument`, then checkpoints. Minimum delay `1000ms` applies between outbound ICANN requests. Planning count when unblocked: `2 × pilotResolvedCount` logical exchanges (details + portion); redirects/retries are additional.
+
 ## Mapping live operator plan (zero HTTP — D2.5A-P0.3A)
 
 **Always run before the first authorized live crawl.** Produces the full VPS operator checklist, pacing, corpus pin, staging/disk checks, failure-branch summary, one-run rule, and truthful live-run expectation fields (`planNetworkRequests: 0`, `liveRunNetworkRequired: true`, page safety cap — **not** a provable pre-contact HTTP total). **Performs zero HTTP** even when `REGISTRY_HUB_RSP_MAPPING_AUTHORIZED=1` is set.

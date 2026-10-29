@@ -66,6 +66,12 @@ export interface PreflightReport {
     mappingLiveAuthorized: boolean;
   };
   networkRequestsExpected: number;
+  /**
+   * pilot-live planning only: resolved apps × 2 logical exchanges
+   * (application-details + server-provided public portion). Redirect/retry
+   * overhead is additional and not included.
+   */
+  pilotLogicalExchangesExpected?: number;
   pilotApplicationToAcId?: Array<{ applicationId: string; gtldresultAcId: number | null }>;
   blockingReasons: string[];
 }
@@ -148,8 +154,12 @@ export async function buildPreflightReport(input: PreflightReportInput): Promise
     }
   }
 
+  let pilotLogicalExchangesExpected: number | undefined;
   if (input.operation === "pilot-live" && blockingReasons.length === 0) {
-    networkRequestsExpected = pilotCounts.pilotResolvedCount;
+    // Details-first + server-provided portion: two logical exchanges per app.
+    // Redirect/retry overhead is not included (same honesty as mapping-live plan).
+    pilotLogicalExchangesExpected = pilotCounts.pilotResolvedCount * 2;
+    networkRequestsExpected = pilotLogicalExchangesExpected;
   }
 
   return {
@@ -175,6 +185,7 @@ export async function buildPreflightReport(input: PreflightReportInput): Promise
       mappingLiveAuthorized: isMappingLiveAuthorized(),
     },
     networkRequestsExpected,
+    pilotLogicalExchangesExpected,
     pilotApplicationToAcId:
       input.operation === "pilot" ||
       input.operation === "pilot-live" ||
@@ -209,6 +220,11 @@ export function formatPreflightReport(report: PreflightReport): string {
     `mappingLiveAuthorized (${RSP_MAPPING_LIVE_AUTH_ENV}): ${report.authState.mappingLiveAuthorized}`,
     `networkRequestsExpected: ${report.networkRequestsExpected}`,
   ];
+  if (report.operation === "pilot-live") {
+    lines.push(
+      `pilotLogicalExchangesExpected: ${report.pilotLogicalExchangesExpected ?? 0} (details + portion per resolved app; redirects/retries extra)`,
+    );
+  }
 
   if (report.pilotApplicationToAcId) {
     lines.push("", "pilot Application ID → gtldresultAcId:");

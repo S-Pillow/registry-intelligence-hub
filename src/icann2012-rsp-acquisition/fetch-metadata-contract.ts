@@ -18,7 +18,13 @@ const FORBIDDEN_METADATA_KEYS = new Set([
 export interface PortionFetchMetadataRecord {
   applicationId: string;
   gtldresultAcId: number;
+  /** SAFE_DERIVED application-details URL used for discovery. */
+  detailsUrl?: string;
+  /** SAFE_DERIVED official server-provided download href (never a manufactured URL). */
+  serverProvidedHref?: string;
+  /** SAFE_DERIVED resolved public-portion URL actually fetched. */
   resolvedUrl: string;
+  /** SAFE_DERIVED final same-origin URL after redirects. */
   finalUrl?: string;
   redirectChain?: string[];
   httpStatus: number;
@@ -31,6 +37,8 @@ export interface PortionFetchMetadataRecord {
   retryAfter?: string;
   retrievedAt: string;
   runId?: string;
+  /** Always current_public_portion for ICANN public-portion downloads. */
+  applicationVersionBasis?: "current_public_portion";
 }
 
 export function redactForbiddenFetchMetadataKeys(
@@ -144,6 +152,8 @@ function redactPagerTransaction(
 export function buildPortionFetchMetadata(input: {
   applicationId: string;
   gtldresultAcId: number;
+  detailsUrl?: string;
+  serverProvidedHref?: string;
   resolvedUrl: string;
   finalUrl?: string;
   redirectChain?: string[];
@@ -157,13 +167,18 @@ export function buildPortionFetchMetadata(input: {
   retryAfter?: string;
   retrievedAt: string;
   runId?: string;
+  applicationVersionBasis?: "current_public_portion";
 }): PortionFetchMetadataRecord {
+  const redact = (url: string | undefined): string | undefined =>
+    url == null ? undefined : sanitizeUrlForPersistence(url, "SAFE_DERIVED");
   return {
     applicationId: input.applicationId,
     gtldresultAcId: input.gtldresultAcId,
-    resolvedUrl: input.resolvedUrl,
-    finalUrl: input.finalUrl,
-    redirectChain: input.redirectChain,
+    detailsUrl: redact(input.detailsUrl),
+    serverProvidedHref: redact(input.serverProvidedHref),
+    resolvedUrl: sanitizeUrlForPersistence(input.resolvedUrl, "SAFE_DERIVED"),
+    finalUrl: redact(input.finalUrl),
+    redirectChain: input.redirectChain?.map((u) => sanitizeUrlForPersistence(u, "SAFE_DERIVED")),
     httpStatus: input.httpStatus,
     contentType: input.contentType,
     contentLength: input.contentLength,
@@ -174,5 +189,6 @@ export function buildPortionFetchMetadata(input: {
     retryAfter: input.retryAfter,
     retrievedAt: input.retrievedAt,
     runId: input.runId,
+    applicationVersionBasis: input.applicationVersionBasis ?? "current_public_portion",
   };
 }

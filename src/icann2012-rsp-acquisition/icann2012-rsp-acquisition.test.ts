@@ -67,9 +67,9 @@ describe("icann2012-rsp-acquisition", () => {
     const big = new Uint8Array(RSP_ACQUISITION_LIMITS.maxPortionBytes + 1);
     const fetcher = vi.fn(async (url: string) => {
       if (url.includes("/170")) {
-        return { status: 200, body: big };
+        return { status: 200, body: big, headers: {}, finalUrl: url };
       }
-      return { status: 404, body: new Uint8Array() };
+      return { status: 404, body: new Uint8Array(), headers: {}, finalUrl: url };
     });
 
     await expect(
