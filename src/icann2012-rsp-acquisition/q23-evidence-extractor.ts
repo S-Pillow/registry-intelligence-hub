@@ -109,11 +109,14 @@ function extractQuestionSections(html: string): SectionSlice[] {
 }
 
 function normalizeProviderName(raw: string): string {
-  return decodeBasicHtmlEntities(raw)
+  let name = decodeBasicHtmlEntities(raw)
     .replace(/\s+/g, " ")
-    // Preserve abbreviation periods (Inc. / Ltd.); strip only loose punctuation.
+    // Preserve legal-name commas and Inc. abbreviation periods; strip only loose edge delimiters.
     .replace(/^[\s,;:"']+|[\s,;:"']+$/g, "")
     .trim();
+  // Sentence-terminating period after LLC/Ltd/Corp/Co/PLC is outside the name; Inc. keeps its period.
+  name = name.replace(/\b(LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.$/i, "$1");
+  return name;
 }
 
 const PROVIDER_NAME_STOPWORDS =
@@ -126,6 +129,60 @@ function isPlausibleProviderName(name: string): boolean {
   // Require at least one letter; reject pure verbs/fragments.
   if (!/[A-Za-z]/.test(name)) return false;
   return true;
+}
+
+/**
+ * Directly governing negation immediately before an assignment-verb match index
+ * (e.g. "has not selected", "did not engage", "has never partnered").
+ */
+const GOVERNING_NEGATION_PREFIX =
+  /(?:\b(?:do|does|did|has|have|had|is|are|was|were|will|shall)\s+)?(?:not|never)(?:\s+currently)?\s+$/i;
+
+/**
+ * Negation inside a provided/performed/operated-by span
+ * (e.g. "will not be provided by", "are never provided by").
+ */
+const NEGATED_PASSIVE_ASSIGNMENT =
+  /\b(?:will|shall|are|is|was|were)\s+(?:not|never)\s+(?:be\s+)?(?:provided|performed|operated)\b|\b(?:not|never)\s+(?:be\s+)?(?:provided|performed|operated)\s+by\b/i;
+
+function isDirectlyNegatedAssignment(
+  text: string,
+  matchIndex: number,
+  matchedText: string,
+): boolean {
+  const prefix = text.slice(Math.max(0, matchIndex - 100), matchIndex);
+  if (GOVERNING_NEGATION_PREFIX.test(prefix)) return true;
+  if (NEGATED_PASSIVE_ASSIGNMENT.test(matchedText)) return true;
+  // Passive forms where "not/never" sits between services and provided (outside matchedText start).
+  const windowStart = Math.max(0, matchIndex - 40);
+  const local = text.slice(windowStart, matchIndex + matchedText.length);
+  if (
+    /\bregistry\s+services?\b[\s\S]{0,40}?\b(?:not|never)\b[\s\S]{0,20}?\b(?:provided|performed|operated)\s+by\b/i.test(
+      local,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Take a provider name starting at `start`, preserving internal commas before legal
+ * suffixes and Inc. abbreviation periods. Stops at `;` or a sentence boundary.
+ */
+function takeProviderNameAsStated(
+  text: string,
+  start: number,
+): { raw: string; length: number } | null {
+  if (start >= text.length) return null;
+  const rest = text.slice(start);
+  // Proper-noun start (capital letter) + word tokens; optional comma+legal-suffix groups.
+  // Capital start avoids capturing verbs after "Registry Service Provider is selected…".
+  const match = rest.match(
+    /^([A-Z][A-Za-z0-9&.'\-]*(?:\s+[A-Za-z0-9][A-Za-z0-9&.'\-]*)*(?:\s*,\s*(?:Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.?)*)/,
+  );
+  if (!match) return null;
+  return { raw: match[1]!, length: match[1]!.length };
 }
 
 function boundExcerpt(text: string, matchIndex: number, matchLength: number): string {
@@ -152,14 +209,22 @@ type ExplicitHit = {
 /**
  * Explicit third-party registry-services assignment patterns.
  * Requires a named provider connected to registry-service / backend RSP wording.
+ * Provider capture groups must not terminate on legal-name commas; provided-by is
+ * handled separately via takeProviderNameAsStated so Inc./LLC punctuation survives.
  */
 const EXPLICIT_PROVIDER_PATTERNS: RegExp[] = [
-  /\b(?:selected|engaged|contracted|appointed|retained)\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b/gi,
-  /\bpartnered\s+with\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\b/gi,
+  /\b(?:selected|select|engaged|engage|contracted|contract|appointed|appoint|retained|retain)\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b/gi,
+  /\b(?:partnered|partner)\s+with\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\b/gi,
   /\b(.+?)\s+will\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\s+for\s+(?:the\s+)?Applicant\b/gi,
-  /\b(?:backend\s+)?registry\s+services?\s+(?:will\s+be\s+|are\s+)?(?:provided|performed|operated)\s+by\s+(.+?)(?:\.|,|;|$)/gi,
-  /\bRegistry\s+Service\s+Provider\s*(?:is|:)\s*([A-Z][^.!?\n]{1,80}?)(?:\.|,|;|$)/g,
-  /\b(?:as|with)\s+(?:our|the)\s+Registry\s+Service\s+Provider[,\s]+([A-Z][^.!?\n]{1,80}?)(?:\.|,|;|$)/g,
+];
+
+/** Prefix-only: name span collected with takeProviderNameAsStated (preserves Inc./LLC commas). */
+const PROVIDED_BY_PREFIX =
+  /\b((?:backend\s+)?registry\s+services?)\s+(?:will\s+be\s+|are\s+)?(?:provided|performed|operated)\s+by\s+/gi;
+
+const RSP_LABEL_PREFIXES: RegExp[] = [
+  /\bRegistry\s+Service\s+Provider\s*(?:is|:)\s*/gi,
+  /\b(?:as|with)\s+(?:our|the)\s+Registry\s+Service\s+Provider[,\s]+/gi,
 ];
 
 const SELF_OPERATED_PATTERNS: RegExp[] = [
@@ -180,29 +245,83 @@ const AMBIGUOUS_VENDOR_NEAR_TECH =
 const AMBIGUOUS_NAME_STOPWORDS =
   /^(?:The|This|These|Applicant|Registry|Services|Service|Provider|Question|Technical|General|Industry|No|DNS|DNSSEC|EPP|Whois|WHOIS|SRS)$/i;
 
+function pushHit(
+  hits: ExplicitHit[],
+  text: string,
+  matchIndex: number,
+  matchLength: number,
+  matchedText: string,
+  rawName: string,
+  role?: string,
+): void {
+  if (isDirectlyNegatedAssignment(text, matchIndex, matchedText)) return;
+  const providerNameAsStated = normalizeProviderName(rawName);
+  if (!isPlausibleProviderName(providerNameAsStated)) return;
+  hits.push({
+    providerNameAsStated,
+    roleAsStated: role ? normalizeProviderName(role) : undefined,
+    matchIndex,
+    matchLength,
+    matchedText,
+  });
+}
+
 function collectExplicitHits(text: string): ExplicitHit[] {
   const hits: ExplicitHit[] = [];
   for (const pattern of EXPLICIT_PROVIDER_PATTERNS) {
     pattern.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(text)) !== null) {
-      const rawName = match[1] ?? "";
-      const role = match[2];
-      const providerNameAsStated = normalizeProviderName(rawName);
-      if (!isPlausibleProviderName(providerNameAsStated)) continue;
-      hits.push({
-        providerNameAsStated,
-        roleAsStated: role ? normalizeProviderName(role) : undefined,
-        matchIndex: match.index,
-        matchLength: match[0].length,
-        matchedText: match[0],
-      });
+      pushHit(
+        hits,
+        text,
+        match.index,
+        match[0].length,
+        match[0],
+        match[1] ?? "",
+        match[2],
+      );
     }
   }
+
+  PROVIDED_BY_PREFIX.lastIndex = 0;
+  let providedPrefix: RegExpExecArray | null;
+  while ((providedPrefix = PROVIDED_BY_PREFIX.exec(text)) !== null) {
+    const nameStart = providedPrefix.index + providedPrefix[0].length;
+    const taken = takeProviderNameAsStated(text, nameStart);
+    if (!taken) continue;
+    const matchedText = text.slice(providedPrefix.index, nameStart + taken.length);
+    const role = providedPrefix[1];
+    pushHit(
+      hits,
+      text,
+      providedPrefix.index,
+      matchedText.length,
+      matchedText,
+      taken.raw,
+      role,
+    );
+  }
+
+  for (const prefixPattern of RSP_LABEL_PREFIXES) {
+    prefixPattern.lastIndex = 0;
+    let labelPrefix: RegExpExecArray | null;
+    while ((labelPrefix = prefixPattern.exec(text)) !== null) {
+      const nameStart = labelPrefix.index + labelPrefix[0].length;
+      const taken = takeProviderNameAsStated(text, nameStart);
+      if (!taken) continue;
+      const matchedText = text.slice(labelPrefix.index, nameStart + taken.length);
+      pushHit(hits, text, labelPrefix.index, matchedText.length, matchedText, taken.raw);
+    }
+  }
+
   // Stable unique by provider+role
   const seen = new Set<string>();
   const unique: ExplicitHit[] = [];
-  for (const hit of hits.sort((a, b) => a.matchIndex - b.matchIndex || a.providerNameAsStated.localeCompare(b.providerNameAsStated))) {
+  for (const hit of hits.sort(
+    (a, b) =>
+      a.matchIndex - b.matchIndex || a.providerNameAsStated.localeCompare(b.providerNameAsStated),
+  )) {
     const key = `${hit.providerNameAsStated.toLowerCase()}|${(hit.roleAsStated ?? "").toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -346,6 +465,12 @@ export function extractHistoricalRspEvidenceFromPublicPortionHtml(
   );
 
   if (candidates.length > 0) {
+    const conflictNotes =
+      selfOperated
+        ? [
+            "CONFLICT: explicit third-party assignment and explicit self-operated / no-external-provider language both present; steward review required — not confirmed",
+          ]
+        : [];
     return {
       schemaVersion: HISTORICAL_RSP_EVIDENCE_EXTRACTION_SCHEMA_VERSION,
       disposition: "EXPLICIT_PROVIDER_CANDIDATE",
@@ -354,6 +479,7 @@ export function extractHistoricalRspEvidenceFromPublicPortionHtml(
       candidates,
       notes: [
         ...notes,
+        ...conflictNotes,
         "candidates require steward review; rspKey / confirmed relationship not assigned",
       ],
     };

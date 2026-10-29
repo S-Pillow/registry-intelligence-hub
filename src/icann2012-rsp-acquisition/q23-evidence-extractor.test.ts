@@ -180,3 +180,101 @@ describe("RIH-2012-RSP-VISIBILITY-1A — Q23 offline evidence extraction", () =>
     expect(htmlToPlainText("<p>A&amp;B</p><br/><b>C</b>")).toBe("A&B C");
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1A-R1 — negation and provider wording", () => {
+  it("R1 — positive selected provider preserves NeuStar, Inc.", () => {
+    const html = portionShell(
+      q23("The Applicant selected NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.providerNameAsStated).toBe("NeuStar, Inc.");
+  });
+
+  it("R1 — negated selected produces zero positive candidates", () => {
+    const html = portionShell(
+      q23("The Applicant has not selected NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R1 — alternate negated selected (did not select) produces zero positive candidates", () => {
+    const html = portionShell(
+      q23("The Applicant did not select NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R1 — negated engaged produces zero positive candidates", () => {
+    const html = portionShell(
+      q23(
+        "The Applicant has not engaged Example Registry Services, LLC to provide registry services.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R1 — provided by preserves NeuStar, Inc. punctuation", () => {
+    const html = portionShell(q23("Registry services will be provided by NeuStar, Inc."));
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.providerNameAsStated).toBe("NeuStar, Inc.");
+  });
+
+  it("R1 — provided by preserves punctuation-bearing synthetic legal name", () => {
+    const html = portionShell(
+      q23("Registry services will be provided by Example Registry Services, LLC."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.providerNameAsStated).toBe("Example Registry Services, LLC");
+  });
+
+  it("R1 — negated provided-by cannot enter the positive path", () => {
+    const html = portionShell(q23("Registry services will not be provided by NeuStar, Inc."));
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R1 — conflicting third-party and self-operated evidence stays reviewable", () => {
+    const html = portionShell(
+      q23(
+        "The Applicant selected NeuStar, Inc. to provide backend registry services. " +
+          "The Applicant will provide the registry services itself.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.reviewState).toBe("REQUIRES_STEWARD_REVIEW");
+    expect(result.candidates[0]).not.toHaveProperty("rspKey");
+    expect(result.notes.some((n) => /CONFLICT/i.test(n))).toBe(true);
+    expect(JSON.stringify(result)).not.toMatch(/"CONFIRMED"/);
+  });
+});
