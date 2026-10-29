@@ -546,3 +546,81 @@ describe("RIH-2012-RSP-VISIBILITY-1A-R3 — affirmative assertion grammar lock",
     );
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1A-R4 — provider-span completeness gate", () => {
+  function extract(content: string) {
+    return extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(q23(content)), {
+      expectedApplicationId: APP_ID,
+    });
+  }
+
+  function expectNoTruncatedPrefix(content: string, forbiddenPrefix: string) {
+    const result = extract(content);
+    const names = result.candidates.map((c) => c.providerNameAsStated);
+    // Forbidden: emit the truncated prefix as providerNameAsStated.
+    expect(names).not.toContain(forbiddenPrefix);
+    // Acceptable: fail closed (preferred) or a complete longer exact name.
+    if (result.candidates.length === 0) {
+      expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    } else {
+      expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+      expect(names.every((n) => n.length > forbiddenPrefix.length)).toBe(true);
+    }
+  }
+
+  it("R4 — provided-by lowercase connector must not emit truncated CORE Internet Council", () => {
+    expectNoTruncatedPrefix(
+      "Registry services will be provided by CORE Internet Council of Registrars.",
+      "CORE Internet Council",
+    );
+  });
+
+  it("R4 — provided-by unsupported S.A. suffix must not emit truncated Example Registry Services", () => {
+    expectNoTruncatedPrefix(
+      "Registry services will be provided by Example Registry Services, S.A.",
+      "Example Registry Services",
+    );
+  });
+
+  it("R4 — RSP-label lowercase connector must not emit truncated CORE Internet Council", () => {
+    expectNoTruncatedPrefix(
+      "Registry Service Provider: CORE Internet Council of Registrars.",
+      "CORE Internet Council",
+    );
+  });
+
+  it("R4 — RSP-label unsupported S.A. suffix must not emit truncated Example Registry Services", () => {
+    expectNoTruncatedPrefix(
+      "Registry Service Provider: Example Registry Services, S.A.",
+      "Example Registry Services",
+    );
+  });
+
+  it("R4 — provided-by NeuStar, Inc. remains exact positive", () => {
+    const result = extract("Registry services will be provided by NeuStar, Inc.");
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["NeuStar, Inc."]);
+  });
+
+  it("R4 — provided-by Afilias Limited remains exact positive", () => {
+    const result = extract("Registry services will be provided by Afilias Limited.");
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Afilias Limited"]);
+  });
+
+  it("R4 — provided-by Example Registry Services, LLC remains exact positive", () => {
+    const result = extract(
+      "Registry services will be provided by Example Registry Services, LLC.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual([
+      "Example Registry Services, LLC",
+    ]);
+  });
+
+  it("R4 — RSP-label NeuStar, Inc. remains exact positive", () => {
+    const result = extract("Registry Service Provider: NeuStar, Inc.");
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["NeuStar, Inc."]);
+  });
+});

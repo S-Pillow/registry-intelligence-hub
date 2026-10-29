@@ -214,7 +214,9 @@ function isLegalAbbreviationPeriod(text: string, periodIndex: number): boolean {
 
 /**
  * Deterministic sentence split on `.|;|!|?` followed by whitespace or end.
- * Does not split on Inc. abbreviation periods so "NeuStar, Inc. to provide…" stays one clause.
+ * Inc. abbreviation periods stay inside the clause when followed by lowercase
+ * continuation ("Inc. to provide…"), but split when the next token is a new
+ * capitalized sentence ("Inc. The Applicant…").
  * L.L.C. internal periods (not followed by whitespace) stay intact.
  */
 function splitSentences(text: string): { text: string; absoluteStart: number }[] {
@@ -227,7 +229,14 @@ function splitSentences(text: string): { text: string; absoluteStart: number }[]
       (i + 1 >= text.length || /\s/.test(text[i + 1]!))
     ) {
       if (ch === "." && isLegalAbbreviationPeriod(text, i)) {
-        continue;
+        let look = i + 1;
+        while (look < text.length && /\s/.test(text[look]!)) look += 1;
+        const next = text[look];
+        // Same-clause continuation after Inc. (e.g. "to provide") — do not split.
+        if (!next || !/[A-Z]/.test(next)) {
+          continue;
+        }
+        // Capitalized token after Inc. — treat as a new sentence boundary.
       }
       const raw = text.slice(start, i + 1);
       const lead = raw.match(/^\s*/)?.[0].length ?? 0;
@@ -308,11 +317,21 @@ const AMBIGUOUS_VENDOR_NEAR_TECH =
 const AMBIGUOUS_NAME_STOPWORDS =
   /^(?:The|This|These|Applicant|Registry|Services|Service|Provider|Question|Technical|General|Industry|No|DNS|DNSSEC|EPP|Whois|WHOIS|SRS)$/i;
 
+/**
+ * After a provider span with no trailing role grammar, only ordinary sentence
+ * punctuation may remain. Any other leftover text means the span is incomplete
+ * (e.g. lowercase connectors or unsupported suffixes) — fail closed.
+ */
+function isOnlyTerminalSentencePunctuation(remainder: string): boolean {
+  return /^\s*[.!?;]*\s*$/.test(remainder);
+}
+
 function tryAffirmativeHit(
   sentence: string,
   absoluteStart: number,
   opener: RegExp,
   roleTail: RegExp | null,
+  options: { requireCompleteProviderSpan?: boolean } = {},
 ): ExplicitHit | null {
   opener.lastIndex = 0;
   const openMatch = opener.exec(sentence);
@@ -329,6 +348,12 @@ function tryAffirmativeHit(
     if (!roleMatch || roleMatch.index !== 0) return null;
     role = roleMatch[1];
     matchEnd = nameStart + taken.length + roleMatch[0].length;
+  } else if (options.requireCompleteProviderSpan) {
+    const remainder = sentence.slice(nameStart + taken.length);
+    if (!isOnlyTerminalSentencePunctuation(remainder)) {
+      // Incomplete provider wording (truncated prefix) — never emit partial name.
+      return null;
+    }
   }
 
   const providerNameAsStated = normalizeProviderName(taken.raw);
@@ -372,10 +397,14 @@ function matchAffirmativeSentence(
   );
   if (partnered) return partnered;
 
-  const providedBy = tryAffirmativeHit(body, absoluteStart, AFFIRMATIVE_PROVIDED_BY, null);
+  const providedBy = tryAffirmativeHit(body, absoluteStart, AFFIRMATIVE_PROVIDED_BY, null, {
+    requireCompleteProviderSpan: true,
+  });
   if (providedBy) return providedBy;
 
-  const rspLabel = tryAffirmativeHit(body, absoluteStart, AFFIRMATIVE_RSP_LABEL, null);
+  const rspLabel = tryAffirmativeHit(body, absoluteStart, AFFIRMATIVE_RSP_LABEL, null, {
+    requireCompleteProviderSpan: true,
+  });
   if (rspLabel) return rspLabel;
 
   // <Provider> will provide … for the Applicant — provider must open the sentence.
