@@ -80,7 +80,15 @@ function findQuestionStart(html: string, question: 23 | 24 | 25): number {
   for (const pattern of patterns) {
     pattern.lastIndex = 0;
     const match = pattern.exec(html);
-    if (match && (best < 0 || match.index < best)) best = match.index;
+    if (!match) continue;
+    let index = match.index;
+    // id="q23" matches inside the opening tag — start after `>` so attribute
+    // debris cannot precede the question heading in plain text.
+    if (/id\s*=/i.test(match[0])) {
+      const gt = html.indexOf(">", match.index);
+      if (gt >= 0) index = gt + 1;
+    }
+    if (best < 0 || index < best) best = index;
   }
   return best;
 }
@@ -139,19 +147,32 @@ const GOVERNING_NEGATION_PREFIX =
   /(?:\b(?:do|does|did|has|have|had|is|are|was|were|will|shall)\s+)?(?:not|never)(?:\s+currently)?\s+$/i;
 
 /**
+ * Non-assertive / speculative framing immediately before an assignment verb.
+ * Intention, plan, modality, and counterfactual "were to" must not become candidates.
+ */
+const NON_ASSERTIVE_ASSIGNMENT_PREFIX =
+  /(?:\b(?:do|does|did|has|have|had)\s+not\s+(?:intend|plan|want|wish|propose|expect)(?:s|ed)?\s+to\s+|\b(?:intends?|plans?|wants?|wishes?|proposes?|expects?)\s+to\s+|\b(?:may|might|could|would|should|can)\s+|\b(?:were|was)\s+to\s+)$/i;
+
+/**
  * Negation inside a provided/performed/operated-by span
  * (e.g. "will not be provided by", "are never provided by").
  */
 const NEGATED_PASSIVE_ASSIGNMENT =
   /\b(?:will|shall|are|is|was|were)\s+(?:not|never)\s+(?:be\s+)?(?:provided|performed|operated)\b|\b(?:not|never)\s+(?:be\s+)?(?:provided|performed|operated)\s+by\b/i;
 
+const LEGAL_SUFFIX_AT = /^(Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.?/i;
+const PROVIDER_FIRST_WORD = /^[A-Z][A-Za-z0-9&'\-]*/;
+/** Continuation word: Title Case only — periods are never part of ordinary tokens. */
+const PROVIDER_NEXT_WORD = /^\s+(?:&\s+)?([A-Z][A-Za-z0-9&'\-]*)/;
+
 function isDirectlyNegatedAssignment(
   text: string,
   matchIndex: number,
   matchedText: string,
 ): boolean {
-  const prefix = text.slice(Math.max(0, matchIndex - 100), matchIndex);
+  const prefix = text.slice(Math.max(0, matchIndex - 120), matchIndex);
   if (GOVERNING_NEGATION_PREFIX.test(prefix)) return true;
+  if (NON_ASSERTIVE_ASSIGNMENT_PREFIX.test(prefix)) return true;
   if (NEGATED_PASSIVE_ASSIGNMENT.test(matchedText)) return true;
   // Passive forms where "not/never" sits between services and provided (outside matchedText start).
   const windowStart = Math.max(0, matchIndex - 40);
@@ -167,22 +188,66 @@ function isDirectlyNegatedAssignment(
 }
 
 /**
- * Take a provider name starting at `start`, preserving internal commas before legal
- * suffixes and Inc. abbreviation periods. Stops at `;` or a sentence boundary.
+ * Take a provider name starting at `start`, preserving commas before legal suffixes
+ * and Inc. abbreviation periods. Stops at real sentence boundaries — ordinary word
+ * tokens do not absorb `.` so following prose is never consumed.
  */
 function takeProviderNameAsStated(
   text: string,
   start: number,
 ): { raw: string; length: number } | null {
   if (start >= text.length) return null;
-  const rest = text.slice(start);
-  // Proper-noun start (capital letter) + word tokens; optional comma+legal-suffix groups.
-  // Capital start avoids capturing verbs after "Registry Service Provider is selected…".
-  const match = rest.match(
-    /^([A-Z][A-Za-z0-9&.'\-]*(?:\s+[A-Za-z0-9][A-Za-z0-9&.'\-]*)*(?:\s*,\s*(?:Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.?)*)/,
-  );
-  if (!match) return null;
-  return { raw: match[1]!, length: match[1]!.length };
+  const first = text.slice(start).match(PROVIDER_FIRST_WORD);
+  if (!first) return null;
+  let i = start + first[0].length;
+  let end = i;
+
+  while (i < text.length) {
+    const comma = text.slice(i).match(/^,\s*/);
+    if (comma) {
+      const afterComma = i + comma[0].length;
+      const suffix = text.slice(afterComma).match(LEGAL_SUFFIX_AT);
+      if (suffix) {
+        i = afterComma + suffix[0].length;
+        end = i;
+        // Legal suffix completes the name; do not continue into following prose.
+        break;
+      }
+      break;
+    }
+
+    // Sentence / clause terminator (not part of a legal-suffix abbreviation).
+    const ch = text[i];
+    if (ch === "." || ch === ";" || ch === "!" || ch === "?") break;
+
+    const next = text.slice(i).match(PROVIDER_NEXT_WORD);
+    if (next) {
+      i += next[0].length;
+      end = i;
+      // "Inc." abbreviation period belongs to the name when not introduced by a comma.
+      if (/^Inc$/i.test(next[1]!) && text[i] === ".") {
+        i += 1;
+        end = i;
+        break;
+      }
+      continue;
+    }
+    break;
+  }
+
+  const raw = text.slice(start, end);
+  if (!raw) return null;
+  return { raw, length: end - start };
+}
+
+/** Drop leading Q23–Q25 heading labels so they cannot enter provider-name captures. */
+function stripLeadingQuestionHeading(text: string): string {
+  return text
+    .replace(/^id\s*=\s*["']q2[3-5][^>]*>\s*/i, "")
+    // Numbered heading only — do not strip body sentences that begin "Registry services will…".
+    .replace(/^(?:Question\s+)?2[3-5]\s*[.)]\s*(?:Registry\s+Services\b\s*)?/i, "")
+    .replace(/^Question\s+2[3-5]\s*[:.\-]?\s*/i, "")
+    .trimStart();
 }
 
 function boundExcerpt(text: string, matchIndex: number, matchLength: number): string {
@@ -209,14 +274,26 @@ type ExplicitHit = {
 /**
  * Explicit third-party registry-services assignment patterns.
  * Requires a named provider connected to registry-service / backend RSP wording.
- * Provider capture groups must not terminate on legal-name commas; provided-by is
- * handled separately via takeProviderNameAsStated so Inc./LLC punctuation survives.
+ * Provider names after the verb are taken with takeProviderNameAsStated (bounded).
+ * Provider-will-provide is handled separately as a sentence-local pattern.
  */
-const EXPLICIT_PROVIDER_PATTERNS: RegExp[] = [
-  /\b(?:selected|select|engaged|engage|contracted|contract|appointed|appoint|retained|retain)\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b/gi,
-  /\b(?:partnered|partner)\s+with\s+(.+?)\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\b/gi,
-  /\b(.+?)\s+will\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\s+for\s+(?:the\s+)?Applicant\b/gi,
-];
+const ASSIGNMENT_VERB_PREFIX =
+  /\b(?:selected|select|engaged|engage|contracted|contract|appointed|appoint|retained|retain)\s+/gi;
+
+const PARTNERED_WITH_PREFIX = /\b(?:partnered|partner)\s+with\s+/gi;
+
+const ASSIGNMENT_ROLE_TAIL =
+  /\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b/i;
+
+const PARTNERED_ROLE_TAIL =
+  /\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\b/i;
+
+/**
+ * Sentence-local: provider name immediately after a sentence boundary (or start),
+ * then "will provide/perform/operate … for the Applicant".
+ */
+const WILL_PROVIDE_FOR_APPLICANT =
+  /(?:^|[.!?]\s+)((?:[A-Z][A-Za-z0-9&'\-]*)(?:\s+(?:&\s+)?[A-Z][A-Za-z0-9&'\-]*){0,5}(?:,\s*(?:Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.?)?)\s+will\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\s+for\s+(?:the\s+)?Applicant\b/g;
 
 /** Prefix-only: name span collected with takeProviderNameAsStated (preserves Inc./LLC commas). */
 const PROVIDED_BY_PREFIX =
@@ -266,22 +343,66 @@ function pushHit(
   });
 }
 
-function collectExplicitHits(text: string): ExplicitHit[] {
+function collectVerbAssignmentHits(
+  text: string,
+  hits: ExplicitHit[],
+  verbPrefix: RegExp,
+  roleTail: RegExp,
+): void {
+  verbPrefix.lastIndex = 0;
+  let prefixMatch: RegExpExecArray | null;
+  while ((prefixMatch = verbPrefix.exec(text)) !== null) {
+    const nameStart = prefixMatch.index + prefixMatch[0].length;
+    const taken = takeProviderNameAsStated(text, nameStart);
+    if (!taken) continue;
+    const afterName = text.slice(nameStart + taken.length);
+    const roleMatch = afterName.match(roleTail);
+    if (!roleMatch || roleMatch.index !== 0) continue;
+    const matchEnd = nameStart + taken.length + roleMatch[0].length;
+    const matchedText = text.slice(prefixMatch.index, matchEnd);
+    // Verb index for negation/modality: start of the assignment verb token.
+    const verbToken = prefixMatch[0].match(
+      /\b(?:selected|select|engaged|engage|contracted|contract|appointed|appoint|retained|retain|partnered|partner)\b/i,
+    );
+    const verbOffset = verbToken ? prefixMatch[0].toLowerCase().lastIndexOf(verbToken[0].toLowerCase()) : 0;
+    const verbIndex = prefixMatch.index + Math.max(0, verbOffset);
+    pushHit(
+      hits,
+      text,
+      verbIndex,
+      matchEnd - verbIndex,
+      matchedText,
+      taken.raw,
+      roleMatch[1],
+    );
+  }
+}
+
+function collectExplicitHits(rawText: string): ExplicitHit[] {
+  const text = stripLeadingQuestionHeading(rawText);
   const hits: ExplicitHit[] = [];
-  for (const pattern of EXPLICIT_PROVIDER_PATTERNS) {
-    pattern.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(text)) !== null) {
-      pushHit(
-        hits,
-        text,
-        match.index,
-        match[0].length,
-        match[0],
-        match[1] ?? "",
-        match[2],
-      );
-    }
+
+  collectVerbAssignmentHits(text, hits, ASSIGNMENT_VERB_PREFIX, ASSIGNMENT_ROLE_TAIL);
+  collectVerbAssignmentHits(text, hits, PARTNERED_WITH_PREFIX, PARTNERED_ROLE_TAIL);
+
+  WILL_PROVIDE_FOR_APPLICANT.lastIndex = 0;
+  let willMatch: RegExpExecArray | null;
+  while ((willMatch = WILL_PROVIDE_FOR_APPLICANT.exec(text)) !== null) {
+    const full = willMatch[0];
+    // Group 1 is the provider; match may include a leading ". " sentence boundary.
+    const providerRaw = willMatch[1] ?? "";
+    const providerOffsetInFull = full.lastIndexOf(providerRaw);
+    const matchIndex =
+      willMatch.index + (providerOffsetInFull >= 0 ? providerOffsetInFull : 0);
+    pushHit(
+      hits,
+      text,
+      matchIndex,
+      full.length - (providerOffsetInFull >= 0 ? providerOffsetInFull : 0),
+      full.slice(providerOffsetInFull >= 0 ? providerOffsetInFull : 0),
+      providerRaw,
+      willMatch[2],
+    );
   }
 
   PROVIDED_BY_PREFIX.lastIndex = 0;
@@ -443,15 +564,17 @@ export function extractHistoricalRspEvidenceFromPublicPortionHtml(
   let ambiguous = false;
 
   for (const section of sections) {
-    const hits = collectExplicitHits(section.text);
+    // Strip Q-heading labels before parse/excerpt so locators stay sentence-local.
+    const text = stripLeadingQuestionHeading(section.text);
+    const hits = collectExplicitHits(text);
     for (const hit of hits) {
-      candidates.push(buildCandidate(applicationId, section.fieldPath, hit, section.text));
+      candidates.push(buildCandidate(applicationId, section.fieldPath, hit, text));
     }
-    if (hasExplicitSelfOperated(section.text)) {
+    if (hasExplicitSelfOperated(text)) {
       selfOperated = true;
       notes.push(`${section.fieldPath}: explicit self-operated / no-external-provider language`);
     }
-    if (hits.length === 0 && hasAmbiguousVendorMention(section.text)) {
+    if (hits.length === 0 && hasAmbiguousVendorMention(text)) {
       ambiguous = true;
       notes.push(`${section.fieldPath}: vendor-like mention near technical terms without assignment language`);
     }

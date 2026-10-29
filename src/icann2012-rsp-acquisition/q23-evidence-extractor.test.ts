@@ -278,3 +278,148 @@ describe("RIH-2012-RSP-VISIBILITY-1A-R1 — negation and provider wording", () =
     expect(JSON.stringify(result)).not.toMatch(/"CONFIRMED"/);
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1A-R2 — assertion and provider-span boundaries", () => {
+  it("R2 — provided by stops at sentence boundary (Afilias Limited)", () => {
+    const html = portionShell(
+      q23(
+        "Registry services will be provided by Afilias Limited. The Applicant will operate the remaining systems.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.providerNameAsStated).toBe("Afilias Limited");
+  });
+
+  it("R2 — provided by stops at sentence boundary (VeriSign Naming Services)", () => {
+    const html = portionShell(
+      q23("Registry services will be provided by VeriSign Naming Services. DNSSEC is described below."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates[0]?.providerNameAsStated).toBe("VeriSign Naming Services");
+  });
+
+  it("R2 — provided by keeps NeuStar, Inc. then stops before next sentence", () => {
+    const html = portionShell(
+      q23("Registry services will be provided by NeuStar, Inc. The Applicant describes DNS separately."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates[0]?.providerNameAsStated).toBe("NeuStar, Inc.");
+  });
+
+  it("R2 — provided by keeps Example Registry Services, LLC then stops", () => {
+    const html = portionShell(
+      q23(
+        "Registry services will be provided by Example Registry Services, LLC. The Applicant describes DNS separately.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates[0]?.providerNameAsStated).toBe("Example Registry Services, LLC");
+  });
+
+  it("R2 — does not intend to select yields zero positive candidates", () => {
+    const html = portionShell(
+      q23(
+        "The Applicant does not intend to select NeuStar, Inc. to provide backend registry services.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R2 — does not plan to select yields zero positive candidates", () => {
+    const html = portionShell(
+      q23(
+        "The Applicant does not plan to select NeuStar, Inc. to provide backend registry services.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R2 — may select yields zero positive candidates", () => {
+    const html = portionShell(
+      q23("The Applicant may select NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R2 — could select yields zero positive candidates", () => {
+    const html = portionShell(
+      q23("The Applicant could select NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R2 — hypothetical were to select yields zero positive candidates", () => {
+    const html = portionShell(
+      q23(
+        "If the Applicant were to select NeuStar, Inc. to provide backend registry services, further review would follow.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  });
+
+  it("R2 — ordinary asserted selected remains a positive exact candidate", () => {
+    const html = portionShell(
+      q23("The Applicant selected NeuStar, Inc. to provide backend registry services."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates[0]?.providerNameAsStated).toBe("NeuStar, Inc.");
+  });
+
+  it("R2 — provider-will-provide is sentence-local (Afilias Limited only)", () => {
+    const html = portionShell(
+      q23("Afilias Limited will provide backend registry services for the Applicant."),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]?.providerNameAsStated).toBe("Afilias Limited");
+    expect(result.candidates[0]?.providerNameAsStated).not.toMatch(/23|Registry Services/i);
+  });
+
+  it("R2 — preceding prose does not leak into provider-will-provide name", () => {
+    const html = portionShell(
+      q23(
+        "The technical model is described below. Afilias Limited will provide backend registry services for the Applicant.",
+      ),
+    );
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates[0]?.providerNameAsStated).toBe("Afilias Limited");
+  });
+});
