@@ -423,3 +423,126 @@ describe("RIH-2012-RSP-VISIBILITY-1A-R2 — assertion and provider-span boundari
     expect(result.candidates[0]?.providerNameAsStated).toBe("Afilias Limited");
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1A-R3 — affirmative assertion grammar lock", () => {
+  function expectNoPositive(content: string) {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(q23(content)), {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+  }
+
+  function expectProvider(content: string, provider: string) {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(q23(content)), {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual([provider]);
+  }
+
+  it("R3 — may have selected is non-positive", () => {
+    expectNoPositive(
+      "The Applicant may have selected NeuStar, Inc. to provide backend registry services.",
+    );
+  });
+
+  it("R3 — might have engaged is non-positive", () => {
+    expectNoPositive(
+      "The Applicant might have engaged Example Registry Services, LLC to provide registry services.",
+    );
+  });
+
+  it("R3 — could have selected is non-positive", () => {
+    expectNoPositive(
+      "The Applicant could have selected NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — would have selected is non-positive", () => {
+    expectNoPositive(
+      "The Applicant would have selected NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — did not ultimately select is non-positive", () => {
+    expectNoPositive(
+      "The Applicant did not ultimately select NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — has never actually selected is non-positive", () => {
+    expectNoPositive(
+      "The Applicant has never actually selected NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — was expected to select is non-positive", () => {
+    expectNoPositive(
+      "The Applicant was expected to select NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — was considering whether to select is non-positive", () => {
+    expectNoPositive(
+      "The Applicant was considering whether to select NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — if approved may select is non-positive", () => {
+    expectNoPositive(
+      "If approved, the Applicant may select NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — intends to select is non-positive", () => {
+    expectNoPositive(
+      "The Applicant intends to select NeuStar, Inc. to provide registry services.",
+    );
+  });
+
+  it("R3 — arbitrary prose before select token cannot create evidence", () => {
+    expectNoPositive(
+      "The Applicant's board discussed whether it might eventually select NeuStar, Inc. to provide backend registry services.",
+    );
+  });
+
+  it("R3 — positive control selected", () => {
+    expectProvider(
+      "The Applicant selected NeuStar, Inc. to provide backend registry services.",
+      "NeuStar, Inc.",
+    );
+  });
+
+  it("R3 — positive control has selected", () => {
+    expectProvider(
+      "The Applicant has selected NeuStar, Inc. to provide backend registry services.",
+      "NeuStar, Inc.",
+    );
+  });
+
+  it("R3 — positive control engaged", () => {
+    expectProvider(
+      "The Applicant engaged Example Registry Services, LLC to provide registry services.",
+      "Example Registry Services, LLC",
+    );
+  });
+
+  it("R3 — positive control partnered with", () => {
+    expectProvider(
+      "The Applicant partnered with VeriSign Naming Services to provide registry services.",
+      "VeriSign Naming Services",
+    );
+  });
+
+  it("R3 — positive control provided by", () => {
+    expectProvider("Registry services will be provided by NeuStar, Inc.", "NeuStar, Inc.");
+  });
+
+  it("R3 — positive control provider will provide for Applicant", () => {
+    expectProvider(
+      "Afilias Limited will provide backend registry services for the Applicant.",
+      "Afilias Limited",
+    );
+  });
+});
