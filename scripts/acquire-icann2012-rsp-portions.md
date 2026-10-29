@@ -69,15 +69,15 @@ npm run acquire-rsp-portions -- mapping-apply-review \
   --output /path/to/mapping.approved.json
 ```
 
-`--output` is optional; default sibling path is `registry-2012-rsp-mapping/<run-id>/mapping.approved.json`.
+`--output` is optional; default sibling path is `registry-2012-rsp-mapping/<run-id>/mapping.approved.json`. Output is created **exclusively** (never overwrites). Paths equal to DRAFT `mapping.json`, the review packet, checkpoint, or other run control files are rejected **before write**. Source artifact must be exactly `EVIDENCE` + `DRAFT`.
 
 | Decision | Behavior |
 | --- | --- |
-| **APPROVE** | Only when mechanical eligibility passes (SHA + runId match, `mappingReviewPass`, no hold, no integrity failures, `roundWideExact`). Writes **approved derivative** only. |
-| **HOLD** | Reports `HOLD — NO PROMOTION`. Exit success. No write. |
-| **REJECT** | Reports `REJECT — NO PROMOTION`. Exit success. No write. |
+| **APPROVE** | Only when mechanical eligibility passes (SHA + runId match, `mappingReviewPass`, no hold, no integrity failures, `roundWideExact`) and source is `EVIDENCE`+`DRAFT`. Writes **approved derivative** only. |
+| **HOLD** | Packet must bind to this reviewed run/SHA. Reports `HOLD — NO PROMOTION`. Exit success. No write. |
+| **REJECT** | Packet must bind to this reviewed run/SHA. Reports `REJECT — NO PROMOTION`. Exit success. No write. |
 
-Fail-closed on wrong SHA, wrong runId, review failure, hold, integrity failure, or non-exact round-wide. Packet path is outside Git (steward storage). Do not commit real APPROVE packets.
+Fail-closed on wrong SHA, wrong runId (all decisions), review failure, hold, integrity failure, non-exact round-wide, lifecycle mismatch, or output collision. Packet path is outside Git (steward storage). Do not commit real APPROVE packets.
 
 ## Live pilot (after written approval only)
 

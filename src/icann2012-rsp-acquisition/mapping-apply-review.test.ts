@@ -9,12 +9,14 @@ import { stagingMappingApprovedArtifactPath, stagingMappingArtifactPath } from "
 import { networkPolicyForCommand } from "./command-mode";
 import { RSP_MAPPING_LIVE_AUTH_ENV } from "./constants";
 import { loadRspMappingArtifact } from "./load-manifest";
+import { mappingLiveCheckpointPath } from "./mapping-checkpoint";
 import { runMappingLive } from "./mapping-live";
 import {
   formatMappingApplyReviewReceipt,
   MappingApplyReviewError,
   runMappingApplyReview,
 } from "./mapping-apply-review";
+import type { ApprovalState, ArtifactPurpose } from "./types";
 import {
   assertRspMappingReviewPacket,
   RSP_MAPPING_REVIEW_SCHEMA_VERSION,
@@ -81,18 +83,23 @@ async function writePacket(
   return path;
 }
 
-async function seedMinimalDraftStaging(runId: string): Promise<{
+async function seedMinimalDraftStaging(
+  runId: string,
+  opts: { artifactPurpose?: ArtifactPurpose; approvalState?: ApprovalState } = {},
+): Promise<{
   staging: string;
   draftPath: string;
   draftSha: string;
   draftBytes: Buffer;
+  checkpointPath: string;
 }> {
   const staging = await mkdtemp(join(tmpdir(), "rsp-apply-review-"));
   const draftPath = stagingMappingArtifactPath(staging, runId);
+  const checkpointPath = mappingLiveCheckpointPath(staging);
   await mkdir(join(staging, "registry-2012-rsp-mapping", runId), { recursive: true });
   // Minimal checkpoint so resolveMappingRunLayout finds the run.
   await writeFile(
-    join(staging, "mapping-live-checkpoint.json"),
+    checkpointPath,
     `${JSON.stringify(
       {
         checkpointVersion: "icann2012-rsp-mapping-live-checkpoint/1.0.0",
@@ -110,8 +117,8 @@ async function seedMinimalDraftStaging(runId: string): Promise<{
   );
   const artifact = {
     mappingVersion: "registry-2012-rsp-mapping/1.0.0",
-    artifactPurpose: "EVIDENCE",
-    approvalState: "DRAFT",
+    artifactPurpose: opts.artifactPurpose ?? "EVIDENCE",
+    approvalState: opts.approvalState ?? "DRAFT",
     bundleId: "synthetic-apply-review",
     scope: "ROUND_WIDE_EXACT",
     entries: [
@@ -132,7 +139,41 @@ async function seedMinimalDraftStaging(runId: string): Promise<{
     draftPath,
     draftSha: sha256Hex(Buffer.from(text, "utf8")),
     draftBytes: Buffer.from(text, "utf8"),
+    checkpointPath,
   };
+}
+
+async function expectApproveEligibleReject(
+  seed: Awaited<ReturnType<typeof seedMinimalDraftStaging>>,
+  runId: string,
+  outputPath?: string,
+): Promise<MappingApplyReviewError> {
+  const packetPath = await writePacket(seed.staging, "approve.json", {
+    reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+    mappingArtifactSha256: seed.draftSha,
+    runId,
+    reviewer: "SYNTHETIC_TEST_STEWARD",
+    reviewedAt: "2026-10-29T12:00:00.000Z",
+    decision: "APPROVE",
+    notes: "synthetic only",
+  });
+  let caught: unknown;
+  try {
+    await runMappingApplyReview({
+      workspaceRoot,
+      runDir: seed.staging,
+      reviewPacketPath: packetPath,
+      outputPath,
+      reviewReportOverride: stubReport({
+        runId,
+        mappingArtifactSha256: seed.draftSha,
+      }),
+    });
+  } catch (err) {
+    caught = err;
+  }
+  expect(caught).toBeInstanceOf(MappingApplyReviewError);
+  return caught as MappingApplyReviewError;
 }
 
 describe("RIH-2012-RSP-VISIBILITY-1E mapping-apply-review", () => {
@@ -297,7 +338,7 @@ describe("RIH-2012-RSP-VISIBILITY-1E mapping-apply-review", () => {
             mappingArtifactSha256: seed.draftSha,
           }),
         }),
-      ).rejects.toBeInstanceOf(MappingApplyReviewError);
+      ).rejects.toThrow(/Packet binding failed/);
       await expect(access(stagingMappingApprovedArtifactPath(seed.staging, "bad-sha"))).rejects.toThrow();
       expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
     } finally {
@@ -326,7 +367,7 @@ describe("RIH-2012-RSP-VISIBILITY-1E mapping-apply-review", () => {
             mappingArtifactSha256: seed.draftSha,
           }),
         }),
-      ).rejects.toBeInstanceOf(MappingApplyReviewError);
+      ).rejects.toThrow(/Packet binding failed/);
       await expect(access(stagingMappingApprovedArtifactPath(seed.staging, "bad-run"))).rejects.toThrow();
       expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
     } finally {
@@ -458,6 +499,258 @@ describe("RIH-2012-RSP-VISIBILITY-1E mapping-apply-review", () => {
     }
   });
 
+  describe("R1 output collision guards", () => {
+    it("rejects outputPath equal to DRAFT mapping.json before write", async () => {
+      const seed = await seedMinimalDraftStaging("collide-draft");
+      try {
+        const err = await expectApproveEligibleReject(seed, "collide-draft", seed.draftPath);
+        expect(err.message).toMatch(/Output path collision|DRAFT mapping\.json/);
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+        const draft = await loadRspMappingArtifact(seed.draftPath);
+        expect(draft.approvalState).toBe("DRAFT");
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("rejects outputPath equal to review packet before write", async () => {
+      const seed = await seedMinimalDraftStaging("collide-packet");
+      try {
+        const packetPath = await writePacket(seed.staging, "approve.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: seed.draftSha,
+          runId: "collide-packet",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "APPROVE",
+        });
+        const packetBytes = await readFile(packetPath);
+        await expect(
+          runMappingApplyReview({
+            workspaceRoot,
+            runDir: seed.staging,
+            reviewPacketPath: packetPath,
+            outputPath: packetPath,
+            reviewReportOverride: stubReport({
+              runId: "collide-packet",
+              mappingArtifactSha256: seed.draftSha,
+            }),
+          }),
+        ).rejects.toThrow(/Output path collision|review packet|already exists/);
+        expect(await readFile(packetPath)).toEqual(packetBytes);
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("rejects existing approved derivative without overwrite", async () => {
+      const seed = await seedMinimalDraftStaging("collide-existing");
+      try {
+        const approvedPath = stagingMappingApprovedArtifactPath(seed.staging, "collide-existing");
+        const preexisting = `${JSON.stringify({ marker: "preexisting-approved" }, null, 2)}\n`;
+        await writeFile(approvedPath, preexisting, "utf8");
+        const existingBytes = await readFile(approvedPath);
+        const err = await expectApproveEligibleReject(seed, "collide-existing");
+        expect(err.message).toMatch(/already exists|exclusive/);
+        expect(await readFile(approvedPath)).toEqual(existingBytes);
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("rejects outputPath equal to mapping checkpoint before write", async () => {
+      const seed = await seedMinimalDraftStaging("collide-ckpt");
+      try {
+        const checkpointBytes = await readFile(seed.checkpointPath);
+        const err = await expectApproveEligibleReject(seed, "collide-ckpt", seed.checkpointPath);
+        expect(err.message).toMatch(/Output path collision|checkpoint/);
+        expect(await readFile(seed.checkpointPath)).toEqual(checkpointBytes);
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+  });
+
+  describe("R1 source lifecycle lock", () => {
+    it("rejects TEST_ONLY + DRAFT source", async () => {
+      const seed = await seedMinimalDraftStaging("life-test-only", {
+        artifactPurpose: "TEST_ONLY",
+        approvalState: "DRAFT",
+      });
+      try {
+        const err = await expectApproveEligibleReject(seed, "life-test-only");
+        expect(err.message).toMatch(/Source lifecycle rejected/);
+        await expect(
+          access(stagingMappingApprovedArtifactPath(seed.staging, "life-test-only")),
+        ).rejects.toThrow();
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("rejects EVIDENCE + APPROVED source (no re-approve)", async () => {
+      const seed = await seedMinimalDraftStaging("life-approved", {
+        artifactPurpose: "EVIDENCE",
+        approvalState: "APPROVED",
+      });
+      try {
+        const err = await expectApproveEligibleReject(seed, "life-approved");
+        expect(err.message).toMatch(/Source lifecycle rejected/);
+        await expect(
+          access(stagingMappingApprovedArtifactPath(seed.staging, "life-approved")),
+        ).rejects.toThrow();
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("EVIDENCE + DRAFT remains approvable under stub mechanical eligibility", async () => {
+      const seed = await seedMinimalDraftStaging("life-ok");
+      try {
+        const packetPath = await writePacket(seed.staging, "approve.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: seed.draftSha,
+          runId: "life-ok",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "APPROVE",
+        });
+        const receipt = await runMappingApplyReview({
+          workspaceRoot,
+          runDir: seed.staging,
+          reviewPacketPath: packetPath,
+          reviewReportOverride: stubReport({
+            runId: "life-ok",
+            mappingArtifactSha256: seed.draftSha,
+          }),
+        });
+        expect(receipt.outcome).toBe("APPROVED");
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+        const approved = await loadRspMappingArtifact(receipt.approvedOutputPath!);
+        expect(approved.artifactPurpose).toBe("EVIDENCE");
+        expect(approved.approvalState).toBe("APPROVED");
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+  });
+
+  describe("R1 packet binding for HOLD/REJECT", () => {
+    it("HOLD wrong SHA fails closed (not HOLD_NO_PROMOTION)", async () => {
+      const seed = await seedMinimalDraftStaging("hold-bad-sha");
+      try {
+        const packetPath = await writePacket(seed.staging, "hold.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: SHA_B,
+          runId: "hold-bad-sha",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "HOLD",
+        });
+        await expect(
+          runMappingApplyReview({
+            workspaceRoot,
+            runDir: seed.staging,
+            reviewPacketPath: packetPath,
+            reviewReportOverride: stubReport({
+              runId: "hold-bad-sha",
+              mappingArtifactSha256: seed.draftSha,
+            }),
+          }),
+        ).rejects.toThrow(/Packet binding failed/);
+        expect(await readFile(seed.draftPath)).toEqual(seed.draftBytes);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("HOLD wrong run ID fails closed", async () => {
+      const seed = await seedMinimalDraftStaging("hold-bad-run");
+      try {
+        const packetPath = await writePacket(seed.staging, "hold.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: seed.draftSha,
+          runId: "other-run",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "HOLD",
+        });
+        await expect(
+          runMappingApplyReview({
+            workspaceRoot,
+            runDir: seed.staging,
+            reviewPacketPath: packetPath,
+            reviewReportOverride: stubReport({
+              runId: "hold-bad-run",
+              mappingArtifactSha256: seed.draftSha,
+            }),
+          }),
+        ).rejects.toThrow(/Packet binding failed/);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("REJECT wrong SHA fails closed (not REJECT_NO_PROMOTION)", async () => {
+      const seed = await seedMinimalDraftStaging("rej-bad-sha");
+      try {
+        const packetPath = await writePacket(seed.staging, "reject.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: SHA_B,
+          runId: "rej-bad-sha",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "REJECT",
+        });
+        await expect(
+          runMappingApplyReview({
+            workspaceRoot,
+            runDir: seed.staging,
+            reviewPacketPath: packetPath,
+            reviewReportOverride: stubReport({
+              runId: "rej-bad-sha",
+              mappingArtifactSha256: seed.draftSha,
+            }),
+          }),
+        ).rejects.toThrow(/Packet binding failed/);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+
+    it("REJECT wrong run ID fails closed", async () => {
+      const seed = await seedMinimalDraftStaging("rej-bad-run");
+      try {
+        const packetPath = await writePacket(seed.staging, "reject.json", {
+          reviewVersion: RSP_MAPPING_REVIEW_SCHEMA_VERSION,
+          mappingArtifactSha256: seed.draftSha,
+          runId: "other-run",
+          reviewer: "SYNTHETIC_TEST_STEWARD",
+          reviewedAt: "2026-10-29T12:00:00.000Z",
+          decision: "REJECT",
+        });
+        await expect(
+          runMappingApplyReview({
+            workspaceRoot,
+            runDir: seed.staging,
+            reviewPacketPath: packetPath,
+            reviewReportOverride: stubReport({
+              runId: "rej-bad-run",
+              mappingArtifactSha256: seed.draftSha,
+            }),
+          }),
+        ).rejects.toThrow(/Packet binding failed/);
+      } finally {
+        await rm(seed.staging, { recursive: true, force: true });
+      }
+    });
+  });
+
   describe("synthetic EXACT_COMPLETE APPROVE path", () => {
     let staging = "";
     let draftPath = "";
@@ -543,7 +836,10 @@ describe("RIH-2012-RSP-VISIBILITY-1E mapping-apply-review", () => {
       expect(receipt1.networkRequests).toBe(0);
       expect(receipt1.mechanicalEligibility).toBe(true);
       expect(receipt1.originalArtifactUnchanged).toBe(true);
-      expect(receipt1.approvedOutputPath).toBe(stagingMappingApprovedArtifactPath(staging, runId));
+      expect(receipt1.approvedOutputPath).toBeTruthy();
+      expect(await readFile(receipt1.approvedOutputPath!)).toEqual(
+        await readFile(stagingMappingApprovedArtifactPath(staging, runId)),
+      );
       expect(await readFile(draftPath)).toEqual(draftBytesBefore);
 
       const approved = await loadRspMappingArtifact(receipt1.approvedOutputPath!);

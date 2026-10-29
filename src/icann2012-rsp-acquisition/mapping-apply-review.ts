@@ -7,12 +7,19 @@
  * promotes when the existing approval contract passes.
  *
  * Never overwrites DRAFT `mapping.json`. APPROVE writes a sibling
- * `mapping.approved.json` (or an explicit --output path).
+ * `mapping.approved.json` (or an explicit --output path) exclusively after
+ * pre-write collision / lifecycle / packet-binding checks.
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { open, readFile, realpath } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
 import { sha256Hex } from "@/normalization/hashes";
-import { stagingMappingApprovedArtifactPath } from "./bundle-paths";
+import {
+  stagingEvidenceBundleManifestPath,
+  stagingMappingApprovedArtifactPath,
+  stagingMappingReviewReportPath,
+} from "./bundle-paths";
 import { loadRspMappingArtifact } from "./load-manifest";
+import { mappingLiveCheckpointPath } from "./mapping-checkpoint";
 import {
   applyMechanicalMappingApproval,
   assertRspMappingReviewPacket,
@@ -158,6 +165,130 @@ export function formatMappingApplyReviewReceipt(receipt: MappingApplyReviewRecei
   return `${lines.join("\n")}\n`;
 }
 
+/** Canonicalize an existing path (must resolve on disk). */
+export async function canonicalizeExistingPath(path: string): Promise<string> {
+  return realpath(resolve(path));
+}
+
+/**
+ * Canonicalize an output candidate. If the file does not exist yet, resolve
+ * through the parent directory realpath when available.
+ */
+export async function canonicalizeOutputCandidate(path: string): Promise<string> {
+  const abs = resolve(path);
+  try {
+    return await realpath(abs);
+  } catch {
+    try {
+      const parentReal = await realpath(dirname(abs));
+      return resolve(parentReal, basename(abs));
+    } catch {
+      return abs;
+    }
+  }
+}
+
+/**
+ * Pre-write guard: output must not collide with any source/control path
+ * consumed by the approval operation, and must not already exist.
+ */
+export async function assertSafeApprovalOutputPath(input: {
+  outputPath: string;
+  protectedPaths: ReadonlyArray<{ label: string; path: string }>;
+}): Promise<string> {
+  const canonicalOutput = await canonicalizeOutputCandidate(input.outputPath);
+
+  for (const protectedEntry of input.protectedPaths) {
+    let canonicalProtected: string;
+    try {
+      canonicalProtected = await canonicalizeExistingPath(protectedEntry.path);
+    } catch {
+      // Protected path may be absent (e.g. review report not persisted yet).
+      canonicalProtected = resolve(protectedEntry.path);
+    }
+    if (canonicalOutput === canonicalProtected) {
+      throw new MappingApplyReviewError(
+        `Output path collision rejected (fail closed): output equals protected ${protectedEntry.label} (${canonicalProtected})`,
+      );
+    }
+  }
+
+  try {
+    await realpath(canonicalOutput);
+    throw new MappingApplyReviewError(
+      `Output path already exists (fail closed; exclusive create only): ${canonicalOutput}`,
+    );
+  } catch (err) {
+    if (err instanceof MappingApplyReviewError) throw err;
+    // ENOENT — exclusive create may proceed.
+  }
+
+  return canonicalOutput;
+}
+
+/** Operator-level provenance: packet must name this reviewed artifact/run. */
+export function assertPacketBindsToReviewedRun(
+  packet: RspMappingReviewPacket,
+  report: MappingReviewReport,
+): void {
+  if (packet.runId !== report.runId) {
+    throw new MappingApplyReviewError(
+      `Packet binding failed (fail closed): packet.runId=${packet.runId} !== report.runId=${report.runId}`,
+    );
+  }
+  if (packet.mappingArtifactSha256.toLowerCase() !== report.mappingArtifactSha256.toLowerCase()) {
+    throw new MappingApplyReviewError(
+      `Packet binding failed (fail closed): packet.mappingArtifactSha256 does not match reviewed artifact SHA`,
+    );
+  }
+}
+
+/** APPROVE source must be exactly EVIDENCE + DRAFT. */
+export function assertSourceLifecycleForApproval(
+  artifact: Registry2012RspMappingArtifact,
+): void {
+  if (artifact.artifactPurpose !== "EVIDENCE" || artifact.approvalState !== "DRAFT") {
+    throw new MappingApplyReviewError(
+      `Source lifecycle rejected (fail closed): expected artifactPurpose=EVIDENCE and approvalState=DRAFT, got ${artifact.artifactPurpose}+${artifact.approvalState}`,
+    );
+  }
+}
+
+async function writeApprovedDerivativeExclusive(
+  outputPath: string,
+  contents: string,
+): Promise<void> {
+  // wx: fail if the path already exists — never overwrite.
+  const handle = await open(outputPath, "wx");
+  try {
+    await handle.writeFile(contents, "utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
+function protectedControlPaths(input: {
+  draftArtifactPath: string;
+  reviewPacketPath: string;
+  checkpointPath: string;
+  stagingRoot: string;
+  runId: string;
+}): Array<{ label: string; path: string }> {
+  return [
+    { label: "DRAFT mapping.json", path: input.draftArtifactPath },
+    { label: "review packet", path: input.reviewPacketPath },
+    { label: "mapping-live checkpoint", path: input.checkpointPath },
+    {
+      label: "mapping-review report",
+      path: stagingMappingReviewReportPath(input.stagingRoot, input.runId),
+    },
+    {
+      label: "evidence-bundle manifest",
+      path: stagingEvidenceBundleManifestPath(input.stagingRoot, input.runId),
+    },
+  ];
+}
+
 /**
  * Independently reviews the completed staging run, then applies the external
  * human decision packet under the existing approval contract.
@@ -171,6 +302,7 @@ export async function runMappingApplyReview(
   const layout = await resolveMappingRunLayout(options.runDir);
   const draftBytesBefore = await readFile(layout.artifactPath);
   const draftArtifactSha256 = sha256Hex(draftBytesBefore);
+  const checkpointPath = mappingLiveCheckpointPath(layout.stagingRoot);
 
   const report =
     options.reviewReportOverride ??
@@ -178,6 +310,9 @@ export async function runMappingApplyReview(
       workspaceRoot: options.workspaceRoot,
       runDir: options.runDir,
     }));
+
+  // All decisions (APPROVE / HOLD / REJECT) must bind to this reviewed run.
+  assertPacketBindsToReviewedRun(packet, report);
 
   if (packet.decision === "HOLD") {
     const draftBytesAfter = await readFile(layout.artifactPath);
@@ -240,11 +375,33 @@ export async function runMappingApplyReview(
   }
 
   const draftArtifact = await loadRspMappingArtifact(layout.artifactPath);
+  assertSourceLifecycleForApproval(draftArtifact);
+
   const approved = applyMechanicalMappingApproval(draftArtifact, report, packet);
-  const outputPath =
+  const requestedOutput =
     options.outputPath ?? stagingMappingApprovedArtifactPath(layout.stagingRoot, layout.runId);
+
+  const safeOutputPath = await assertSafeApprovalOutputPath({
+    outputPath: requestedOutput,
+    protectedPaths: protectedControlPaths({
+      draftArtifactPath: layout.artifactPath,
+      reviewPacketPath: options.reviewPacketPath,
+      checkpointPath,
+      stagingRoot: layout.stagingRoot,
+      runId: layout.runId,
+    }),
+  });
+
+  // Re-check DRAFT bytes immediately before any write (prevention, not rollback).
+  const draftBytesPreWrite = await readFile(layout.artifactPath);
+  if (Buffer.compare(draftBytesBefore, draftBytesPreWrite) !== 0) {
+    throw new MappingApplyReviewError(
+      "Invariant violated before write: DRAFT mapping.json changed during apply-review",
+    );
+  }
+
   const approvedText = serializeApprovedArtifact(approved);
-  await writeFile(outputPath, approvedText, "utf8");
+  await writeApprovedDerivativeExclusive(safeOutputPath, approvedText);
 
   const draftBytesAfter = await readFile(layout.artifactPath);
   const originalUnchanged = Buffer.compare(draftBytesBefore, draftBytesAfter) === 0;
@@ -263,7 +420,7 @@ export async function runMappingApplyReview(
     report,
     mechanicalEligibility: true,
     outcome: "APPROVED",
-    approvedOutputPath: outputPath,
+    approvedOutputPath: safeOutputPath,
     approvedOutputSha256: sha256Hex(Buffer.from(approvedText, "utf8")),
     originalArtifactUnchanged: true,
     rejectReasons: [],
