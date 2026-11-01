@@ -91,16 +91,25 @@ export interface SleepFn {
   (ms: number): Promise<void>;
 }
 
+/** Monotonic-ish clock in milliseconds (injectable for tests). */
+export type NowFn = () => number;
+
 export const defaultSleep: SleepFn = (ms) => new Promise((r) => setTimeout(r, ms));
+export const defaultNow: NowFn = () => Date.now();
 
 /** In-memory same-origin cookie jar — never persisted. */
 export class GtldresultSessionTransport {
   private cookies = new Map<string, string>();
   private lastExchange: SafePagerExchange | null = null;
+  /** Timestamp of the last outbound fetchImpl call (after pacing). */
+  private lastOutboundAtMs: number | null = null;
+  /** Every attempted ICANN HTTP request (initial, redirect hops, retries). */
+  private outboundRequestCount = 0;
 
   constructor(
     private readonly fetchImpl: GtldresultFetcher,
     private readonly sleep: SleepFn = defaultSleep,
+    private readonly now: NowFn = defaultNow,
   ) {}
 
   getCookieHeaderForRequest(): string | undefined {
@@ -110,6 +119,11 @@ export class GtldresultSessionTransport {
 
   getLastExchange(): SafePagerExchange | null {
     return this.lastExchange;
+  }
+
+  /** Truthful outbound ICANN HTTP attempt count (redirects + retries included). */
+  getOutboundRequestCount(): number {
+    return this.outboundRequestCount;
   }
 
   /** Returns redacted safe headers for snapshot metadata (no Set-Cookie / CSRF). */
@@ -163,8 +177,22 @@ export class GtldresultSessionTransport {
     this.lastExchange = null;
   }
 
+  /**
+   * Ensure the configured minimum gap since the previous outbound request.
+   * Used by callers between logical exchanges; also invoked automatically
+   * before every fetchImpl call (redirect hops and retries included).
+   * Does not double-sleep when a larger retry backoff already satisfies the minimum.
+   */
   async waitBetweenRequests(): Promise<void> {
-    await this.sleep(RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests);
+    await this.paceBeforeOutbound();
+  }
+
+  private async paceBeforeOutbound(): Promise<void> {
+    const minDelay = RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests;
+    if (this.lastOutboundAtMs == null) return;
+    const elapsed = this.now() - this.lastOutboundAtMs;
+    const remaining = minDelay - elapsed;
+    if (remaining > 0) await this.sleep(remaining);
   }
 
   /**
@@ -267,6 +295,10 @@ export class GtldresultSessionTransport {
 
     let lastStatus = 0;
     for (let attempt = 0; attempt < RSP_ACQUISITION_LIMITS.maxRetriesPerUrl; attempt++) {
+      await this.paceBeforeOutbound();
+      this.outboundRequestCount += 1;
+      this.lastOutboundAtMs = this.now();
+
       const response = await this.fetchImpl(url, { headers });
       lastStatus = response.status;
       const setCookieHeaderCount = this.ingestResponseCookies(response);
@@ -276,6 +308,8 @@ export class GtldresultSessionTransport {
       }
       if (response.status >= 500) {
         const delay = RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)];
+        // Backoff already exceeds minDelay (4s+); paceBeforeOutbound on the next
+        // attempt will not add another 1000ms when the clock advances with sleep.
         await this.sleep(delay);
         continue;
       }

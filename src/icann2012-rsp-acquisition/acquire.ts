@@ -43,9 +43,11 @@ import {
 } from "./application-details-download";
 import {
   createNodeGtldresultFetcher,
+  defaultNow,
   defaultSleep,
   GtldresultSessionTransport,
   type GtldresultFetcher,
+  type NowFn,
   type SleepFn,
 } from "./gtldresult-session-transport";
 import { NetworkTargetPolicyError } from "./network-target-policy";
@@ -64,8 +66,10 @@ export interface AcquirePilotOptions {
   mappingArtifactPath?: string;
   /** Mapping-live run directory. Required before pilot-live HTTP on an APPROVED artifact. */
   evidenceIndexPath?: string;
-  /** Injected sleep for pacing / backoff (tests use a no-op). */
+  /** Injected sleep for pacing / backoff (tests advance a fake clock). */
   sleep?: SleepFn;
+  /** Injected clock for transport pacing (pair with sleep in tests). */
+  now?: NowFn;
 }
 
 function stagingPortionPath(stagingRoot: string, applicationId: string): string {
@@ -145,7 +149,10 @@ export interface LiveAcquireResult {
   completed: string[];
   skipped: string[];
   quarantined: string[];
-  /** Outbound ICANN request count (redirects counted separately inside transport). */
+  /**
+   * Every attempted ICANN HTTP request observed by the session transport
+   * (initial requests, redirect hops, and 5xx retries).
+   */
   httpRequestCount: number;
 }
 
@@ -213,13 +220,10 @@ export async function acquirePilotLivePortions(
   await assertPilotLivePreflight({ ...options, stagingRoot });
 
   const sleep = options.sleep ?? defaultSleep;
-  const transport = new GtldresultSessionTransport(fetcher, sleep);
-  let httpRequestCount = 0;
-  const countGet = async (url: string) => {
-    const response = await transport.get(url);
-    httpRequestCount += 1 + (transport.getLastExchange()?.redirectCount ?? 0);
-    return response;
-  };
+  const now = options.now ?? defaultNow;
+  const transport = new GtldresultSessionTransport(fetcher, sleep, now);
+  // Pacing and outbound counting live at the transport fetch boundary
+  // (every hop / retry). Do not add a second sleep layer here.
 
   const batchId = options.batchId ?? `pilot-${new Date().toISOString().slice(0, 10)}`;
   const manifest = await loadPilotManifest(options.workspaceRoot);
@@ -272,14 +276,11 @@ export async function acquirePilotLivePortions(
     const detailsUrl = buildDetailsUrl(acId);
     let details;
     try {
-      details = await countGet(detailsUrl);
+      details = await transport.get(detailsUrl);
     } catch (err) {
       // 403/429 halt the entire run (transport throws Run halted).
       throw err;
     }
-
-    // Pace after every outbound exchange, including failures classified below.
-    await transport.waitBetweenRequests();
 
     if (details.status === 404) {
       await quarantineApp(
@@ -337,11 +338,10 @@ export async function acquirePilotLivePortions(
 
     let portion;
     try {
-      portion = await countGet(parsed.resolvedPortionUrl);
+      portion = await transport.get(parsed.resolvedPortionUrl);
     } catch (err) {
       throw err;
     }
-    await transport.waitBetweenRequests();
 
     if (portion.status === 404) {
       await quarantineApp(
@@ -460,5 +460,11 @@ export async function acquirePilotLivePortions(
     completed.push(entry.applicationId);
   }
 
-  return { mode: "live", completed, skipped, quarantined, httpRequestCount };
+  return {
+    mode: "live",
+    completed,
+    skipped,
+    quarantined,
+    httpRequestCount: transport.getOutboundRequestCount(),
+  };
 }

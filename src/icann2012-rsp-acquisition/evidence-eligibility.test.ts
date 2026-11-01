@@ -300,7 +300,15 @@ describe("registry-2012-rsp-mapping eligibility (D2.5A-P0.1A)", () => {
         mappingArtifactPath: mappingPath,
         evidenceIndexPath: runRoot,
         batchId: "eligibility-test",
-        sleep: async () => undefined,
+        ...(() => {
+          let t = 0;
+          return {
+            sleep: async (ms: number) => {
+              t += ms;
+            },
+            now: () => t,
+          };
+        })(),
       },
       fetcher,
     );

@@ -65,6 +65,11 @@ export interface PreflightReport {
     pilotLiveAuthorized: boolean;
     mappingLiveAuthorized: boolean;
   };
+  /**
+   * For pilot-live when unblocked: base **logical exchange** count
+   * (`2 × pilotResolvedCount` = details + portion). Not a guaranteed raw HTTP
+   * total — redirects and retries add requests beyond this figure.
+   */
   networkRequestsExpected: number;
   /**
    * pilot-live planning only: resolved apps × 2 logical exchanges
@@ -218,7 +223,11 @@ export function formatPreflightReport(report: PreflightReport): string {
     `legacyAcquisitionEnv (${RSP_ACQUISITION_AUTH_ENV}): ${report.authState.legacyAcquisitionEnv}`,
     `pilotLiveAuthorized (${RSP_PILOT_LIVE_AUTH_ENV}): ${report.authState.pilotLiveAuthorized}`,
     `mappingLiveAuthorized (${RSP_MAPPING_LIVE_AUTH_ENV}): ${report.authState.mappingLiveAuthorized}`,
-    `networkRequestsExpected: ${report.networkRequestsExpected}`,
+    `networkRequestsExpected: ${report.networkRequestsExpected}${
+      report.operation === "pilot-live" && report.networkRequestsExpected > 0
+        ? " (logical exchanges only — not raw HTTP; redirects/retries extra)"
+        : ""
+    }`,
   ];
   if (report.operation === "pilot-live") {
     lines.push(

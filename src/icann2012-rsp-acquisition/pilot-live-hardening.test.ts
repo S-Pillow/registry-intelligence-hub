@@ -134,13 +134,17 @@ async function seedApprovedHarness(apps: Array<{ applicationId: string; acId: nu
 
 describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)", () => {
   let prevPilot: string | undefined;
+  let fakeNow = 0;
   const sleeps: number[] = [];
   const sleep = async (ms: number) => {
     sleeps.push(ms);
+    fakeNow += ms;
   };
+  const now = () => fakeNow;
 
   beforeEach(() => {
     sleeps.length = 0;
+    fakeNow = 0;
     prevPilot = process.env[RSP_PILOT_LIVE_AUTH_ENV];
     process.env[RSP_PILOT_LIVE_AUTH_ENV] = "1";
   });
@@ -194,16 +198,21 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "harden-happy",
         sleep,
+        now,
       },
       fetcher,
     );
 
     expect(result.completed).toContain(BOSCH_APP);
     expect(result.quarantined).not.toContain(BOSCH_APP);
+    expect(result.httpRequestCount).toBe(2);
     expect(urls[0]).toBe(DETAILS_BOSCH);
     expect(urls.some((u) => u.includes("downloadapplication"))).toBe(true);
     expect(urls.some((u) => u === PORTION_BOSCH || u.includes("downloadapplication/170"))).toBe(
       true,
+    );
+    expect(sleeps.filter((ms) => ms === RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests)).toHaveLength(
+      1,
     );
 
     const meta = JSON.parse(
@@ -220,7 +229,6 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
     expect(ck.completed.some((e: { applicationId: string }) => e.applicationId === BOSCH_APP)).toBe(
       true,
     );
-    expect(sleeps.filter((ms) => ms === RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests).length).toBeGreaterThanOrEqual(2);
   });
 
   it("wrong details Application ID does not fetch a public portion", async () => {
@@ -241,6 +249,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "wrong-details",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -275,6 +284,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "missing-link",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -310,6 +320,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "ambiguous",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -342,6 +353,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "cross-host",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -370,6 +382,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "http-link",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -399,6 +412,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "wrong-portion-id",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -432,6 +446,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "no-q23",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -462,6 +477,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
           evidenceIndexPath: harness.runRoot,
           batchId: `page-${label}`,
           sleep,
+          now,
         },
         fetcher,
       );
@@ -498,6 +514,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
           batchId: "redir-ok",
           forceRefetch: true,
           sleep,
+          now,
         },
         fetcher,
       );
@@ -524,6 +541,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
             evidenceIndexPath: harness2.runRoot,
             batchId: "redir-cross",
             sleep,
+            now,
           },
           fetcher,
         ),
@@ -563,6 +581,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
             evidenceIndexPath: harness3.runRoot,
             batchId: "redir-loop",
             sleep,
+            now,
           },
           loopFetcher,
         ),
@@ -592,6 +611,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
           evidenceIndexPath: harness.runRoot,
           batchId: "halt-403",
           sleep,
+          now,
         },
         fetcher,
       ),
@@ -599,7 +619,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
     expect(hotelsHit).toBe(false);
   });
 
-  it("5xx retries use bounded backoff sleeps", async () => {
+  it("5xx retries use bounded backoff sleeps and truthful request count", async () => {
     const harness = await seedApprovedHarness([{ applicationId: BOSCH_APP, acId: BOSCH_AC }]);
     let detailsAttempts = 0;
     const fetcher: GtldresultFetcher = async (url) => {
@@ -621,11 +641,17 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "retry-5xx",
         sleep,
+        now,
       },
       fetcher,
     );
     expect(result.completed).toContain(BOSCH_APP);
+    // two failed details + one success details + one portion
+    expect(result.httpRequestCount).toBe(4);
     expect(sleeps.some((ms) => ms === 4000 || ms === 8000)).toBe(true);
+    // retry backoffs already ≥ minDelay — no extra 1000ms stacked on those gaps
+    const minOnly = sleeps.filter((ms) => ms === RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests);
+    expect(minOnly.length).toBe(1); // only details→portion after success
   });
 
   it("oversize portion is quarantined and not checkpointed as completed", async () => {
@@ -653,6 +679,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "oversize",
         sleep,
+        now,
       },
       fetcher,
     );
@@ -690,14 +717,15 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
         evidenceIndexPath: harness.runRoot,
         batchId: "pacing",
         sleep,
+        now,
       },
       fetcher,
     );
     const paceDelays = sleeps.filter(
       (ms) => ms === RSP_ACQUISITION_LIMITS.minDelayMsBetweenGtldresultRequests,
     );
-    // At least: after Bosch details (quarantine missing link), after Hotels details, after Hotels portion
-    expect(paceDelays.length).toBeGreaterThanOrEqual(3);
+    // Bosch details (quarantine) → Hotels details → Hotels portion: two paced gaps
+    expect(paceDelays.length).toBeGreaterThanOrEqual(2);
   });
 
   it("does not invent network access — mocked fetcher only", async () => {
@@ -726,6 +754,7 @@ describe("RIH-2012-RSP-VISIBILITY-1H0 pilot-live hardening (synthetic HTTP only)
           evidenceIndexPath: harness.runRoot,
           batchId: "zero-http",
           sleep,
+          now,
         },
         fetcher,
       );
