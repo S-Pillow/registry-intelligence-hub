@@ -332,10 +332,43 @@ const WILL_PROVIDE_ROLE = new RegExp(
 
 /** Steward-verified: elected to partner with PROVIDER to provide back-end services. */
 const ELECTED_PARTNER_OPENER = /\b(?:has\s+)?elected\s+to\s+partner\s+with\s+/i;
+/**
+ * Role tail for elected-partner only. Allows a single optional comma before
+ * `to provide` so `Inc, to provide` matches without absorbing the comma into
+ * the provider span. Do not reuse this separator for other role tails.
+ */
 const ELECTED_PARTNER_ROLE = new RegExp(
-  String.raw`^\s+to\s+provide\s+((?:the\s+)?${BACK_END}\s+(?:registry\s+)?services?)\b`,
+  String.raw`^\s*,?\s*to\s+provide\s+((?:the\s+)?${BACK_END}\s+(?:registry\s+)?services?)\b`,
   "i",
 );
+
+const LEGAL_SUFFIX_TOKEN = /^(?:Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC|s\.r\.o)\.?$/i;
+
+/**
+ * Single-token parenthetical that case-insensitively aliases one non-suffix
+ * token of the just-parsed provider span (e.g. `NeuStar, Inc (Neustar)`).
+ * Treated as interstitial evidence — not included in providerNameAsStated.
+ * Narrower than all-caps acronym absorption; rejects descriptive prose.
+ */
+function skipSameNameParentheticalAlias(
+  text: string,
+  start: number,
+  providerRaw: string,
+): number | null {
+  const match = text
+    .slice(start)
+    .match(/^\s*\([“"']?([A-Za-z][A-Za-z0-9&.'-]{0,40})[”"']?\)/);
+  if (!match) return null;
+  const alias = match[1]!;
+  const tokens = providerRaw
+    .split(/[\s,]+/)
+    .map((token) => token.replace(/\.+$/, ""))
+    .filter((token) => token.length > 0 && !LEGAL_SUFFIX_TOKEN.test(token));
+  if (!tokens.some((token) => token.toLowerCase() === alias.toLowerCase())) {
+    return null;
+  }
+  return start + match[0].length;
+}
 
 /** Steward-verified: will outsource the entirety of its technical operations to PROVIDER. */
 const OUTSOURCE_ENTIRETY_OPENER =
@@ -457,15 +490,21 @@ function tryAffirmativeHit(
   if (!taken) return null;
 
   let role: string | undefined;
-  let matchEnd = nameStart + taken.length;
+  let cursor = nameStart + taken.length;
+  // Optional same-name mixed-case alias interstitial before a role tail.
   if (roleTail) {
-    const afterName = sentence.slice(nameStart + taken.length);
+    const aliasEnd = skipSameNameParentheticalAlias(sentence, cursor, taken.raw);
+    if (aliasEnd !== null) cursor = aliasEnd;
+  }
+  let matchEnd = cursor;
+  if (roleTail) {
+    const afterName = sentence.slice(cursor);
     const roleMatch = afterName.match(roleTail);
     if (!roleMatch || roleMatch.index !== 0) return null;
     role = roleMatch[1];
-    matchEnd = nameStart + taken.length + roleMatch[0].length;
+    matchEnd = cursor + roleMatch[0].length;
   } else if (options.requireCompleteProviderSpan) {
-    const remainder = sentence.slice(nameStart + taken.length);
+    const remainder = sentence.slice(cursor);
     if (!isOnlyTerminalSentencePunctuation(remainder)) {
       // Incomplete provider wording (truncated prefix) — never emit partial name.
       return null;
@@ -526,7 +565,10 @@ function trySelectedBackendProviderHits(
   // Sentence-initial PROVIDER + passive/selected-as / is-selected role.
   const providerOpen = takeProviderNameAsStated(sentence, 0);
   if (providerOpen) {
-    const after = sentence.slice(providerOpen.length);
+    let cursor = providerOpen.length;
+    const aliasEnd = skipSameNameParentheticalAlias(sentence, cursor, providerOpen.raw);
+    if (aliasEnd !== null) cursor = aliasEnd;
+    const after = sentence.slice(cursor);
     for (const roleRe of [
       SELECTED_PASSIVE_TO_PROVIDE,
       SELECTED_AS_BACKEND_PROVIDER,
@@ -536,7 +578,7 @@ function trySelectedBackendProviderHits(
       if (!roleMatch || roleMatch.index !== 0) continue;
       const providerNameAsStated = normalizeProviderName(providerOpen.raw);
       if (!isPlausibleProviderName(providerNameAsStated)) return null;
-      const matchEnd = providerOpen.length + roleMatch[0].length;
+      const matchEnd = cursor + roleMatch[0].length;
       return {
         providerNameAsStated,
         roleAsStated: normalizeProviderName(roleMatch[1]!),
@@ -558,7 +600,9 @@ function trySelectedBackendProviderHits(
     if (taken) {
       const providerNameAsStated = normalizeProviderName(taken.raw);
       if (isPlausibleProviderName(providerNameAsStated)) {
-        const matchEnd = adjusted + taken.length;
+        let matchEnd = adjusted + taken.length;
+        const aliasEnd = skipSameNameParentheticalAlias(sentence, matchEnd, taken.raw);
+        if (aliasEnd !== null) matchEnd = aliasEnd;
         return {
           providerNameAsStated,
           roleAsStated: normalizeProviderName(commaRole[1]!),

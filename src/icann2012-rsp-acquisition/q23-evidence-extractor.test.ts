@@ -681,6 +681,69 @@ describe("RIH-2012-RSP-VISIBILITY-1H8 — steward-verified assignment grammar", 
     );
   });
 
+  it("1H8-R1 — elected partner allows optional comma before to-provide role", () => {
+    assertExplicitCandidate(
+      "Example Applicant has elected to partner with Example Provider, Inc, to provide back-end services.",
+      "Example Provider, Inc",
+    );
+  });
+
+  it("1H8-R1 — elected partner still accepts Inc. period before to-provide", () => {
+    assertExplicitCandidate(
+      "Example Applicant has elected to partner with Example Provider, Inc. to provide back-end services.",
+      "Example Provider, Inc.",
+    );
+  });
+
+  it("1H8-R1 — elected partner same-name mixed-case alias is interstitial", () => {
+    const result = assertExplicitCandidate(
+      "Example Applicant has elected to partner with ExampleCo, Inc (ExampleCo) to provide back-end services.",
+      "ExampleCo, Inc",
+    );
+    expect(result.candidates[0]!.providerNameAsStated.includes("(")).toBe(false);
+  });
+
+  it("1H8-R1 — elected partner quoted same-name alias is interstitial", () => {
+    assertExplicitCandidate(
+      "Example Applicant has elected to partner with ExampleCo, Inc. (“ExampleCo”) to provide back-end services.",
+      "ExampleCo, Inc.",
+    );
+  });
+
+  it("1H8-R1 — elected partner descriptive parenthetical is not an alias", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "Example Applicant has elected to partner with ExampleCo, Inc (managed DNS) to provide back-end services.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8-R1 — elected partner different-name parenthetical is not an alias", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "Example Applicant has elected to partner with ExampleCo, Inc (DifferentCo) to provide back-end services.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8-R1 — selected backend provider comma form with mixed-case same-name alias", () => {
+    assertExplicitCandidate(
+      "Oversight includes Example Applicant's selected backend registry services provider, Verisign Inc (Verisign).",
+      "Verisign Inc",
+      "Q24",
+    );
+  });
+
   it("1H8 — outsource the entirety of technical operations to provider", () => {
     assertExplicitCandidate(
       "Example Operator LLC will outsource the entirety of its technical operations to Example Cloud Registry.",
