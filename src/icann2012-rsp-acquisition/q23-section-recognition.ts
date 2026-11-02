@@ -78,6 +78,33 @@ function isInsideExcludedRange(
   return ranges.some((r) => index >= r.start && index < r.end);
 }
 
+/**
+ * First match of `pattern` whose start index is outside excluded script/style
+ * ranges. Continues past excluded hits; does not treat an excluded first match
+ * as terminal. Uses a local global clone so shared pattern state is untouched.
+ */
+function findFirstNonExcludedMatch(
+  html: string,
+  pattern: RegExp,
+  excluded: Array<{ start: number; end: number }>,
+): RegExpExecArray | null {
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  const re = new RegExp(pattern.source, flags);
+  re.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) !== null) {
+    if (!isInsideExcludedRange(match.index, excluded)) {
+      return match;
+    }
+    // Avoid zero-length-match infinite loops when continuing past exclusions.
+    if (match[0].length === 0) {
+      re.lastIndex += 1;
+      if (re.lastIndex > html.length) break;
+    }
+  }
+  return null;
+}
+
 export type Q23SectionMatch = {
   /** Raw HTML index where the Q23 section should begin for slicing. */
   index: number;
@@ -95,7 +122,8 @@ function kindForPattern(pattern: RegExp): Q23SectionMatch["kind"] {
 /**
  * Earliest recognized Q23 section start in raw HTML, or -1.
  * DOM-id matches begin after the opening tag's `>` so attribute text is excluded.
- * Matches inside `<script>` / `<style>` blocks are ignored.
+ * Matches inside `<script>` / `<style>` blocks are ignored; later body matches
+ * for the same recognizer remain eligible.
  */
 export function findQ23SectionStart(html: string): number {
   return findQ23SectionMatch(html)?.index ?? -1;
@@ -106,10 +134,8 @@ export function findQ23SectionMatch(html: string): Q23SectionMatch | null {
   let best: Q23SectionMatch | null = null;
 
   for (const pattern of Q23_PATTERNS) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(html);
+    const match = findFirstNonExcludedMatch(html, pattern, excluded);
     if (!match) continue;
-    if (isInsideExcludedRange(match.index, excluded)) continue;
 
     let index = match.index;
     if (/id\s*=/i.test(match[0])) {

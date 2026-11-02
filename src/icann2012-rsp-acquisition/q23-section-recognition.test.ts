@@ -223,4 +223,91 @@ describe("RIH-2012-RSP-VISIBILITY-1H4 — Q23 section recognition", () => {
       expect(portionDocumentHasQ23Section(html)).toBe(false);
     });
   });
+
+  describe("excluded-match continuation (1H4-R1)", () => {
+    it("finds a body canonical prompt after an excluded script occurrence", () => {
+      const bodyPrompt = `<p id="body-q23">${CANONICAL_PROMPT}</p><p>SYNTHETIC_Q23_BODY</p>`;
+      const html = shell(`
+        <script>var decoy = "${CANONICAL_PROMPT}";</script>
+        ${bodyPrompt}
+        <div id="q24"><h2>24. Shared Registration System</h2><p>MARKER_Q24_ONLY</p></div>
+      `);
+      const match = findQ23SectionMatch(html);
+      expect(match).not.toBeNull();
+      expect(match!.kind).toBe("canonical-prompt");
+      expect(html.slice(match!.index, match!.index + 40)).toContain("23.");
+      expect(match!.index).toBeGreaterThan(html.indexOf("</script>"));
+      expect(html.slice(0, match!.index)).toContain("<script>");
+      expect(portionDocumentHasQ23Section(html)).toBe(true);
+      expect(validatePublicPortionDocument(html, { expectedApplicationId: APP_ID }).ok).toBe(
+        true,
+      );
+
+      const q24 = /id\s*=\s*["']q24(?:_agb)?["']/i.exec(html)!;
+      const q24Start = html.indexOf(">", q24.index) + 1;
+      const slice = html.slice(match!.index, q24Start);
+      expect(slice).toContain("SYNTHETIC_Q23_BODY");
+      expect(slice).not.toContain("MARKER_Q24_ONLY");
+
+      const extraction = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+        expectedApplicationId: APP_ID,
+      });
+      expect(extraction.disposition).toBe("NO_QUALIFYING_PROVIDER_ASSERTION");
+      expect(extraction.candidates).toEqual([]);
+    });
+
+    it("finds a body canonical prompt after an excluded style occurrence", () => {
+      const html = shell(`
+        <style>/* ${CANONICAL_PROMPT} */</style>
+        <p>${CANONICAL_PROMPT}</p>
+      `);
+      const match = findQ23SectionMatch(html);
+      expect(match?.kind).toBe("canonical-prompt");
+      expect(match!.index).toBeGreaterThan(html.indexOf("</style>"));
+      expect(portionDocumentHasQ23Section(html)).toBe(true);
+      expect(validatePublicPortionDocument(html, { expectedApplicationId: APP_ID }).ok).toBe(
+        true,
+      );
+    });
+
+    it("finds a real DOM id after script text containing id=\"q23\"", () => {
+      const html = shell(`
+        <script>var attr = 'id="q23"';</script>
+        <div id="q23"><p>SYNTHETIC_DOM_Q23</p></div>
+      `);
+      const match = findQ23SectionMatch(html);
+      expect(match?.kind).toBe("dom-id");
+      expect(match!.index).toBeGreaterThan(html.indexOf("</script>"));
+      expect(html.slice(match!.index)).toContain("SYNTHETIC_DOM_Q23");
+      expect(validatePublicPortionDocument(html, { expectedApplicationId: APP_ID }).ok).toBe(
+        true,
+      );
+    });
+
+    it("still rejects script-only and style-only canonical prompts", () => {
+      const scriptOnly = shell(`<script>var x = "${CANONICAL_PROMPT}";</script><p>No body Q23.</p>`);
+      expect(portionDocumentHasQ23Section(scriptOnly)).toBe(false);
+      expect(findQ23SectionStart(scriptOnly)).toBe(-1);
+
+      const styleOnly = shell(`<style>/* ${CANONICAL_PROMPT} */</style><p>No body Q23.</p>`);
+      expect(portionDocumentHasQ23Section(styleOnly)).toBe(false);
+      expect(findQ23SectionStart(styleOnly)).toBe(-1);
+    });
+
+    it("selects the earliest valid cross-pattern match after an excluded decoy", () => {
+      const html = shell(`
+        <script>var decoy = "${CANONICAL_PROMPT}";</script>
+        <h2>23. Registry Services</h2>
+        <p>HEADING_BODY</p>
+        <p>${CANONICAL_PROMPT}</p>
+        <p>LATER_CANONICAL_BODY</p>
+      `);
+      const match = findQ23SectionMatch(html);
+      expect(match?.kind).toBe("heading");
+      expect(match!.index).toBeGreaterThan(html.indexOf("</script>"));
+      expect(html.slice(match!.index)).toContain("HEADING_BODY");
+      // Heading precedes the later body canonical prompt.
+      expect(match!.index).toBeLessThan(html.indexOf(CANONICAL_PROMPT, html.indexOf("</script>")));
+    });
+  });
 });
