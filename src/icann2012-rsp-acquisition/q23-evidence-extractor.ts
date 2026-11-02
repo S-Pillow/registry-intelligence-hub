@@ -136,15 +136,33 @@ function isPlausibleProviderName(name: string): boolean {
   return true;
 }
 
-const LEGAL_SUFFIX_AT = /^(Inc|LLC|L\.L\.C|Ltd|Corp|Co|PLC)\.?/i;
+const LEGAL_SUFFIX_AT =
+  /^(?:Inc\.?|LLC|L\.L\.C\.?|Ltd\.?|Corp\.?|Co\.?|PLC|s\.r\.o\.)/i;
+/** Space-separated dotted legal form (no leading comma), e.g. `Gransy s.r.o.`. */
+const DOTTED_LEGAL_SUFFIX_AT = /^\s+(s\.r\.o\.)/i;
+/**
+ * Short all-caps/digit parenthetical alias immediately after a provider span
+ * (e.g. `(CNNIC)`, `(TRA)`, `(ISC)`, `(ARI)`). Descriptive or exchange-code
+ * parentheticals are intentionally rejected.
+ */
+const PARENTHETICAL_ALIAS_AT = /^\s*\(([A-Z][A-Z0-9]{1,12})\)/;
 const PROVIDER_FIRST_WORD = /^[A-Z][A-Za-z0-9&'\-]*/;
 /** Continuation word: Title Case only — periods are never part of ordinary tokens. */
 const PROVIDER_NEXT_WORD = /^\s+(?:&\s+)?([A-Z][A-Za-z0-9&'\-]*)/;
+
+function absorbParentheticalAlias(text: string, i: number, end: number): number {
+  const alias = text.slice(i).match(PARENTHETICAL_ALIAS_AT);
+  if (!alias) return end;
+  return i + alias[0].length;
+}
 
 /**
  * Take a provider name starting at `start`, preserving commas before legal suffixes
  * and Inc. abbreviation periods. Stops at real sentence boundaries — ordinary word
  * tokens do not absorb `.` so following prose is never consumed.
+ *
+ * Bounded extensions (additive): `s.r.o.` dotted legal suffix; short parenthetical
+ * acronym/alias immediately attached to the completed name span.
  */
 function takeProviderNameAsStated(
   text: string,
@@ -164,8 +182,17 @@ function takeProviderNameAsStated(
       if (suffix) {
         i = afterComma + suffix[0].length;
         end = i;
+        end = absorbParentheticalAlias(text, i, end);
         break;
       }
+      break;
+    }
+
+    const dotted = text.slice(i).match(DOTTED_LEGAL_SUFFIX_AT);
+    if (dotted) {
+      i += dotted[0].length;
+      end = i;
+      end = absorbParentheticalAlias(text, i, end);
       break;
     }
 
@@ -179,9 +206,17 @@ function takeProviderNameAsStated(
       if (/^Inc$/i.test(next[1]!) && text[i] === ".") {
         i += 1;
         end = i;
+        end = absorbParentheticalAlias(text, i, end);
         break;
       }
       continue;
+    }
+
+    // Parenthetical alias may follow the final Title Case token with no legal suffix.
+    const withAlias = absorbParentheticalAlias(text, i, end);
+    if (withAlias !== end) {
+      end = withAlias;
+      break;
     }
     break;
   }
@@ -276,15 +311,88 @@ type ExplicitHit = {
   matchedText: string;
 };
 
+/** Presentation variants for back-end role wording (recognition only; roleAsStated stays literal). */
+const BACK_END = String.raw`(?:backend|back-end|back\s+end)`;
+
 /** Role tail shared by affirmative Applicant assignment forms. */
-const ROLE_TAIL =
-  /^\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b/i;
+const ROLE_TAIL = new RegExp(
+  String.raw`^\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:${BACK_END}\s+)?(?:registry\s+services?|registry\s+service\s+provider(?:\s+services?)?))\b`,
+  "i",
+);
 
-const PARTNERED_ROLE_TAIL =
-  /^\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\b/i;
+const PARTNERED_ROLE_TAIL = new RegExp(
+  String.raw`^\s+to\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:${BACK_END}\s+)?registry\s+services?)\b`,
+  "i",
+);
 
-const WILL_PROVIDE_ROLE =
-  /^\s+will\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:backend\s+)?registry\s+services?)\s+for\s+(?:the\s+)?Applicant\b/i;
+const WILL_PROVIDE_ROLE = new RegExp(
+  String.raw`^\s+will\s+(?:provide|perform|operate)\s+((?:the\s+)?(?:${BACK_END}\s+)?registry\s+services?)\s+for\s+(?:the\s+)?Applicant\b`,
+  "i",
+);
+
+/** Steward-verified: elected to partner with PROVIDER to provide back-end services. */
+const ELECTED_PARTNER_OPENER = /\b(?:has\s+)?elected\s+to\s+partner\s+with\s+/i;
+const ELECTED_PARTNER_ROLE = new RegExp(
+  String.raw`^\s+to\s+provide\s+((?:the\s+)?${BACK_END}\s+(?:registry\s+)?services?)\b`,
+  "i",
+);
+
+/** Steward-verified: will outsource the entirety of its technical operations to PROVIDER. */
+const OUTSOURCE_ENTIRETY_OPENER =
+  /\bwill\s+outsource\s+the\s+entirety\s+of\s+(?:its|their)\s+technical\s+operations\s+to\s+/i;
+
+/** Steward-verified: PROVIDER, the back-end provider of registry services … */
+const BACKEND_PROVIDER_APPOSITIVE = new RegExp(
+  String.raw`,\s+the\s+(${BACK_END}\s+provider\s+of\s+registry\s+services?)\b`,
+  "i",
+);
+
+/** Steward-verified: engaged PROVIDER to deliver (registry) services. */
+const ENGAGED_TO_DELIVER_OPENER = /\b(?:(?:We|I)\s+have|has)\s+engaged\s+/i;
+const ENGAGED_TO_DELIVER_ROLE =
+  /^\s+to\s+deliver\s+((?:the\s+)?(?:registry\s+)?services?)\b/i;
+
+/**
+ * Steward-verified passive/explicit selected-as-backend constructions:
+ * - PROVIDER has been/was selected [by X] to provide back-end services
+ * - PROVIDER has been/was selected as [the] back-end registry services provider
+ * - PROVIDER is [Possessive] selected (provider of) backend registry services
+ * - selected backend registry services provider, PROVIDER
+ */
+const SELECTED_PASSIVE_TO_PROVIDE = new RegExp(
+  String.raw`^\s*,?\s*(?:in\s+turn,?\s+)?(?:has\s+been|was)\s+selected\b(?:\s+by\s+(?:(?!\bto\s+provide\b).){1,80}?)?\s+to\s+provide\s+((?:the\s+)?${BACK_END}\s+(?:registry\s+)?services?)\b`,
+  "i",
+);
+const SELECTED_AS_BACKEND_PROVIDER = new RegExp(
+  String.raw`^\s*,?\s*(?:has\s+been|was)\s+selected\s+as\s+(?:the\s+)?((?:${BACK_END}\s+)(?:registry\s+)?(?:services?\s+)?provider)\b`,
+  "i",
+);
+const IS_SELECTED_BACKEND_PROVIDER = new RegExp(
+  String.raw`^\s+is\s+(?:[A-Za-z][A-Za-z0-9&.'-]{0,40}'s\s+)?selected\s+(?:provider\s+of\s+)?((?:${BACK_END}\s+)?registry\s+services?(?:\s+provider)?)\b`,
+  "i",
+);
+const SELECTED_BACKEND_PROVIDER_COMMA = new RegExp(
+  String.raw`\bselected\s+(?:provider\s+of\s+)?((?:${BACK_END}\s+)?registry\s+services?(?:\s+provider)?),\s*`,
+  "i",
+);
+
+/** Steward-verified: retained PROVIDER as the Registry Back-End Service Provider. */
+const RETAINED_AS_BACKEND_OPENER = /\b(?:has\s+)?retained\s+/i;
+const RETAINED_AS_BACKEND_ROLE = new RegExp(
+  String.raw`^\s+as\s+["“]?((?:the\s+)?Registry\s+Back[\s-]?End\s+Service\s+Provider)["”]?\b`,
+  "i",
+);
+
+/** Steward-verified: Registry operations are outsourced to and performed by PROVIDER. */
+const OUTSOURCED_AND_PERFORMED_BY =
+  /^(?:Registry\s+operations?)\s+(?:are|is|will\s+be)\s+outsourced\s+to\s+and\s+performed\s+by\s+/i;
+
+/**
+ * Steward-verified planning form (narrow): planning to outsource the technical
+ * operation … to … partner company PROVIDER.
+ */
+const PLANNING_OUTSOURCE_PARTNER_OPENER =
+  /\b(?:(?:we|I)\s+are|is|are)\s+planning\s+to\s+outsource\s+the\s+technical\s+operation(?:s)?(?:\s+of\s+(?:the\s+)?gTLD)?\s+to\s+(?:our\s+|its\s+|their\s+)?partner\s+company\s+/i;
 
 /**
  * Affirmative clause openers only — past/perfect assignment verbs after Applicant.
@@ -329,12 +437,22 @@ function tryAffirmativeHit(
   absoluteStart: number,
   opener: RegExp,
   roleTail: RegExp | null,
-  options: { requireCompleteProviderSpan?: boolean } = {},
+  options: {
+    requireCompleteProviderSpan?: boolean;
+    /** When true, opener may appear mid-sentence (not only at index 0). */
+    allowMidSentence?: boolean;
+    skipLeadingThe?: boolean;
+  } = {},
 ): ExplicitHit | null {
   opener.lastIndex = 0;
   const openMatch = opener.exec(sentence);
-  if (!openMatch || openMatch.index !== 0) return null;
-  const nameStart = openMatch[0].length;
+  if (!openMatch) return null;
+  if (!options.allowMidSentence && openMatch.index !== 0) return null;
+  let nameStart = openMatch.index + openMatch[0].length;
+  if (options.skipLeadingThe !== false) {
+    const theSkip = sentence.slice(nameStart).match(/^the\s+/i);
+    if (theSkip) nameStart += theSkip[0].length;
+  }
   const taken = takeProviderNameAsStated(sentence, nameStart);
   if (!taken) return null;
 
@@ -357,14 +475,102 @@ function tryAffirmativeHit(
   const providerNameAsStated = normalizeProviderName(taken.raw);
   if (!isPlausibleProviderName(providerNameAsStated)) return null;
 
-  const matchedText = sentence.slice(0, matchEnd);
+  const matchedText = sentence.slice(openMatch.index, matchEnd);
   return {
     providerNameAsStated,
     roleAsStated: role ? normalizeProviderName(role) : undefined,
-    matchIndex: absoluteStart,
-    matchLength: matchEnd,
+    matchIndex: absoluteStart + openMatch.index,
+    matchLength: matchEnd - openMatch.index,
     matchedText,
   };
+}
+
+function tryBackendProviderAppositiveHit(
+  sentence: string,
+  absoluteStart: number,
+): ExplicitHit | null {
+  BACKEND_PROVIDER_APPOSITIVE.lastIndex = 0;
+  const roleMatch = BACKEND_PROVIDER_APPOSITIVE.exec(sentence);
+  if (!roleMatch || roleMatch.index <= 0) return null;
+  const commaIndex = roleMatch.index;
+  // Provider span must end exactly at the appositive comma. Prefer the longest
+  // (leftmost) plausible span so legal tokens like "Co" are not taken alone.
+  let bestStart = -1;
+  let bestTaken: { raw: string; length: number } | null = null;
+  for (let start = 0; start < commaIndex; start += 1) {
+    if (start > 0 && /[A-Za-z0-9]/.test(sentence[start - 1]!)) continue;
+    const taken = takeProviderNameAsStated(sentence, start);
+    if (!taken || start + taken.length !== commaIndex) continue;
+    if (bestStart < 0 || start < bestStart) {
+      bestStart = start;
+      bestTaken = taken;
+    }
+  }
+  if (bestStart < 0 || !bestTaken) return null;
+  const providerNameAsStated = normalizeProviderName(bestTaken.raw);
+  if (!isPlausibleProviderName(providerNameAsStated)) return null;
+  const matchEnd = commaIndex + roleMatch[0].length;
+  return {
+    providerNameAsStated,
+    roleAsStated: normalizeProviderName(roleMatch[1]!),
+    matchIndex: absoluteStart + bestStart,
+    matchLength: matchEnd - bestStart,
+    matchedText: sentence.slice(bestStart, matchEnd),
+  };
+}
+
+function trySelectedBackendProviderHits(
+  sentence: string,
+  absoluteStart: number,
+): ExplicitHit | null {
+  // Sentence-initial PROVIDER + passive/selected-as / is-selected role.
+  const providerOpen = takeProviderNameAsStated(sentence, 0);
+  if (providerOpen) {
+    const after = sentence.slice(providerOpen.length);
+    for (const roleRe of [
+      SELECTED_PASSIVE_TO_PROVIDE,
+      SELECTED_AS_BACKEND_PROVIDER,
+      IS_SELECTED_BACKEND_PROVIDER,
+    ]) {
+      const roleMatch = after.match(roleRe);
+      if (!roleMatch || roleMatch.index !== 0) continue;
+      const providerNameAsStated = normalizeProviderName(providerOpen.raw);
+      if (!isPlausibleProviderName(providerNameAsStated)) return null;
+      const matchEnd = providerOpen.length + roleMatch[0].length;
+      return {
+        providerNameAsStated,
+        roleAsStated: normalizeProviderName(roleMatch[1]!),
+        matchIndex: absoluteStart,
+        matchLength: matchEnd,
+        matchedText: sentence.slice(0, matchEnd),
+      };
+    }
+  }
+
+  // Role-then-provider: selected backend registry services provider, PROVIDER
+  SELECTED_BACKEND_PROVIDER_COMMA.lastIndex = 0;
+  const commaRole = SELECTED_BACKEND_PROVIDER_COMMA.exec(sentence);
+  if (commaRole) {
+    const nameStart = commaRole.index + commaRole[0].length;
+    const theSkip = sentence.slice(nameStart).match(/^the\s+/i);
+    const adjusted = nameStart + (theSkip?.[0].length ?? 0);
+    const taken = takeProviderNameAsStated(sentence, adjusted);
+    if (taken) {
+      const providerNameAsStated = normalizeProviderName(taken.raw);
+      if (isPlausibleProviderName(providerNameAsStated)) {
+        const matchEnd = adjusted + taken.length;
+        return {
+          providerNameAsStated,
+          roleAsStated: normalizeProviderName(commaRole[1]!),
+          matchIndex: absoluteStart + commaRole.index,
+          matchLength: matchEnd - commaRole.index,
+          matchedText: sentence.slice(commaRole.index, matchEnd),
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -424,6 +630,68 @@ function matchAffirmativeSentence(
       }
     }
   }
+
+  // --- Steward-verified additive constructions (RIH-2012-RSP-VISIBILITY-1H8) ---
+
+  const elected = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    ELECTED_PARTNER_OPENER,
+    ELECTED_PARTNER_ROLE,
+    { allowMidSentence: true },
+  );
+  if (elected) return elected;
+
+  const outsourceEntirety = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    OUTSOURCE_ENTIRETY_OPENER,
+    null,
+    { allowMidSentence: true, requireCompleteProviderSpan: true },
+  );
+  if (outsourceEntirety) return outsourceEntirety;
+
+  const appositive = tryBackendProviderAppositiveHit(body, absoluteStart);
+  if (appositive) return appositive;
+
+  const engagedDeliver = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    ENGAGED_TO_DELIVER_OPENER,
+    ENGAGED_TO_DELIVER_ROLE,
+    { allowMidSentence: true },
+  );
+  if (engagedDeliver) return engagedDeliver;
+
+  const selectedBackend = trySelectedBackendProviderHits(body, absoluteStart);
+  if (selectedBackend) return selectedBackend;
+
+  const retainedBackend = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    RETAINED_AS_BACKEND_OPENER,
+    RETAINED_AS_BACKEND_ROLE,
+    { allowMidSentence: true },
+  );
+  if (retainedBackend) return retainedBackend;
+
+  const outsourcedPerformed = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    OUTSOURCED_AND_PERFORMED_BY,
+    null,
+    { requireCompleteProviderSpan: true },
+  );
+  if (outsourcedPerformed) return outsourcedPerformed;
+
+  const planningPartner = tryAffirmativeHit(
+    body,
+    absoluteStart,
+    PLANNING_OUTSOURCE_PARTNER_OPENER,
+    null,
+    { allowMidSentence: true, requireCompleteProviderSpan: true },
+  );
+  if (planningPartner) return planningPartner;
 
   return null;
 }

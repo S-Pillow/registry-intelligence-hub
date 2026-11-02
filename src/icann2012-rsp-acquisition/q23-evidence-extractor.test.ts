@@ -642,3 +642,259 @@ describe("RIH-2012-RSP-VISIBILITY-1A-R4 — provider-span completeness gate", ()
     expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["NeuStar, Inc."]);
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1H8 — steward-verified assignment grammar", () => {
+  function assertExplicitCandidate(
+    content: string,
+    providerNameAsStated: string,
+    sourceFieldPath: "Q23" | "Q24" | "Q25" = "Q23",
+  ) {
+    const body =
+      sourceFieldPath === "Q23"
+        ? q23(content)
+        : sourceFieldPath === "Q24"
+          ? `<div id="q23"><h2>23. Registry Services</h2><p>Technical overview follows.</p></div><div id="q24"><h2>24. Additional services</h2><p>${content}</p></div>`
+          : `<div id="q23"><h2>23. Registry Services</h2><p>Technical overview follows.</p></div><div id="q25"><h2>25. EPP</h2><p>${content}</p></div>`;
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(body), {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    const candidate = result.candidates[0]!;
+    expect(candidate.providerNameAsStated).toBe(providerNameAsStated);
+    expect(candidate.sourceFieldPath).toBe(sourceFieldPath);
+    expect(candidate.evidenceClassification).toBe("PUBLIC_ICANN");
+    expect(candidate.applicationVersionBasis).toBe("current_public_portion");
+    expect(candidate.reviewState).toBe("REQUIRES_STEWARD_REVIEW");
+    expect(candidate).not.toHaveProperty("rspKey");
+    expect(JSON.stringify(candidate)).not.toMatch(/"CONFIRMED"/);
+    expect(candidate.evidenceLocator).toMatch(new RegExp(`^${sourceFieldPath}@\\d+:\\d+$`));
+    expect(candidate.evidenceExcerpt?.length ?? 0).toBeGreaterThan(0);
+    expect(candidate.evidenceExcerpt!.length).toBeLessThanOrEqual(240);
+    return result;
+  }
+
+  it("1H8 — elected to partner with provider for back-end services", () => {
+    assertExplicitCandidate(
+      "Example Applicant LLC has elected to partner with Example Back-End Provider, Inc. to provide back-end services for the registry.",
+      "Example Back-End Provider, Inc.",
+    );
+  });
+
+  it("1H8 — outsource the entirety of technical operations to provider", () => {
+    assertExplicitCandidate(
+      "Example Operator LLC will outsource the entirety of its technical operations to Example Cloud Registry.",
+      "Example Cloud Registry",
+    );
+  });
+
+  it("1H8 — provider-role appositive (back-end provider of registry services)", () => {
+    assertExplicitCandidate(
+      "Answers are provided directly from Example Registry Co, the back-end provider of registry services for this TLD.",
+      "Example Registry Co",
+    );
+  });
+
+  it("1H8 — engaged provider to deliver services", () => {
+    assertExplicitCandidate(
+      "We have engaged Example Registry Services (ERS) to deliver services for this TLD.",
+      "Example Registry Services (ERS)",
+    );
+  });
+
+  it("1H8 — engaged provider to deliver registry services (has engaged)", () => {
+    assertExplicitCandidate(
+      "Example Authority Body has engaged the Regional Registry Authority UAE (RRA) to deliver registry services for this TLD.",
+      "Regional Registry Authority UAE (RRA)",
+    );
+  });
+
+  it("1H8 — passive selected to provide back-end services", () => {
+    assertExplicitCandidate(
+      "Example Provider, Inc., in turn, has been selected by Example Manager to provide back-end services for the registry.",
+      "Example Provider, Inc.",
+    );
+  });
+
+  it("1H8 — selected as the back-end registry services provider", () => {
+    assertExplicitCandidate(
+      "Example Provider, Inc. has been selected as the back-end registry services provider for this TLD.",
+      "Example Provider, Inc.",
+    );
+  });
+
+  it("1H8 — selected backend registry services provider, PROVIDER", () => {
+    assertExplicitCandidate(
+      "Oversight includes Example Applicant's selected backend registry services provider, Verisign Inc (VSI).",
+      "Verisign Inc (VSI)",
+      "Q24",
+    );
+  });
+
+  it("1H8 — retained as the Registry Back-End Service Provider", () => {
+    assertExplicitCandidate(
+      'The Registry Operator has retained China Example Network Information Center (CENIC) as "the Registry Back-End Service Provider" of this TLD.',
+      "China Example Network Information Center (CENIC)",
+      "Q25",
+    );
+  });
+
+  it("1H8 — registry operations outsourced to and performed by provider", () => {
+    assertExplicitCandidate(
+      "Registry operations are outsourced to and performed by Internet Example Consortium, Inc (IEC).",
+      "Internet Example Consortium, Inc (IEC)",
+    );
+  });
+
+  it("1H8 — planning to outsource technical operation to partner company", () => {
+    assertExplicitCandidate(
+      "We are planning to outsource the technical operation of gTLD to our partner company Example Registrar s.r.o.",
+      "Example Registrar s.r.o.",
+    );
+  });
+
+  it("1H8 — provider-span legal suffix Inc. preserved", () => {
+    assertExplicitCandidate(
+      "Example Applicant LLC has elected to partner with NeuStar, Inc. to provide back-end services for the registry.",
+      "NeuStar, Inc.",
+    );
+  });
+
+  it("1H8 — provider-span does not absorb following prose after parenthetical alias", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "We have engaged Example Registry Services (ERS) to deliver services for this TLD. Additional prose about DNSSEC materials follows.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.candidates[0]!.providerNameAsStated).toBe("Example Registry Services (ERS)");
+    expect(result.candidates[0]!.providerNameAsStated.includes("Additional")).toBe(false);
+  });
+
+  it("1H8 — provider-span rejects descriptive parenthetical over-capture", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "Registry operations are outsourced to and performed by Example Systems Consortium (including managed DNS).",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    // Incomplete span after name (descriptive parenthetical) — fail closed, no truncated candidate.
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — Verisign system/security description remains non-assignment", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "Verisign provides a comprehensive system and physical security solution that is designed to ensure a TLD is protected. " +
+            "Verisign's Shared Registration System (SRS) supports the IETF Extensible Provisioning Protocol (EPP) specifications.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
+  });
+
+  it("1H8 — vendor near SRS/EPP/DNS without assignment stays ambiguous-capable", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "The technical model references ExampleVendor SRS materials and EPP documentation without assigning a registry service provider.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).toBe("AMBIGUOUS_PROVIDER_RELATIONSHIP");
+  });
+
+  it("1H8 — partner with X without backend/service role is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(q23("Example Applicant LLC has elected to partner with Example Vendor for marketing support.")),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — selected X without backend/provider role is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(q23("Example Applicant LLC has selected Example Vendor for office furniture.")),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — engaged X without service role is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(q23("Example Applicant LLC has engaged Example Counsel for trademark filings.")),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — generic outsourcing discussion without provider target is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23("The Applicant may consider outsourcing technical operations in the future if needed."),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — future/conditional planning outside verified partner-company form is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23("We are planning to outsource some network monitoring to an unnamed vendor someday."),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — company appositive without explicit provider role is non-positive", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23("Answers are provided directly from Example Registry Co, the corporate affiliate of the Applicant."),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H8 — named company is registry services provider does not become self-operated", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23(
+          "Registry services for this TLD will be performed by Example Named Operator. Example Named Operator is the registry services provider for this and several other TLD applications.",
+        ),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
+  });
+
+  it("1H8 — named company will serve as registry operator does not become self-operated", () => {
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(
+      portionShell(
+        q23('Example Named Operator, Inc ("ENO") will serve as the registry operator for the .example registry.'),
+      ),
+      { expectedApplicationId: APP_ID },
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
+    expect(result.candidates).toEqual([]);
+  });
+});
