@@ -141,6 +141,24 @@ describe("RIH-2012-RSP-VISIBILITY-1A — Q23 offline evidence extraction", () =>
     expect(result.candidates).toEqual([]);
   });
 
+  it("1H4 — canonical ICANN Q23 prompt isolates a section without inventing provider facts", () => {
+    const html = portionShell(`
+      <p>Registry Services</p>
+      <p>23. Provide name and full description of all the Registry Services to be provided</p>
+      <p>Synthetic Q23 narrative with no registry-services provider assignment.</p>
+      <div id="q24"><h2>24. Shared Registration System</h2>
+        <p>MARKER_Q24_ONLY — must not be treated as the only Q23 body.</p>
+      </div>
+    `);
+    const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {
+      expectedApplicationId: APP_ID,
+    });
+    expect(result.disposition).toBe("NO_QUALIFYING_PROVIDER_ASSERTION");
+    expect(result.candidates).toEqual([]);
+    expect(result.applicationId).toBe(APP_ID);
+    expect(result.applicationVersionBasis).toBe(PUBLIC_PORTION_VERSION_BASIS);
+  });
+
   it("G — application-id mismatch fails closed as malformed/unusable", () => {
     const html = portionShell(q23("selected NeuStar, Inc. to provide backend registry services."), "1-0000-00000");
     const result = extractHistoricalRspEvidenceFromPublicPortionHtml(html, {

@@ -1,5 +1,8 @@
 import type { QuarantineReason } from "./types";
 import { classifyViewstatusPageHtml } from "./viewstatus-page-classification";
+import { portionDocumentHasQ23Section } from "./q23-section-recognition";
+
+export { portionDocumentHasQ23Section };
 
 /**
  * Official public-portion documents are the current published portion.
@@ -9,10 +12,6 @@ export const PUBLIC_PORTION_VERSION_BASIS = "current_public_portion" as const;
 
 export type PublicPortionVersionBasis = typeof PUBLIC_PORTION_VERSION_BASIS;
 
-const Q23_DOM_ID = /id\s*=\s*["']q23(?:_agb)?["']/i;
-const Q23_HEADING =
-  /(?:Question\s+23\b|\b23\s*[\.\)])\s*[:\-]?\s*Registry\s+Services\b/i;
-const Q23_DEFINED = /Registry\s+services\s+are\s+defined\s+as\s+the\s+following/i;
 const LABELED_APPLICATION_ID =
   /Application\s*ID(?:\s*<\/[^>]+>|\s)*[:#]?\s*(?:<\/[^>]+>\s*)*(1-\d+-\d+)/gi;
 const DOWNLOAD_PHRASE = "download public portion of application";
@@ -24,10 +23,6 @@ export interface PublicPortionValidationOptions {
 export type PublicPortionValidationResult =
   | { ok: true; applicationVersionBasis: PublicPortionVersionBasis; applicationId: string | null }
   | { ok: false; reason: QuarantineReason; applicationVersionBasis: PublicPortionVersionBasis };
-
-export function portionDocumentHasQ23Section(html: string): boolean {
-  return Q23_DOM_ID.test(html) || Q23_HEADING.test(html) || Q23_DEFINED.test(html);
-}
 
 export function extractLabeledApplicationIds(html: string): string[] {
   const ids: string[] = [];
@@ -45,10 +40,10 @@ function hasOfficialDownloadPhrase(html: string): boolean {
 }
 
 /**
- * Recognize a public-portion Question 23 section.
- * Accepts the historical `id="q23"` anchor and the question-text form ICANN
- * now emits. Status-grid hubs, ICANN error pages, and application-details
- * pages (download link, no Q23 section) fail closed.
+ * Recognize a public-portion Question 23 section via shared recognizers
+ * (DOM id, heading, defined-phrase, canonical ICANN prompt). Status-grid
+ * hubs, ICANN error pages, and application-details pages (download link,
+ * no Q23 section) fail closed.
  */
 export function validatePublicPortionDocument(
   html: string,

@@ -13,6 +13,7 @@ import {
   validatePublicPortionDocument,
   type PublicPortionValidationOptions,
 } from "./public-portion-validation";
+import { findQ23SectionStart } from "./q23-section-recognition";
 
 const MAX_EXCERPT_CHARS = 240;
 
@@ -60,30 +61,27 @@ type SectionSlice = {
 };
 
 function findQuestionStart(html: string, question: 23 | 24 | 25): number {
+  if (question === 23) {
+    return findQ23SectionStart(html);
+  }
   const patterns =
-    question === 23
+    question === 24
       ? [
-          /id\s*=\s*["']q23(?:_agb)?["']/i,
-          /(?:Question\s+23\b|\b23\s*[\.\)])\s*[:\-]?\s*Registry\s+Services\b/i,
-          /Registry\s+services\s+are\s+defined\s+as\s+the\s+following/i,
+          /id\s*=\s*["']q24(?:_agb)?["']/i,
+          /(?:Question\s+24\b|\b24\s*[\.\)])\s*[:\-]?\s*/i,
         ]
-      : question === 24
-        ? [
-            /id\s*=\s*["']q24(?:_agb)?["']/i,
-            /(?:Question\s+24\b|\b24\s*[\.\)])\s*[:\-]?\s*/i,
-          ]
-        : [
-            /id\s*=\s*["']q25(?:_agb)?["']/i,
-            /(?:Question\s+25\b|\b25\s*[\.\)])\s*[:\-]?\s*/i,
-          ];
+      : [
+          /id\s*=\s*["']q25(?:_agb)?["']/i,
+          /(?:Question\s+25\b|\b25\s*[\.\)])\s*[:\-]?\s*/i,
+        ];
   let best = -1;
   for (const pattern of patterns) {
     pattern.lastIndex = 0;
     const match = pattern.exec(html);
     if (!match) continue;
     let index = match.index;
-    // id="q23" matches inside the opening tag — start after `>` so attribute
-    // debris cannot precede the question heading in plain text.
+    // id="q24"/"q25" matches inside the opening tag — start after `>` so
+    // attribute debris cannot precede the question heading in plain text.
     if (/id\s*=/i.test(match[0])) {
       const gt = html.indexOf(">", match.index);
       if (gt >= 0) index = gt + 1;
