@@ -1,7 +1,8 @@
+import type { HistoricalRspApprovedEvidenceArtifact } from "@/icann2012-rsp-acquisition/historical-rsp-approved-evidence";
 import {
   HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION,
   HISTORICAL_RSP_RELATIONSHIP_NON_CLAIMS,
-  type ApprovedHistoricalRspEvidenceRowInput,
+  type HistoricalRspEvidenceRowSelector,
   type HistoricalRspProviderIdentityDecision,
   type HistoricalRspProviderRelationship,
 } from "./types";
@@ -9,27 +10,35 @@ import {
   HistoricalRspProviderContractError,
   assertExactString,
   assertRelationshipStateConsistency,
-  assertSha256Hex,
   buildEvidenceRowReference,
   deterministicRelationshipId,
+  resolveUniqueApprovedEvidenceRow,
+  validateProviderIdentityDecision,
 } from "./validation";
 
 export type UnresolvedRelationshipInput = {
-  evidenceRow: ApprovedHistoricalRspEvidenceRowInput;
-  approvedEvidenceArtifactSha256: string;
+  approvedEvidenceArtifact: HistoricalRspApprovedEvidenceArtifact;
+  /** Externally verified SHA-256 of the approved-evidence artifact bytes. */
+  verifiedApprovedEvidenceArtifactSha256: string;
+  evidenceSelector: HistoricalRspEvidenceRowSelector;
   relationshipState?: "UNRESOLVED" | "PENDING_IDENTITY_REVIEW";
 };
 
 /**
  * Build an unresolved / pending-identity historical RSP relationship.
- * Retains exact provider literal and evidence coordinates without organizationKey.
+ * Requires trusted approved-artifact membership of the evidence row.
  */
 export function buildUnresolvedHistoricalRspRelationship(
   input: UnresolvedRelationshipInput,
 ): HistoricalRspProviderRelationship {
+  const row = resolveUniqueApprovedEvidenceRow({
+    artifact: input.approvedEvidenceArtifact,
+    verifiedApprovedEvidenceArtifactSha256: input.verifiedApprovedEvidenceArtifactSha256,
+    selector: input.evidenceSelector,
+  });
   const evidenceRef = buildEvidenceRowReference(
-    input.evidenceRow,
-    input.approvedEvidenceArtifactSha256,
+    row,
+    input.verifiedApprovedEvidenceArtifactSha256,
   );
   const relationshipState = input.relationshipState ?? "UNRESOLVED";
   const relationship: HistoricalRspProviderRelationship = {
@@ -58,28 +67,30 @@ export function buildUnresolvedHistoricalRspRelationship(
 }
 
 export type MaterializeConfirmedRelationshipInput = {
-  evidenceRow: ApprovedHistoricalRspEvidenceRowInput;
-  approvedEvidenceArtifactSha256: string;
+  approvedEvidenceArtifact: HistoricalRspApprovedEvidenceArtifact;
+  /** Externally verified SHA-256 of the approved-evidence artifact bytes. */
+  verifiedApprovedEvidenceArtifactSha256: string;
+  evidenceSelector: HistoricalRspEvidenceRowSelector;
   identityDecision: HistoricalRspProviderIdentityDecision;
 };
 
 /**
  * Materialize an IDENTITY_CONFIRMED historical RSP relationship.
- * Fail-closed: APPROVED evidence, exact literal coverage, steward-approved decision.
+ * Fail-closed on artifact trust, unique row membership, decision provenance,
+ * and deterministic decision-link integrity.
  */
 export function materializeIdentityConfirmedHistoricalRspRelationship(
   input: MaterializeConfirmedRelationshipInput,
 ): HistoricalRspProviderRelationship {
-  if (input.evidenceRow.approvalState !== "APPROVED") {
-    throw new HistoricalRspProviderContractError(
-      "EVIDENCE_NOT_APPROVED",
-      "Confirmed historical RSP relationships require APPROVED evidence",
-    );
-  }
-  assertSha256Hex(input.approvedEvidenceArtifactSha256, "approvedEvidenceArtifactSha256");
+  const verifiedSha = input.verifiedApprovedEvidenceArtifactSha256.toLowerCase();
+  const row = resolveUniqueApprovedEvidenceRow({
+    artifact: input.approvedEvidenceArtifact,
+    verifiedApprovedEvidenceArtifactSha256: verifiedSha,
+    selector: input.evidenceSelector,
+  });
 
-  const decision = input.identityDecision;
-  if (decision.reviewState !== "steward-approved") {
+  validateProviderIdentityDecision(input.identityDecision);
+  if (input.identityDecision.reviewState !== "steward-approved") {
     throw new HistoricalRspProviderContractError(
       "IDENTITY_NOT_APPROVED",
       "Confirmed relationship requires steward-approved provider identity decision",
@@ -87,15 +98,18 @@ export function materializeIdentityConfirmedHistoricalRspRelationship(
   }
 
   assertExactString(
-    decision.providerNameAsStated,
-    input.evidenceRow.providerNameAsStated,
-    "identityDecision.providerNameAsStated vs evidenceRow.providerNameAsStated",
+    input.identityDecision.provenance.sourceApprovedEvidenceArtifactSha256.toLowerCase(),
+    verifiedSha,
+    "identityDecision.provenance.sourceApprovedEvidenceArtifactSha256 vs verified approved-evidence artifact SHA",
+  );
+  assertExactString(
+    input.identityDecision.providerNameAsStated,
+    row.providerNameAsStated,
+    "identityDecision.providerNameAsStated vs approved evidence row providerNameAsStated",
   );
 
-  const evidenceRef = buildEvidenceRowReference(
-    input.evidenceRow,
-    input.approvedEvidenceArtifactSha256,
-  );
+  const evidenceRef = buildEvidenceRowReference(row, verifiedSha);
+  const decision = input.identityDecision;
 
   const relationship: HistoricalRspProviderRelationship = {
     schemaVersion: HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION,
@@ -123,40 +137,45 @@ export function materializeIdentityConfirmedHistoricalRspRelationship(
 }
 
 /**
- * Fail-closed materialization against mismatched evidence coordinates / artifact / decision.
+ * Fail-closed binding check against an approved artifact + selector.
  */
 export function assertEvidenceBindingMatches(input: {
   relationship: HistoricalRspProviderRelationship;
-  evidenceRow: ApprovedHistoricalRspEvidenceRowInput;
-  approvedEvidenceArtifactSha256: string;
+  approvedEvidenceArtifact: HistoricalRspApprovedEvidenceArtifact;
+  verifiedApprovedEvidenceArtifactSha256: string;
+  evidenceSelector: HistoricalRspEvidenceRowSelector;
 }): void {
-  const { relationship, evidenceRow } = input;
-  assertExactString(relationship.applicationId, evidenceRow.applicationId, "applicationId");
+  const row = resolveUniqueApprovedEvidenceRow({
+    artifact: input.approvedEvidenceArtifact,
+    verifiedApprovedEvidenceArtifactSha256: input.verifiedApprovedEvidenceArtifactSha256,
+    selector: input.evidenceSelector,
+  });
+  const { relationship } = input;
+  assertExactString(relationship.applicationId, row.applicationId, "applicationId");
   assertExactString(
     relationship.providerNameAsStated,
-    evidenceRow.providerNameAsStated,
+    row.providerNameAsStated,
     "providerNameAsStated",
   );
   assertExactString(
     relationship.evidenceRef.sourceFieldPath,
-    evidenceRow.sourceFieldPath,
+    row.sourceFieldPath,
     "sourceFieldPath",
   );
   assertExactString(
     relationship.evidenceRef.evidenceLocator,
-    evidenceRow.evidenceLocator,
+    row.evidenceLocator,
     "evidenceLocator",
   );
   assertExactString(
     relationship.evidenceRef.approvedEvidenceArtifactSha256,
-    input.approvedEvidenceArtifactSha256.toLowerCase(),
+    input.verifiedApprovedEvidenceArtifactSha256.toLowerCase(),
     "approvedEvidenceArtifactSha256",
   );
 }
 
 /**
  * RSP relationship never mutates applicant/member application lists.
- * Returns the unchanged membership snapshot for regression assertions.
  */
 export function applyRelationshipWithoutMembershipMutation(input: {
   relationship: HistoricalRspProviderRelationship;

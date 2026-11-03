@@ -4,15 +4,18 @@ export {
   HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
   HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION,
   HISTORICAL_RSP_RELATIONSHIP_NON_CLAIMS,
-  type ApprovedHistoricalRspEvidenceRowInput,
   type ForbiddenProviderIdentityField,
+  type HistoricalOrganizationLineageRecord,
+  type HistoricalRspApprovedEvidenceArtifact,
+  type HistoricalRspApprovedEvidenceRow,
   type HistoricalRspCurrentAttribution,
   type HistoricalRspEvidenceRowReference,
-  type HistoricalRspLineageInput,
+  type HistoricalRspEvidenceRowSelector,
   type HistoricalRspProviderIdentityDecision,
   type HistoricalRspProviderRelationship,
   type HistoricalRspRelationshipState,
   type ProviderIdentityConfidence,
+  type ProviderIdentityDecisionProvenance,
   type ProviderIdentityOperationType,
   type ProviderIdentityReviewState,
   type TrustedConfirmedOrganization,
@@ -20,15 +23,20 @@ export {
 
 export {
   HistoricalRspProviderContractError,
+  approvedEvidenceRowIdentity,
+  assertCanonicalApprovedEvidenceRow,
   assertExactString,
   assertNoForbiddenProviderIdentityFields,
   assertRelationshipStateConsistency,
   assertSha256Hex,
+  assertTrustedApprovedEvidenceArtifact,
   buildEvidenceRowReference,
   deterministicProviderIdentityDecisionId,
   deterministicRelationshipId,
   evidenceRowReferenceEquals,
   indexTrustedOrganizations,
+  resolveUniqueApprovedEvidenceRow,
+  validateProviderIdentityDecision,
 } from "./validation";
 
 export {
@@ -51,4 +59,8 @@ export {
   type UnresolvedRelationshipInput,
 } from "./historical-rsp-relationship";
 
-export { deriveHistoricalRspCurrentAttribution } from "./current-attribution";
+export {
+  assertAttributionEligibleLineage,
+  deriveHistoricalRspCurrentAttribution,
+  deriveHistoricalRspCurrentAttributionFromUnknown,
+} from "./current-attribution";

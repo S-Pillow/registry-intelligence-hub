@@ -6,6 +6,12 @@
  * No canonical rspKey. No applicant membership from provider role.
  */
 
+import type {
+  HistoricalRspApprovedEvidenceArtifact,
+  HistoricalRspApprovedEvidenceRow,
+} from "@/icann2012-rsp-acquisition/historical-rsp-approved-evidence";
+import type { HistoricalOrganizationLineageRecord } from "@/historical-organization-lineage/types";
+
 export const HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION =
   "historical-rsp-provider-identity/1.0.0" as const;
 
@@ -14,6 +20,9 @@ export const HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION =
 
 export const HISTORICAL_RSP_CURRENT_ATTRIBUTION_METHOD_VERSION =
   "historical-rsp-current-attribution/1.0.0" as const;
+
+export type { HistoricalRspApprovedEvidenceArtifact, HistoricalRspApprovedEvidenceRow };
+export type { HistoricalOrganizationLineageRecord };
 
 export type ProviderIdentityOperationType =
   | "BIND_EXISTING_ORGANIZATION"
@@ -43,12 +52,20 @@ export type TrustedConfirmedOrganization = {
   canonicalOrganizationName: string;
 };
 
+export type ProviderIdentityDecisionProvenance = {
+  /** Externally verified SHA-256 of the approved historical RSP evidence artifact bytes. */
+  sourceApprovedEvidenceArtifactSha256: string;
+  /** SHA-256 of the steward identity-review / approval source artifact. */
+  identityReviewArtifactSha256: string;
+};
+
 /**
  * Steward-reviewed provider identity decision.
  * Explicit only — never inferred by case/punctuation/fuzzy match.
  */
 export type HistoricalRspProviderIdentityDecision = {
   schemaVersion: typeof HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION;
+  /** Deterministic from semantic decision content — never caller-overridden. */
   decisionId: string;
   operationType: ProviderIdentityOperationType;
   /** Exact historical provider wording under review — never normalized. */
@@ -65,26 +82,24 @@ export type HistoricalRspProviderIdentityDecision = {
    * Provider-origin identities have no applicant membership.
    */
   organizationOrigin: "existing-confirmed" | "provider-origin";
-};
-
-export type HistoricalRspEvidenceRowReference = {
-  applicationId: string;
-  sourceFieldPath: "Q23" | "Q24" | "Q25";
-  evidenceLocator: string;
-  providerNameAsStated: string;
-  approvedEvidenceArtifactSha256: string;
+  provenance: ProviderIdentityDecisionProvenance;
 };
 
 /**
- * Minimal approved-evidence row shape required for relationship materialization.
- * Mirrors approved-evidence-row coordinates without importing production artifacts.
+ * Evidence-row selector coordinates — parity with approved-evidence row identity.
+ * Includes roleAsStated so identity is no weaker than evidence-apply-review.
  */
-export type ApprovedHistoricalRspEvidenceRowInput = {
-  approvalState: "APPROVED";
+export type HistoricalRspEvidenceRowSelector = {
   applicationId: string;
   sourceFieldPath: "Q23" | "Q24" | "Q25";
   evidenceLocator: string;
   providerNameAsStated: string;
+  roleAsStated?: string | null;
+};
+
+export type HistoricalRspEvidenceRowReference = HistoricalRspEvidenceRowSelector & {
+  approvedEvidenceArtifactSha256: string;
+  roleAsStated: string | null;
 };
 
 export type HistoricalRspRelationshipState =
@@ -110,12 +125,10 @@ export type HistoricalRspProviderRelationship = {
   /** Present only when relationshipState === IDENTITY_CONFIRMED. */
   providerIdentityDecisionId: string | null;
   provenance: {
+    /** Externally verified approved-evidence artifact byte hash. */
     approvedEvidenceArtifactSha256: string;
     methodVersion: typeof HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION;
   };
-  /**
-   * Explicit non-claims preserved on every relationship record.
-   */
   nonClaims: readonly string[];
 };
 
@@ -126,25 +139,6 @@ export const HISTORICAL_RSP_RELATIONSHIP_NON_CLAIMS = [
   "Does not claim current RSP capability or current provider relationship",
   "Does not rewrite historical source provider wording",
 ] as const;
-
-export type HistoricalRspLineageInput = {
-  lineageId: string;
-  historicalOrganizationKey: string;
-  historicalCanonicalName: string;
-  currentOrganizationKey: string;
-  currentCanonicalName: string;
-  relationshipType:
-    | "SAME_ENTITY_RENAME"
-    | "BUSINESS_LINE_SUCCESSION"
-    | "ACQUISITION"
-    | "MERGER"
-    | "OTHER_EVIDENCE_BACKED_SUCCESSION";
-  stewardState: "steward-approved" | "pending-review";
-  confidence: "high" | "medium" | "low";
-  effectiveDateOrYear: string | null;
-  scopeNotes: string;
-  nonClaims: readonly string[];
-};
 
 /**
  * Historical footprint attribution — never current capability.
@@ -159,7 +153,7 @@ export type HistoricalRspCurrentAttribution = {
   currentOrganizationKey: string;
   currentCanonicalName: string;
   lineageId: string;
-  lineageRelationshipType: HistoricalRspLineageInput["relationshipType"];
+  lineageRelationshipType: HistoricalOrganizationLineageRecord["relationshipType"];
   providerNameAsStated: string;
   /** Always false — lineage never implies current RSP capability. */
   claimsCurrentRspCapability: false;

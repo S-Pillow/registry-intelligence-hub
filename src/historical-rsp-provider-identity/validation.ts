@@ -1,11 +1,17 @@
+import {
+  HISTORICAL_RSP_APPROVED_EVIDENCE_ROW_SCHEMA_VERSION,
+  HISTORICAL_RSP_APPROVED_EVIDENCE_SCHEMA_VERSION,
+  type HistoricalRspApprovedEvidenceArtifact,
+  type HistoricalRspApprovedEvidenceRow,
+} from "@/icann2012-rsp-acquisition/historical-rsp-approved-evidence";
 import { contentHash } from "@/normalization/hashes";
 import {
   FORBIDDEN_PROVIDER_IDENTITY_FIELDS,
   HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
   HISTORICAL_RSP_PROVIDER_RELATIONSHIP_SCHEMA_VERSION,
-  type ApprovedHistoricalRspEvidenceRowInput,
   type ForbiddenProviderIdentityField,
   type HistoricalRspEvidenceRowReference,
+  type HistoricalRspEvidenceRowSelector,
   type HistoricalRspProviderIdentityDecision,
   type HistoricalRspProviderRelationship,
   type TrustedConfirmedOrganization,
@@ -65,45 +71,163 @@ export function assertNonEmptyString(value: unknown, label: string): asserts val
   }
 }
 
+/**
+ * Local evidence-row identity — semantic parity with
+ * `evidenceRowIdentity` in evidence-apply-review.ts
+ * (applicationId, sourceFieldPath, providerNameAsStated, evidenceLocator, roleAsStated).
+ * Implemented locally to avoid importing the apply-review operator module.
+ */
+export function approvedEvidenceRowIdentity(input: {
+  applicationId: string;
+  sourceFieldPath: string;
+  providerNameAsStated: string;
+  evidenceLocator: string;
+  roleAsStated?: string | null;
+}): string {
+  const role = input.roleAsStated == null ? "" : input.roleAsStated;
+  return [
+    input.applicationId,
+    input.sourceFieldPath,
+    input.providerNameAsStated,
+    input.evidenceLocator,
+    role,
+  ].join("\u0001");
+}
+
 export function evidenceRowReferenceEquals(
   a: HistoricalRspEvidenceRowReference,
   b: HistoricalRspEvidenceRowReference,
 ): boolean {
   return (
-    a.applicationId === b.applicationId &&
-    a.sourceFieldPath === b.sourceFieldPath &&
-    a.evidenceLocator === b.evidenceLocator &&
-    a.providerNameAsStated === b.providerNameAsStated &&
+    approvedEvidenceRowIdentity(a) === approvedEvidenceRowIdentity(b) &&
     a.approvedEvidenceArtifactSha256.toLowerCase() ===
       b.approvedEvidenceArtifactSha256.toLowerCase()
   );
 }
 
-export function buildEvidenceRowReference(
-  row: ApprovedHistoricalRspEvidenceRowInput,
-  approvedEvidenceArtifactSha256: string,
-): HistoricalRspEvidenceRowReference {
+/**
+ * Validate canonical approved-evidence artifact lifecycle fields.
+ * Treats verifiedApprovedEvidenceArtifactSha256 as an externally verified byte hash
+ * (does not re-hash the in-memory object as proof of original bytes).
+ */
+export function assertTrustedApprovedEvidenceArtifact(input: {
+  artifact: HistoricalRspApprovedEvidenceArtifact;
+  verifiedApprovedEvidenceArtifactSha256: string;
+}): void {
+  const { artifact } = input;
+  assertSha256Hex(
+    input.verifiedApprovedEvidenceArtifactSha256,
+    "verifiedApprovedEvidenceArtifactSha256",
+  );
+  if (artifact.schemaVersion !== HISTORICAL_RSP_APPROVED_EVIDENCE_SCHEMA_VERSION) {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_EVIDENCE_SCHEMA_MISMATCH",
+      `Expected approved-evidence schema ${HISTORICAL_RSP_APPROVED_EVIDENCE_SCHEMA_VERSION}, got ${String(artifact.schemaVersion)}`,
+    );
+  }
+  if (artifact.artifactPurpose !== "EVIDENCE") {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_EVIDENCE_PURPOSE_MISMATCH",
+      `artifactPurpose must be EVIDENCE, got ${String(artifact.artifactPurpose)}`,
+    );
+  }
+  if (artifact.approvalState !== "APPROVED") {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_EVIDENCE_NOT_APPROVED",
+      "Approved-evidence artifact approvalState must be APPROVED",
+    );
+  }
+  if (!Array.isArray(artifact.approvedEvidenceRows)) {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_EVIDENCE_ROWS_MISSING",
+      "approvedEvidenceRows must be an array",
+    );
+  }
+}
+
+export function assertCanonicalApprovedEvidenceRow(
+  row: HistoricalRspApprovedEvidenceRow,
+): void {
+  if (row.schemaVersion !== HISTORICAL_RSP_APPROVED_EVIDENCE_ROW_SCHEMA_VERSION) {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_ROW_SCHEMA_MISMATCH",
+      `Expected approved-row schema ${HISTORICAL_RSP_APPROVED_EVIDENCE_ROW_SCHEMA_VERSION}, got ${String(row.schemaVersion)}`,
+    );
+  }
+  if (row.evidenceClassification !== "PUBLIC_ICANN") {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_ROW_CLASSIFICATION",
+      "evidenceClassification must be PUBLIC_ICANN",
+    );
+  }
+  if (row.applicationVersionBasis !== "current_public_portion") {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_ROW_VERSION_BASIS",
+      "applicationVersionBasis must be current_public_portion",
+    );
+  }
   if (row.approvalState !== "APPROVED") {
     throw new HistoricalRspProviderContractError(
-      "EVIDENCE_NOT_APPROVED",
-      "Confirmed historical RSP relationships require APPROVED evidence rows",
+      "APPROVED_ROW_NOT_APPROVED",
+      "approved evidence row approvalState must be APPROVED",
     );
   }
-  assertNonEmptyString(row.applicationId, "applicationId");
-  assertNonEmptyString(row.evidenceLocator, "evidenceLocator");
-  assertNonEmptyString(row.providerNameAsStated, "providerNameAsStated");
-  assertSha256Hex(approvedEvidenceArtifactSha256, "approvedEvidenceArtifactSha256");
-  if (!["Q23", "Q24", "Q25"].includes(row.sourceFieldPath)) {
+  if (row.approvalBasis !== "STEWARD_REVIEW") {
     throw new HistoricalRspProviderContractError(
-      "INVALID_SOURCE_FIELD",
-      `sourceFieldPath must be Q23|Q24|Q25, got ${JSON.stringify(row.sourceFieldPath)}`,
+      "APPROVED_ROW_BASIS",
+      "approvalBasis must be STEWARD_REVIEW",
     );
   }
+}
+
+/**
+ * Resolve exactly one approved row from a trusted artifact by material evidence identity.
+ * Fail-closed on zero or duplicate matches.
+ */
+export function resolveUniqueApprovedEvidenceRow(input: {
+  artifact: HistoricalRspApprovedEvidenceArtifact;
+  verifiedApprovedEvidenceArtifactSha256: string;
+  selector: HistoricalRspEvidenceRowSelector;
+}): HistoricalRspApprovedEvidenceRow {
+  assertTrustedApprovedEvidenceArtifact({
+    artifact: input.artifact,
+    verifiedApprovedEvidenceArtifactSha256: input.verifiedApprovedEvidenceArtifactSha256,
+  });
+  const target = approvedEvidenceRowIdentity(input.selector);
+  const matches: HistoricalRspApprovedEvidenceRow[] = [];
+  for (const row of input.artifact.approvedEvidenceRows) {
+    assertCanonicalApprovedEvidenceRow(row);
+    if (approvedEvidenceRowIdentity(row) === target) {
+      matches.push(row);
+    }
+  }
+  if (matches.length === 0) {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_ROW_NOT_FOUND",
+      "Referenced evidence row does not exist in the approved-evidence artifact",
+    );
+  }
+  if (matches.length > 1) {
+    throw new HistoricalRspProviderContractError(
+      "APPROVED_ROW_NOT_UNIQUE",
+      "Referenced evidence row identity is not unique inside the approved-evidence artifact",
+    );
+  }
+  return matches[0]!;
+}
+
+export function buildEvidenceRowReference(
+  row: HistoricalRspApprovedEvidenceRow,
+  approvedEvidenceArtifactSha256: string,
+): HistoricalRspEvidenceRowReference {
+  assertCanonicalApprovedEvidenceRow(row);
+  assertSha256Hex(approvedEvidenceArtifactSha256, "approvedEvidenceArtifactSha256");
   return {
     applicationId: row.applicationId,
     sourceFieldPath: row.sourceFieldPath,
     evidenceLocator: row.evidenceLocator,
     providerNameAsStated: row.providerNameAsStated,
+    roleAsStated: row.roleAsStated ?? null,
     approvedEvidenceArtifactSha256: approvedEvidenceArtifactSha256.toLowerCase(),
   };
 }
@@ -124,24 +248,121 @@ export function deterministicRelationshipId(input: {
   })}`;
 }
 
-/** Deterministic decision ID from semantic identity fields (not reviewedAt alone). */
-export function deterministicProviderIdentityDecisionId(input: {
-  operationType: HistoricalRspProviderIdentityDecision["operationType"];
-  providerNameAsStated: string;
-  organizationKey: string;
-  canonicalOrganizationName: string;
-  reviewState: HistoricalRspProviderIdentityDecision["reviewState"];
-  rationale: string;
-}): string {
+/** Deterministic decision ID from semantic decision content (excludes reviewer/reviewedAt). */
+export function deterministicProviderIdentityDecisionId(
+  decision: Pick<
+    HistoricalRspProviderIdentityDecision,
+    | "operationType"
+    | "providerNameAsStated"
+    | "organizationKey"
+    | "canonicalOrganizationName"
+    | "reviewState"
+    | "rationale"
+    | "confidence"
+    | "organizationOrigin"
+    | "provenance"
+  >,
+): string {
   return `hist-rsp-pid:${contentHash({
     schemaVersion: HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
-    operationType: input.operationType,
-    providerNameAsStated: input.providerNameAsStated,
-    organizationKey: input.organizationKey,
-    canonicalOrganizationName: input.canonicalOrganizationName,
-    reviewState: input.reviewState,
-    rationale: input.rationale,
+    operationType: decision.operationType,
+    providerNameAsStated: decision.providerNameAsStated,
+    organizationKey: decision.organizationKey,
+    canonicalOrganizationName: decision.canonicalOrganizationName,
+    reviewState: decision.reviewState,
+    rationale: decision.rationale,
+    confidence: decision.confidence,
+    organizationOrigin: decision.organizationOrigin,
+    provenance: {
+      sourceApprovedEvidenceArtifactSha256:
+        decision.provenance.sourceApprovedEvidenceArtifactSha256.toLowerCase(),
+      identityReviewArtifactSha256:
+        decision.provenance.identityReviewArtifactSha256.toLowerCase(),
+    },
   })}`;
+}
+
+export function validateProviderIdentityDecision(
+  decision: HistoricalRspProviderIdentityDecision,
+): void {
+  assertNoForbiddenProviderIdentityFields(decision as unknown as Record<string, unknown>);
+  if (decision.schemaVersion !== HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_SCHEMA_MISMATCH",
+      `Unexpected provider identity schemaVersion: ${decision.schemaVersion}`,
+    );
+  }
+  if (
+    decision.operationType !== "BIND_EXISTING_ORGANIZATION" &&
+    decision.operationType !== "CREATE_PROVIDER_ORGANIZATION"
+  ) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_OPERATION_UNKNOWN",
+      `Unrecognized operationType: ${String(decision.operationType)}`,
+    );
+  }
+  if (
+    decision.reviewState !== "steward-approved" &&
+    decision.reviewState !== "pending-review" &&
+    decision.reviewState !== "rejected"
+  ) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_REVIEW_STATE_UNKNOWN",
+      `Unrecognized reviewState: ${String(decision.reviewState)}`,
+    );
+  }
+  assertNonEmptyString(decision.decisionId, "decisionId");
+  assertNonEmptyString(decision.providerNameAsStated, "providerNameAsStated");
+  assertNonEmptyString(decision.organizationKey, "organizationKey");
+  assertNonEmptyString(decision.canonicalOrganizationName, "canonicalOrganizationName");
+  assertNonEmptyString(decision.reviewer, "reviewer");
+  assertNonEmptyString(decision.reviewedAt, "reviewedAt");
+  assertNonEmptyString(decision.rationale, "rationale");
+  if (
+    decision.confidence !== "high" &&
+    decision.confidence !== "medium" &&
+    decision.confidence !== "low"
+  ) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_CONFIDENCE_UNKNOWN",
+      `Unrecognized confidence: ${String(decision.confidence)}`,
+    );
+  }
+  assertSha256Hex(
+    decision.provenance.sourceApprovedEvidenceArtifactSha256,
+    "provenance.sourceApprovedEvidenceArtifactSha256",
+  );
+  assertSha256Hex(
+    decision.provenance.identityReviewArtifactSha256,
+    "provenance.identityReviewArtifactSha256",
+  );
+
+  if (
+    decision.operationType === "BIND_EXISTING_ORGANIZATION" &&
+    decision.organizationOrigin !== "existing-confirmed"
+  ) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_ORIGIN_MISMATCH",
+      "BIND_EXISTING_ORGANIZATION requires organizationOrigin existing-confirmed",
+    );
+  }
+  if (
+    decision.operationType === "CREATE_PROVIDER_ORGANIZATION" &&
+    decision.organizationOrigin !== "provider-origin"
+  ) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_ORIGIN_MISMATCH",
+      "CREATE_PROVIDER_ORGANIZATION requires organizationOrigin provider-origin",
+    );
+  }
+
+  const expectedId = deterministicProviderIdentityDecisionId(decision);
+  if (decision.decisionId !== expectedId) {
+    throw new HistoricalRspProviderContractError(
+      "IDENTITY_DECISION_LINK_TAMPERED",
+      "decisionId does not match deterministic semantic decision content",
+    );
+  }
 }
 
 export function indexTrustedOrganizations(

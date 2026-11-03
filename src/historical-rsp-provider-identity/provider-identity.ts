@@ -2,14 +2,17 @@ import {
   HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
   type HistoricalRspProviderIdentityDecision,
   type ProviderIdentityConfidence,
+  type ProviderIdentityDecisionProvenance,
   type TrustedConfirmedOrganization,
 } from "./types";
 import {
   HistoricalRspProviderContractError,
   assertNoForbiddenProviderIdentityFields,
   assertNonEmptyString,
+  assertSha256Hex,
   deterministicProviderIdentityDecisionId,
   indexTrustedOrganizations,
+  validateProviderIdentityDecision,
 } from "./validation";
 
 export type BindExistingOrganizationInput = {
@@ -23,8 +26,7 @@ export type BindExistingOrganizationInput = {
   confidence: ProviderIdentityConfidence;
   /** Trusted confirmed organization universe (caller-supplied). */
   trustedConfirmedOrganizations: readonly TrustedConfirmedOrganization[];
-  /** Optional explicit decision ID; otherwise deterministic from semantic inputs. */
-  decisionId?: string;
+  provenance: ProviderIdentityDecisionProvenance;
   /** Raw payload for forbidden-field scanning (e.g. untrusted JSON). */
   rawPayload?: Record<string, unknown>;
 };
@@ -38,12 +40,12 @@ export type CreateProviderOrganizationInput = {
   reviewedAt: string;
   rationale: string;
   confidence: ProviderIdentityConfidence;
+  provenance: ProviderIdentityDecisionProvenance;
   /**
    * Optional known keys for collision checking (existing confirmed + prior provider-origin).
    * When provided, CREATE must not collide with an existing key.
    */
   knownOrganizationKeys?: ReadonlySet<string> | readonly string[];
-  decisionId?: string;
   rawPayload?: Record<string, unknown>;
 };
 
@@ -61,10 +63,28 @@ function scanForbidden(rawPayload: Record<string, unknown> | undefined, built: o
   }
 }
 
+function normalizeProvenance(
+  provenance: ProviderIdentityDecisionProvenance,
+): ProviderIdentityDecisionProvenance {
+  assertSha256Hex(
+    provenance.sourceApprovedEvidenceArtifactSha256,
+    "provenance.sourceApprovedEvidenceArtifactSha256",
+  );
+  assertSha256Hex(
+    provenance.identityReviewArtifactSha256,
+    "provenance.identityReviewArtifactSha256",
+  );
+  return {
+    sourceApprovedEvidenceArtifactSha256:
+      provenance.sourceApprovedEvidenceArtifactSha256.toLowerCase(),
+    identityReviewArtifactSha256: provenance.identityReviewArtifactSha256.toLowerCase(),
+  };
+}
+
 /**
  * Explicit steward BIND_EXISTING_ORGANIZATION decision.
  * Fails closed if organizationKey is not in the trusted confirmed universe.
- * Does not mutate applicant membership.
+ * decisionId is always derived — never caller-overridden.
  */
 export function createBindExistingOrganizationDecision(
   input: BindExistingOrganizationInput,
@@ -94,37 +114,33 @@ export function createBindExistingOrganizationDecision(
     );
   }
 
-  const decisionId =
-    input.decisionId ??
-    deterministicProviderIdentityDecisionId({
-      operationType: "BIND_EXISTING_ORGANIZATION",
-      providerNameAsStated: input.providerNameAsStated,
-      organizationKey: input.organizationKey,
-      canonicalOrganizationName,
-      reviewState: "steward-approved",
-      rationale: input.rationale,
-    });
-
-  return {
-    schemaVersion: HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
-    decisionId,
-    operationType: "BIND_EXISTING_ORGANIZATION",
+  const provenance = normalizeProvenance(input.provenance);
+  const partial = {
+    operationType: "BIND_EXISTING_ORGANIZATION" as const,
     providerNameAsStated: input.providerNameAsStated,
     organizationKey: input.organizationKey,
     canonicalOrganizationName,
-    reviewState: "steward-approved",
-    reviewer: input.reviewer,
-    reviewedAt: input.reviewedAt,
+    reviewState: "steward-approved" as const,
     rationale: input.rationale,
     confidence: input.confidence,
-    organizationOrigin: "existing-confirmed",
+    organizationOrigin: "existing-confirmed" as const,
+    provenance,
   };
+  const decision: HistoricalRspProviderIdentityDecision = {
+    schemaVersion: HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
+    decisionId: deterministicProviderIdentityDecisionId(partial),
+    ...partial,
+    reviewer: input.reviewer,
+    reviewedAt: input.reviewedAt,
+  };
+  validateProviderIdentityDecision(decision);
+  return decision;
 }
 
 /**
  * Explicit steward CREATE_PROVIDER_ORGANIZATION decision.
  * organizationKey must be steward-supplied — never derived from the literal.
- * No applicant membership fields are created or required.
+ * decisionId is always derived — never caller-overridden.
  */
 export function createProviderOrganizationDecision(
   input: CreateProviderOrganizationInput,
@@ -150,36 +166,31 @@ export function createProviderOrganizationDecision(
     }
   }
 
-  const decisionId =
-    input.decisionId ??
-    deterministicProviderIdentityDecisionId({
-      operationType: "CREATE_PROVIDER_ORGANIZATION",
-      providerNameAsStated: input.providerNameAsStated,
-      organizationKey: input.organizationKey,
-      canonicalOrganizationName: input.canonicalOrganizationName,
-      reviewState: "steward-approved",
-      rationale: input.rationale,
-    });
-
-  return {
-    schemaVersion: HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
-    decisionId,
-    operationType: "CREATE_PROVIDER_ORGANIZATION",
+  const provenance = normalizeProvenance(input.provenance);
+  const partial = {
+    operationType: "CREATE_PROVIDER_ORGANIZATION" as const,
     providerNameAsStated: input.providerNameAsStated,
     organizationKey: input.organizationKey,
     canonicalOrganizationName: input.canonicalOrganizationName,
-    reviewState: "steward-approved",
-    reviewer: input.reviewer,
-    reviewedAt: input.reviewedAt,
+    reviewState: "steward-approved" as const,
     rationale: input.rationale,
     confidence: input.confidence,
-    organizationOrigin: "provider-origin",
+    organizationOrigin: "provider-origin" as const,
+    provenance,
   };
+  const decision: HistoricalRspProviderIdentityDecision = {
+    schemaVersion: HISTORICAL_RSP_PROVIDER_IDENTITY_SCHEMA_VERSION,
+    decisionId: deterministicProviderIdentityDecisionId(partial),
+    ...partial,
+    reviewer: input.reviewer,
+    reviewedAt: input.reviewedAt,
+  };
+  validateProviderIdentityDecision(decision);
+  return decision;
 }
 
 /**
  * Case/punctuation resemblance alone never binds identity.
- * Callers must use an explicit steward decision — this helper documents the rule.
  */
 export function attemptImplicitAliasBind(input: {
   providerNameAsStated: string;
@@ -212,6 +223,7 @@ export function providerOriginApplicantMembership(
   memberApplicationIds: undefined;
   ownedApplicationIds: undefined;
 } {
+  validateProviderIdentityDecision(decision);
   if (decision.organizationOrigin !== "provider-origin") {
     throw new HistoricalRspProviderContractError(
       "NOT_PROVIDER_ORIGIN",
