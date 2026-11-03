@@ -961,3 +961,142 @@ describe("RIH-2012-RSP-VISIBILITY-1H8 — steward-verified assignment grammar", 
     expect(result.candidates).toEqual([]);
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1H11 — extractor fidelity gaps", () => {
+  function extractQ23(content: string) {
+    return extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(q23(content)), {
+      expectedApplicationId: APP_ID,
+    });
+  }
+
+  it("1H11 — Co suffix must not absorb conducts prefix (Verisign, co regression)", () => {
+    const result = extractQ23(
+      "Oversight includes Example Applicant's selected backend registry services provider, Verisign, conducts registry testing under contract.",
+    );
+    const names = result.candidates.map((c) => c.providerNameAsStated);
+    expect(names.some((n) => /,\s*co$/i.test(n))).toBe(false);
+    expect(names).not.toContain("Verisign, co");
+    if (result.disposition === "EXPLICIT_PROVIDER_CANDIDATE") {
+      expect(names).toContain("Verisign");
+    }
+  });
+
+  it("1H11 — Co suffix must not absorb company prefix", () => {
+    const result = extractQ23(
+      "Oversight includes Example Applicant's selected backend registry services provider, Verisign, company policies require annual review.",
+    );
+    const names = result.candidates.map((c) => c.providerNameAsStated);
+    expect(names.some((n) => /,\s*co$/i.test(n))).toBe(false);
+    expect(names).not.toContain("Verisign, co");
+  });
+
+  it("1H11 — Corp suffix must not absorb corporate prefix", () => {
+    const result = extractQ23(
+      "Oversight includes Example Applicant's selected backend registry services provider, Verisign, corporate security audits are annual.",
+    );
+    const names = result.candidates.map((c) => c.providerNameAsStated);
+    expect(names.some((n) => /,\s*corp$/i.test(n))).toBe(false);
+    expect(names).not.toContain("Verisign, corp");
+  });
+
+  it("1H11 — valid legal suffix Co still parses", () => {
+    const result = extractQ23(
+      "Registry services will be provided by Example Registry Co.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Example Registry Co"]);
+  });
+
+  it("1H11 — valid legal suffix Co. after comma still parses", () => {
+    const result = extractQ23(
+      "Registry services will be provided by Example Registry, Co.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    // Existing normalizeProviderName strips sentence-terminating period after Co.
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Example Registry, Co"]);
+  });
+
+  it("1H11 — valid legal suffix Corp. still parses", () => {
+    const result = extractQ23(
+      "Registry services will be provided by Example Registry Corp.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Example Registry Corp"]);
+  });
+
+  it("1H11 — valid legal suffix Inc. still parses", () => {
+    const result = extractQ23(
+      "Registry services will be provided by Example Registry, Inc.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Example Registry, Inc."]);
+  });
+
+  it("1H11 — valid legal suffix s.r.o. still parses", () => {
+    const result = extractQ23(
+      "We are planning to outsource the technical operation of gTLD to our partner company Example Registrar s.r.o.",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates.map((c) => c.providerNameAsStated)).toEqual(["Example Registrar s.r.o."]);
+  });
+
+  it("1H11 — ISC guidebook Registry Operations Team heading leak is recognized", () => {
+    const result = extractQ23(
+      "23.2.1. Registry Operations Team Registry operations are outsourced to and performed by Internet Example Consortium, Inc (IEC).",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    const candidate = result.candidates[0]!;
+    expect(candidate.providerNameAsStated).toBe("Internet Example Consortium, Inc (IEC)");
+    expect(candidate.sourceFieldPath).toBe("Q23");
+    expect(candidate.evidenceClassification).toBe("PUBLIC_ICANN");
+    expect(candidate.applicationVersionBasis).toBe("current_public_portion");
+    expect(candidate.reviewState).toBe("REQUIRES_STEWARD_REVIEW");
+    expect(candidate).not.toHaveProperty("rspKey");
+    expect(candidate.evidenceLocator).toMatch(/^Q23@\d+:\d+$/);
+    expect(candidate.evidenceExcerpt?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("1H11 — Registry Operations Team heading alone does not create a candidate", () => {
+    const result = extractQ23(
+      "23.2.1. Registry Operations Team This section describes staffing responsibilities.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H11 — arbitrary narrative before Registry operations is not stripped as a heading", () => {
+    const result = extractQ23(
+      "Some narrative Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    // Sentence does not begin with Registry operations after a verified heading leak —
+    // fail closed (no unconstrained mid-sentence outsourced matching).
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H11 — numeric prose without Registry Operations Team is not a removable heading", () => {
+    const result = extractQ23(
+      "23.2.1. Staffing Overview Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H11 — genuine Verisign security/system description remains non-assignment", () => {
+    const result = extractQ23(
+      "Verisign provides a comprehensive system and physical security solution that is designed to ensure a TLD is protected. " +
+        "Verisign's Shared Registration System (SRS) supports the IETF Extensible Provisioning Protocol (EPP) specifications.",
+    );
+    expect(result.candidates).toEqual([]);
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
+  });
+
+  it("1H11 — named company is registry services provider does not become self-operated", () => {
+    const result = extractQ23(
+      "Registry services for this TLD will be performed by Example Named Operator. Example Named Operator is the registry services provider for this and several other TLD applications.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
+  });
+});

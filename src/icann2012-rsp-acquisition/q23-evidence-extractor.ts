@@ -136,8 +136,12 @@ function isPlausibleProviderName(name: string): boolean {
   return true;
 }
 
+/**
+ * Legal suffix after a comma must be a complete token.
+ * `(?![A-Za-z])` rejects prefix matches such as Co⊂conducts / Corp⊂corporate.
+ */
 const LEGAL_SUFFIX_AT =
-  /^(?:Inc\.?|LLC|L\.L\.C\.?|Ltd\.?|Corp\.?|Co\.?|PLC|s\.r\.o\.)/i;
+  /^(?:Inc\.?|LLC|L\.L\.C\.?|Ltd\.?|Corp\.?|Co\.?|PLC|s\.r\.o\.)(?![A-Za-z])/i;
 /** Space-separated dotted legal form (no leading comma), e.g. `Gransy s.r.o.`. */
 const DOTTED_LEGAL_SUFFIX_AT = /^\s+(s\.r\.o\.)/i;
 /**
@@ -234,6 +238,9 @@ function stripLeadingQuestionHeading(text: string): string {
     .replace(/^Question\s+2[3-5]\s*[:.\-]?\s*/i, "")
     // Case-sensitive: `/i` would make (?=[A-Z]) also match "will".
     .replace(/^Registry\s+Services\b\s+(?=[A-Z])/, "")
+    // Bounded: allow guidebook subsection numbers immediately after the Q23 title
+    // so `Registry Services 23.2.1. Registry Operations Team…` can expose the clause.
+    .replace(/^Registry\s+Services\b\s+(?=\d+(?:\.\d+)+\.?)/, "")
     .replace(/^Additional\s+services?\b\s*/i, "")
     .trimStart();
 }
@@ -419,6 +426,35 @@ const RETAINED_AS_BACKEND_ROLE = new RegExp(
 /** Steward-verified: Registry operations are outsourced to and performed by PROVIDER. */
 const OUTSOURCED_AND_PERFORMED_BY =
   /^(?:Registry\s+operations?)\s+(?:are|is|will\s+be)\s+outsourced\s+to\s+and\s+performed\s+by\s+/i;
+
+/**
+ * Guidebook subsection heading leak immediately before the outsourced-operations
+ * clause (1H10/1H11). Only `N.N.N. Registry Operations Team` when followed by
+ * `Registry operation(s)…` — not arbitrary numeric prose.
+ */
+const REGISTRY_OPERATIONS_TEAM_HEADING_LEAK =
+  /^(\d+(?:\.\d+)+\.?\s+Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/i;
+
+/**
+ * Neutralize only the terminal period after `N.N.N.` when it would otherwise
+ * split the verified `Registry Operations Team` heading away from the following
+ * assignment clause. Replaces that period with a space (length-preserving) so
+ * evidence locators remain aligned to the section text.
+ */
+function collapseRegistryOperationsTeamHeadingPeriod(text: string): string {
+  return text.replace(
+    /(\d+(?:\.\d+)+)(\.)(\s+)(Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/gi,
+    "$1 $3$4",
+  );
+}
+
+function stripRegistryOperationsTeamHeadingLeak(
+  sentence: string,
+): { text: string; strippedLength: number } {
+  const match = sentence.match(REGISTRY_OPERATIONS_TEAM_HEADING_LEAK);
+  if (!match) return { text: sentence, strippedLength: 0 };
+  return { text: sentence.slice(match[1]!.length), strippedLength: match[1]!.length };
+}
 
 /**
  * Steward-verified planning form (narrow): planning to outsource the technical
@@ -627,7 +663,10 @@ function matchAffirmativeSentence(
 ): ExplicitHit | null {
   // Sentence text is already trimmed by splitSentences; do not strip trailing
   // periods here — Inc. abbreviation periods must remain available to the name taker.
-  const body = sentence;
+  // Bounded heading-leak strip for ISC-style guidebook subsection prefixes only.
+  const stripped = stripRegistryOperationsTeamHeadingLeak(sentence);
+  const body = stripped.text;
+  absoluteStart += stripped.strippedLength;
 
   const applicantAssigned = tryAffirmativeHit(
     body,
@@ -742,8 +781,11 @@ function matchAffirmativeSentence(
 
 function collectExplicitHits(text: string): ExplicitHit[] {
   const hits: ExplicitHit[] = [];
+  // Prevent guidebook `N.N.N.` terminal periods from splitting the verified
+  // Registry Operations Team heading away from the outsourced-operations clause.
+  const segmentedText = collapseRegistryOperationsTeamHeadingPeriod(text);
 
-  for (const sentence of splitSentences(text)) {
+  for (const sentence of splitSentences(segmentedText)) {
     const hit = matchAffirmativeSentence(sentence.text, sentence.absoluteStart);
     if (hit) hits.push(hit);
   }
