@@ -8,6 +8,8 @@ import {
   EvidenceApplyReviewError,
   evaluateEvidencePromotionCompatibility,
   formatEvidenceApplyReviewReceipt,
+  PILOT_PROMOTION_READINESS_REVIEW_WRAPPER_SCHEMA_VERSION,
+  PILOT_Q23_EXTRACTION_WRAPPER_SCHEMA_VERSION,
   runEvidenceApplyReview,
 } from "./evidence-apply-review";
 import {
@@ -19,6 +21,7 @@ import {
   HISTORICAL_RSP_APPROVED_EVIDENCE_SCHEMA_VERSION,
 } from "./historical-rsp-approved-evidence";
 import { HISTORICAL_RSP_EVIDENCE_CANDIDATE_SCHEMA_VERSION } from "./historical-rsp-evidence-candidate";
+import { sha256Hex } from "@/normalization/hashes";
 
 const REAL_EXTRACTION =
   "/var/lib/registry-intelligence-hub/icann2012-rsp-pilot-evidence/pilot-2026-11-01-rih-2012-rsp-1h-1h14/q23-extraction.json";
@@ -1023,6 +1026,259 @@ describe("RIH-2012-RSP-VISIBILITY-1H16 evidence-apply-review", () => {
     expect(networkPolicyForCommand("evidence-apply-review").allowsOutboundHttp).toBe(false);
   });
 
+  describe("1H16-R1 integrity hardening", () => {
+    it("R1 — missing readiness entry rejects", async () => {
+      const seed = await seedPair("r1-missing-ready", {
+        review: (doc) => ({
+          ...doc,
+          applicationLevelReadiness: doc.applicationLevelReadiness.slice(0, 1),
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: 1,
+      });
+      const err = await runEvidenceApplyReview({
+        extractionPath: seed.extractionPath,
+        stewardReviewPath: seed.reviewPath,
+        approvalPacketPath: packetPath,
+        outputPath: join(seed.dir, "out.json"),
+      }).catch((e) => e);
+      expect(err).toBeInstanceOf(EvidenceApplyReviewError);
+      expect((err as EvidenceApplyReviewError).receipt?.rejectReasons.join(" ")).toMatch(
+        /Missing applicationLevelReadiness/,
+      );
+    });
+
+    it("R1 — duplicate readiness entry rejects", async () => {
+      const seed = await seedPair("r1-dup-ready", {
+        review: (doc) => ({
+          ...doc,
+          applicationLevelReadiness: [
+            ...doc.applicationLevelReadiness,
+            { ...doc.applicationLevelReadiness[0]! },
+          ],
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      const err = await runEvidenceApplyReview({
+        extractionPath: seed.extractionPath,
+        stewardReviewPath: seed.reviewPath,
+        approvalPacketPath: packetPath,
+        outputPath: join(seed.dir, "out.json"),
+      }).catch((e) => e);
+      expect((err as EvidenceApplyReviewError).receipt?.rejectReasons.join(" ")).toMatch(
+        /Duplicate applicationLevelReadiness/,
+      );
+    });
+
+    it("R1 — phantom readiness application rejects", async () => {
+      const seed = await seedPair("r1-phantom-ready", {
+        review: (doc) => ({
+          ...doc,
+          applicationLevelReadiness: [
+            ...doc.applicationLevelReadiness,
+            {
+              applicationId: "1-0000-phantom",
+              candidateRowCount: 1,
+              acceptedRowCount: 1,
+              rejectedRowCount: 0,
+              correctionNeededRowCount: 0,
+              literalProviderNameSet: ["Phantom"],
+              applicationPromotionReadiness: "READY_FOR_EVIDENCE_PROMOTION",
+            },
+          ],
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      const err = await runEvidenceApplyReview({
+        extractionPath: seed.extractionPath,
+        stewardReviewPath: seed.reviewPath,
+        approvalPacketPath: packetPath,
+        outputPath: join(seed.dir, "out.json"),
+      }).catch((e) => e);
+      expect((err as EvidenceApplyReviewError).receipt?.rejectReasons.join(" ")).toMatch(
+        /Phantom applicationLevelReadiness/,
+      );
+    });
+
+    it("R1 — wrong candidateRowCount rejects", async () => {
+      const seed = await seedPair("r1-wrong-count", {
+        review: (doc) => ({
+          ...doc,
+          applicationLevelReadiness: doc.applicationLevelReadiness.map((a, i) =>
+            i === 0 ? { ...a, candidateRowCount: 99 } : a,
+          ),
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      const err = await runEvidenceApplyReview({
+        extractionPath: seed.extractionPath,
+        stewardReviewPath: seed.reviewPath,
+        approvalPacketPath: packetPath,
+        outputPath: join(seed.dir, "out.json"),
+      }).catch((e) => e);
+      expect((err as EvidenceApplyReviewError).receipt?.rejectReasons.join(" ")).toMatch(
+        /candidateRowCount mismatches/,
+      );
+    });
+
+    it("R1 — wrong extraction wrapper schema rejects", async () => {
+      const seed = await seedPair("r1-bad-ext-schema", {
+        extraction: (doc) => ({
+          ...doc,
+          schemaVersion: "rih-2012-rsp-pilot-q23-extraction/9.9.9",
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      await expect(
+        runEvidenceApplyReview({
+          extractionPath: seed.extractionPath,
+          stewardReviewPath: seed.reviewPath,
+          approvalPacketPath: packetPath,
+          outputPath: join(seed.dir, "out.json"),
+        }),
+      ).rejects.toThrow(/Extraction wrapper schema rejected/);
+    });
+
+    it("R1 — wrong steward-review wrapper schema rejects", async () => {
+      const seed = await seedPair("r1-bad-rev-schema", {
+        review: (doc) => ({
+          ...doc,
+          schemaVersion: "rih-2012-rsp-pilot-promotion-readiness-review/9.9.9",
+        }),
+      });
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      await expect(
+        runEvidenceApplyReview({
+          extractionPath: seed.extractionPath,
+          stewardReviewPath: seed.reviewPath,
+          approvalPacketPath: packetPath,
+          outputPath: join(seed.dir, "out.json"),
+        }),
+      ).rejects.toThrow(/Steward review wrapper schema rejected/);
+    });
+
+    it("R1 — packet SHA and decision derive from identical single-read bytes", async () => {
+      const seed = await seedPair("r1-packet-bytes");
+      tempDirs.push(seed.dir);
+      const packetBody: HistoricalRspEvidenceApprovalPacket = {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      };
+      const packetPath = await writePacket(seed.dir, "approve.json", packetBody);
+      const packetBytes = await readFile(packetPath);
+      const expectedPacketSha = sha256Hex(packetBytes);
+      const receipt = await runEvidenceApplyReview({
+        extractionPath: seed.extractionPath,
+        stewardReviewPath: seed.reviewPath,
+        approvalPacketPath: packetPath,
+        outputPath: join(seed.dir, "out.json"),
+      });
+      expect(receipt.outcome).toBe("APPROVED");
+      expect(receipt.approvalPacketSha256).toBe(expectedPacketSha);
+      expect(receipt.decision).toBe("APPROVE");
+      expect(receipt.approvalPacketUnchanged).toBe(true);
+      expect(PILOT_Q23_EXTRACTION_WRAPPER_SCHEMA_VERSION).toBe(
+        "rih-2012-rsp-pilot-q23-extraction/1.0.0",
+      );
+      expect(PILOT_PROMOTION_READINESS_REVIEW_WRAPPER_SCHEMA_VERSION).toBe(
+        "rih-2012-rsp-pilot-promotion-readiness-review/1.0.0",
+      );
+    });
+
+    it("R1 — approval packet mutation before write rejects", async () => {
+      const seed = await seedPair("r1-mut-packet");
+      tempDirs.push(seed.dir);
+      const packetPath = await writePacket(seed.dir, "approve.json", {
+        schemaVersion: HISTORICAL_RSP_EVIDENCE_APPROVAL_SCHEMA_VERSION,
+        sourceExtractionSha256: seed.extractionSha,
+        stewardReviewSha256: seed.reviewSha,
+        decision: "APPROVE",
+        reviewer: "SYNTHETIC_TEST_STEWARD",
+        reviewedAt: "2026-11-03T12:00:00.000Z",
+        expectedCandidateRowCount: seed.candidateCount,
+        expectedReadyApplicationCount: seed.readyCount,
+      });
+      await expect(
+        runEvidenceApplyReview({
+          extractionPath: seed.extractionPath,
+          stewardReviewPath: seed.reviewPath,
+          approvalPacketPath: packetPath,
+          outputPath: join(seed.dir, "out.json"),
+          testBeforeExclusiveWrite: async () => {
+            const current = await readFile(packetPath);
+            await writeFile(packetPath, `${current.toString("utf8")} \n`);
+          },
+        }),
+      ).rejects.toThrow(/approval packet changed/);
+      await expect(access(join(seed.dir, "out.json"))).rejects.toThrow();
+    });
+  });
+
   it("read-only real 1H14/1H15 compatibility check performs no writes", async () => {
     const extractionBytes = await readFile(REAL_EXTRACTION);
     const reviewBytes = await readFile(REAL_REVIEW);
@@ -1040,7 +1296,14 @@ describe("RIH-2012-RSP-VISIBILITY-1H16 evidence-apply-review", () => {
     expect(compat.acceptCount).toBe(34);
     expect(compat.rejectCount).toBe(0);
     expect(compat.needsCorrectionCount).toBe(0);
+    expect(compat.expectedCandidateBearingApplicationCount).toBe(19);
+    expect(compat.readinessEntryCount).toBe(19);
     expect(compat.readyApplicationCount).toBe(19);
+    expect(compat.applicationReadinessReconciliation.ok).toBe(true);
+    expect(compat.applicationReadinessReconciliation.missingApplicationIds).toEqual([]);
+    expect(compat.applicationReadinessReconciliation.duplicateApplicationIds).toEqual([]);
+    expect(compat.applicationReadinessReconciliation.phantomApplicationIds).toEqual([]);
+    expect(compat.applicationReadinessReconciliation.candidateRowCountMismatches).toEqual([]);
     expect(compat.reconciliation.ok).toBe(true);
     expect(compat.prohibitedIdentityFieldHits).toEqual([]);
     expect(compat.mechanicallyEligibleIgnoringPacket).toBe(true);

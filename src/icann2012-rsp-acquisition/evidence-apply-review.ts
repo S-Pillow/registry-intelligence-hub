@@ -25,6 +25,14 @@ import {
 export const EVIDENCE_APPLY_REVIEW_RECEIPT_VERSION =
   "registry-hub-rsp-evidence-apply-review-receipt/1.0.0" as const;
 
+/** Exact wrapper version this operator accepts for pilot Q23 extractions. */
+export const PILOT_Q23_EXTRACTION_WRAPPER_SCHEMA_VERSION =
+  "rih-2012-rsp-pilot-q23-extraction/1.0.0" as const;
+
+/** Exact wrapper version this operator accepts for promotion-readiness reviews. */
+export const PILOT_PROMOTION_READINESS_REVIEW_WRAPPER_SCHEMA_VERSION =
+  "rih-2012-rsp-pilot-promotion-readiness-review/1.0.0" as const;
+
 export type EvidenceApplyReviewOutcome =
   | "APPROVED"
   | "HOLD_NO_PROMOTION"
@@ -43,6 +51,23 @@ export interface EvidenceRowReconciliationResult {
   errors: string[];
 }
 
+export interface EvidenceApplicationReadinessReconciliationResult {
+  ok: boolean;
+  expectedCandidateBearingApplicationCount: number;
+  readinessEntryCount: number;
+  missingApplicationIds: string[];
+  duplicateApplicationIds: string[];
+  phantomApplicationIds: string[];
+  candidateRowCountMismatches: Array<{
+    applicationId: string;
+    expected: number;
+    actual: number;
+  }>;
+  notReadyApplicationIds: string[];
+  readyApplicationCount: number;
+  errors: string[];
+}
+
 export interface EvidenceApplyReviewReceipt {
   receiptVersion: typeof EVIDENCE_APPLY_REVIEW_RECEIPT_VERSION;
   sourceExtractionPath: string;
@@ -58,12 +83,14 @@ export interface EvidenceApplyReviewReceipt {
   reviewedCandidateCount: number;
   readyApplicationCount: number;
   rowReconciliation: EvidenceRowReconciliationResult;
+  applicationReadinessReconciliation: EvidenceApplicationReadinessReconciliationResult;
   mechanicalEligibility: boolean;
   outcome: EvidenceApplyReviewOutcome;
   approvedOutputPath: string | null;
   approvedOutputSha256: string | null;
   extractionUnchanged: boolean;
   reviewUnchanged: boolean;
+  approvalPacketUnchanged: boolean;
   networkRequests: 0;
   rejectReasons: string[];
 }
@@ -197,8 +224,10 @@ function parsePilotExtractionArtifact(doc: unknown): PilotExtractionArtifact {
   if (!isPlainObject(doc)) {
     throw new EvidenceApplyReviewError("Extraction artifact must be a JSON object");
   }
-  if (typeof doc.schemaVersion !== "string" || !doc.schemaVersion.trim()) {
-    throw new EvidenceApplyReviewError("Extraction artifact missing schemaVersion");
+  if (doc.schemaVersion !== PILOT_Q23_EXTRACTION_WRAPPER_SCHEMA_VERSION) {
+    throw new EvidenceApplyReviewError(
+      `Extraction wrapper schema rejected (fail closed): expected ${PILOT_Q23_EXTRACTION_WRAPPER_SCHEMA_VERSION}, got ${String(doc.schemaVersion)}`,
+    );
   }
   if (doc.artifactPurpose !== "EVIDENCE") {
     throw new EvidenceApplyReviewError(
@@ -220,8 +249,10 @@ function parseStewardReviewArtifact(doc: unknown): PilotStewardReviewArtifact {
   if (!isPlainObject(doc)) {
     throw new EvidenceApplyReviewError("Steward review artifact must be a JSON object");
   }
-  if (typeof doc.schemaVersion !== "string" || !doc.schemaVersion.trim()) {
-    throw new EvidenceApplyReviewError("Steward review missing schemaVersion");
+  if (doc.schemaVersion !== PILOT_PROMOTION_READINESS_REVIEW_WRAPPER_SCHEMA_VERSION) {
+    throw new EvidenceApplyReviewError(
+      `Steward review wrapper schema rejected (fail closed): expected ${PILOT_PROMOTION_READINESS_REVIEW_WRAPPER_SCHEMA_VERSION}, got ${String(doc.schemaVersion)}`,
+    );
   }
   if (doc.artifactPurpose !== "REVIEW") {
     throw new EvidenceApplyReviewError(
@@ -376,6 +407,113 @@ function validateCandidateContracts(
   return errors;
 }
 
+/**
+ * Derive expected candidate-bearing applications from extraction candidates and
+ * reconcile against steward-review applicationLevelReadiness[]. Fail closed on
+ * missing/duplicate/phantom readiness entries and candidateRowCount drift.
+ */
+export function reconcileApplicationReadiness(
+  extractionCandidates: readonly HistoricalRspEvidenceCandidate[],
+  readiness: readonly StewardApplicationReadiness[],
+): EvidenceApplicationReadinessReconciliationResult {
+  const errors: string[] = [];
+  const expectedCounts = new Map<string, number>();
+  for (const candidate of extractionCandidates) {
+    expectedCounts.set(
+      candidate.applicationId,
+      (expectedCounts.get(candidate.applicationId) ?? 0) + 1,
+    );
+  }
+  const expectedIds = [...expectedCounts.keys()].sort();
+
+  const readinessCounts = new Map<string, number>();
+  const readinessById = new Map<string, StewardApplicationReadiness>();
+  for (const entry of readiness) {
+    readinessCounts.set(
+      entry.applicationId,
+      (readinessCounts.get(entry.applicationId) ?? 0) + 1,
+    );
+    if (!readinessById.has(entry.applicationId)) {
+      readinessById.set(entry.applicationId, entry);
+    }
+  }
+
+  const duplicateApplicationIds = [...readinessCounts.entries()]
+    .filter(([, n]) => n > 1)
+    .map(([id]) => id)
+    .sort();
+  const missingApplicationIds = expectedIds.filter((id) => !readinessCounts.has(id));
+  const phantomApplicationIds = [...readinessCounts.keys()]
+    .filter((id) => !expectedCounts.has(id))
+    .sort();
+
+  if (duplicateApplicationIds.length > 0) {
+    errors.push(
+      `Duplicate applicationLevelReadiness application IDs: ${duplicateApplicationIds.join(", ")}`,
+    );
+  }
+  if (missingApplicationIds.length > 0) {
+    errors.push(
+      `Missing applicationLevelReadiness entries for candidate-bearing applications: ${missingApplicationIds.join(", ")}`,
+    );
+  }
+  if (phantomApplicationIds.length > 0) {
+    errors.push(
+      `Phantom applicationLevelReadiness applications with no extraction candidates: ${phantomApplicationIds.join(", ")}`,
+    );
+  }
+
+  const candidateRowCountMismatches: Array<{
+    applicationId: string;
+    expected: number;
+    actual: number;
+  }> = [];
+  const notReadyApplicationIds: string[] = [];
+
+  for (const applicationId of expectedIds) {
+    const expected = expectedCounts.get(applicationId)!;
+    const entry = readinessById.get(applicationId);
+    if (!entry) continue;
+    if (entry.candidateRowCount !== expected) {
+      candidateRowCountMismatches.push({
+        applicationId,
+        expected,
+        actual: entry.candidateRowCount,
+      });
+    }
+    if (entry.applicationPromotionReadiness !== "READY_FOR_EVIDENCE_PROMOTION") {
+      notReadyApplicationIds.push(applicationId);
+    }
+  }
+
+  if (candidateRowCountMismatches.length > 0) {
+    errors.push(
+      `applicationLevelReadiness candidateRowCount mismatches: ${candidateRowCountMismatches
+        .map((m) => `${m.applicationId}(expected=${m.expected},actual=${m.actual})`)
+        .join(", ")}`,
+    );
+  }
+  if (notReadyApplicationIds.length > 0) {
+    errors.push(
+      `Applications not READY_FOR_EVIDENCE_PROMOTION: ${notReadyApplicationIds.join(", ")}`,
+    );
+  }
+
+  const ok = errors.length === 0;
+  return {
+    ok,
+    expectedCandidateBearingApplicationCount: expectedIds.length,
+    readinessEntryCount: readiness.length,
+    missingApplicationIds,
+    duplicateApplicationIds,
+    phantomApplicationIds,
+    candidateRowCountMismatches,
+    notReadyApplicationIds,
+    readyApplicationCount: ok ? expectedIds.length : 0,
+    errors,
+  };
+}
+
 export function evaluateEvidenceApproveEligibility(input: {
   packet: HistoricalRspEvidenceApprovalPacket;
   extractionSha256: string;
@@ -384,6 +522,7 @@ export function evaluateEvidenceApproveEligibility(input: {
   review: PilotStewardReviewArtifact;
   candidates: readonly HistoricalRspEvidenceCandidate[];
   reconciliation: EvidenceRowReconciliationResult;
+  applicationReadinessReconciliation: EvidenceApplicationReadinessReconciliationResult;
 }): { eligible: boolean; errors: string[]; readyApplicationCount: number } {
   const errors: string[] = [];
 
@@ -422,6 +561,9 @@ export function evaluateEvidenceApproveEligibility(input: {
   if (!input.reconciliation.ok) {
     errors.push(...input.reconciliation.errors);
   }
+  if (!input.applicationReadinessReconciliation.ok) {
+    errors.push(...input.applicationReadinessReconciliation.errors);
+  }
 
   const rejectCount = input.review.rows.filter(
     (r) => r.stewardReviewClassification === "REJECT_EVIDENCE_CANDIDATE",
@@ -445,30 +587,26 @@ export function evaluateEvidenceApproveEligibility(input: {
     errors.push(`NEEDS_CORRECTION present: ${needsCorrectionCount}`);
   }
 
-  const candidateBearing = input.review.applicationLevelReadiness.filter(
-    (a) => a.candidateRowCount > 0,
-  );
-  const notReady = candidateBearing.filter(
-    (a) => a.applicationPromotionReadiness !== "READY_FOR_EVIDENCE_PROMOTION",
-  );
-  if (notReady.length > 0) {
-    errors.push(
-      `Applications not READY_FOR_EVIDENCE_PROMOTION: ${notReady
-        .map((a) => a.applicationId)
-        .join(", ")}`,
-    );
-  }
-
-  const readyApplicationCount = candidateBearing.filter(
-    (a) => a.applicationPromotionReadiness === "READY_FOR_EVIDENCE_PROMOTION",
-  ).length;
+  const readyApplicationCount =
+    input.applicationReadinessReconciliation.readyApplicationCount;
 
   if (input.packet.expectedCandidateRowCount !== input.review.rows.length) {
     errors.push(
       `packet.expectedCandidateRowCount=${input.packet.expectedCandidateRowCount} !== reviewed=${input.review.rows.length}`,
     );
   }
-  if (input.packet.expectedReadyApplicationCount !== readyApplicationCount) {
+  if (
+    input.packet.expectedReadyApplicationCount !==
+    input.applicationReadinessReconciliation.expectedCandidateBearingApplicationCount
+  ) {
+    errors.push(
+      `packet.expectedReadyApplicationCount=${input.packet.expectedReadyApplicationCount} !== expected candidate-bearing applications=${input.applicationReadinessReconciliation.expectedCandidateBearingApplicationCount}`,
+    );
+  }
+  if (
+    input.applicationReadinessReconciliation.ok &&
+    input.packet.expectedReadyApplicationCount !== readyApplicationCount
+  ) {
     errors.push(
       `packet.expectedReadyApplicationCount=${input.packet.expectedReadyApplicationCount} !== ready=${readyApplicationCount}`,
     );
@@ -477,7 +615,9 @@ export function evaluateEvidenceApproveEligibility(input: {
   return {
     eligible: errors.length === 0 && input.packet.decision === "APPROVE",
     errors,
-    readyApplicationCount,
+    readyApplicationCount: input.applicationReadinessReconciliation.ok
+      ? readyApplicationCount
+      : 0,
   };
 }
 
@@ -496,8 +636,11 @@ export function evaluateEvidencePromotionCompatibility(input: {
   acceptCount: number;
   rejectCount: number;
   needsCorrectionCount: number;
+  expectedCandidateBearingApplicationCount: number;
+  readinessEntryCount: number;
   readyApplicationCount: number;
   reconciliation: EvidenceRowReconciliationResult;
+  applicationReadinessReconciliation: EvidenceApplicationReadinessReconciliationResult;
   prohibitedIdentityFieldHits: string[];
   mechanicallyEligibleIgnoringPacket: boolean;
   errors: string[];
@@ -512,6 +655,10 @@ export function evaluateEvidencePromotionCompatibility(input: {
   );
   const candidates = flattenExtractionCandidates(extraction);
   const reconciliation = reconcileEvidenceCandidateRows(candidates, review.rows);
+  const applicationReadinessReconciliation = reconcileApplicationReadiness(
+    candidates,
+    review.applicationLevelReadiness,
+  );
   const prohibitedIdentityFieldHits = [
     ...assertNoProhibitedIdentityFields(extraction, "extraction"),
     ...assertNoProhibitedIdentityFields(review, "steward review"),
@@ -526,11 +673,6 @@ export function evaluateEvidencePromotionCompatibility(input: {
   const needsCorrectionCount = review.rows.filter(
     (r) => r.stewardReviewClassification === "NEEDS_CORRECTION",
   ).length;
-  const readyApplicationCount = review.applicationLevelReadiness.filter(
-    (a) =>
-      a.candidateRowCount > 0 &&
-      a.applicationPromotionReadiness === "READY_FOR_EVIDENCE_PROMOTION",
-  ).length;
 
   const syntheticPacket: HistoricalRspEvidenceApprovalPacket = {
     schemaVersion: "historical-rsp-evidence-approval/1.0.0",
@@ -540,7 +682,8 @@ export function evaluateEvidencePromotionCompatibility(input: {
     reviewer: "COMPATIBILITY_CHECK",
     reviewedAt: "1970-01-01T00:00:00.000Z",
     expectedCandidateRowCount: review.rows.length,
-    expectedReadyApplicationCount: readyApplicationCount,
+    expectedReadyApplicationCount:
+      applicationReadinessReconciliation.expectedCandidateBearingApplicationCount,
   };
   const eligibility = evaluateEvidenceApproveEligibility({
     packet: syntheticPacket,
@@ -550,6 +693,7 @@ export function evaluateEvidencePromotionCompatibility(input: {
     review,
     candidates,
     reconciliation,
+    applicationReadinessReconciliation,
   });
 
   return {
@@ -560,8 +704,12 @@ export function evaluateEvidencePromotionCompatibility(input: {
     acceptCount,
     rejectCount,
     needsCorrectionCount,
-    readyApplicationCount,
+    expectedCandidateBearingApplicationCount:
+      applicationReadinessReconciliation.expectedCandidateBearingApplicationCount,
+    readinessEntryCount: applicationReadinessReconciliation.readinessEntryCount,
+    readyApplicationCount: applicationReadinessReconciliation.readyApplicationCount,
     reconciliation,
+    applicationReadinessReconciliation,
     prohibitedIdentityFieldHits,
     mechanicallyEligibleIgnoringPacket: eligibility.eligible,
     errors: eligibility.errors,
@@ -639,12 +787,14 @@ function baseReceipt(input: {
   reviewedCandidateCount: number;
   readyApplicationCount: number;
   rowReconciliation: EvidenceRowReconciliationResult;
+  applicationReadinessReconciliation: EvidenceApplicationReadinessReconciliationResult;
   mechanicalEligibility: boolean;
   outcome: EvidenceApplyReviewOutcome;
   approvedOutputPath: string | null;
   approvedOutputSha256: string | null;
   extractionUnchanged: boolean;
   reviewUnchanged: boolean;
+  approvalPacketUnchanged: boolean;
   rejectReasons: string[];
 }): EvidenceApplyReviewReceipt {
   return {
@@ -662,12 +812,14 @@ function baseReceipt(input: {
     reviewedCandidateCount: input.reviewedCandidateCount,
     readyApplicationCount: input.readyApplicationCount,
     rowReconciliation: input.rowReconciliation,
+    applicationReadinessReconciliation: input.applicationReadinessReconciliation,
     mechanicalEligibility: input.mechanicalEligibility,
     outcome: input.outcome,
     approvedOutputPath: input.approvedOutputPath,
     approvedOutputSha256: input.approvedOutputSha256,
     extractionUnchanged: input.extractionUnchanged,
     reviewUnchanged: input.reviewUnchanged,
+    approvalPacketUnchanged: input.approvalPacketUnchanged,
     networkRequests: 0,
     rejectReasons: input.rejectReasons,
   };
@@ -691,12 +843,14 @@ export function formatEvidenceApplyReviewReceipt(
     `reviewedCandidateCount: ${receipt.reviewedCandidateCount}`,
     `readyApplicationCount: ${receipt.readyApplicationCount}`,
     `rowReconciliationOk: ${receipt.rowReconciliation.ok}`,
+    `applicationReadinessReconciliationOk: ${receipt.applicationReadinessReconciliation.ok}`,
     `mechanicalEligibility: ${receipt.mechanicalEligibility}`,
     `outcome: ${receipt.outcome}`,
     `approvedOutputPath: ${receipt.approvedOutputPath ?? "(none)"}`,
     `approvedOutputSha256: ${receipt.approvedOutputSha256 ?? "(none)"}`,
     `extractionUnchanged: ${receipt.extractionUnchanged ? "yes" : "no"}`,
     `reviewUnchanged: ${receipt.reviewUnchanged ? "yes" : "no"}`,
+    `approvalPacketUnchanged: ${receipt.approvalPacketUnchanged ? "yes" : "no"}`,
     `networkRequests: ${receipt.networkRequests}`,
   ];
   if (receipt.outcome === "HOLD_NO_PROMOTION") {
@@ -721,12 +875,12 @@ export function formatEvidenceApplyReviewReceipt(
 export async function runEvidenceApplyReview(
   options: EvidenceApplyReviewOptions,
 ): Promise<EvidenceApplyReviewReceipt> {
-  const packetRaw = JSON.parse(
-    await readFile(options.approvalPacketPath, "utf8"),
-  ) as unknown;
-  const packet = assertHistoricalRspEvidenceApprovalPacket(packetRaw);
+  // Single packet byte read: SHA and parse must derive from identical bytes.
   const packetBytes = await readFile(options.approvalPacketPath);
   const approvalPacketSha256 = sha256Hex(packetBytes);
+  const packet = assertHistoricalRspEvidenceApprovalPacket(
+    JSON.parse(packetBytes.toString("utf8")) as unknown,
+  );
 
   const extractionBytesBefore = await readFile(options.extractionPath);
   const reviewBytesBefore = await readFile(options.stewardReviewPath);
@@ -753,26 +907,30 @@ export async function runEvidenceApplyReview(
   );
   const candidates = flattenExtractionCandidates(extraction);
   const reconciliation = reconcileEvidenceCandidateRows(candidates, review.rows);
-  const readyApplicationCount = review.applicationLevelReadiness.filter(
-    (a) =>
-      a.candidateRowCount > 0 &&
-      a.applicationPromotionReadiness === "READY_FOR_EVIDENCE_PROMOTION",
-  ).length;
+  const applicationReadinessReconciliation = reconcileApplicationReadiness(
+    candidates,
+    review.applicationLevelReadiness,
+  );
+  const readyApplicationCount =
+    applicationReadinessReconciliation.readyApplicationCount;
 
-  const unchangedPair = async (): Promise<{
+  const unchangedTriple = async (): Promise<{
     extractionUnchanged: boolean;
     reviewUnchanged: boolean;
+    approvalPacketUnchanged: boolean;
   }> => {
     const extractionAfter = await readFile(options.extractionPath);
     const reviewAfter = await readFile(options.stewardReviewPath);
+    const packetAfter = await readFile(options.approvalPacketPath);
     return {
       extractionUnchanged: Buffer.compare(extractionBytesBefore, extractionAfter) === 0,
       reviewUnchanged: Buffer.compare(reviewBytesBefore, reviewAfter) === 0,
+      approvalPacketUnchanged: Buffer.compare(packetBytes, packetAfter) === 0,
     };
   };
 
   if (packet.decision === "HOLD") {
-    const unchanged = await unchangedPair();
+    const unchanged = await unchangedTriple();
     return baseReceipt({
       extractionPath: options.extractionPath,
       extractionSha256,
@@ -785,18 +943,20 @@ export async function runEvidenceApplyReview(
       reviewedCandidateCount: review.rows.length,
       readyApplicationCount,
       rowReconciliation: reconciliation,
+      applicationReadinessReconciliation,
       mechanicalEligibility: false,
       outcome: "HOLD_NO_PROMOTION",
       approvedOutputPath: null,
       approvedOutputSha256: null,
       extractionUnchanged: unchanged.extractionUnchanged,
       reviewUnchanged: unchanged.reviewUnchanged,
+      approvalPacketUnchanged: unchanged.approvalPacketUnchanged,
       rejectReasons: [],
     });
   }
 
   if (packet.decision === "REJECT") {
-    const unchanged = await unchangedPair();
+    const unchanged = await unchangedTriple();
     return baseReceipt({
       extractionPath: options.extractionPath,
       extractionSha256,
@@ -809,12 +969,14 @@ export async function runEvidenceApplyReview(
       reviewedCandidateCount: review.rows.length,
       readyApplicationCount,
       rowReconciliation: reconciliation,
+      applicationReadinessReconciliation,
       mechanicalEligibility: false,
       outcome: "REJECT_NO_PROMOTION",
       approvedOutputPath: null,
       approvedOutputSha256: null,
       extractionUnchanged: unchanged.extractionUnchanged,
       reviewUnchanged: unchanged.reviewUnchanged,
+      approvalPacketUnchanged: unchanged.approvalPacketUnchanged,
       rejectReasons: [],
     });
   }
@@ -827,10 +989,11 @@ export async function runEvidenceApplyReview(
     review,
     candidates,
     reconciliation,
+    applicationReadinessReconciliation,
   });
 
   if (!eligibility.eligible) {
-    const unchanged = await unchangedPair();
+    const unchanged = await unchangedTriple();
     const receipt = baseReceipt({
       extractionPath: options.extractionPath,
       extractionSha256,
@@ -843,12 +1006,14 @@ export async function runEvidenceApplyReview(
       reviewedCandidateCount: review.rows.length,
       readyApplicationCount: eligibility.readyApplicationCount,
       rowReconciliation: reconciliation,
+      applicationReadinessReconciliation,
       mechanicalEligibility: false,
       outcome: "APPROVE_REJECTED",
       approvedOutputPath: null,
       approvedOutputSha256: null,
       extractionUnchanged: unchanged.extractionUnchanged,
       reviewUnchanged: unchanged.reviewUnchanged,
+      approvalPacketUnchanged: unchanged.approvalPacketUnchanged,
       rejectReasons: eligibility.errors,
     });
     throw new EvidenceApplyReviewError(
@@ -869,6 +1034,7 @@ export async function runEvidenceApplyReview(
   // Re-read immediately before write — prevention, not rollback.
   const extractionPreWrite = await readFile(options.extractionPath);
   const reviewPreWrite = await readFile(options.stewardReviewPath);
+  const packetPreWrite = await readFile(options.approvalPacketPath);
   if (Buffer.compare(extractionBytesBefore, extractionPreWrite) !== 0) {
     throw new EvidenceApplyReviewError(
       "Invariant violated before write: extraction artifact changed during apply-review",
@@ -879,11 +1045,17 @@ export async function runEvidenceApplyReview(
       "Invariant violated before write: steward review artifact changed during apply-review",
     );
   }
+  if (Buffer.compare(packetBytes, packetPreWrite) !== 0) {
+    throw new EvidenceApplyReviewError(
+      "Invariant violated before write: approval packet changed during apply-review",
+    );
+  }
 
   if (options.testBeforeExclusiveWrite) {
     await options.testBeforeExclusiveWrite();
     const extractionAfterHook = await readFile(options.extractionPath);
     const reviewAfterHook = await readFile(options.stewardReviewPath);
+    const packetAfterHook = await readFile(options.approvalPacketPath);
     if (Buffer.compare(extractionBytesBefore, extractionAfterHook) !== 0) {
       throw new EvidenceApplyReviewError(
         "Invariant violated before write: extraction artifact changed during apply-review",
@@ -892,6 +1064,11 @@ export async function runEvidenceApplyReview(
     if (Buffer.compare(reviewBytesBefore, reviewAfterHook) !== 0) {
       throw new EvidenceApplyReviewError(
         "Invariant violated before write: steward review artifact changed during apply-review",
+      );
+    }
+    if (Buffer.compare(packetBytes, packetAfterHook) !== 0) {
+      throw new EvidenceApplyReviewError(
+        "Invariant violated before write: approval packet changed during apply-review",
       );
     }
   }
@@ -914,17 +1091,20 @@ export async function runEvidenceApplyReview(
       typeof extraction.sourceDocumentCount === "number"
         ? extraction.sourceDocumentCount
         : extraction.results.length,
-    candidateBearingApplicationCount: review.applicationLevelReadiness.filter(
-      (a) => a.candidateRowCount > 0,
-    ).length,
+    candidateBearingApplicationCount:
+      applicationReadinessReconciliation.expectedCandidateBearingApplicationCount,
   });
   const approvedText = serializeHistoricalRspApprovedEvidence(approved);
   await writeApprovedDerivativeExclusive(safeOutputPath, approvedText);
 
-  const unchanged = await unchangedPair();
-  if (!unchanged.extractionUnchanged || !unchanged.reviewUnchanged) {
+  const unchanged = await unchangedTriple();
+  if (
+    !unchanged.extractionUnchanged ||
+    !unchanged.reviewUnchanged ||
+    !unchanged.approvalPacketUnchanged
+  ) {
     throw new EvidenceApplyReviewError(
-      "Invariant violated: source extraction/review changed during apply-review",
+      "Invariant violated: source extraction/review/packet changed during apply-review",
     );
   }
 
@@ -940,12 +1120,14 @@ export async function runEvidenceApplyReview(
     reviewedCandidateCount: review.rows.length,
     readyApplicationCount: eligibility.readyApplicationCount,
     rowReconciliation: reconciliation,
+    applicationReadinessReconciliation,
     mechanicalEligibility: true,
     outcome: "APPROVED",
     approvedOutputPath: safeOutputPath,
     approvedOutputSha256: sha256Hex(Buffer.from(approvedText, "utf8")),
     extractionUnchanged: true,
     reviewUnchanged: true,
+    approvalPacketUnchanged: true,
     rejectReasons: [],
   });
 }
