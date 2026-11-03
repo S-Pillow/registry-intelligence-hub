@@ -1100,3 +1100,61 @@ describe("RIH-2012-RSP-VISIBILITY-1H11 — extractor fidelity gaps", () => {
     expect(result.disposition).not.toBe("EXPLICIT_SELF_OPERATED");
   });
 });
+
+describe("RIH-2012-RSP-VISIBILITY-1H13 — nested ISC guidebook heading residue", () => {
+  function extractQ23(content: string) {
+    return extractHistoricalRspEvidenceFromPublicPortionHtml(portionShell(q23(content)), {
+      expectedApplicationId: APP_ID,
+    });
+  }
+
+  it("1H13 — OPERATIONS outer residue + Registry Operations Team recovers assignment", () => {
+    const result = extractQ23(
+      "23.2. OPERATIONS 23.2.1. Registry Operations Team Registry operations are outsourced to and performed by Internet Example Consortium, Inc (IEC).",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    const candidate = result.candidates[0]!;
+    expect(candidate.providerNameAsStated).toBe("Internet Example Consortium, Inc (IEC)");
+    expect(candidate.sourceFieldPath).toBe("Q23");
+    expect(candidate.evidenceClassification).toBe("PUBLIC_ICANN");
+    expect(candidate.applicationVersionBasis).toBe("current_public_portion");
+    expect(candidate.reviewState).toBe("REQUIRES_STEWARD_REVIEW");
+    expect(candidate).not.toHaveProperty("rspKey");
+    expect(candidate.evidenceLocator).toMatch(/^Q23@\d+:\d+$/);
+    expect(candidate.evidenceExcerpt?.length ?? 0).toBeGreaterThan(0);
+    expect(candidate.evidenceExcerpt).toMatch(/outsourced to and performed by/i);
+  });
+
+  it("1H13 — wrong outer heading SECURITY does not unlock assignment", () => {
+    const result = extractQ23(
+      "23.2. SECURITY 23.2.1. Registry Operations Team Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H13 — wrong inner heading Staffing Team does not unlock assignment", () => {
+    const result = extractQ23(
+      "23.2. OPERATIONS 23.2.1. Staffing Team Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H13 — OPERATIONS + Team without assignment clause remains non-positive", () => {
+    const result = extractQ23(
+      "23.2. OPERATIONS 23.2.1. Registry Operations Team This section describes registry operations staffing.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
+  it("1H13 — OPERATIONS narrative prefix without locked structure remains non-positive", () => {
+    const result = extractQ23(
+      "OPERATIONS narrative text Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+});

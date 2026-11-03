@@ -429,11 +429,15 @@ const OUTSOURCED_AND_PERFORMED_BY =
 
 /**
  * Guidebook subsection heading leak immediately before the outsourced-operations
- * clause (1H10/1H11). Only `N.N.N. Registry Operations Team` when followed by
- * `Registry operation(s)…` — not arbitrary numeric prose.
+ * clause (1H10–1H13). Accepts:
+ * - `N.N.N. Registry Operations Team` at sentence start; or
+ * - exact outer residue `OPERATIONS N.N.N Registry Operations Team` after the
+ *   ordinary splitter splits on `23.2.` in `23.2. OPERATIONS 23.2.1. …`
+ * Only when immediately followed by `Registry operation(s)…`.
+ * Case-sensitive `OPERATIONS` — not generic uppercase-heading stripping.
  */
 const REGISTRY_OPERATIONS_TEAM_HEADING_LEAK =
-  /^(\d+(?:\.\d+)+\.?\s+Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/i;
+  /^((?:OPERATIONS\s+)?\d+(?:\.\d+)+\.?\s+Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/;
 
 /**
  * Neutralize only the terminal period after `N.N.N.` when it would otherwise
