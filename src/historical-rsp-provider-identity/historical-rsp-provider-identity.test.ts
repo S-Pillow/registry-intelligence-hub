@@ -33,7 +33,6 @@ import {
   type TrustedConfirmedOrganization,
 } from "./types";
 import {
-  HistoricalRspProviderContractError,
   approvedEvidenceRowIdentity,
   assertNoForbiddenProviderIdentityFields,
   deterministicProviderIdentityDecisionId,
