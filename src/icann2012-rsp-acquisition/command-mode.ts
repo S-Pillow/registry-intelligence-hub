@@ -6,6 +6,7 @@ export type AcquisitionCommandMode =
   | "mapping-live-plan"
   | "mapping-review"
   | "mapping-apply-review"
+  | "evidence-apply-review"
   | "pager-live-diagnostic"
   | "portion-live-diagnostic";
 
@@ -24,6 +25,7 @@ export function networkPolicyForCommand(mode: AcquisitionCommandMode): CommandMo
     case "mapping-dry-run":
     case "mapping-review":
     case "mapping-apply-review":
+    case "evidence-apply-review":
     case "mapping-live-plan":
       return {
         mode,

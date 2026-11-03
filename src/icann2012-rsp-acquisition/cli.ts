@@ -14,6 +14,11 @@ import {
   runMappingApplyReview,
 } from "./mapping-apply-review";
 import {
+  EvidenceApplyReviewError,
+  formatEvidenceApplyReviewReceipt,
+  runEvidenceApplyReview,
+} from "./evidence-apply-review";
+import {
   buildMappingLiveOperatorPlan,
   formatMappingLiveOperatorPlan,
   formatMappingLiveOperatorPlanJson,
@@ -60,6 +65,7 @@ Usage:
   npm run acquire-rsp-portions -- mapping-live-plan [--workspace <dir>] [--staging <dir>] [--json]
   npm run acquire-rsp-portions -- mapping-review --run-dir <staging dir> [--workspace <dir>]
   npm run acquire-rsp-portions -- mapping-apply-review --run-dir <staging dir> --review-packet <packet.json> [--output <approved-mapping.json>] [--workspace <dir>]
+  npm run acquire-rsp-portions -- evidence-apply-review --extraction <q23-extraction.json> --steward-review <promotion-readiness-review.json> --approval-packet <packet.json> --output <approved-evidence.json>
   npm run acquire-rsp-portions -- preflight-report --operation <pilot|pilot-live|mapping-dry-run|mapping-live> [--workspace <dir>] [--staging <dir>] [--approved-mapping <json>]
   npm run acquire-rsp-portions -- pager-live-diagnostic
   npm run acquire-rsp-portions -- portion-live-diagnostic
@@ -99,6 +105,9 @@ async function main(): Promise<void> {
       json: { type: "boolean", default: false },
       "run-dir": { type: "string" },
       "review-packet": { type: "string" },
+      extraction: { type: "string" },
+      "steward-review": { type: "string" },
+      "approval-packet": { type: "string" },
       output: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
@@ -229,6 +238,37 @@ async function main(): Promise<void> {
     } catch (err) {
       if (err instanceof MappingApplyReviewError && err.receipt) {
         console.log(formatMappingApplyReviewReceipt(err.receipt));
+        console.log(JSON.stringify(err.receipt, null, 2));
+      }
+      throw err;
+    }
+  }
+
+  if (command === "evidence-apply-review") {
+    const extraction = values.extraction as string | undefined;
+    const stewardReview = values["steward-review"] as string | undefined;
+    const approvalPacket = values["approval-packet"] as string | undefined;
+    const output = values.output as string | undefined;
+    if (!extraction || !stewardReview || !approvalPacket || !output) {
+      console.error(
+        "--extraction, --steward-review, --approval-packet, and --output are required for evidence-apply-review (zero HTTP; applies human packet only)\n",
+      );
+      console.log(usage());
+      process.exit(1);
+    }
+    try {
+      const receipt = await runEvidenceApplyReview({
+        extractionPath: extraction,
+        stewardReviewPath: stewardReview,
+        approvalPacketPath: approvalPacket,
+        outputPath: output,
+      });
+      console.log(formatEvidenceApplyReviewReceipt(receipt));
+      console.log(JSON.stringify(receipt, null, 2));
+      return;
+    } catch (err) {
+      if (err instanceof EvidenceApplyReviewError && err.receipt) {
+        console.log(formatEvidenceApplyReviewReceipt(err.receipt));
         console.log(JSON.stringify(err.receipt, null, 2));
       }
       throw err;
