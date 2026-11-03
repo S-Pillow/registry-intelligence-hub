@@ -428,16 +428,17 @@ const OUTSOURCED_AND_PERFORMED_BY =
   /^(?:Registry\s+operations?)\s+(?:are|is|will\s+be)\s+outsourced\s+to\s+and\s+performed\s+by\s+/i;
 
 /**
- * Guidebook subsection heading leak immediately before the outsourced-operations
- * clause (1H10–1H13). Accepts:
- * - `N.N.N. Registry Operations Team` at sentence start; or
- * - exact outer residue `OPERATIONS N.N.N Registry Operations Team` after the
- *   ordinary splitter splits on `23.2.` in `23.2. OPERATIONS 23.2.1. …`
- * Only when immediately followed by `Registry operation(s)…`.
- * Case-sensitive `OPERATIONS` — not generic uppercase-heading stripping.
+ * Inner guidebook subsection heading leak (1H10/1H11; retained /i semantics):
+ * `N.N.N. Registry Operations Team` at sentence start, immediately before
+ * `Registry operation(s)…`. Case-insensitive for the inner heading tokens.
+ * Exact outer `OPERATIONS ` residue is handled separately in the strip helper
+ * (1H13/1H13-R1) — not via this regex and not as generic uppercase stripping.
  */
 const REGISTRY_OPERATIONS_TEAM_HEADING_LEAK =
-  /^((?:OPERATIONS\s+)?\d+(?:\.\d+)+\.?\s+Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/;
+  /^(\d+(?:\.\d+)+\.?\s+Registry\s+Operations\s+Team\s+)(?=Registry\s+operations?\b)/i;
+
+/** Exact outer residue after splitter cuts at `23.2.` in `23.2. OPERATIONS …`. */
+const OPERATIONS_OUTER_HEADING_RESIDUE = "OPERATIONS ";
 
 /**
  * Neutralize only the terminal period after `N.N.N.` when it would otherwise
@@ -455,9 +456,19 @@ function collapseRegistryOperationsTeamHeadingPeriod(text: string): string {
 function stripRegistryOperationsTeamHeadingLeak(
   sentence: string,
 ): { text: string; strippedLength: number } {
-  const match = sentence.match(REGISTRY_OPERATIONS_TEAM_HEADING_LEAK);
+  let remainder = sentence;
+  let outerLength = 0;
+  if (remainder.startsWith(OPERATIONS_OUTER_HEADING_RESIDUE)) {
+    remainder = remainder.slice(OPERATIONS_OUTER_HEADING_RESIDUE.length);
+    outerLength = OPERATIONS_OUTER_HEADING_RESIDUE.length;
+  }
+  const match = remainder.match(REGISTRY_OPERATIONS_TEAM_HEADING_LEAK);
   if (!match) return { text: sentence, strippedLength: 0 };
-  return { text: sentence.slice(match[1]!.length), strippedLength: match[1]!.length };
+  const innerLength = match[1]!.length;
+  return {
+    text: remainder.slice(innerLength),
+    strippedLength: outerLength + innerLength,
+  };
 }
 
 /**

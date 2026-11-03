@@ -1126,6 +1126,25 @@ describe("RIH-2012-RSP-VISIBILITY-1H13 — nested ISC guidebook heading residue"
     expect(candidate.evidenceExcerpt).toMatch(/outsourced to and performed by/i);
   });
 
+  it("1H13-R1 — inherited case-insensitive inner Registry Operations Team still matches", () => {
+    const result = extractQ23(
+      "23.2.1. registry operations team registry operations are outsourced to and performed by Internet Example Consortium, Inc (IEC).",
+    );
+    expect(result.disposition).toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0]!.providerNameAsStated).toBe(
+      "Internet Example Consortium, Inc (IEC)",
+    );
+  });
+
+  it("1H13-R1 — lowercase outer operations residue is not accepted", () => {
+    const result = extractQ23(
+      "23.2. operations 23.2.1. Registry Operations Team Registry operations are outsourced to and performed by Example Vendor.",
+    );
+    expect(result.disposition).not.toBe("EXPLICIT_PROVIDER_CANDIDATE");
+    expect(result.candidates).toEqual([]);
+  });
+
   it("1H13 — wrong outer heading SECURITY does not unlock assignment", () => {
     const result = extractQ23(
       "23.2. SECURITY 23.2.1. Registry Operations Team Registry operations are outsourced to and performed by Example Vendor.",
