@@ -94,7 +94,7 @@ describe("HubLegalFooter", () => {
       /independent research and intelligence project/i,
     );
     expect(within(footer).getByTestId("hub-legal-footer-independence")).toHaveTextContent(
-      /not affiliated with or endorsed by ICANN or IANA/i,
+      /not affiliated with or endorsed by ICANN, IANA, or GoDaddy Registry/i,
     );
     expect(within(footer).getByTestId("hub-legal-footer-source-rights")).toHaveTextContent(
       /public third-party sources/i,

@@ -25,7 +25,7 @@ export function HubLegalFooter({
       <div className="mx-auto max-w-[1480px] space-y-3 px-4 py-6 text-xs leading-5 text-slate-600 sm:px-6">
         <p data-testid="hub-legal-footer-independence">
           Registry Intelligence Hub is an independent research and intelligence project. It is not
-          affiliated with or endorsed by ICANN or IANA.
+          affiliated with or endorsed by ICANN, IANA, or GoDaddy Registry.
         </p>
         <p data-testid="hub-legal-footer-source-rights">
           RIH incorporates and derives information from public third-party sources. Third-party data,
