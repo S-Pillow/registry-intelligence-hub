@@ -8,6 +8,19 @@ import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-20
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
 import { prepareHistorical2012SharedLayout } from "@/historical-2012/structural-summary";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
+import { HUB_BASE_PATH } from "@/lib/hub-paths";
+import {
+  HUB_CANONICAL_URL,
+  HUB_OG_DESCRIPTION,
+  HUB_OG_IMAGE_ALT,
+  HUB_OG_IMAGE_HEIGHT,
+  HUB_OG_IMAGE_PATH,
+  HUB_OG_IMAGE_URL,
+  HUB_OG_IMAGE_WIDTH,
+  HUB_OG_SITE_NAME,
+  HUB_OG_TITLE,
+  HUB_PUBLIC_ORIGIN,
+} from "@/lib/hub-social-metadata";
 import { claimActualityAssertedForBrowser } from "@/lib/registry-application-payload-shared";
 import "./globals.css";
 
@@ -22,11 +35,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(`${HUB_PUBLIC_ORIGIN}${HUB_BASE_PATH}`),
   title: {
-    default: "Registry Intelligence Hub",
+    default: HUB_OG_TITLE,
     template: "%s · Registry Intelligence Hub",
   },
-  description: "Historical 2012 evidence for ICANN application intelligence. 2026 Reveal Day data is shown only after it is promoted.",
+  description: HUB_OG_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: HUB_OG_TITLE,
+    description: HUB_OG_DESCRIPTION,
+    url: HUB_CANONICAL_URL,
+    siteName: HUB_OG_SITE_NAME,
+    type: "website",
+    images: [
+      {
+        url: HUB_OG_IMAGE_PATH,
+        width: HUB_OG_IMAGE_WIDTH,
+        height: HUB_OG_IMAGE_HEIGHT,
+        alt: HUB_OG_IMAGE_ALT,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: HUB_OG_TITLE,
+    description: HUB_OG_DESCRIPTION,
+    images: [
+      {
+        url: HUB_OG_IMAGE_URL,
+        width: HUB_OG_IMAGE_WIDTH,
+        height: HUB_OG_IMAGE_HEIGHT,
+        alt: HUB_OG_IMAGE_ALT,
+      },
+    ],
+  },
 };
 
 export default async function RootLayout({
