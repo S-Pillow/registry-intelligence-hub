@@ -28,11 +28,19 @@ A legacy bare `GET /aps/applications/export/csv` is **not** authoritative (retur
 
 ### Contention
 
-Public link published on the APS Applications page / program materials:
+Explicit source selection (never calendar-switched):
 
-`https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv`
+| Kind | URL / locator |
+| --- | --- |
+| `reveal-day` (default) | `https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv` |
+| `string-confirmation` | `https://newgtldprogram.icann.org/en/application-rounds/round2/string-confirmation-contention-sets.csv` (APS Help SCD link) |
+| `explicit` / `file` | Operator-supplied path or URL via `--contention` |
 
-Acquisition follows redirects to the durable file URL, requires a non-empty CSV body, and runs the accepted contention CSV parser. An unfollowed 301 with an empty body is treated as failure (not a zero-row CSV).
+Acquisition follows redirects, requires a non-empty CSV body, and runs the accepted contention CSV parser. An unfollowed 301 with an empty body is treated as failure (not a zero-row CSV). A failed SCD fetch does **not** silently substitute Reveal Day bytes.
+
+CLI: `--contention-source reveal-day|string-confirmation` (mutually exclusive with `--contention`).
+
+**SCD contention `-R` IDs:** the contention parser still rejects `-R` Application IDs. Official SCD membership rows are expected to use non-`-R` logical Application IDs; if ICANN publishes `-R` memberships, acquisition must fail closed until a supported identity contract is authorized.
 
 ### Validation / hashes
 

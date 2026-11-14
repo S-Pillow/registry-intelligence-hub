@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   if (!command || command === "help" || command === "--help") {
     console.log(`Usage:
   npm run change-intel:bootstrap [-- --cwd <path>]
-  npm run change-intel:refresh -- [--dry-run] [--mode file|fetch] [--application <path|url>] [--contention <path|url>]
+  npm run change-intel:refresh -- [--dry-run] [--mode file|fetch] [--application <path|url>] [--contention <path|url>] [--contention-source reveal-day|string-confirmation]
   npm run change-intel -- status
 `);
     process.exit(0);
@@ -54,6 +54,17 @@ async function main(): Promise<void> {
   if (command === "refresh") {
     const dryRun = argFlag(rest, "--dry-run");
     const mode = (argValue(rest, "--mode") as "file" | "fetch" | undefined) ?? "fetch";
+    const contentionSourceRaw = argValue(rest, "--contention-source");
+    let contentionSourceKind: "reveal-day" | "string-confirmation" | undefined;
+    if (contentionSourceRaw !== undefined) {
+      if (contentionSourceRaw !== "reveal-day" && contentionSourceRaw !== "string-confirmation") {
+        console.error(
+          `Invalid --contention-source ${JSON.stringify(contentionSourceRaw)}; expected reveal-day|string-confirmation`,
+        );
+        process.exit(1);
+      }
+      contentionSourceKind = contentionSourceRaw;
+    }
     try {
       const result = await refreshChangeIntel({
         cwd,
@@ -61,6 +72,7 @@ async function main(): Promise<void> {
         mode,
         applicationPathOrUrl: argValue(rest, "--application"),
         contentionPathOrUrl: argValue(rest, "--contention"),
+        contentionSourceKind,
       });
       console.log(
         JSON.stringify({

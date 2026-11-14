@@ -125,6 +125,45 @@ function rejectContentionCsvShape(headers: string[]): void {
   }
 }
 
+/**
+ * APS Help (String Confirmation Day): selected replacement application records keep the
+ * `-R` Application ID and change Application Type from "Replacement String" to
+ * "New gTLD" or "New gTLD with Variants". Unselected strings become Deactivated.
+ *
+ * Stable replacement-row identity is the `-R` suffix (documented APS indicator).
+ * Application Type alone is not used to invent selection or logical Application IDs.
+ */
+const REPLACEMENT_ROW_APPLICATION_TYPES = new Set([
+  "Replacement String",
+  "New gTLD",
+  "New gTLD with Variants",
+]);
+
+function classifyApsSourceRowIdentity(
+  sourceRowId: string,
+  applicationType: string,
+): { isReplacement: boolean } {
+  const idEndsWithR = sourceRowId.endsWith("-R");
+  const typeIsLegacyReplacementLabel = applicationType === "Replacement String";
+
+  if (!idEndsWithR && typeIsLegacyReplacementLabel) {
+    throw new Error(
+      `APS CSV row ${sourceRowId}: replacement indicators disagree (idEndsWithR=false, applicationType=${JSON.stringify(applicationType)}); Application Type "Replacement String" requires a -R Application ID`,
+    );
+  }
+
+  if (idEndsWithR) {
+    if (!REPLACEMENT_ROW_APPLICATION_TYPES.has(applicationType)) {
+      throw new Error(
+        `APS CSV row ${sourceRowId}: unsupported Application Type for -R replacement row: ${JSON.stringify(applicationType)}; expected one of ${[...REPLACEMENT_ROW_APPLICATION_TYPES].join(" | ")}`,
+      );
+    }
+    return { isReplacement: true };
+  }
+
+  return { isReplacement: false };
+}
+
 function rowToSource(headers: string[], cells: string[]): ApsCsvSourceRow {
   if (cells.length !== headers.length) {
     throw new Error(`APS CSV row column count ${cells.length} != header count ${headers.length}`);
@@ -133,15 +172,7 @@ function rowToSource(headers: string[], cells: string[]): ApsCsvSourceRow {
   const sourceRowId = get("Application ID").trim();
   if (!sourceRowId) throw new Error("APS CSV row missing Application ID");
   const applicationType = get("Application Type").trim();
-  // Replacement requires BOTH indicators; disagreement fails closed.
-  const idEndsWithR = sourceRowId.endsWith("-R");
-  const sourceTypeIsReplacement = applicationType === "Replacement String";
-  if (idEndsWithR !== sourceTypeIsReplacement) {
-    throw new Error(
-      `APS CSV row ${sourceRowId}: replacement indicators disagree (idEndsWithR=${idEndsWithR}, applicationType=${JSON.stringify(applicationType)}); both -R suffix and Replacement String are required together`,
-    );
-  }
-  const isReplacement = idEndsWithR && sourceTypeIsReplacement;
+  const { isReplacement } = classifyApsSourceRowIdentity(sourceRowId, applicationType);
   const designations: ApplicationDesignationsV2 = {
     brand: parseApsBoolean(get("TLD Type: Brand"), "TLD Type: Brand", sourceRowId),
     community: parseApsBoolean(get("TLD Type: Community"), "TLD Type: Community", sourceRowId),

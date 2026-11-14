@@ -13,9 +13,12 @@ import {
   APS_APPLICATION_EXPORT_PATH,
   APS_CONFIG_URL,
   APS_CONTENTION_CSV_URL,
+  APS_REVEAL_DAY_CONTENTION_CSV_URL,
+  APS_STRING_CONFIRMATION_CONTENTION_CSV_URL,
   fetchApplicationCsvBytes,
   fetchContentionCsvBytes,
   locateApplicationExportUrl,
+  resolveContentionSource,
   type FetchLike,
 } from "@/change-intel/sources";
 import { trackedFieldsFromPublicationApp } from "@/change-intel/tracked-fields";
@@ -121,6 +124,106 @@ describe("CHANGE-INTEL-1B application source locator / export contract", () => {
         },
       }),
     ).rejects.toThrow(/APPLICATION_VALIDATION_FAILED/);
+  });
+});
+
+describe("CHANGE-INTEL SCD contention source selection", () => {
+  it("defaults to Reveal Day and resolves SCD URL only when explicitly selected", () => {
+    expect(resolveContentionSource({ mode: "fetch" })).toEqual({
+      kind: "reveal-day",
+      requestedUrl: APS_REVEAL_DAY_CONTENTION_CSV_URL,
+    });
+    expect(APS_CONTENTION_CSV_URL).toBe(APS_REVEAL_DAY_CONTENTION_CSV_URL);
+    expect(
+      resolveContentionSource({ mode: "fetch", contentionSourceKind: "string-confirmation" }),
+    ).toEqual({
+      kind: "string-confirmation",
+      requestedUrl: APS_STRING_CONFIRMATION_CONTENTION_CSV_URL,
+    });
+    expect(
+      resolveContentionSource({
+        mode: "fetch",
+        contentionPathOrUrl: "https://example.test/custom-contention.csv",
+      }),
+    ).toEqual({
+      kind: "explicit",
+      requestedUrl: "https://example.test/custom-contention.csv",
+    });
+    expect(() =>
+      resolveContentionSource({
+        mode: "fetch",
+        contentionPathOrUrl: "https://example.test/custom-contention.csv",
+        contentionSourceKind: "string-confirmation",
+      }),
+    ).toThrow(/CONTENTION_SOURCE_AMBIGUOUS/);
+  });
+
+  it("acquires SCD contention when selected and records provenance without Reveal Day substitution", async () => {
+    const appFixture = await readFile(FIXTURE_APP);
+    const contFixture = await readFile(FIXTURE_CONT);
+    const exportUrl = `https://newgtldprogram-aps.icann.org/aps${APS_APPLICATION_EXPORT_PATH}`;
+    const finalScd =
+      "https://newgtldprogram.icann.org/sites/default/files/documents/string-confirmation-contention-sets.csv";
+    const fetchImpl: FetchLike = async (input, init) => {
+      const url = String(input);
+      if (url === APS_CONFIG_URL) {
+        return Response.json({ restBackendUrl: "https://newgtldprogram-aps.icann.org/aps" });
+      }
+      if (url === exportUrl) {
+        expect(init?.method).toBe("POST");
+        return csvResponse(appFixture, { url: exportUrl });
+      }
+      if (url === APS_STRING_CONFIRMATION_CONTENTION_CSV_URL) {
+        expect(init?.method ?? "GET").toBe("GET");
+        return csvResponse(contFixture, { url: finalScd, type: "text/csv" });
+      }
+      if (url === APS_REVEAL_DAY_CONTENTION_CSV_URL) {
+        throw new Error("must not fall back to Reveal Day contention when SCD selected");
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    };
+    const acquired = await acquireNormalizedSources({
+      mode: "fetch",
+      contentionSourceKind: "string-confirmation",
+      fetchImpl,
+    });
+    expect(acquired.contentionSourceKind).toBe("string-confirmation");
+    expect(acquired.contentionRequestedUrl).toBe(APS_STRING_CONFIRMATION_CONTENTION_CSV_URL);
+    expect(acquired.contentionSource.sourceUrl).toBe(finalScd);
+    expect(acquired.contentionSource.contentSha256).toBe(sha256Hex(contFixture));
+    expect(acquired.officialContentionMemberships).toBe(891);
+  });
+
+  it("unavailable SCD contention fails closed and does not return Reveal Day bytes", async () => {
+    const appFixture = await readFile(FIXTURE_APP);
+    const exportUrl = `https://newgtldprogram-aps.icann.org/aps${APS_APPLICATION_EXPORT_PATH}`;
+    await expect(
+      acquireNormalizedSources({
+        mode: "fetch",
+        contentionSourceKind: "string-confirmation",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          if (url === APS_CONFIG_URL) {
+            return Response.json({ restBackendUrl: "https://newgtldprogram-aps.icann.org/aps" });
+          }
+          if (url === exportUrl) {
+            expect(init?.method).toBe("POST");
+            return csvResponse(appFixture, { url: exportUrl });
+          }
+          if (url === APS_STRING_CONFIRMATION_CONTENTION_CSV_URL) {
+            return csvResponse("<!DOCTYPE html><html>Not Found</html>", {
+              status: 404,
+              type: "text/html",
+              url,
+            });
+          }
+          if (url === APS_REVEAL_DAY_CONTENTION_CSV_URL) {
+            throw new Error("must not substitute Reveal Day contention for failed SCD fetch");
+          }
+          throw new Error(`unexpected fetch ${url}`);
+        },
+      }),
+    ).rejects.toThrow(/CONTENTION_FETCH_FAILED|CONTENTION_NON_CSV_RESPONSE/);
   });
 });
 
@@ -284,8 +387,44 @@ describe("CHANGE-INTEL-1B fetch acquire wiring", () => {
     const acquired = await acquireNormalizedSources({ mode: "fetch", fetchImpl });
     expect(acquired.applications.length).toBe(1614);
     expect(acquired.officialContentionMemberships).toBe(891);
+    expect(acquired.contentionSourceKind).toBe("reveal-day");
     expect(acquired.applicationSource.sourceUrl).toBe(exportUrl);
     expect(acquired.contentionSource.sourceUrl).toBe(finalCont);
     expect(acquired.applicationSource.semanticHash).not.toBe(sha256Hex(appFixture));
+  });
+
+  it("SCD contention fetch failure leaves Change Intelligence index unchanged", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "ci-scd-refresh-"));
+    await mkdir(join(cwd, ".data/reveal-2026/browser"), { recursive: true });
+    const boot = await bootstrapChangeIntel({
+      cwd,
+      browserPayloadPath: join(process.cwd(), ".data/reveal-2026/browser/applications-browser-v2.json"),
+    });
+    expect(boot.status).toBe("initialized");
+    const beforeIdx = await readFile(join(cwd, ".data/change-intel/index.json"), "utf8");
+    const appFixture = await readFile(FIXTURE_APP);
+    const exportUrl = `https://newgtldprogram-aps.icann.org/aps${APS_APPLICATION_EXPORT_PATH}`;
+    await expect(
+      refreshChangeIntel({
+        cwd,
+        mode: "fetch",
+        contentionSourceKind: "string-confirmation",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          if (url === APS_CONFIG_URL) {
+            return Response.json({ restBackendUrl: "https://newgtldprogram-aps.icann.org/aps" });
+          }
+          if (url === exportUrl) {
+            expect(init?.method).toBe("POST");
+            return csvResponse(appFixture, { url: exportUrl });
+          }
+          if (url === APS_STRING_CONFIRMATION_CONTENTION_CSV_URL) {
+            return csvResponse("<html>missing</html>", { status: 404, type: "text/html", url });
+          }
+          throw new Error(`unexpected fetch ${url}`);
+        },
+      }),
+    ).rejects.toThrow(/CONTENTION_FETCH_FAILED|CONTENTION_NON_CSV_RESPONSE/);
+    expect(await readFile(join(cwd, ".data/change-intel/index.json"), "utf8")).toBe(beforeIdx);
   });
 });

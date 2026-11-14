@@ -98,13 +98,15 @@ describe("APS Application CSV parser / publication 2.0.0", () => {
     expect(gamma.replacementString).toBeUndefined();
   });
 
-  it("rejects -R with non-replacement application type", () => {
+  it("rejects -R with unsupported Application Type", () => {
     const bytes = mutateCsv(loadFixture("minimal-applications.csv"), (text) =>
       text.replace(
         ",SYN1000T-T10001-R,Alpha Applicant LLC,Replacement String,",
-        ",SYN1000T-T10001-R,Alpha Applicant LLC,New gTLD,",
+        ",SYN1000T-T10001-R,Alpha Applicant LLC,Existing gTLD with Variants,",
       ));
-    expect(() => parseAndNormalizeApsApplicationCsv(withBom(bytes))).toThrow(/replacement indicators disagree/i);
+    expect(() => parseAndNormalizeApsApplicationCsv(withBom(bytes))).toThrow(
+      /unsupported Application Type for -R replacement row/i,
+    );
   });
 
   it("rejects Replacement String without -R suffix", () => {
@@ -114,6 +116,41 @@ describe("APS Application CSV parser / publication 2.0.0", () => {
         ",SYN1000T-T10001-X,Alpha Applicant LLC,Replacement String,",
       ));
     expect(() => parseAndNormalizeApsApplicationCsv(withBom(bytes))).toThrow(/replacement indicators disagree/i);
+  });
+
+  it("SCD: selected replacement keeps -R id with New gTLD type; unselected original Deactivated", () => {
+    const parsed = parseAndNormalizeApsApplicationCsv(
+      withBom(loadFixture("scd-selected-and-deactivated.csv")),
+    );
+    expect(parsed.applications).toHaveLength(4);
+    expect(parsed.replacementCount).toBe(3);
+    const alpha = parsed.applications.find((a) => a.applicationId === "SYN1000T-T10001")!;
+    expect(alpha.applicationStatus).toBe("Deactivated");
+    expect(alpha.appliedString.label).toBe("alpha");
+    expect(alpha.appliedString.sourceRowId).toBe("SYN1000T-T10001");
+    expect(alpha.replacementString?.sourceRowId).toBe("SYN1000T-T10001-R");
+    expect(alpha.replacementString?.label).toBe("beta");
+    expect(alpha.replacementString?.applicationType).toBe("New gTLD");
+    expect(alpha.replacementString?.applicationStatus).toBe("Active");
+  });
+
+  it("SCD: deactivated unselected -R may remain Replacement String; selected may be New gTLD with Variants", () => {
+    const parsed = parseAndNormalizeApsApplicationCsv(
+      withBom(loadFixture("scd-selected-and-deactivated.csv")),
+    );
+    const keptPrimary = parsed.applications.find((a) => a.applicationId === "SYN3000T-T30001")!;
+    expect(keptPrimary.applicationStatus).toBe("Active");
+    expect(keptPrimary.replacementString?.applicationType).toBe("Replacement String");
+    expect(keptPrimary.replacementString?.applicationStatus).toBe("Deactivated");
+
+    const variantsSelected = parsed.applications.find((a) => a.applicationId === "SYN4000T-T40001")!;
+    expect(variantsSelected.applicationStatus).toBe("Deactivated");
+    expect(variantsSelected.replacementString?.applicationType).toBe("New gTLD with Variants");
+    expect(variantsSelected.replacementString?.applicationStatus).toBe("Active");
+    expect(variantsSelected.replacementString?.sourceRowId).toBe("SYN4000T-T40001-R");
+    // Selection is evidenced by status/type fields — not inferred solely from -R.
+    expect(variantsSelected.appliedString.label).toBe("epsilon");
+    expect(variantsSelected.replacementString?.label).toBe("epsilon-v");
   });
 
   it("links replacement when -R row appears before base", () => {

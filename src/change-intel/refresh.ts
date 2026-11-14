@@ -5,7 +5,7 @@ import {
   browserDocumentFromNormalized,
   buildRspPostureMap,
 } from "@/change-intel/rsp-context";
-import { acquireNormalizedSources } from "@/change-intel/sources";
+import { acquireNormalizedSources, type FetchLike } from "@/change-intel/sources";
 import {
   persistRefresh,
   readIndex,
@@ -33,6 +33,10 @@ export async function refreshChangeIntel(input?: {
   mode?: "fetch" | "file";
   applicationPathOrUrl?: string;
   contentionPathOrUrl?: string;
+  /** Explicit contention catalog; do not combine with contentionPathOrUrl. Default reveal-day. */
+  contentionSourceKind?: "reveal-day" | "string-confirmation";
+  /** Test/injection seam only — production refresh uses global fetch. */
+  fetchImpl?: FetchLike;
   observedAt?: string;
 }): Promise<RefreshResult> {
   const cwd = input?.cwd ?? process.cwd();
@@ -54,16 +58,19 @@ export async function refreshChangeIntel(input?: {
       : undefined);
   const contentionPathOrUrl =
     input?.contentionPathOrUrl
-    ?? (mode === "file"
+    ?? (mode === "file" && !input?.contentionSourceKind
       ? join(cwd, ".data/reveal-2026/aps-capture/reveal-day-contention-sets.csv")
       : undefined);
 
   // Acquisition/validation — on failure throw before any write.
   // Fetch mode locates the current APS POST export via /api/config when no override URL is given.
+  // Contention source is explicit (default Reveal Day); never calendar-switched to SCD.
   const acquired = await acquireNormalizedSources({
     applicationPathOrUrl,
     contentionPathOrUrl,
+    contentionSourceKind: input?.contentionSourceKind,
     mode,
+    fetchImpl: input?.fetchImpl,
   });
 
   const observedAt = input?.observedAt ?? new Date().toISOString();

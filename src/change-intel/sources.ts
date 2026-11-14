@@ -26,10 +26,64 @@ export const APS_APPLICATION_EXPORT_PATH = "/applications/export/csv";
 
 /**
  * Public ICANN Reveal Day contention CSV link (may 301 to the durable file URL).
- * Prefer this published link over hard-coding the final file path alone.
+ * Default Change Intelligence contention source — not auto-replaced on calendar date.
  */
-export const APS_CONTENTION_CSV_URL =
+export const APS_REVEAL_DAY_CONTENTION_CSV_URL =
   "https://newgtldprogram.icann.org/en/application-rounds/round2/reveal-day-contention-sets.csv";
+
+/**
+ * Official String Confirmation Day contention CSV linked from APS Help.
+ * Available only after successful retrieval/validation — never inferred from the calendar.
+ */
+export const APS_STRING_CONFIRMATION_CONTENTION_CSV_URL =
+  "https://newgtldprogram.icann.org/en/application-rounds/round2/string-confirmation-contention-sets.csv";
+
+/** @deprecated Alias for Reveal Day contention URL (historical import sites). */
+export const APS_CONTENTION_CSV_URL = APS_REVEAL_DAY_CONTENTION_CSV_URL;
+
+/** Explicit contention acquisition selector — never calendar-driven. */
+export type ContentionSourceKind = "reveal-day" | "string-confirmation" | "explicit" | "file";
+
+export type ResolvedContentionSource = {
+  kind: ContentionSourceKind;
+  /** Requested path or URL before redirects. */
+  requestedUrl: string;
+};
+
+/**
+ * Resolve contention locator without silent Reveal Day ↔ SCD substitution.
+ * - Default / `reveal-day` → Reveal Day URL
+ * - `string-confirmation` → SCD URL (must still fetch+validate successfully)
+ * - Explicit path/URL → `explicit` or `file` depending on mode
+ */
+export function resolveContentionSource(input: {
+  mode: "file" | "fetch";
+  contentionPathOrUrl?: string;
+  contentionSourceKind?: "reveal-day" | "string-confirmation";
+}): ResolvedContentionSource {
+  if (input.contentionPathOrUrl) {
+    if (input.contentionSourceKind) {
+      throw new Error(
+        "CONTENTION_SOURCE_AMBIGUOUS: provide either --contention path/url or --contention-source kind, not both",
+      );
+    }
+    return {
+      kind: input.mode === "file" ? "file" : "explicit",
+      requestedUrl: input.contentionPathOrUrl,
+    };
+  }
+  if (input.mode === "file") {
+    throw new Error("CONTENTION_FETCH_FAILED: file mode requires contention path");
+  }
+  const kind = input.contentionSourceKind ?? "reveal-day";
+  if (kind === "string-confirmation") {
+    return { kind, requestedUrl: APS_STRING_CONFIRMATION_CONTENTION_CSV_URL };
+  }
+  if (kind === "reveal-day") {
+    return { kind, requestedUrl: APS_REVEAL_DAY_CONTENTION_CSV_URL };
+  }
+  throw new Error(`CONTENTION_SOURCE_UNSUPPORTED: ${String(kind)}`);
+}
 
 /** @deprecated Legacy GET path — not the current Download CSV contract. Kept for tests/errors only. */
 export const APS_APPLICATION_CSV_URL =
@@ -50,6 +104,8 @@ export type AcquiredNormalizedSources = {
   contentionSets: ContentionSetV1[];
   applicationSource: SourceArtifactMeta;
   contentionSource: SourceArtifactMeta;
+  /** Provenance of which contention locator was requested (not calendar-inferred). */
+  contentionSourceKind: ContentionSourceKind;
   observedDistinctApplicantNames: number;
   officialContentionSets: number;
   officialContentionMemberships: number;
@@ -252,6 +308,8 @@ async function readFileBytes(pathOrUrl: string): Promise<{
 export async function acquireNormalizedSources(input: {
   applicationPathOrUrl?: string;
   contentionPathOrUrl?: string;
+  /** Explicit contention catalog selection; ignored when contentionPathOrUrl is set. */
+  contentionSourceKind?: "reveal-day" | "string-confirmation";
   mode: "file" | "fetch";
   fetchImpl?: FetchLike;
 }): Promise<AcquiredNormalizedSources> {
@@ -265,9 +323,15 @@ export async function acquireNormalizedSources(input: {
   let contRequestedUrl: string;
   let contFinalUrl: string;
 
+  const resolvedContention = resolveContentionSource({
+    mode: input.mode,
+    contentionPathOrUrl: input.contentionPathOrUrl,
+    contentionSourceKind: input.contentionSourceKind,
+  });
+
   if (input.mode === "file") {
-    if (!input.applicationPathOrUrl || !input.contentionPathOrUrl) {
-      throw new Error("APPLICATION_FETCH_FAILED: file mode requires application and contention paths");
+    if (!input.applicationPathOrUrl) {
+      throw new Error("APPLICATION_FETCH_FAILED: file mode requires application path");
     }
     try {
       const app = await readFileBytes(input.applicationPathOrUrl);
@@ -280,7 +344,7 @@ export async function acquireNormalizedSources(input: {
       );
     }
     try {
-      const cont = await readFileBytes(input.contentionPathOrUrl);
+      const cont = await readFileBytes(resolvedContention.requestedUrl);
       contBytes = cont.bytes;
       contRequestedUrl = cont.sourceUrl;
       contFinalUrl = cont.sourceUrl;
@@ -298,8 +362,10 @@ export async function acquireNormalizedSources(input: {
     appRequestedUrl = app.requestedUrl;
     appFinalUrl = app.finalUrl;
 
-    const contentionUrl = input.contentionPathOrUrl ?? APS_CONTENTION_CSV_URL;
-    const cont = await fetchContentionCsvBytes({ url: contentionUrl, fetchImpl });
+    const cont = await fetchContentionCsvBytes({
+      url: resolvedContention.requestedUrl,
+      fetchImpl,
+    });
     contBytes = cont.bytes;
     contRequestedUrl = cont.requestedUrl;
     contFinalUrl = cont.finalUrl;
@@ -333,6 +399,7 @@ export async function acquireNormalizedSources(input: {
   return {
     applications: appParsed.applications,
     contentionSets: contParsed.contentionSets,
+    contentionSourceKind: resolvedContention.kind,
     observedDistinctApplicantNames: appParsed.observedDistinctApplicantNames,
     officialContentionSets: contParsed.contentionSets.length,
     officialContentionMemberships: membershipCount,
