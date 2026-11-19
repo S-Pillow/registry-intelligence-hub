@@ -7,9 +7,11 @@ import {
   OrganizationMappingBadge,
 } from "@/components/registry/organization-mapping-display";
 import {
-  CONTENTION_SET_PLAIN_LANGUAGE,
   SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE,
+  contestedApplicationsStatLabel,
+  contentionSetExplanation,
   filterApplicantPortfolio,
+  noContentionMembershipsLabel,
   scdContentionStatusLabel,
   selectionModeLabel,
   type ApplicantIntelligenceLookup,
@@ -127,9 +129,21 @@ function PortfolioRowCard({ row }: { row: ApplicantPortfolioRow }) {
             .join("; ")}
         </p>
       ) : null}
-      <Link href={row.exploreHref} className="mt-2 inline-block font-semibold text-[#006a56] underline">
-        Open in Explore
-      </Link>
+      <div className="mt-2 flex flex-wrap gap-3">
+        <Link href={row.exploreHref} className="font-semibold text-[#006a56] underline">
+          Open in Explore
+        </Link>
+        {row.scdContentionStatus === "contested" && row.contentionSetHref ? (
+          <Link
+            href={row.contentionSetHref}
+            className="font-semibold text-[#006a56] underline"
+            data-testid={`portfolio-contention-link-${row.applicationId}`}
+          >
+            Open contention set
+            {row.scdContentionSetId ? ` #${row.scdContentionSetId}` : ""}
+          </Link>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -220,7 +234,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           testId="stat-brand"
         />
         <Stat
-          label="In initial contention"
+          label={contestedApplicationsStatLabel(observation)}
           value={profile.contestedApplicationCount}
           testId="stat-contested"
         />
@@ -391,6 +405,15 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
                     {row.scdContentionSetId ? (
                       <span className="mt-0.5 block text-slate-500">set {row.scdContentionSetId}</span>
                     ) : null}
+                    {row.scdContentionStatus === "contested" && row.contentionSetHref ? (
+                      <Link
+                        href={row.contentionSetHref}
+                        className="mt-0.5 block font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                        data-testid={`portfolio-contention-link-${row.applicationId}`}
+                      >
+                        Open contention set
+                      </Link>
+                    ) : null}
                     {row.inInitialContention && row.scdContentionStatus === "unavailable" ? (
                       <span className="mt-0.5 block text-[10px] text-slate-500">
                         Historical membership: {row.officialContentionSetIds.join(", ")}
@@ -425,7 +448,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
         </h2>
         <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
           <p className="font-semibold text-slate-900">What is a contention set?</p>
-          <p className="mt-1 leading-6">{CONTENTION_SET_PLAIN_LANGUAGE}</p>
+          <p className="mt-1 leading-6">{contentionSetExplanation(observation)}</p>
         </div>
         <dl className="mt-3 grid gap-2 sm:grid-cols-3 text-sm">
           <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -442,7 +465,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           </div>
         </dl>
         {profile.contentionSets.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-600">No official initial contention memberships for this Applicant.</p>
+          <p className="mt-3 text-sm text-slate-600">{noContentionMembershipsLabel(observation)}</p>
         ) : (
           <ul className="mt-4 space-y-3">
             {profile.contentionSets.map((set) => (
@@ -596,7 +619,12 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
         </h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
           <li>ICANN Application publication (represented Applications)</li>
-          <li>Official initial contention membership publication</li>
+          <li>
+            {observation.scdContentionEvidence === "ready" ||
+            observation.applicationSnapshotId.includes("string-confirmation")
+              ? "Published SCD contention membership capture"
+              : "Official initial contention membership publication"}
+          </li>
           {evidence?.applicantWebsiteHost ? <li>ICANN Applicant Website / Application Responses</li> : null}
           <li>Organization resolution sidecar (steward-approved mappings where Confirmed)</li>
           <li>ICANN evaluated Main-RSP list (public capability posture only)</li>

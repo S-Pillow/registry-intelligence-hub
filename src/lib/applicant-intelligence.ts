@@ -81,6 +81,8 @@ export type ApplicantPortfolioRow = {
   scdContentionSetId: string | null;
   competitors: ApplicantStringCompetitor[];
   officialAwardOutcome: ApplicantOfficialAwardOutcome;
+  /** Deep link to the primary official contention set when membership is present. */
+  contentionSetHref: string | null;
   exploreHref: string;
 };
 
@@ -216,7 +218,8 @@ export function isStringConfirmationSnapshotId(snapshotId: string | null | undef
 
 /**
  * SCD contention classification is allowed only when both Application and contention
- * snapshots are String Confirmation Day and the overlay is available (pin-matched).
+ * snapshots are String Confirmation Day, the overlay is available, and the overlay's
+ * application-publication pin matches this browser document's application content hash.
  * Never combine SCD applications with Reveal Day contention as “current.”
  */
 export function resolveScdContentionEvidenceStatus(
@@ -226,6 +229,12 @@ export function resolveScdContentionEvidenceStatus(
   if (overlay.status !== "available") return "unavailable";
   if (!isStringConfirmationSnapshotId(document.snapshotId)) return "unavailable";
   if (!isStringConfirmationSnapshotId(overlay.snapshotId)) return "unavailable";
+  if (
+    !overlay.applicationPublicationPinHash ||
+    overlay.applicationPublicationPinHash !== document.snapshotContentHash
+  ) {
+    return "unavailable";
+  }
   return "ready";
 }
 
@@ -282,11 +291,13 @@ export function resolveSelectedStringStatus(app: BrowserApplicationV2): Resolved
   }
 
   const replacementStringLabel = repl.label ?? "";
-  const isR = typeof repl.sourceRowId === "string" && repl.sourceRowId.endsWith("-R");
+  const expectedReplacementId = `${app.applicationId}-R`;
+  const identityMatches =
+    typeof repl.sourceRowId === "string" && repl.sourceRowId === expectedReplacementId;
   const selectedType = SELECTED_REPLACEMENT_TYPES.has(repl.applicationType);
   const unselectedType = UNSELECTED_REPLACEMENT_TYPES.has(repl.applicationType);
 
-  if (!isR) {
+  if (!identityMatches) {
     return {
       selectionMode: "unresolved",
       originalAppliedForString,
@@ -294,7 +305,8 @@ export function resolveSelectedStringStatus(app: BrowserApplicationV2): Resolved
       selectedReplacementApplicationId: null,
       replacementStringLabel,
       currentApplicationStatus: baseStatus,
-      unresolvedReason: "Replacement row identity is not a source-backed -R application ID",
+      unresolvedReason:
+        "Replacement row identity must equal base applicationId + \"-R\" (source-backed selected-string guard)",
     };
   }
 
@@ -491,6 +503,12 @@ function portfolioRowsForApplicant(
         scdContentionSetId,
         competitors,
         officialAwardOutcome: "not_established" as const,
+        contentionSetHref:
+          scdContentionSetId != null
+            ? contentionSetHref(scdContentionSetId)
+            : setIds[0]
+              ? contentionSetHref(setIds[0])
+              : null,
         exploreHref: `/explore?q=${encodeURIComponent(app.applicationId)}`,
       };
     });
@@ -720,8 +738,40 @@ export function buildContentionApplicationCountDistribution(
 export const CONTENTION_SET_PLAIN_LANGUAGE =
   "A contention set groups Applications that ICANN has identified as competing with one another. A set with 13 Applications means 13 Applications are in that competition group; those Applications may represent fewer than 13 distinct Applicants. These are official initial memberships and may change as the program progresses — not a prediction of final outcome.";
 
+export const SCD_CONTENTION_SET_PLAIN_LANGUAGE =
+  "A contention set groups Applications that ICANN has identified as competing with one another. A set with 13 Applications means 13 Applications are in that competition group; those Applications may represent fewer than 13 distinct Applicants. These are published String Confirmation Day contention memberships and may change as the program progresses — not a prediction of final outcome.";
+
 export const SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE =
   "No published SCD contention membership is not an official award. Award/delegation requires separate authoritative evidence.";
+
+/** True when the profile observation is on an SCD application snapshot (wording only). */
+export function isScdApplicationObservation(
+  observation: Pick<ApplicantStringStatusObservation, "applicationSnapshotId">,
+): boolean {
+  return isStringConfirmationSnapshotId(observation.applicationSnapshotId);
+}
+
+export function contestedApplicationsStatLabel(
+  observation: Pick<ApplicantStringStatusObservation, "applicationSnapshotId">,
+): string {
+  return isScdApplicationObservation(observation) ? "In SCD contention" : "In initial contention";
+}
+
+export function contentionSetExplanation(
+  observation: Pick<ApplicantStringStatusObservation, "applicationSnapshotId">,
+): string {
+  return isScdApplicationObservation(observation)
+    ? SCD_CONTENTION_SET_PLAIN_LANGUAGE
+    : CONTENTION_SET_PLAIN_LANGUAGE;
+}
+
+export function noContentionMembershipsLabel(
+  observation: Pick<ApplicantStringStatusObservation, "applicationSnapshotId">,
+): string {
+  return isScdApplicationObservation(observation)
+    ? "No published SCD contention memberships for this Applicant."
+    : "No official initial contention memberships for this Applicant.";
+}
 
 export type ApplicantPortfolioFilter =
   | "all"

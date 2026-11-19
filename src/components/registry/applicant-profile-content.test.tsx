@@ -90,6 +90,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
         scdContentionSetId: null,
         competitors: [],
         officialAwardOutcome: "not_established",
+        contentionSetHref: null,
         exploreHref: "/explore?q=SF1",
       },
       {
@@ -116,6 +117,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
         scdContentionSetId: null,
         competitors: [],
         officialAwardOutcome: "not_established",
+        contentionSetHref: null,
         exploreHref: "/explore?q=SF2",
       },
       {
@@ -142,6 +144,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
         scdContentionSetId: null,
         competitors: [],
         officialAwardOutcome: "not_established",
+        contentionSetHref: null,
         exploreHref: "/explore?q=SF3",
       },
       {
@@ -168,6 +171,7 @@ function baseProfile(overrides: Partial<Extract<ApplicantIntelligenceLookup, { f
         scdContentionSetId: null,
         competitors: [],
         officialAwardOutcome: "not_established",
+        contentionSetHref: null,
         exploreHref: "/explore?q=SF4",
       },
     ],

@@ -70,14 +70,17 @@ Portfolio rows answer: which strings this Applicant is pursuing, which are uncon
 | Field | Rule |
 | --- | --- |
 | Original applied-for string | Base Application `appliedString.label` |
-| Selected / current string | Selected only when `-R` identity, Application Type (`New gTLD` / `New gTLD with Variants`), and status evidence are consistent (typically base Deactivated + `-R` Active) |
+| Selected / current string | Selected only when `replacement.sourceRowId === applicationId + "-R"`, Application Type (`New gTLD` / `New gTLD with Variants`), and status evidence are consistent (typically base Deactivated + `-R` Active) |
 | Unselected replacement | Type `Replacement String` with non-Active `-R` → keep original |
 | Conflicting replacement evidence | Fail closed to `unresolved` |
-| SCD contention | Join by **base** Application ID; `uncontested_in_scd_capture` only when SCD application + contention snapshots are string-confirmation and the overlay is available |
+| SCD contention | Join by **base** Application ID; `uncontested_in_scd_capture` only when SCD application + contention snapshots are string-confirmation, the overlay is available, and `applicationPublicationPinHash` matches the browser document `snapshotContentHash` |
 | Missing / mismatched / Reveal Day contention | `unavailable` — never labeled uncontested |
 | Official award | `not_established` unless separate authoritative award/delegation evidence exists; uncontested ≠ awarded |
+| Contested navigation | Portfolio rows in SCD contention link to `/contention?set=<id>` |
 
-Observation basis (snapshot IDs + timestamps) is labeled on the profile. On Reveal Day actuality, historical membership labeling is retained and SCD activation is not implied.
+Observation basis (snapshot IDs + timestamps) is labeled on the profile. Profile copy uses “SCD contention” / “published contention” on SCD snapshots and retains “initial contention” on Reveal Day snapshots. Classification rules are unchanged.
+
+Portable acceptance cohort: `src/lib/fixtures/applicant-string-status-scd-cohort/` (provenance-documented extraction from the approved SCD candidate; no `/tmp` dependency for `npm run test`).
 
 Registry Services, LLC (GoDaddy’s direct Applicant) remains distinct from GoDaddy Registry’s RSP role.
 

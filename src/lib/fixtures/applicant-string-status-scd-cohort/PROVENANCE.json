@@ -1,0 +1,30 @@
+{
+  "fixtureId": "applicant-string-status-scd-cohort-v1",
+  "purpose": "Portable GoDaddy + ShortDot SCD string-status acceptance cohort for Vitest",
+  "derivedFrom": {
+    "candidateDir": "/tmp/rih-scd-pub-candidate-20261119-stats",
+    "applicationSnapshotId": "snap-aps-2026-applications-string-confirmation-v1",
+    "applicationGraphContentHash": "1d8ba53c6042e9ed13cf012b15ac1ec6b74eb2f272a548cf8c217fed8d2f80ad",
+    "applicationSourceFileSha256": "055f1b2d77628bc47a6674e753c9049a782a6e565a307b7a21d50190c365292d",
+    "contentionSnapshotId": "snap-aps-2026-contention-string-confirmation-v1",
+    "contentionSidecarContentSha256": "43e279185468f9335119720ece167043119e88718a8afcb2c845ea8ed6f6c6d1",
+    "contentionSourceFileSha256": "395ac47b69e808870f13701132ad070ebee9771bac5f7950edf2efabe38d2602",
+    "officialAggregatesContentSha256": "d28a791a336ad42c2fd7a40a6503c15e7cb9a77da1a1d1259f7c65e6b97d52ef"
+  },
+  "inclusionRule": "All applications for Registry Services, LLC and ShortDot (Ireland) Limited, plus every application sharing any of their SCD contention set IDs",
+  "cohortApplicationCount": 305,
+  "expectedAcceptance": {
+    "registryServicesLlc": {
+      "applications": 77,
+      "selectedReplacements": 8,
+      "activeUncontested": 21,
+      "activeContested": 56
+    },
+    "shortDotIrelandLimited": {
+      "applications": 40,
+      "selectedReplacements": 8,
+      "activeContested": 24
+    }
+  },
+  "extractedAt": "2026-11-19T02:24:53.362Z"
+}
