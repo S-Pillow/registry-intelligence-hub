@@ -1,14 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   ApplicantIdentityEvidencePanel,
   OrganizationMappingBadge,
 } from "@/components/registry/organization-mapping-display";
 import {
   CONTENTION_SET_PLAIN_LANGUAGE,
+  SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE,
+  filterApplicantPortfolio,
+  scdContentionStatusLabel,
+  selectionModeLabel,
   type ApplicantIntelligenceLookup,
   type ApplicantIntelligenceProfile,
+  type ApplicantPortfolioFilter,
+  type ApplicantPortfolioRow,
 } from "@/lib/applicant-intelligence";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 function Stat({
@@ -77,9 +84,63 @@ function HubChrome({ active }: { active?: string }) {
   );
 }
 
+const PORTFOLIO_FILTERS: Array<{ id: ApplicantPortfolioFilter; label: string }> = [
+  { id: "all", label: "All applications" },
+  { id: "no_scd_contention", label: "No published SCD contention" },
+  { id: "still_in_contention", label: "Still in contention" },
+  { id: "selected_replacements", label: "Selected replacements" },
+  { id: "withdrawn_or_unresolved", label: "Withdrawn or unresolved" },
+];
+
+function PortfolioRowCard({ row }: { row: ApplicantPortfolioRow }) {
+  const selectedDiffers = row.selectedCurrentString !== row.originalAppliedForString;
+  return (
+    <li
+      className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm"
+      data-testid={`portfolio-row-${row.applicationId}`}
+    >
+      <p className="font-semibold text-slate-950">
+        .{row.selectedCurrentString || "—"}
+        {selectedDiffers ? (
+          <span className="ml-2 text-xs font-medium text-slate-600">
+            (original .{row.originalAppliedForString})
+          </span>
+        ) : null}
+        {row.brand ? <span className="ml-2 text-xs font-semibold text-[#006a56]">Brand</span> : null}
+      </p>
+      <p className="mt-1 font-mono text-xs text-slate-600">{row.applicationId}</p>
+      <p className="mt-1 text-xs text-slate-600">
+        Status: {row.currentApplicationStatus ?? "—"} · {selectionModeLabel(row.selectionMode)}
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        {scdContentionStatusLabel(row.scdContentionStatus)}
+        {row.scdContentionSetId ? ` · set ${row.scdContentionSetId}` : ""}
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        Award: {row.officialAwardOutcome === "awarded" ? "Awarded" : "Not established"}
+      </p>
+      {row.competitors.length > 0 ? (
+        <p className="mt-1 text-xs text-slate-600" data-testid={`portfolio-competitors-${row.applicationId}`}>
+          Competitors:{" "}
+          {row.competitors
+            .map((c) => `${c.applicantLegalName} (.${c.appliedForString})`)
+            .join("; ")}
+        </p>
+      ) : null}
+      <Link href={row.exploreHref} className="mt-2 inline-block font-semibold text-[#006a56] underline">
+        Open in Explore
+      </Link>
+    </li>
+  );
+}
+
 function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
   const evidence = profile.identityEvidence;
   const orgConfirmed = profile.organizationResolutionStatus === "CONFIRMED";
+  const [portfolioFilter, setPortfolioFilter] = useState<ApplicantPortfolioFilter>("all");
+  const filteredPortfolio = filterApplicantPortfolio(profile.portfolio, portfolioFilter);
+  const observation = profile.stringStatusObservation;
+  const summary = profile.stringStatusSummary;
 
   return (
     <main className="mx-auto max-w-[1100px] px-4 py-8" data-testid="applicant-profile">
@@ -232,64 +293,130 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           Brand applications: {profile.brandApplicationCount} of {profile.applicationCount}. Applied-for
           strings are Applications under this Applicant — not separate Organizations.
         </p>
+        <div
+          className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700"
+          data-testid="portfolio-observation-basis"
+        >
+          <p className="font-semibold text-slate-900">String status observation</p>
+          <p className="mt-1 leading-6">{observation.publicationBasisLabel}</p>
+          <p className="mt-1 text-xs text-slate-600">
+            Application snapshot {observation.applicationSnapshotId} · published{" "}
+            {observation.publishedAt}
+            {observation.contentionSnapshotId
+              ? ` · contention ${observation.contentionSnapshotId}`
+              : " · contention not bound"}
+          </p>
+          <p className="mt-1 text-xs text-slate-600">{SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE}</p>
+          {observation.scdContentionEvidence === "ready" ? (
+            <p className="mt-2 text-xs text-slate-700" data-testid="portfolio-string-status-summary">
+              Active without SCD contention: {summary.activeUncontestedInScdCapture} · Active in SCD
+              contention: {summary.activeContestedInScdCapture} · Selected replacements:{" "}
+              {summary.selectedReplacements} · Award established: {summary.awardEstablishedCount}
+            </p>
+          ) : null}
+        </div>
+        <div
+          className="mt-3 flex flex-wrap gap-2"
+          role="group"
+          aria-label="Portfolio filters"
+          data-testid="portfolio-filters"
+        >
+          {PORTFOLIO_FILTERS.map((f) => {
+            const active = portfolioFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setPortfolioFilter(f.id)}
+                className={`rounded border px-2.5 py-1 text-xs font-semibold ${
+                  active
+                    ? "border-[#006a56] bg-[#006a56] text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+                }`}
+                data-testid={`portfolio-filter-${f.id}`}
+                aria-pressed={active}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
         <ul className="mt-4 space-y-2 md:hidden" data-testid="portfolio-mobile-list">
-          {profile.portfolio.map((row) => (
-            <li
-              key={row.applicationId}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm"
-            >
-              <p className="font-semibold text-slate-950">
-                .{row.appliedForString || "—"}
-                {row.brand ? (
-                  <span className="ml-2 text-xs font-semibold text-[#006a56]">Brand</span>
-                ) : null}
-              </p>
-              <p className="mt-1 font-mono text-xs text-slate-600">{row.applicationId}</p>
-              <p className="mt-1 text-xs text-slate-600">
-                {row.inInitialContention
-                  ? `Initial contention · set ${row.officialContentionSetIds.join(", ")}`
-                  : "Not in initial contention"}
-              </p>
-              <Link href={row.exploreHref} className="mt-2 inline-block font-semibold text-[#006a56] underline">
-                Open in Explore
-              </Link>
-            </li>
+          {filteredPortfolio.map((row) => (
+            <PortfolioRowCard key={row.applicationId} row={row} />
           ))}
         </ul>
         <div className="mt-4 hidden overflow-x-auto md:block" data-testid="portfolio-table-wrap">
           <table className="min-w-full text-left text-sm" data-testid="portfolio-table">
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-2 py-2 font-semibold">String</th>
+                <th className="px-2 py-2 font-semibold">Original</th>
+                <th className="px-2 py-2 font-semibold">Selected</th>
                 <th className="px-2 py-2 font-semibold">Application ID</th>
-                <th className="px-2 py-2 font-semibold">Designations</th>
                 <th className="px-2 py-2 font-semibold">Status</th>
-                <th className="px-2 py-2 font-semibold">Contention</th>
+                <th className="px-2 py-2 font-semibold">SCD contention</th>
+                <th className="px-2 py-2 font-semibold">Competitors</th>
+                <th className="px-2 py-2 font-semibold">Award</th>
               </tr>
             </thead>
             <tbody>
-              {profile.portfolio.map((row) => (
-                <tr key={row.applicationId} className="border-b border-slate-100">
+              {filteredPortfolio.map((row) => (
+                <tr
+                  key={row.applicationId}
+                  className="border-b border-slate-100"
+                  data-testid={`portfolio-row-${row.applicationId}`}
+                >
                   <td className="px-2 py-2 font-medium">
                     <Link href={row.exploreHref} className="text-[#006a56] underline-offset-2 hover:underline">
-                      .{row.appliedForString || "—"}
+                      .{row.originalAppliedForString || "—"}
                     </Link>
                   </td>
-                  <td className="px-2 py-2 font-mono text-xs">{row.applicationId}</td>
-                  <td className="px-2 py-2 text-xs">
-                    {[row.brand ? "Brand" : null, row.idn ? "IDN" : null, row.community ? "Community" : null]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
+                  <td className="px-2 py-2 text-xs text-slate-800">
+                    .{row.selectedCurrentString || "—"}
+                    {row.selectionMode === "selected-replacement" && row.selectedReplacementApplicationId ? (
+                      <span className="mt-0.5 block font-mono text-[10px] text-slate-500">
+                        {row.selectedReplacementApplicationId}
+                      </span>
+                    ) : null}
                   </td>
-                  <td className="px-2 py-2 text-xs text-slate-700">{row.applicationStatus ?? "—"}</td>
+                  <td className="px-2 py-2 font-mono text-xs">{row.applicationId}</td>
+                  <td className="px-2 py-2 text-xs text-slate-700">
+                    {row.currentApplicationStatus ?? "—"}
+                    <span className="mt-0.5 block text-[10px] text-slate-500">
+                      {selectionModeLabel(row.selectionMode)}
+                    </span>
+                  </td>
                   <td className="px-2 py-2 text-xs">
-                    {row.inInitialContention ? row.officialContentionSetIds.join(", ") : "—"}
+                    {scdContentionStatusLabel(row.scdContentionStatus)}
+                    {row.scdContentionSetId ? (
+                      <span className="mt-0.5 block text-slate-500">set {row.scdContentionSetId}</span>
+                    ) : null}
+                    {row.inInitialContention && row.scdContentionStatus === "unavailable" ? (
+                      <span className="mt-0.5 block text-[10px] text-slate-500">
+                        Historical membership: {row.officialContentionSetIds.join(", ")}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-2 py-2 text-xs text-slate-700">
+                    {row.competitors.length === 0
+                      ? "—"
+                      : row.competitors
+                          .map((c) => `${c.applicantLegalName} (.${c.appliedForString})`)
+                          .join("; ")}
+                  </td>
+                  <td className="px-2 py-2 text-xs text-slate-700">
+                    {row.officialAwardOutcome === "awarded" ? "Awarded" : "Not established"}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {filteredPortfolio.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-600" data-testid="portfolio-filter-empty">
+            No applications match this filter.
+          </p>
+        ) : null}
       </section>
 
       <section className="mt-8" aria-labelledby="contention-heading" data-testid="applicant-contention-section">

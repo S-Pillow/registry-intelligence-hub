@@ -63,6 +63,24 @@ Do not show cross-round metrics for unmatched Applicants. Do not imply unmatched
 
 Brand designation is shown inside the Applicant portfolio. Applied-for strings remain Applications under the legal Applicant — never separate Organizations (e.g. `.slack` / `.tableau` under Salesforce, Inc.).
 
+## Applicant string status (SCD)
+
+Portfolio rows answer: which strings this Applicant is pursuing, which are uncontested in the SCD capture, which remain contested, and whether an official award is established.
+
+| Field | Rule |
+| --- | --- |
+| Original applied-for string | Base Application `appliedString.label` |
+| Selected / current string | Selected only when `-R` identity, Application Type (`New gTLD` / `New gTLD with Variants`), and status evidence are consistent (typically base Deactivated + `-R` Active) |
+| Unselected replacement | Type `Replacement String` with non-Active `-R` → keep original |
+| Conflicting replacement evidence | Fail closed to `unresolved` |
+| SCD contention | Join by **base** Application ID; `uncontested_in_scd_capture` only when SCD application + contention snapshots are string-confirmation and the overlay is available |
+| Missing / mismatched / Reveal Day contention | `unavailable` — never labeled uncontested |
+| Official award | `not_established` unless separate authoritative award/delegation evidence exists; uncontested ≠ awarded |
+
+Observation basis (snapshot IDs + timestamps) is labeled on the profile. On Reveal Day actuality, historical membership labeling is retained and SCD activation is not implied.
+
+Registry Services, LLC (GoDaddy’s direct Applicant) remains distinct from GoDaddy Registry’s RSP role.
+
 ## Contention semantics
 
 A contention set groups Applications ICANN has identified as competing with one another. Application count and distinct Applicant count are separate: one Applicant may have multiple Applications in the same set.
