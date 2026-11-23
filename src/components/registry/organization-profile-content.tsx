@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  filterOrganizationPortfolio,
   type OrganizationIntelligenceLookup,
   type OrganizationIntelligenceProfile,
+  type OrganizationPortfolioRow,
 } from "@/lib/organization-intelligence";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
 import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
@@ -12,6 +14,19 @@ import { organizationCounterpartSummaryForKey } from "@/lib/organization-content
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
 import { OrganizationConcentrationProfileContext } from "@/components/registry/organization-concentration-panel";
 import { OrganizationContentionPairsProfileContext } from "@/components/registry/organization-contention-pairs-panel";
+import {
+  ProfilePortfolioFilterBar,
+  ProfileSourceSummary,
+  ScdProfileSummaryCards,
+  usePortfolioFilterNavigation,
+} from "@/components/registry/scd-profile-summary";
+import {
+  contestedApplicationsStatLabel,
+  noContentionMembershipsLabel,
+  scdContentionStatusLabel,
+  selectionModeLabel,
+  type ApplicationPortfolioFilter,
+} from "@/lib/application-string-status";
 
 function Stat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -19,6 +34,59 @@ function Stat({ label, value, testId }: { label: string; value: string | number;
       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-bold tabular-nums text-slate-950">{value}</p>
     </div>
+  );
+}
+
+function OrganizationPortfolioMobileRow({ row }: { row: OrganizationPortfolioRow }) {
+  const selectedDiffers = row.selectedCurrentString !== row.originalAppliedForString;
+  return (
+    <li
+      className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm"
+      data-testid={`org-portfolio-row-${row.applicationId}`}
+    >
+      <p className="font-semibold">
+        .{row.selectedCurrentString || "—"}
+        {selectedDiffers ? (
+          <span className="ml-2 text-xs font-medium text-slate-600">
+            (original .{row.originalAppliedForString})
+          </span>
+        ) : null}
+        {row.brand ? <span className="ml-2 text-xs text-[#006a56]">Brand</span> : null}
+      </p>
+      <p className="mt-1 font-mono text-xs text-slate-600">{row.applicationId}</p>
+      <p className="mt-1">
+        <Link href={row.applicantProfileHref} className="text-[#006a56] underline">
+          {row.applicantLegalName}
+        </Link>
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        Status: {row.currentApplicationStatus ?? "—"} · {selectionModeLabel(row.selectionMode)}
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        {scdContentionStatusLabel(row.scdContentionStatus)}
+        {row.scdContentionSetId ? ` · set ${row.scdContentionSetId}` : ""}
+      </p>
+      {row.competitors.length > 0 ? (
+        <p className="mt-1 text-xs text-slate-600">
+          Competitors:{" "}
+          {row.competitors.map((c) => `${c.applicantLegalName} (.${c.appliedForString})`).join("; ")}
+        </p>
+      ) : null}
+      <div className="mt-2 flex flex-wrap gap-3">
+        <Link href={row.exploreHref} className="text-xs font-semibold text-[#006a56] underline">
+          Open in Explore
+        </Link>
+        {row.scdContentionStatus === "contested" && row.contentionSetHref ? (
+          <Link
+            href={row.contentionSetHref}
+            className="text-xs font-semibold text-[#006a56] underline"
+            data-testid={`org-portfolio-contention-link-${row.applicationId}`}
+          >
+            Open contention set
+          </Link>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -73,24 +141,51 @@ function ProfileFound({
   const [applicantFilter, setApplicantFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState<"all" | "brand" | "non-brand">("all");
   const [contentionFilter, setContentionFilter] = useState<"all" | "in" | "out">("all");
+  const [portfolioFilter, setPortfolioFilter] = useState<ApplicationPortfolioFilter>("all");
   const [portfolioQ, setPortfolioQ] = useState("");
+  const portfolioRef = useRef<HTMLElement | null>(null);
+  const selectPortfolioFilter = usePortfolioFilterNavigation(portfolioRef, setPortfolioFilter);
+  const observation = profile.stringStatusObservation;
+  const summary = profile.stringStatusSummary;
+  const scdReady = observation.scdContentionEvidence === "ready";
 
   const filteredPortfolio = useMemo(() => {
     const q = portfolioQ.trim().toLowerCase();
-    return profile.portfolio.filter((row) => {
+    return filterOrganizationPortfolio(profile.portfolio, portfolioFilter).filter((row) => {
       if (applicantFilter !== "all" && row.applicantLegalName !== applicantFilter) return false;
       if (brandFilter === "brand" && !row.brand) return false;
       if (brandFilter === "non-brand" && row.brand) return false;
-      if (contentionFilter === "in" && !row.inInitialContention) return false;
-      if (contentionFilter === "out" && row.inInitialContention) return false;
+      if (contentionFilter === "in") {
+        if (scdReady) {
+          if (row.scdContentionStatus !== "contested") return false;
+        } else if (!row.inInitialContention) {
+          return false;
+        }
+      }
+      if (contentionFilter === "out") {
+        if (scdReady) {
+          if (row.scdContentionStatus !== "uncontested_in_scd_capture") return false;
+        } else if (row.inInitialContention) {
+          return false;
+        }
+      }
       if (!q) return true;
       return (
         row.appliedForString.toLowerCase().includes(q) ||
+        row.selectedCurrentString.toLowerCase().includes(q) ||
         row.applicationId.toLowerCase().includes(q) ||
         row.applicantLegalName.toLowerCase().includes(q)
       );
     });
-  }, [profile.portfolio, applicantFilter, brandFilter, contentionFilter, portfolioQ]);
+  }, [
+    profile.portfolio,
+    portfolioFilter,
+    applicantFilter,
+    brandFilter,
+    contentionFilter,
+    portfolioQ,
+    scdReady,
+  ]);
 
   return (
     <main className="mx-auto max-w-[1100px] px-4 py-8" data-testid="organization-profile">
@@ -140,13 +235,21 @@ function ProfileFound({
         </div>
       </header>
 
+      <ScdProfileSummaryCards
+        summary={summary}
+        observation={observation}
+        activeFilter={portfolioFilter}
+        onSelect={selectPortfolioFilter}
+      />
+      <ProfileSourceSummary observation={observation} />
+
       <section
         className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
         aria-labelledby="org-glance-heading"
         data-testid="organization-at-a-glance"
       >
-        <h2 id="org-glance-heading" className="sr-only">
-          At a glance
+        <h2 id="org-glance-heading" className="text-sm font-semibold text-slate-700 sm:col-span-2 lg:col-span-4">
+          Additional intelligence
         </h2>
         <Stat label="Applicant entities" value={profile.applicantEntityCount} testId="stat-applicants" />
         <Stat label="2026 Applications" value={profile.applicationCount} testId="stat-applications" />
@@ -156,7 +259,7 @@ function ProfileFound({
           testId="stat-brand"
         />
         <Stat
-          label="In initial contention"
+          label={contestedApplicationsStatLabel(observation)}
           value={profile.contestedApplicationCount}
           testId="stat-contested"
         />
@@ -314,7 +417,12 @@ function ProfileFound({
         </ul>
       </section>
 
-      <section className="mt-8" aria-labelledby="portfolio-heading" data-testid="org-portfolio-section">
+      <section
+        ref={portfolioRef}
+        className="mt-8 scroll-mt-4"
+        aria-labelledby="portfolio-heading"
+        data-testid="org-portfolio-section"
+      >
         <h2 id="portfolio-heading" className="text-lg font-bold text-slate-950">
           Application portfolio
         </h2>
@@ -322,6 +430,11 @@ function ProfileFound({
           Brand Applications: {profile.brandApplicationCount} of {profile.applicationCount}. Each row keeps
           its legal Applicant attribution — {profile.canonicalName} is not the ICANN Applicant.
         </p>
+        <ProfilePortfolioFilterBar
+          activeFilter={portfolioFilter}
+          onChange={selectPortfolioFilter}
+          showClear
+        />
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <label className="text-sm text-slate-700">
             Applicant{" "}
@@ -361,8 +474,8 @@ function ProfileFound({
               data-testid="portfolio-filter-contention"
             >
               <option value="all">All</option>
-              <option value="in">In contention</option>
-              <option value="out">Not in contention</option>
+              <option value="in">{scdReady ? "Still contested (SCD)" : "In contention"}</option>
+              <option value="out">{scdReady ? "No SCD contention" : "Not in contention"}</option>
             </select>
           </label>
           <label className="text-sm text-slate-700 sm:flex-1">
@@ -378,42 +491,42 @@ function ProfileFound({
         </div>
         <ul className="mt-4 space-y-2 md:hidden" data-testid="org-portfolio-mobile">
           {filteredPortfolio.map((row) => (
-            <li key={row.applicationId} className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm">
-              <p className="font-semibold">
-                .{row.appliedForString || "—"}
-                {row.brand ? <span className="ml-2 text-xs text-[#006a56]">Brand</span> : null}
-              </p>
-              <p className="mt-1 font-mono text-xs text-slate-600">{row.applicationId}</p>
-              <p className="mt-1">
-                <Link href={row.applicantProfileHref} className="text-[#006a56] underline">
-                  {row.applicantLegalName}
-                </Link>
-              </p>
-              <Link href={row.exploreHref} className="mt-2 inline-block text-xs font-semibold text-[#006a56] underline">
-                Open in Explore
-              </Link>
-            </li>
+            <OrganizationPortfolioMobileRow key={row.applicationId} row={row} />
           ))}
         </ul>
         <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="min-w-full text-left text-sm" data-testid="org-portfolio-table">
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-2 py-2 font-semibold">String</th>
+                <th className="px-2 py-2 font-semibold">Original</th>
+                <th className="px-2 py-2 font-semibold">Selected</th>
                 <th className="px-2 py-2 font-semibold">Application ID</th>
                 <th className="px-2 py-2 font-semibold">Applicant</th>
-                <th className="px-2 py-2 font-semibold">Brand</th>
                 <th className="px-2 py-2 font-semibold">Status</th>
-                <th className="px-2 py-2 font-semibold">Contention</th>
+                <th className="px-2 py-2 font-semibold">SCD contention</th>
+                <th className="px-2 py-2 font-semibold">Competitors</th>
               </tr>
             </thead>
             <tbody>
               {filteredPortfolio.map((row) => (
-                <tr key={row.applicationId} className="border-b border-slate-100">
+                <tr
+                  key={row.applicationId}
+                  className="border-b border-slate-100"
+                  data-testid={`org-portfolio-row-${row.applicationId}`}
+                >
                   <td className="px-2 py-2">
                     <Link href={row.exploreHref} className="font-medium text-[#006a56] hover:underline">
-                      .{row.appliedForString || "—"}
+                      .{row.originalAppliedForString || "—"}
                     </Link>
+                    {row.brand ? <span className="ml-1 text-[10px] font-semibold text-[#006a56]">Brand</span> : null}
+                  </td>
+                  <td className="px-2 py-2 text-xs text-slate-800">
+                    .{row.selectedCurrentString || "—"}
+                    {row.selectionMode === "selected-replacement" && row.selectedReplacementApplicationId ? (
+                      <span className="mt-0.5 block font-mono text-[10px] text-slate-500">
+                        {row.selectedReplacementApplicationId}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-2 py-2 font-mono text-xs">{row.applicationId}</td>
                   <td className="px-2 py-2">
@@ -421,16 +534,65 @@ function ProfileFound({
                       {row.applicantLegalName}
                     </Link>
                   </td>
-                  <td className="px-2 py-2 text-xs">{row.brand ? "Brand" : "—"}</td>
-                  <td className="px-2 py-2 text-xs">{row.applicationStatus ?? "—"}</td>
+                  <td className="px-2 py-2 text-xs text-slate-700">
+                    {row.currentApplicationStatus ?? "—"}
+                    <span className="mt-0.5 block text-[10px] text-slate-500">
+                      {selectionModeLabel(row.selectionMode)}
+                    </span>
+                  </td>
                   <td className="px-2 py-2 text-xs">
-                    {row.inInitialContention ? row.officialContentionSetIds.join(", ") : "—"}
+                    {scdContentionStatusLabel(row.scdContentionStatus)}
+                    {row.scdContentionSetId ? (
+                      <span className="mt-0.5 block text-slate-500">set {row.scdContentionSetId}</span>
+                    ) : null}
+                    {row.scdContentionStatus === "contested" && row.contentionSetHref ? (
+                      <Link
+                        href={row.contentionSetHref}
+                        className="mt-0.5 block font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                        data-testid={`org-portfolio-contention-link-${row.applicationId}`}
+                      >
+                        Open contention set
+                      </Link>
+                    ) : null}
+                    {row.inInitialContention && row.scdContentionStatus === "unavailable" ? (
+                      <span className="mt-0.5 block text-[10px] text-slate-500">
+                        Historical membership: {row.officialContentionSetIds.join(", ")}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-2 py-2 text-xs text-slate-700">
+                    {row.competitors.length === 0
+                      ? "—"
+                      : row.competitors
+                          .map((c) => `${c.applicantLegalName} (.${c.appliedForString})`)
+                          .join("; ")}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {filteredPortfolio.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-600" data-testid="org-portfolio-filter-empty">
+            No applications match this filter.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500" data-testid="org-portfolio-filter-count">
+            Showing {filteredPortfolio.length} of {profile.portfolio.length} applications
+            {portfolioFilter !== "all" ? (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="font-semibold text-[#006a56] underline"
+                  onClick={() => selectPortfolioFilter("all")}
+                >
+                  Show all
+                </button>
+              </>
+            ) : null}
+          </p>
+        )}
       </section>
 
       <section className="mt-8" aria-labelledby="contention-heading" data-testid="org-contention-section">
@@ -458,7 +620,9 @@ function ProfileFound({
           </div>
         </dl>
         {profile.contentionSets.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-600">No official initial contention memberships for this Organization.</p>
+          <p className="mt-3 text-sm text-slate-600">
+            {noContentionMembershipsLabel(observation, "Organization")}
+          </p>
         ) : (
           <ul className="mt-4 max-h-96 space-y-2 overflow-y-auto">
             {profile.contentionSets.slice(0, 40).map((set) => (
@@ -615,7 +779,13 @@ function ProfileFound({
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
           <li>Organization resolution: RIH evidence-backed mapping (steward Confirmed)</li>
           <li>Applications: ICANN APS / represented Application publication</li>
-          <li>Contention: official initial contention memberships</li>
+          <li>
+            Contention:{" "}
+            {observation.scdContentionEvidence === "ready" ||
+            observation.applicationSnapshotId.includes("string-confirmation")
+              ? "Published SCD contention membership capture"
+              : "Official initial contention memberships"}
+          </li>
           <li>RSP: official evaluated-RSP source where applicable</li>
           <li>Cross-round: accepted historical identity evidence where confirmed</li>
         </ul>

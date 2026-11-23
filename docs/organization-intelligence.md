@@ -44,6 +44,14 @@ Never collapse these. Portfolio aggregation always retains legal Applicant attri
 | Returning | Confirmed cross-round participation overlay |
 | Changes | Link to Change Intelligence (no fabricated events) |
 
+## Application status summary (primary)
+
+Same four clickable SCD summary cards as Applicant Profiles (total / no published SCD contention / still contested / selected replacements), driven by `src/lib/application-string-status.ts`.
+
+Organization counts aggregate **distinct Applications belonging to Confirmed represented Applicant legal entities** for that Organization. Do not include RSP customers solely because they use the Organization’s registry services. Selected replacements use the current `-R` string and status.
+
+When SCD contention evidence is not ready, uncontested/contested cards show **Unavailable**. Source line + expandable Source details match the Applicant Profile pattern.
+
 ## Portfolio wording
 
 Preferred: “RIH maps N represented Applications across M Applicant legal entities to {Organization}.”

@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ApplicantIdentityEvidencePanel,
   OrganizationMappingBadge,
 } from "@/components/registry/organization-mapping-display";
 import {
-  SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE,
+  ProfilePortfolioFilterBar,
+  ProfileSourceSummary,
+  ScdProfileSummaryCards,
+  usePortfolioFilterNavigation,
+} from "@/components/registry/scd-profile-summary";
+import {
   contestedApplicationsStatLabel,
   contentionSetExplanation,
   filterApplicantPortfolio,
@@ -20,6 +25,7 @@ import {
   type ApplicantPortfolioRow,
 } from "@/lib/applicant-intelligence";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
+
 function Stat({
   label,
   value,
@@ -86,14 +92,6 @@ function HubChrome({ active }: { active?: string }) {
   );
 }
 
-const PORTFOLIO_FILTERS: Array<{ id: ApplicantPortfolioFilter; label: string }> = [
-  { id: "all", label: "All applications" },
-  { id: "no_scd_contention", label: "No published SCD contention" },
-  { id: "still_in_contention", label: "Still in contention" },
-  { id: "selected_replacements", label: "Selected replacements" },
-  { id: "withdrawn_or_unresolved", label: "Withdrawn or unresolved" },
-];
-
 function PortfolioRowCard({ row }: { row: ApplicantPortfolioRow }) {
   const selectedDiffers = row.selectedCurrentString !== row.originalAppliedForString;
   return (
@@ -152,6 +150,8 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
   const evidence = profile.identityEvidence;
   const orgConfirmed = profile.organizationResolutionStatus === "CONFIRMED";
   const [portfolioFilter, setPortfolioFilter] = useState<ApplicantPortfolioFilter>("all");
+  const portfolioRef = useRef<HTMLElement | null>(null);
+  const selectPortfolioFilter = usePortfolioFilterNavigation(portfolioRef, setPortfolioFilter);
   const filteredPortfolio = filterApplicantPortfolio(profile.portfolio, portfolioFilter);
   const observation = profile.stringStatusObservation;
   const summary = profile.stringStatusSummary;
@@ -219,13 +219,21 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
         </div>
       </header>
 
+      <ScdProfileSummaryCards
+        summary={summary}
+        observation={observation}
+        activeFilter={portfolioFilter}
+        onSelect={selectPortfolioFilter}
+      />
+      <ProfileSourceSummary observation={observation} />
+
       <section
         className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
         aria-labelledby="at-a-glance-heading"
         data-testid="applicant-at-a-glance"
       >
-        <h2 id="at-a-glance-heading" className="sr-only">
-          At a glance
+        <h2 id="at-a-glance-heading" className="text-sm font-semibold text-slate-700 sm:col-span-2 lg:col-span-4">
+          Additional intelligence
         </h2>
         <Stat label="Applications" value={profile.applicationCount} testId="stat-applications" />
         <Stat
@@ -299,7 +307,12 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
         />
       </section>
 
-      <section className="mt-8" aria-labelledby="portfolio-heading" data-testid="applicant-portfolio-section">
+      <section
+        ref={portfolioRef}
+        className="mt-8 scroll-mt-4"
+        aria-labelledby="portfolio-heading"
+        data-testid="applicant-portfolio-section"
+      >
         <h2 id="portfolio-heading" className="text-lg font-bold text-slate-950">
           Application portfolio
         </h2>
@@ -307,54 +320,11 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           Brand applications: {profile.brandApplicationCount} of {profile.applicationCount}. Applied-for
           strings are Applications under this Applicant — not separate Organizations.
         </p>
-        <div
-          className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700"
-          data-testid="portfolio-observation-basis"
-        >
-          <p className="font-semibold text-slate-900">String status observation</p>
-          <p className="mt-1 leading-6">{observation.publicationBasisLabel}</p>
-          <p className="mt-1 text-xs text-slate-600">
-            Application snapshot {observation.applicationSnapshotId} · published{" "}
-            {observation.publishedAt}
-            {observation.contentionSnapshotId
-              ? ` · contention ${observation.contentionSnapshotId}`
-              : " · contention not bound"}
-          </p>
-          <p className="mt-1 text-xs text-slate-600">{SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE}</p>
-          {observation.scdContentionEvidence === "ready" ? (
-            <p className="mt-2 text-xs text-slate-700" data-testid="portfolio-string-status-summary">
-              Active without SCD contention: {summary.activeUncontestedInScdCapture} · Active in SCD
-              contention: {summary.activeContestedInScdCapture} · Selected replacements:{" "}
-              {summary.selectedReplacements} · Award established: {summary.awardEstablishedCount}
-            </p>
-          ) : null}
-        </div>
-        <div
-          className="mt-3 flex flex-wrap gap-2"
-          role="group"
-          aria-label="Portfolio filters"
-          data-testid="portfolio-filters"
-        >
-          {PORTFOLIO_FILTERS.map((f) => {
-            const active = portfolioFilter === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setPortfolioFilter(f.id)}
-                className={`rounded border px-2.5 py-1 text-xs font-semibold ${
-                  active
-                    ? "border-[#006a56] bg-[#006a56] text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-slate-400"
-                }`}
-                data-testid={`portfolio-filter-${f.id}`}
-                aria-pressed={active}
-              >
-                {f.label}
-              </button>
-            );
-          })}
-        </div>
+        <ProfilePortfolioFilterBar
+          activeFilter={portfolioFilter}
+          onChange={selectPortfolioFilter}
+          showClear
+        />
         <ul className="mt-4 space-y-2 md:hidden" data-testid="portfolio-mobile-list">
           {filteredPortfolio.map((row) => (
             <PortfolioRowCard key={row.applicationId} row={row} />
@@ -439,7 +409,23 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           <p className="mt-3 text-sm text-slate-600" data-testid="portfolio-filter-empty">
             No applications match this filter.
           </p>
-        ) : null}
+        ) : (
+          <p className="mt-3 text-xs text-slate-500" data-testid="portfolio-filter-count">
+            Showing {filteredPortfolio.length} of {profile.portfolio.length} applications
+            {portfolioFilter !== "all" ? (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="font-semibold text-[#006a56] underline"
+                  onClick={() => selectPortfolioFilter("all")}
+                >
+                  Show all
+                </button>
+              </>
+            ) : null}
+          </p>
+        )}
       </section>
 
       <section className="mt-8" aria-labelledby="contention-heading" data-testid="applicant-contention-section">

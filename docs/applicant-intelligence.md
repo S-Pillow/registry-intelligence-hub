@@ -47,11 +47,24 @@ Unknown names render a clear not-found state.
 | Identity evidence | Applicant Website / parent / control fields on Organization overlay |
 | Provenance | Existing Data & methodology / drawer patterns |
 
-## At-a-glance counts
+## Application status summary (primary)
+
+Immediately beneath the profile heading, four clickable summary cards are the primary business summary:
+
+- Total applications
+- No published SCD contention
+- Still contested
+- Selected replacement strings
+
+Cards filter the Application portfolio and scroll it into view. Secondary “Additional intelligence” metrics retain Brand, RSP, counterparts, and cross-round context.
+
+Verbose snapshot IDs / hashes live in expandable **Source details**. The visible line is of the form: `Source: ICANN String Confirmation Day · November 18, 2026 capture`. Uncontested ≠ awarded remains disclosed. When SCD contention evidence is not ready, uncontested/contested cards show **Unavailable** (never inferred zeros).
+
+## At-a-glance counts (secondary)
 
 - Applications
 - Brand applications (`N of total`)
-- Applications in official initial contention
+- Applications in official initial contention (or SCD contention wording on SCD snapshots)
 - Unique contention sets
 - Distinct counterpart Applicants
 - Public Main-RSP posture
@@ -78,7 +91,7 @@ Portfolio rows answer: which strings this Applicant is pursuing, which are uncon
 | Official award | `not_established` unless separate authoritative award/delegation evidence exists; uncontested ≠ awarded |
 | Contested navigation | Portfolio rows in SCD contention link to `/contention?set=<id>` |
 
-Observation basis (snapshot IDs + timestamps) is labeled on the profile. Profile copy uses “SCD contention” / “published contention” on SCD snapshots and retains “initial contention” on Reveal Day snapshots. Classification rules are unchanged.
+Observation basis (snapshot IDs + timestamps) is available under Source details. Profile copy uses “SCD contention” / “published contention” on SCD snapshots and retains “initial contention” on Reveal Day snapshots. Classification lives in `src/lib/application-string-status.ts` and is shared with Organization Profiles (Confirmed represented Applicants only — never RSP customers by service use).
 
 Portable acceptance cohort: `src/lib/fixtures/applicant-string-status-scd-cohort/` (provenance-documented extraction from the approved SCD candidate; no `/tmp` dependency for `npm run test`).
 

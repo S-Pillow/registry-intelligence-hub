@@ -13,10 +13,6 @@ import {
   type ParticipantRow,
   type ParticipantIdentityEvidenceOverlay,
 } from "@/lib/participant-intelligence";
-
-function applicantHref(applicantLegalName: string): string {
-  return `/applicant?name=${encodeURIComponent(applicantLegalName)}`;
-}
 import {
   buildRspOpportunityIntelligence,
   prospectingPostureLabel,
@@ -29,6 +25,25 @@ import {
   lineagesForCurrentOrganizationKey,
   relationshipTypeLabel,
 } from "@/historical-organization-lineage/load-lineage";
+import {
+  buildContentionSetMemberIndex,
+  buildStringStatusObservation,
+  classifyApplicationStringStatus,
+  filterApplicationPortfolio,
+  resolveScdContentionEvidenceStatus,
+  summarizeApplicationStringStatus,
+  type ApplicationOfficialAwardOutcome,
+  type ApplicationPortfolioFilter,
+  type ApplicationScdContentionStatus,
+  type ApplicationStringCompetitor,
+  type ApplicationStringSelectionMode,
+  type ApplicationStringStatusObservation,
+  type ApplicationStringStatusSummary,
+} from "@/lib/application-string-status";
+
+function applicantHref(applicantLegalName: string): string {
+  return `/applicant?name=${encodeURIComponent(applicantLegalName)}`;
+}
 
 export type OrganizationApplicantMember = {
   applicantLegalName: string;
@@ -46,12 +61,27 @@ export type OrganizationApplicantMember = {
 
 export type OrganizationPortfolioRow = {
   applicationId: string;
+  /** Original applied-for string (base Application label). */
   appliedForString: string;
+  originalAppliedForString: string;
+  selectedCurrentString: string;
+  selectedReplacementApplicationId: string | null;
+  replacementStringLabel: string | null;
+  selectionMode: ApplicationStringSelectionMode;
+  selectionUnresolvedReason: string | null;
+  /** Status of the selected/current string (Active `-R` when selected replacement). */
+  currentApplicationStatus: string | null;
   applicantLegalName: string;
   brand: boolean;
+  /** Base Application status as published (may be Deactivated when `-R` is selected). */
   applicationStatus: string | null;
   inInitialContention: boolean;
   officialContentionSetIds: string[];
+  scdContentionStatus: ApplicationScdContentionStatus;
+  scdContentionSetId: string | null;
+  competitors: ApplicationStringCompetitor[];
+  officialAwardOutcome: ApplicationOfficialAwardOutcome;
+  contentionSetHref: string | null;
   exploreHref: string;
   applicantProfileHref: string;
 };
@@ -95,6 +125,8 @@ export type OrganizationIntelligenceProfile = {
   distinctExternalCounterpartApplicants: number;
   applicants: OrganizationApplicantMember[];
   portfolio: OrganizationPortfolioRow[];
+  stringStatusObservation: ApplicationStringStatusObservation;
+  stringStatusSummary: ApplicationStringStatusSummary;
   contentionSets: OrganizationContentionSetSummary[];
   counterparts: OrganizationCounterpart[];
   evidenceSummary: {
@@ -250,19 +282,21 @@ export function buildOrganizationIntelligenceProfile(
         a.applicantLegalName.localeCompare(b.applicantLegalName),
     );
 
+  const scdEvidence = resolveScdContentionEvidenceStatus(document);
+  const setMembers = buildContentionSetMemberIndex(document.applications);
+  const stringStatusObservation = buildStringStatusObservation(document);
+
   const portfolio: OrganizationPortfolioRow[] = document.applications
     .filter((a) => memberNames.has(a.applicant))
     .map((app: BrowserApplicationV2) => {
-      const oc = app.officialContention;
-      const setIds = oc?.membershipPresent ? [...oc.officialContentionSetIds].sort() : [];
+      const classified = classifyApplicationStringStatus(app, scdEvidence, setMembers);
       return {
         applicationId: app.applicationId,
-        appliedForString: app.appliedString?.label ?? "",
+        appliedForString: classified.originalAppliedForString,
+        ...classified,
         applicantLegalName: app.applicant,
         brand: Boolean(app.designations.brand),
         applicationStatus: app.applicationStatus ?? null,
-        inInitialContention: Boolean(oc?.membershipPresent),
-        officialContentionSetIds: setIds,
         exploreHref: `/explore?q=${encodeURIComponent(app.applicationId)}`,
         applicantProfileHref: applicantHref(app.applicant),
       };
@@ -273,21 +307,10 @@ export function buildOrganizationIntelligenceProfile(
         a.applicationId.localeCompare(b.applicationId),
     );
 
+  const stringStatusSummary = summarizeApplicationStringStatus(portfolio);
   const brandApplicationCount = portfolio.filter((p) => p.brand).length;
   const contestedApplicationCount = portfolio.filter((p) => p.inInitialContention).length;
   const contentionMemberships = memberRows.reduce((n, p) => n + p.officialContentionMemberships, 0);
-
-  // Contention sets involving any Organization Application
-  const setMembers = new Map<string, BrowserApplicationV2[]>();
-  for (const app of document.applications) {
-    const oc = app.officialContention;
-    if (!oc?.membershipPresent) continue;
-    for (const setId of oc.officialContentionSetIds) {
-      const list = setMembers.get(setId) ?? [];
-      list.push(app);
-      setMembers.set(setId, list);
-    }
-  }
 
   const contentionSets: OrganizationContentionSetSummary[] = [];
   const counterpartAcc = new Map<
@@ -435,6 +458,8 @@ export function buildOrganizationIntelligenceProfile(
     distinctExternalCounterpartApplicants: counterparts.length,
     applicants,
     portfolio,
+    stringStatusObservation,
+    stringStatusSummary,
     contentionSets,
     counterparts,
     evidenceSummary,
@@ -452,3 +477,11 @@ export function buildOrganizationIntelligenceProfile(
     contentionHref: `/contention?view=all&q=${encodeURIComponent(org.canonicalName)}`,
   };
 }
+
+export function filterOrganizationPortfolio(
+  portfolio: ReadonlyArray<OrganizationPortfolioRow>,
+  filter: ApplicationPortfolioFilter,
+): OrganizationPortfolioRow[] {
+  return filterApplicationPortfolio(portfolio, filter);
+}
+
