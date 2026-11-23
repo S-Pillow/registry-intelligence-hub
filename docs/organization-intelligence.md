@@ -46,7 +46,7 @@ Never collapse these. Portfolio aggregation always retains legal Applicant attri
 
 ## Application status summary (primary)
 
-Same four clickable summary cards as Applicant Profiles (Total applications / No competing applications / Still contested / Replacement strings selected), driven by `src/lib/application-string-status.ts`.
+Same four clickable summary cards as Applicant Profiles (Total applications / Applications with no published competitors / Applications facing competition / Replacement strings selected), driven by `src/lib/application-string-status.ts`.
 
 Organization counts aggregate **distinct Applications belonging to Confirmed represented Applicant legal entities** for that Organization. Do not include RSP customers solely because they use the Organization’s registry services. Replacement strings use the current `-R` string and status.
 

@@ -50,7 +50,7 @@ export function ScdProfileSummaryCards({
     {
       id: "no_scd_contention",
       filter: "no_scd_contention",
-      label: "No competing applications",
+      label: "Applications with no published competitors",
       testId: "scd-summary-uncontested",
       value: summary.activeUncontestedInScdCapture,
       available: scdReady,
@@ -59,7 +59,7 @@ export function ScdProfileSummaryCards({
     {
       id: "still_in_contention",
       filter: "still_in_contention",
-      label: "Still contested",
+      label: "Applications facing competition",
       testId: "scd-summary-contested",
       value: summary.activeContestedInScdCapture,
       available: scdReady,

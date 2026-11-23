@@ -421,9 +421,9 @@ export function filterApplicationPortfolio<
 export function scdContentionStatusLabel(status: ApplicationScdContentionStatus): string {
   switch (status) {
     case "contested":
-      return "Still contested";
+      return "Applications facing competition";
     case "uncontested_in_scd_capture":
-      return "No competing applications";
+      return "Applications with no published competitors";
     case "n/a_withdrawn":
       return "Withdrawn";
     case "unavailable":
@@ -457,7 +457,7 @@ export const SCD_CONTENTION_SET_PLAIN_LANGUAGE =
   "A contention set groups Applications that ICANN has identified as competing with one another. A set with 13 Applications means 13 Applications are in that competition group; those Applications may represent fewer than 13 distinct Applicants. These are published String Confirmation Day contention memberships and may change as the program progresses — not a prediction of final outcome.";
 
 export const SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE =
-  "“No competing applications” means none are recorded in the published contention data; it does not establish an award.";
+  "“Applications with no published competitors” means none are recorded in the published contention data; it does not establish an award.";
 
 /** True when the profile observation is on an SCD application snapshot (wording only). */
 export function isScdApplicationObservation(
@@ -469,7 +469,9 @@ export function isScdApplicationObservation(
 export function contestedApplicationsStatLabel(
   observation: Pick<ApplicationStringStatusObservation, "applicationSnapshotId">,
 ): string {
-  return isScdApplicationObservation(observation) ? "Still contested" : "In initial contention";
+  return isScdApplicationObservation(observation)
+    ? "Applications facing competition"
+    : "In initial contention";
 }
 
 export function contentionSetExplanation(
@@ -485,7 +487,7 @@ export function noContentionMembershipsLabel(
   subject: "Applicant" | "Organization" = "Applicant",
 ): string {
   return isScdApplicationObservation(observation)
-    ? `No competing applications are recorded in the published contention data for this ${subject}.`
+    ? `No published competitors are recorded in the contention data for this ${subject}.`
     : `No official initial contention memberships for this ${subject}.`;
 }
 
@@ -521,8 +523,8 @@ export const PROFILE_PORTFOLIO_FILTERS: Array<{
   label: string;
 }> = [
   { id: "all", label: "All applications" },
-  { id: "no_scd_contention", label: "No competing applications" },
-  { id: "still_in_contention", label: "Still contested" },
+  { id: "no_scd_contention", label: "Applications with no published competitors" },
+  { id: "still_in_contention", label: "Applications facing competition" },
   { id: "selected_replacements", label: "Replacement strings selected" },
   { id: "withdrawn_or_unresolved", label: "Withdrawn or unresolved" },
 ];

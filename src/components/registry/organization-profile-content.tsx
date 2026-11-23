@@ -498,8 +498,10 @@ function ProfileFound({
               data-testid="portfolio-filter-contention"
             >
               <option value="all">All</option>
-              <option value="in">{scdReady ? "Still contested" : "In contention"}</option>
-              <option value="out">{scdReady ? "No competing applications" : "Not in contention"}</option>
+              <option value="in">{scdReady ? "Applications facing competition" : "In contention"}</option>
+              <option value="out">
+                {scdReady ? "Applications with no published competitors" : "Not in contention"}
+              </option>
             </select>
           </label>
           <label className="text-sm text-slate-700 sm:flex-1">

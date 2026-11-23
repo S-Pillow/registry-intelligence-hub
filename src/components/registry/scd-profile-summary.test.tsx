@@ -280,20 +280,22 @@ describe("SCD profile summary UX — Applicant", () => {
     expect(screen.getByTestId("scd-summary-total")).toHaveTextContent("Total applications");
     expect(screen.getByTestId("scd-summary-total")).toHaveTextContent("4");
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(
-      "No competing applications",
+      "Applications with no published competitors",
     );
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent("2");
-    expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("Still contested");
+    expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent(
+      "Applications facing competition",
+    );
     expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("2");
     expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent(
       "Replacement strings selected",
     );
     expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent("2");
     expect(screen.getByTestId("portfolio-filter-no_scd_contention")).toHaveTextContent(
-      "No competing applications",
+      "Applications with no published competitors",
     );
     expect(screen.getByTestId("portfolio-filter-still_in_contention")).toHaveTextContent(
-      "Still contested",
+      "Applications facing competition",
     );
     expect(screen.getByTestId("portfolio-filter-selected_replacements")).toHaveTextContent(
       "Replacement strings selected",
@@ -307,7 +309,9 @@ describe("SCD profile summary UX — Applicant", () => {
     expect(screen.getByTestId("profile-source-line")).not.toHaveTextContent(/SCD contention/i);
     expect(screen.getByTestId("scd-profile-summary")).not.toHaveTextContent(/SCD contention/i);
     expect(screen.getByTestId("source-details")).toBeInTheDocument();
-    expect(screen.getByTestId("stat-contested")).toHaveTextContent("Still contested");
+    expect(screen.getByTestId("stat-contested")).toHaveTextContent(
+      "Applications facing competition",
+    );
     expect(screen.getByRole("columnheader", { name: "Competition status" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("scd-summary-uncontested"));
@@ -441,7 +445,7 @@ describe("SCD profile summary UX — Organization", () => {
     render(<OrganizationProfileContent lookup={orgLookup({ portfolio })} />);
 
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(
-      "No competing applications",
+      "Applications with no published competitors",
     );
     expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent(
       "Replacement strings selected",
