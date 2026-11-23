@@ -50,7 +50,7 @@ export function ScdProfileSummaryCards({
     {
       id: "no_scd_contention",
       filter: "no_scd_contention",
-      label: "No published SCD contention",
+      label: "No competing applications",
       testId: "scd-summary-uncontested",
       value: summary.activeUncontestedInScdCapture,
       available: scdReady,
@@ -68,7 +68,7 @@ export function ScdProfileSummaryCards({
     {
       id: "selected_replacements",
       filter: "selected_replacements",
-      label: "Selected replacement strings",
+      label: "Replacement strings selected",
       testId: "scd-summary-replacements",
       value: summary.selectedReplacements,
       available: true,
@@ -115,7 +115,7 @@ export function ScdProfileSummaryCards({
               <p className="mt-1 text-2xl font-bold tabular-nums">{display}</p>
               {!card.available ? (
                 <p className={`mt-1 text-[11px] ${active ? "text-white/80" : "text-slate-500"}`}>
-                  SCD contention evidence not available
+                  Published contention data not available
                 </p>
               ) : null}
             </button>

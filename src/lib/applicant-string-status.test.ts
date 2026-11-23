@@ -434,9 +434,7 @@ describe("portable SCD cohort acceptance — Registry Services, LLC", () => {
     expect(summary.unresolvedSelections).toBe(0);
     expect(summary.awardEstablishedCount).toBe(0);
 
-    expect(contestedApplicationsStatLabel(profile.stringStatusObservation)).toBe(
-      "In SCD contention",
-    );
+    expect(contestedApplicationsStatLabel(profile.stringStatusObservation)).toBe("Still contested");
 
     const brand = profile.portfolio.find((r) => r.originalAppliedForString === "brand");
     expect(brand).toMatchObject({

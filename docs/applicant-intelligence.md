@@ -52,13 +52,13 @@ Unknown names render a clear not-found state.
 Immediately beneath the profile heading, four clickable summary cards are the primary business summary:
 
 - Total applications
-- No published SCD contention
+- No competing applications
 - Still contested
-- Selected replacement strings
+- Replacement strings selected
 
 Cards filter the Application portfolio and scroll it into view. Secondary “Additional intelligence” metrics retain Brand, RSP, counterparts, and cross-round context.
 
-Verbose snapshot IDs / hashes live in expandable **Source details**. The visible line is of the form: `Source: ICANN String Confirmation Day · November 18, 2026 capture`. Uncontested ≠ awarded remains disclosed. When SCD contention evidence is not ready, uncontested/contested cards show **Unavailable** (never inferred zeros).
+Verbose snapshot IDs / hashes live in expandable **Source details**. The visible line is of the form: `Source: ICANN String Confirmation Day · November 18, 2026 capture`. “No competing applications” means none are recorded in the published contention data; it does not establish an award. When published contention evidence is not ready, competing/contested cards show **Unavailable** (never inferred zeros).
 
 ## At-a-glance counts (secondary)
 

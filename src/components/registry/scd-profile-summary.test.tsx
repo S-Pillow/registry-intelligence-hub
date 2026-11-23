@@ -262,7 +262,7 @@ const samplePortfolio: ApplicantPortfolioRow[] = [
 ];
 
 describe("SCD profile summary UX — Applicant", () => {
-  it("renders clickable summary cards and filters portfolio rows", () => {
+  it("renders exact plain-English labels and filters portfolio rows", () => {
     render(
       <ApplicantProfileContent
         lookup={applicantLookup({
@@ -277,17 +277,38 @@ describe("SCD profile summary UX — Applicant", () => {
       />,
     );
 
+    expect(screen.getByTestId("scd-summary-total")).toHaveTextContent("Total applications");
     expect(screen.getByTestId("scd-summary-total")).toHaveTextContent("4");
+    expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(
+      "No competing applications",
+    );
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent("2");
+    expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("Still contested");
     expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("2");
+    expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent(
+      "Replacement strings selected",
+    );
     expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent("2");
+    expect(screen.getByTestId("portfolio-filter-no_scd_contention")).toHaveTextContent(
+      "No competing applications",
+    );
+    expect(screen.getByTestId("portfolio-filter-still_in_contention")).toHaveTextContent(
+      "Still contested",
+    );
+    expect(screen.getByTestId("portfolio-filter-selected_replacements")).toHaveTextContent(
+      "Replacement strings selected",
+    );
     expect(screen.getByTestId("profile-source-line")).toHaveTextContent(
       /ICANN String Confirmation Day · November 18, 2026 capture/i,
     );
-    expect(screen.getByTestId("source-details")).toBeInTheDocument();
-    expect(screen.getByTestId("profile-source-line")).not.toHaveTextContent(
-      /snap-aps-2026-applications-string-confirmation-v1/,
+    expect(screen.getByTestId("profile-source-summary")).toHaveTextContent(
+      /none are recorded in the published contention data/i,
     );
+    expect(screen.getByTestId("profile-source-line")).not.toHaveTextContent(/SCD contention/i);
+    expect(screen.getByTestId("scd-profile-summary")).not.toHaveTextContent(/SCD contention/i);
+    expect(screen.getByTestId("source-details")).toBeInTheDocument();
+    expect(screen.getByTestId("stat-contested")).toHaveTextContent("Still contested");
+    expect(screen.getByRole("columnheader", { name: "Competition status" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("scd-summary-uncontested"));
     const table = screen.getByTestId("portfolio-table");
@@ -315,7 +336,7 @@ describe("SCD profile summary UX — Applicant", () => {
     expect(within(table).getByTestId("portfolio-row-A3")).toBeInTheDocument();
   });
 
-  it("shows unavailable SCD counts instead of zeros when evidence is missing", () => {
+  it("shows unavailable competing/contested state instead of zeros when evidence is missing", () => {
     render(
       <ApplicantProfileContent
         lookup={applicantLookup({
@@ -337,15 +358,53 @@ describe("SCD profile summary UX — Applicant", () => {
       />,
     );
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(/Unavailable/i);
+    expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(
+      /Published contention data not available/i,
+    );
     expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent(/Unavailable/i);
     expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent("2");
     expect(screen.getByTestId("profile-source-line")).toHaveTextContent(/Reveal Day/i);
     expect(screen.getByTestId("stat-contested")).toHaveTextContent(/In initial contention/i);
+    expect(screen.getByTestId("scd-profile-summary")).not.toHaveTextContent(/SCD contention/i);
+  });
+
+  it("keeps Active-status consistency between contested card count and filtered rows", () => {
+    const portfolio = [
+      ...samplePortfolio,
+      mkApplicantRow({
+        applicationId: "A5",
+        appliedForString: "legacy",
+        currentApplicationStatus: "Deactivated",
+        applicationStatus: "Deactivated",
+        scdContentionStatus: "contested",
+        scdContentionSetId: "99",
+      }),
+    ];
+    render(
+      <ApplicantProfileContent
+        lookup={applicantLookup({
+          portfolio,
+          summary: {
+            applicationCount: 5,
+            activeUncontestedInScdCapture: 2,
+            activeContestedInScdCapture: 2,
+            selectedReplacements: 2,
+          },
+        })}
+      />,
+    );
+    expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("2");
+    fireEvent.click(screen.getByTestId("scd-summary-contested"));
+    const table = screen.getByTestId("portfolio-table");
+    expect(within(table).getByTestId("portfolio-row-A2")).toBeInTheDocument();
+    expect(within(table).getByTestId("portfolio-row-A4")).toBeInTheDocument();
+    expect(within(table).queryByTestId("portfolio-row-A5")).not.toBeInTheDocument();
+    expect(screen.getByTestId("portfolio-filter-count")).toHaveTextContent("Showing 2 of 5");
   });
 });
 
 describe("SCD profile summary UX — Organization", () => {
-  it("filters multi-applicant portfolio from summary cards", () => {
+  it("filters multi-applicant portfolio from summary cards with plain-English labels", () => {
     const portfolio: OrganizationPortfolioRow[] = [
       mkOrgRow({
         applicationId: "B1",
@@ -381,6 +440,12 @@ describe("SCD profile summary UX — Organization", () => {
 
     render(<OrganizationProfileContent lookup={orgLookup({ portfolio })} />);
 
+    expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent(
+      "No competing applications",
+    );
+    expect(screen.getByTestId("scd-summary-replacements")).toHaveTextContent(
+      "Replacement strings selected",
+    );
     expect(screen.getByTestId("scd-summary-total")).toHaveTextContent("3");
     expect(screen.getByTestId("scd-summary-uncontested")).toHaveTextContent("2");
     expect(screen.getByTestId("scd-summary-contested")).toHaveTextContent("1");
@@ -400,5 +465,70 @@ describe("SCD profile summary UX — Organization", () => {
     fireEvent.click(screen.getByTestId("portfolio-filter-clear"));
     expect(within(table).getByTestId("org-portfolio-row-B1")).toBeInTheDocument();
     expect(within(table).getByTestId("org-portfolio-row-B2")).toBeInTheDocument();
+  });
+
+  it("clears Applicant/Brand/Contention/Search filters when a summary card is clicked", () => {
+    const portfolio: OrganizationPortfolioRow[] = [
+      mkOrgRow({
+        applicationId: "B1",
+        appliedForString: "alpha",
+        applicantLegalName: "Applicant One, LLC",
+        brand: true,
+        scdContentionStatus: "uncontested_in_scd_capture",
+      }),
+      mkOrgRow({
+        applicationId: "B2",
+        appliedForString: "beta",
+        applicantLegalName: "Applicant Two, Inc.",
+        brand: false,
+        scdContentionStatus: "contested",
+        scdContentionSetId: "9",
+        contentionSetHref: "/contention?set=9",
+      }),
+      mkOrgRow({
+        applicationId: "B3",
+        appliedForString: "gamma",
+        applicantLegalName: "Applicant One, LLC",
+        brand: false,
+        scdContentionStatus: "uncontested_in_scd_capture",
+      }),
+    ];
+
+    render(<OrganizationProfileContent lookup={orgLookup({ portfolio })} />);
+
+    fireEvent.change(screen.getByTestId("portfolio-filter-applicant"), {
+      target: { value: "Applicant One, LLC" },
+    });
+    fireEvent.change(screen.getByTestId("portfolio-filter-brand"), {
+      target: { value: "brand" },
+    });
+    fireEvent.change(screen.getByTestId("portfolio-filter-contention"), {
+      target: { value: "out" },
+    });
+    fireEvent.change(screen.getByTestId("portfolio-search"), {
+      target: { value: "alpha" },
+    });
+
+    const table = screen.getByTestId("org-portfolio-table");
+    expect(within(table).getByTestId("org-portfolio-row-B1")).toBeInTheDocument();
+    expect(within(table).queryByTestId("org-portfolio-row-B2")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("scd-summary-contested"));
+    expect(screen.getByTestId("portfolio-filter-applicant")).toHaveValue("all");
+    expect(screen.getByTestId("portfolio-filter-brand")).toHaveValue("all");
+    expect(screen.getByTestId("portfolio-filter-contention")).toHaveValue("all");
+    expect(screen.getByTestId("portfolio-search")).toHaveValue("");
+    expect(within(table).getByTestId("org-portfolio-row-B2")).toBeInTheDocument();
+    expect(within(table).queryByTestId("org-portfolio-row-B1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("org-portfolio-filter-count")).toHaveTextContent("Showing 1 of 3");
+
+    fireEvent.change(screen.getByTestId("portfolio-filter-applicant"), {
+      target: { value: "Applicant Two, Inc." },
+    });
+    fireEvent.click(screen.getByTestId("portfolio-filter-clear"));
+    expect(screen.getByTestId("portfolio-filter-applicant")).toHaveValue("all");
+    expect(within(table).getByTestId("org-portfolio-row-B1")).toBeInTheDocument();
+    expect(within(table).getByTestId("org-portfolio-row-B2")).toBeInTheDocument();
+    expect(within(table).getByTestId("org-portfolio-row-B3")).toBeInTheDocument();
   });
 });

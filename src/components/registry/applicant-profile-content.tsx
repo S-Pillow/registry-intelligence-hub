@@ -338,7 +338,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
                 <th className="px-2 py-2 font-semibold">Selected</th>
                 <th className="px-2 py-2 font-semibold">Application ID</th>
                 <th className="px-2 py-2 font-semibold">Status</th>
-                <th className="px-2 py-2 font-semibold">SCD contention</th>
+                <th className="px-2 py-2 font-semibold">Competition status</th>
                 <th className="px-2 py-2 font-semibold">Competitors</th>
                 <th className="px-2 py-2 font-semibold">Award</th>
               </tr>
@@ -608,7 +608,7 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
           <li>
             {observation.scdContentionEvidence === "ready" ||
             observation.applicationSnapshotId.includes("string-confirmation")
-              ? "Published SCD contention membership capture"
+              ? "Published String Confirmation Day contention membership capture"
               : "Official initial contention membership publication"}
           </li>
           {evidence?.applicantWebsiteHost ? <li>ICANN Applicant Website / Application Responses</li> : null}

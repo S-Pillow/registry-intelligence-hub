@@ -392,9 +392,17 @@ export function filterApplicationPortfolio<
 >(portfolio: ReadonlyArray<T>, filter: ApplicationPortfolioFilter): T[] {
   switch (filter) {
     case "no_scd_contention":
-      return portfolio.filter((r) => r.scdContentionStatus === "uncontested_in_scd_capture");
+      // Match summary card Active-status rule for uncontested counts.
+      return portfolio.filter(
+        (r) =>
+          r.currentApplicationStatus === "Active" &&
+          r.scdContentionStatus === "uncontested_in_scd_capture",
+      );
     case "still_in_contention":
-      return portfolio.filter((r) => r.scdContentionStatus === "contested");
+      // Match summary card Active-status rule for contested counts.
+      return portfolio.filter(
+        (r) => r.currentApplicationStatus === "Active" && r.scdContentionStatus === "contested",
+      );
     case "selected_replacements":
       return portfolio.filter((r) => r.selectionMode === "selected-replacement");
     case "withdrawn_or_unresolved":
@@ -413,13 +421,13 @@ export function filterApplicationPortfolio<
 export function scdContentionStatusLabel(status: ApplicationScdContentionStatus): string {
   switch (status) {
     case "contested":
-      return "Still in SCD contention";
+      return "Still contested";
     case "uncontested_in_scd_capture":
-      return "No published SCD contention";
+      return "No competing applications";
     case "n/a_withdrawn":
-      return "Withdrawn (SCD N/A)";
+      return "Withdrawn";
     case "unavailable":
-      return "SCD contention unavailable";
+      return "Competition status unavailable";
     case "unresolved":
       return "Unresolved";
     default:
@@ -432,9 +440,9 @@ export function selectionModeLabel(mode: ApplicationStringSelectionMode): string
     case "original-only":
       return "Original string";
     case "kept-original-unselected-replacement":
-      return "Kept original (unselected replacement)";
+      return "Kept original (replacement not selected)";
     case "selected-replacement":
-      return "Selected replacement";
+      return "Replacement string selected";
     case "unresolved":
       return "Unresolved selection";
     default:
@@ -449,7 +457,7 @@ export const SCD_CONTENTION_SET_PLAIN_LANGUAGE =
   "A contention set groups Applications that ICANN has identified as competing with one another. A set with 13 Applications means 13 Applications are in that competition group; those Applications may represent fewer than 13 distinct Applicants. These are published String Confirmation Day contention memberships and may change as the program progresses — not a prediction of final outcome.";
 
 export const SCD_UNCONTESTED_NOT_AWARDED_PLAIN_LANGUAGE =
-  "No published SCD contention membership is not an official award. Award/delegation requires separate authoritative evidence.";
+  "“No competing applications” means none are recorded in the published contention data; it does not establish an award.";
 
 /** True when the profile observation is on an SCD application snapshot (wording only). */
 export function isScdApplicationObservation(
@@ -461,7 +469,7 @@ export function isScdApplicationObservation(
 export function contestedApplicationsStatLabel(
   observation: Pick<ApplicationStringStatusObservation, "applicationSnapshotId">,
 ): string {
-  return isScdApplicationObservation(observation) ? "In SCD contention" : "In initial contention";
+  return isScdApplicationObservation(observation) ? "Still contested" : "In initial contention";
 }
 
 export function contentionSetExplanation(
@@ -477,7 +485,7 @@ export function noContentionMembershipsLabel(
   subject: "Applicant" | "Organization" = "Applicant",
 ): string {
   return isScdApplicationObservation(observation)
-    ? `No published SCD contention memberships for this ${subject}.`
+    ? `No competing applications are recorded in the published contention data for this ${subject}.`
     : `No official initial contention memberships for this ${subject}.`;
 }
 
@@ -492,7 +500,7 @@ export function formatProfileSourceLine(
       : "Source: ICANN String Confirmation Day";
   }
   if (isStringConfirmationSnapshotId(observation.applicationSnapshotId)) {
-    return "Source: String Confirmation Day applications — SCD contention evidence unavailable";
+    return "Source: String Confirmation Day applications — published contention data unavailable";
   }
   return "Source: Reveal Day / historical publication basis";
 }
@@ -513,8 +521,8 @@ export const PROFILE_PORTFOLIO_FILTERS: Array<{
   label: string;
 }> = [
   { id: "all", label: "All applications" },
-  { id: "no_scd_contention", label: "No published SCD contention" },
-  { id: "still_in_contention", label: "Still in contention" },
-  { id: "selected_replacements", label: "Selected replacements" },
+  { id: "no_scd_contention", label: "No competing applications" },
+  { id: "still_in_contention", label: "Still contested" },
+  { id: "selected_replacements", label: "Replacement strings selected" },
   { id: "withdrawn_or_unresolved", label: "Withdrawn or unresolved" },
 ];

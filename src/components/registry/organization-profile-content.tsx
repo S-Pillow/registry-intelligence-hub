@@ -18,7 +18,6 @@ import {
   ProfilePortfolioFilterBar,
   ProfileSourceSummary,
   ScdProfileSummaryCards,
-  usePortfolioFilterNavigation,
 } from "@/components/registry/scd-profile-summary";
 import {
   contestedApplicationsStatLabel,
@@ -144,10 +143,25 @@ function ProfileFound({
   const [portfolioFilter, setPortfolioFilter] = useState<ApplicationPortfolioFilter>("all");
   const [portfolioQ, setPortfolioQ] = useState("");
   const portfolioRef = useRef<HTMLElement | null>(null);
-  const selectPortfolioFilter = usePortfolioFilterNavigation(portfolioRef, setPortfolioFilter);
   const observation = profile.stringStatusObservation;
   const summary = profile.stringStatusSummary;
   const scdReady = observation.scdContentionEvidence === "ready";
+
+  const clearSecondaryPortfolioFilters = () => {
+    setApplicantFilter("all");
+    setBrandFilter("all");
+    setContentionFilter("all");
+    setPortfolioQ("");
+  };
+
+  /** Summary cards and "Show all" reset conflicting secondary filters so counts match rows. */
+  const selectPortfolioFilter = (filter: ApplicationPortfolioFilter) => {
+    clearSecondaryPortfolioFilters();
+    setPortfolioFilter(filter);
+    requestAnimationFrame(() => {
+      portfolioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const filteredPortfolio = useMemo(() => {
     const q = portfolioQ.trim().toLowerCase();
@@ -157,14 +171,24 @@ function ProfileFound({
       if (brandFilter === "non-brand" && row.brand) return false;
       if (contentionFilter === "in") {
         if (scdReady) {
-          if (row.scdContentionStatus !== "contested") return false;
+          if (
+            row.currentApplicationStatus !== "Active" ||
+            row.scdContentionStatus !== "contested"
+          ) {
+            return false;
+          }
         } else if (!row.inInitialContention) {
           return false;
         }
       }
       if (contentionFilter === "out") {
         if (scdReady) {
-          if (row.scdContentionStatus !== "uncontested_in_scd_capture") return false;
+          if (
+            row.currentApplicationStatus !== "Active" ||
+            row.scdContentionStatus !== "uncontested_in_scd_capture"
+          ) {
+            return false;
+          }
         } else if (row.inInitialContention) {
           return false;
         }
@@ -474,8 +498,8 @@ function ProfileFound({
               data-testid="portfolio-filter-contention"
             >
               <option value="all">All</option>
-              <option value="in">{scdReady ? "Still contested (SCD)" : "In contention"}</option>
-              <option value="out">{scdReady ? "No SCD contention" : "Not in contention"}</option>
+              <option value="in">{scdReady ? "Still contested" : "In contention"}</option>
+              <option value="out">{scdReady ? "No competing applications" : "Not in contention"}</option>
             </select>
           </label>
           <label className="text-sm text-slate-700 sm:flex-1">
@@ -503,7 +527,7 @@ function ProfileFound({
                 <th className="px-2 py-2 font-semibold">Application ID</th>
                 <th className="px-2 py-2 font-semibold">Applicant</th>
                 <th className="px-2 py-2 font-semibold">Status</th>
-                <th className="px-2 py-2 font-semibold">SCD contention</th>
+                <th className="px-2 py-2 font-semibold">Competition status</th>
                 <th className="px-2 py-2 font-semibold">Competitors</th>
               </tr>
             </thead>
@@ -783,7 +807,7 @@ function ProfileFound({
             Contention:{" "}
             {observation.scdContentionEvidence === "ready" ||
             observation.applicationSnapshotId.includes("string-confirmation")
-              ? "Published SCD contention membership capture"
+              ? "Published String Confirmation Day contention membership capture"
               : "Official initial contention memberships"}
           </li>
           <li>RSP: official evaluated-RSP source where applicable</li>

@@ -46,11 +46,11 @@ Never collapse these. Portfolio aggregation always retains legal Applicant attri
 
 ## Application status summary (primary)
 
-Same four clickable SCD summary cards as Applicant Profiles (total / no published SCD contention / still contested / selected replacements), driven by `src/lib/application-string-status.ts`.
+Same four clickable summary cards as Applicant Profiles (Total applications / No competing applications / Still contested / Replacement strings selected), driven by `src/lib/application-string-status.ts`.
 
-Organization counts aggregate **distinct Applications belonging to Confirmed represented Applicant legal entities** for that Organization. Do not include RSP customers solely because they use the Organization’s registry services. Selected replacements use the current `-R` string and status.
+Organization counts aggregate **distinct Applications belonging to Confirmed represented Applicant legal entities** for that Organization. Do not include RSP customers solely because they use the Organization’s registry services. Replacement strings use the current `-R` string and status.
 
-When SCD contention evidence is not ready, uncontested/contested cards show **Unavailable**. Source line + expandable Source details match the Applicant Profile pattern.
+Clicking a summary card (or Show all applications) clears Applicant, Brand, Contention, and Search filters so card counts match displayed rows. When published contention evidence is not ready, competing/contested cards show **Unavailable**. Source line + expandable Source details match the Applicant Profile pattern.
 
 ## Portfolio wording
 
