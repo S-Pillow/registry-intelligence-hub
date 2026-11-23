@@ -1,0 +1,45 @@
+{
+  "manifestId": "activedns-mid-panel-YYYY-MM",
+  "sourceName": "ActiveDNS",
+  "sourceUrl": "https://activedns.net/",
+  "snapshotDate": "YYYY-MM-DD",
+  "description": "Template for the approved six-TLD ActiveDNS mid-panel. Fill sha256 and declaredDomains from the ActiveDNS public index after placing the gzip files in a local input directory. Do not commit raw domain lists.",
+  "panel": [
+    {
+      "tld": "net",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-net.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    },
+    {
+      "tld": "org",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-org.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    },
+    {
+      "tld": "info",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-info.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    },
+    {
+      "tld": "biz",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-biz.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    },
+    {
+      "tld": "app",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-app.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    },
+    {
+      "tld": "dev",
+      "filename": "YYYY-MM_activedns.net_domainlist_dot-dev.txt.gz",
+      "sha256": "REPLACE_WITH_INDEX_SHA256",
+      "declaredDomains": 0
+    }
+  ]
+}

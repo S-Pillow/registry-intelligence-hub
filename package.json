@@ -23,6 +23,7 @@
     "change-intel:refresh": "tsx src/change-intel/cli.ts refresh",
     "market-mrr": "tsx src/market-baseline-mrr/cli.ts",
     "market-publish": "tsx src/market-baseline-publication/cli.ts",
+    "suffix-demand": "tsx src/suffix-demand-counter/cli.ts",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "verify:project-docs": "tsx scripts/verify-project-docs.ts",
     "smoke": "npm run build && node scripts/production-smoke.mjs",
