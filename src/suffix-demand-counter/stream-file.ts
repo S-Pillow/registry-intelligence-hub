@@ -3,8 +3,8 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { Transform } from "node:stream";
 import { createGunzip } from "node:zlib";
-import { sldMatchesCandidate } from "./match";
 import { parseRegistrableDomainForTld } from "./parse-domain";
+import type { SuffixMatchIndex } from "./suffix-trie";
 import { SuffixDemandCounterError, type FileVerification, type PanelFileSpec } from "./types";
 
 type HeaderState = {
@@ -25,18 +25,18 @@ export type StreamFileResult = {
  * Stream a gzipped ActiveDNS list: hash compressed bytes, parse headers and
  * domain lines, update per-candidate distinct-FQDN counters.
  *
- * `seenDomains` is shared across the panel so repeated FQDNs are suppressed
- * once; different FQDNs that share an SLD remain distinct counts.
+ * ActiveDNS lists are sorted. Duplicate suppression uses O(1) previous-domain
+ * state only and fails closed if ordering is violated. Each file is a distinct
+ * TLD, so cross-TLD FQDNs remain distinct without a global domain set.
  */
 export async function streamPanelFile(options: {
   absolutePath: string;
   spec: PanelFileSpec;
   snapshotDate: string;
-  candidates: readonly string[];
-  seenDomains: Set<string>;
+  matchIndex: SuffixMatchIndex;
   matchCounts: Map<string, number>;
 }): Promise<StreamFileResult> {
-  const { absolutePath, spec, snapshotDate, candidates, seenDomains, matchCounts } = options;
+  const { absolutePath, spec, snapshotDate, matchIndex, matchCounts } = options;
 
   const hasher = new HashThrough();
   const gunzip = createGunzip();
@@ -47,6 +47,7 @@ export async function streamPanelFile(options: {
   let rejectedRecords = 0;
   let duplicateRecords = 0;
   let bodyLines = 0;
+  let previousDomain: string | null = null;
   const header: HeaderState = {
     generated: null,
     tld: null,
@@ -87,20 +88,31 @@ export async function streamPanelFile(options: {
         continue;
       }
 
-      if (seenDomains.has(parsed.domain)) {
-        duplicateRecords += 1;
-        continue;
+      if (previousDomain !== null) {
+        if (parsed.domain < previousDomain) {
+          throw new SuffixDemandCounterError(
+            `Unsorted domain list — refusing panel results for ${spec.filename}`,
+            [
+              `previous=${previousDomain}`,
+              `current=${parsed.domain}`,
+              "ActiveDNS lists must be sorted; bounded duplicate detection requires that ordering.",
+            ],
+          );
+        }
+        if (parsed.domain === previousDomain) {
+          duplicateRecords += 1;
+          continue;
+        }
       }
-      seenDomains.add(parsed.domain);
+      previousDomain = parsed.domain;
       acceptedRecords += 1;
 
-      for (const candidate of candidates) {
-        if (sldMatchesCandidate(parsed.sld, candidate)) {
-          matchCounts.set(candidate, (matchCounts.get(candidate) ?? 0) + 1);
-        }
+      for (const candidate of matchIndex.matchAll(parsed.sld)) {
+        matchCounts.set(candidate, (matchCounts.get(candidate) ?? 0) + 1);
       }
     }
   } catch (err) {
+    if (err instanceof SuffixDemandCounterError) throw err;
     throw new SuffixDemandCounterError(`Failed while reading ${spec.filename}`, [
       err instanceof Error ? err.message : String(err),
     ]);

@@ -1,5 +1,5 @@
 /**
- * RIH-FCAST-03 — Offline ActiveDNS suffix-demand counter types.
+ * RIH-FCAST-03 / 03A — Offline ActiveDNS suffix-demand counter types.
  *
  * Aggregate output is compatible with SuffixDemandEvidence field shapes
  * without changing the production forecast data contract.
@@ -11,6 +11,24 @@ export const ACTIVEDNS_SOURCE_URL = "https://activedns.net/";
 /** Initial mid-panel TLDs from RIH-FCAST-02. */
 export const MID_PANEL_TLDS = ["net", "org", "info", "biz", "app", "dev"] as const;
 export type MidPanelTld = (typeof MID_PANEL_TLDS)[number];
+
+export type CandidateMode = "example-list" | "applications-document-v2";
+
+export type CandidateProvenance = {
+  mode: CandidateMode;
+  /** Absolute or operator-supplied path for applications mode; null for example-list. */
+  applicationsDocumentPath: string | null;
+  snapshotId: string | null;
+  snapshotContentHash: string | null;
+  publishedAt: string | null;
+  payloadMode: string | null;
+  documentSha256: string | null;
+  totalForecastUnits: number;
+  eligibleCandidateCount: number;
+  brandExcludedCount: number;
+  brandExcludedLabels: string[];
+  note: string;
+};
 
 export type PanelFileSpec = {
   /** ASCII TLD without leading dot, e.g. "net". */
@@ -56,6 +74,8 @@ export type MatchingPolicy = {
   normalization: "ascii-lowercase-ldh";
   comparison: "case-insensitive";
   rule: "second-level-label equals candidate OR literal endsWith candidate";
+  implementation: "reversed-suffix-trie";
+  duplicateDetection: "sorted-adjacent-previous-domain";
   semanticKeywordAnalysis: false;
   note: string;
 };
@@ -63,6 +83,8 @@ export type MatchingPolicy = {
 export type StringDemandCount = {
   stringLabel: string;
   domainCount: number;
+  contested: boolean;
+  brandExcluded: false;
   /** Field-compatible with SuffixDemandEvidence when status is available. */
   suffixDemandEvidence: {
     status: "available";
@@ -74,7 +96,7 @@ export type StringDemandCount = {
 };
 
 export type SuffixDemandAggregate = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   status: "complete";
   sourceName: string;
   sourceUrl: string;
@@ -83,6 +105,7 @@ export type SuffixDemandAggregate = {
   manifestId: string;
   sourceId: string;
   referencePanelTlds: string[];
+  candidateProvenance: CandidateProvenance;
   matching: MatchingPolicy;
   files: FileVerification[];
   processing: {
@@ -101,7 +124,7 @@ export type SuffixDemandAggregate = {
 };
 
 export type CounterFailure = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   status: "failed";
   reason: string;
   manifestId: string | null;

@@ -32,23 +32,34 @@ Application identity comes from the active browser publication. Domain-name-leve
 
 Authorize a bounded, redistributable domain-name sample or approved zone-file panel for a fixed set of existing open gTLDs; compute suffix-demand counts against that panel; then emit numeric ranges with the experimental conversions.
 
-### Offline suffix-demand counter (RIH-FCAST-03)
+### Offline suffix-demand counter (RIH-FCAST-03 / 03A)
 
 An offline CLI computes panel-limited observed suffix-demand aggregates from **locally supplied** ActiveDNS gzip lists. It does not download data, does not wire counts into `/forecast`, and does not apply conversion factors.
 
 ```bash
 # 1) Place the six local gzip lists in a directory (do not commit them).
 # 2) Copy the template manifest and fill sha256 / declaredDomains / filenames / snapshotDate.
-# 3) Run:
+# 3a) Prototype example strings:
 npm run suffix-demand -- \
   --input-dir /path/to/local/lists \
   --manifest /path/to/filled-mid-panel.manifest.json \
+  --candidate-mode example-list \
+  --out .data/suffix-demand/aggregate.json
+
+# 3b) Full eligible 2026 inventory from an authoritative applications document:
+npm run suffix-demand -- \
+  --input-dir /path/to/local/lists \
+  --manifest /path/to/filled-mid-panel.manifest.json \
+  --candidate-mode applications-document-v2 \
+  --applications-document /path/to/RegistryApplicationsDocumentV2.json \
   --out .data/suffix-demand/aggregate.json
 ```
 
 Approved mid-panel TLDs: `.net`, `.org`, `.info`, `.biz`, `.app`, `.dev`. Template: `src/suffix-demand-counter/panel/mid-panel.manifest.template.json`. Write evidence only under `.data/`. Never commit raw domain lists.
 
-Matching is an explicit ASCII case-insensitive **equals / literal endsWith** heuristic on the registrable second-level label — not semantic keyword analysis. Observed ActiveDNS domains are not equivalent to all registered domains.
+Matching is an explicit ASCII case-insensitive **equals / literal endsWith** heuristic on the registrable second-level label (reversed suffix trie) — not semantic keyword analysis. Duplicate suppression assumes each ActiveDNS list is **sorted** and fails closed otherwise. Memory does not grow with distinct domain cardinality. Observed ActiveDNS domains are not equivalent to all registered domains.
+
+Applications-document mode reuses `buildForecastUnits` / selected-string resolution: one count per unique selected/current string, Brand-designation proxy exclusion (not proof of closed policy), contested dedupe by string. Example-list mode remains for lightweight tests only and is not a full-round inventory.
 
 ## Validation posture
 

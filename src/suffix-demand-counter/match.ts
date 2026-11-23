@@ -40,7 +40,9 @@ export const MATCHING_POLICY = {
   normalization: "ascii-lowercase-ldh",
   comparison: "case-insensitive",
   rule: "second-level-label equals candidate OR literal endsWith candidate",
+  implementation: "reversed-suffix-trie",
+  duplicateDetection: "sorted-adjacent-previous-domain",
   semanticKeywordAnalysis: false as const,
   note:
-    "Counts use a simple ASCII equals/endsWith heuristic on the registrable second-level label. This is not semantic keyword analysis.",
+    "Counts use a simple ASCII equals/endsWith heuristic on the registrable second-level label (via a reversed suffix trie). This is not semantic keyword analysis. Duplicate suppression assumes each ActiveDNS list is sorted.",
 } as const;
