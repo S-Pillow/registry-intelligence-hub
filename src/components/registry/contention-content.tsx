@@ -29,6 +29,7 @@ import { OrganizationConcentrationContentionPanel } from "@/components/registry/
 import { OrganizationContentionPairsPanel } from "@/components/registry/organization-contention-pairs-panel";
 import type { OrganizationConcentrationModel } from "@/lib/organization-concentration";
 import type { OrganizationContentionPairModel } from "@/lib/organization-contention-pairs";
+import { ForecastLink } from "@/components/registry/forecast-link";
 
 function Metric({ label, value, testId }: { label: string; value: string | number; testId: string }) {
   return (
@@ -67,7 +68,13 @@ function SetDetailPanel({
             <h2 id="contention-set-detail-title" className="mt-1 text-lg font-bold text-slate-950">
               Set #{set.setId}
               {set.appliedForStrings[0] ? (
-                <span className="ml-2 font-semibold text-slate-700">.{set.appliedForStrings[0]}</span>
+                <span className="ml-2 font-semibold text-slate-700">
+                  <ForecastLink
+                    label={set.appliedForStrings[0]}
+                    testId={`contention-detail-forecast-${set.setId}`}
+                    fallback={<>.{set.appliedForStrings[0]}</>}
+                  />
+                </span>
               ) : null}
             </h2>
           </div>
@@ -183,7 +190,13 @@ function SetDetailPanel({
                   data-testid={`member-${m.applicationId}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-950">.{m.appliedForString || "—"}</span>
+                    <span className="font-semibold text-slate-950">
+                      <ForecastLink
+                        label={m.appliedForString}
+                        testId={`contention-member-forecast-${m.applicationId}`}
+                        fallback={<>.{m.appliedForString || "—"}</>}
+                      />
+                    </span>
                     {m.isGodaddyApplicant ? (
                       <Badge className="bg-emerald-100 text-[#006a56]" data-testid="godaddy-member-badge">
                         GoDaddy Applicant
@@ -532,7 +545,18 @@ export function ContentionContent({
                   >
                     <td className="px-3 py-2 font-semibold text-[#006a56]">#{set.setId}</td>
                     <td className="px-3 py-2">
-                      {set.appliedForStrings.map((s) => `.${s}`).join(", ") || "—"}
+                      {set.appliedForStrings.length
+                        ? set.appliedForStrings.map((s, i) => (
+                            <span key={`${set.setId}-${s}`}>
+                              {i > 0 ? ", " : null}
+                              <ForecastLink
+                                label={s}
+                                testId={`contention-row-forecast-${set.setId}-${s}`}
+                                fallback={<>.{s}</>}
+                              />
+                            </span>
+                          ))
+                        : "—"}
                     </td>
                     <td className="px-3 py-2 tabular-nums">{set.totalApplications}</td>
                     <td className="px-3 py-2 tabular-nums">{set.godaddyApplications}</td>

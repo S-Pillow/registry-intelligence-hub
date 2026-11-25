@@ -25,6 +25,7 @@ import {
   type ApplicantPortfolioRow,
 } from "@/lib/applicant-intelligence";
 import { CompareAddButton, CompareTrayFloating } from "@/components/registry/compare-add-button";
+import { ForecastLink } from "@/components/registry/forecast-link";
 
 function Stat({
   label,
@@ -100,10 +101,20 @@ function PortfolioRowCard({ row }: { row: ApplicantPortfolioRow }) {
       data-testid={`portfolio-row-${row.applicationId}`}
     >
       <p className="font-semibold text-slate-950">
-        .{row.selectedCurrentString || "—"}
+        <ForecastLink
+          label={row.selectedCurrentString}
+          testId={`portfolio-forecast-selected-${row.applicationId}`}
+          fallback={<span>.{row.selectedCurrentString || "—"}</span>}
+        />
         {selectedDiffers ? (
           <span className="ml-2 text-xs font-medium text-slate-600">
-            (original .{row.originalAppliedForString})
+            (original{" "}
+            <ForecastLink
+              label={row.originalAppliedForString}
+              testId={`portfolio-forecast-original-${row.applicationId}`}
+              fallback={<span>.{row.originalAppliedForString}</span>}
+            />
+            )
           </span>
         ) : null}
         {row.brand ? <span className="ml-2 text-xs font-semibold text-[#006a56]">Brand</span> : null}
@@ -128,8 +139,12 @@ function PortfolioRowCard({ row }: { row: ApplicantPortfolioRow }) {
         </p>
       ) : null}
       <div className="mt-2 flex flex-wrap gap-3">
-        <Link href={row.exploreHref} className="font-semibold text-[#006a56] underline">
-          Open in Explore
+        <Link
+          href={row.exploreHref}
+          className="font-semibold text-[#006a56] underline"
+          data-testid={`portfolio-application-details-${row.applicationId}`}
+        >
+          Application details
         </Link>
         {row.scdContentionStatus === "contested" && row.contentionSetHref ? (
           <Link
@@ -351,17 +366,30 @@ function ProfileFound({ profile }: { profile: ApplicantIntelligenceProfile }) {
                   data-testid={`portfolio-row-${row.applicationId}`}
                 >
                   <td className="px-2 py-2 font-medium">
-                    <Link href={row.exploreHref} className="text-[#006a56] underline-offset-2 hover:underline">
-                      .{row.originalAppliedForString || "—"}
-                    </Link>
+                    <ForecastLink
+                      label={row.originalAppliedForString}
+                      testId={`portfolio-forecast-original-${row.applicationId}`}
+                      fallback={<span>.{row.originalAppliedForString || "—"}</span>}
+                    />
                   </td>
                   <td className="px-2 py-2 text-xs text-slate-800">
-                    .{row.selectedCurrentString || "—"}
+                    <ForecastLink
+                      label={row.selectedCurrentString}
+                      testId={`portfolio-forecast-selected-${row.applicationId}`}
+                      fallback={<span>.{row.selectedCurrentString || "—"}</span>}
+                    />
                     {row.selectionMode === "selected-replacement" && row.selectedReplacementApplicationId ? (
                       <span className="mt-0.5 block font-mono text-[10px] text-slate-500">
                         {row.selectedReplacementApplicationId}
                       </span>
                     ) : null}
+                    <Link
+                      href={row.exploreHref}
+                      className="mt-0.5 block text-[11px] font-semibold text-[#006a56] underline-offset-2 hover:underline"
+                      data-testid={`portfolio-application-details-${row.applicationId}`}
+                    >
+                      Application details
+                    </Link>
                   </td>
                   <td className="px-2 py-2 font-mono text-xs">{row.applicationId}</td>
                   <td className="px-2 py-2 text-xs text-slate-700">

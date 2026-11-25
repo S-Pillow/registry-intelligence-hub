@@ -21,6 +21,7 @@ import {
 import { applicantProfileHref } from "@/lib/applicant-intelligence";
 import { hubPath } from "@/lib/hub-paths";
 import { ExploreDatasetSwitcher } from "@/components/registry/explore-dataset-shell";
+import { ForecastLink } from "@/components/registry/forecast-link";
 
 export function ExploreContentV2({
   document,
@@ -148,7 +149,24 @@ export function ExploreContentV2({
             className="px-3 py-2 text-sm"
             data-testid={`explore-v2-row-${app.applicationId}`}
           >
-            <strong>.{app.appliedString.label}</strong>
+            <strong>
+              <ForecastLink
+                label={app.appliedString.label}
+                testId={`explore-v2-forecast-${app.applicationId}`}
+                fallback={<>.{app.appliedString.label}</>}
+              />
+            </strong>
+            {app.replacementString?.label &&
+            app.replacementString.label !== app.appliedString.label ? (
+              <span className="ml-2 text-xs text-slate-600">
+                replacement{" "}
+                <ForecastLink
+                  label={app.replacementString.label}
+                  testId={`explore-v2-forecast-replacement-${app.applicationId}`}
+                  fallback={<>.{app.replacementString.label}</>}
+                />
+              </span>
+            ) : null}
             <span className="mt-0.5 block text-slate-700">
               {app.applicationId} ·{" "}
               <Link

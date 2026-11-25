@@ -1,18 +1,35 @@
 /**
- * Narrow Next.js Proxy gate for the local forecast preview route.
- * Returns a real HTTP 404 before the App Router streams a soft-200 shell
- * when the development preview flag is off (see Next.js loading status-codes docs).
+ * Narrow Next.js Proxy for gated forecast detail/preview routes.
+ * - Gate off: hard HTTP 404 before App Router soft-200 streaming
+ * - Gate on + /forecast/preview: hard redirect to /forecast overview
+ * Bare `/forecast` remains available when gated data is off.
  */
-import { resolveForecastLocalPreviewProxy } from "@/lib/forecast-local-preview";
+import { NextResponse, type NextRequest } from "next/server";
+import {
+  buildForecastLocalPreviewDisabledHttpResponse,
+  isForecastLocalPreviewEnabled,
+} from "@/lib/forecast-local-preview";
+import { forecastOverviewHref } from "@/lib/forecast-routes";
 
-export function proxy() {
-  return resolveForecastLocalPreviewProxy();
+export function proxy(request: NextRequest) {
+  if (!isForecastLocalPreviewEnabled()) {
+    return buildForecastLocalPreviewDisabledHttpResponse();
+  }
+
+  const { pathname } = request.nextUrl;
+  if (pathname.endsWith("/forecast/preview")) {
+    const url = request.nextUrl.clone();
+    // Keep the current basePath prefix if present; avoid double-prefixing.
+    url.pathname = pathname.replace(/\/forecast\/preview\/?$/, forecastOverviewHref());
+    return NextResponse.redirect(url, 307);
+  }
 }
 
 export const config = {
-  // Match both the app-relative path and the deployed basePath form.
   matcher: [
     "/forecast/preview",
+    "/forecast/:label",
     "/tools/registry-intelligence-hub/forecast/preview",
+    "/tools/registry-intelligence-hub/forecast/:label",
   ],
 };

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ForecastAvailabilityProvider } from "@/components/registry/forecast-availability-provider";
 import { HubClaimActualityProvider } from "@/components/registry/hub-claim-actuality-provider";
 import { HubHistorical2012Provider } from "@/components/registry/hub-historical-2012-provider";
 import { HubRegistryDataProvider } from "@/components/registry/hub-registry-data-provider";
@@ -7,6 +8,7 @@ import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
 import { loadHistorical2012ConfirmedPortfoliosResolution } from "@/historical-2012/confirmed-portfolios-server";
 import { loadHistorical2012PayloadResolution } from "@/historical-2012/payload-server";
 import { prepareHistorical2012SharedLayout } from "@/historical-2012/structural-summary";
+import { loadForecastCatalog } from "@/lib/forecast-catalog-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import { HUB_BASE_PATH } from "@/lib/hub-paths";
 import {
@@ -80,12 +82,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const configuredClaimActuality = await loadPromotedClaimActualityState();
-  const [registryData, historical2012Full, confirmedPortfolios] = await Promise.all([
+  const [registryData, historical2012Full, confirmedPortfolios, forecastCatalog] = await Promise.all([
     loadHubRegistryData(configuredClaimActuality),
     loadHistorical2012PayloadResolution(),
     loadHistorical2012ConfirmedPortfoliosResolution(),
+    loadForecastCatalog(),
   ]);
   const { applicationPayload: historical2012, structuralSummary } = prepareHistorical2012SharedLayout(historical2012Full);
+  const forecastEnabled = forecastCatalog.status === "ok";
+  const forecastLabels = forecastEnabled ? forecastCatalog.catalog.labelSet : [];
   return (
     <html
       lang="en"
@@ -99,7 +104,9 @@ export default async function RootLayout({
               confirmedPortfolios={confirmedPortfolios}
               structuralSummary={structuralSummary}
             >
-              {children}
+              <ForecastAvailabilityProvider enabled={forecastEnabled} labels={forecastLabels}>
+                {children}
+              </ForecastAvailabilityProvider>
             </HubHistorical2012Provider>
           </HubRegistryDataProvider>
         </HubClaimActualityProvider>

@@ -83,24 +83,39 @@ npm run forecast-preview -- \
 
 Uses existing factors 0.8 / 1.9 / 3.2 via `estimateRegistrationsFromSuffixDemand`. Retains all measured strings including WDO and Brand; does not apply Brand exclusion. Labels that fail `isCompoundWordCandidate` keep `measuredDomainCount` with `range: null` and `conversion_not_recommended`. Outputs under `.data/registration-forecast/` are offline analysis artifacts only — not website integration or verified market predictions.
 
-### Local data-backed forecast interface (RIH-FCAST-05B)
+### Local data-backed forecast interface (RIH-FCAST-05B / 05C)
 
-Development-only preview UI at `/forecast/preview` (with hub `basePath`: `/tools/registry-intelligence-hub/forecast/preview`).
-
-Enable only when **both** are set:
+Development-only gated forecast experience. Enable only when **both** are set:
 
 - `NODE_ENV=development`
 - `RIH_FORECAST_LOCAL_PREVIEW=1`
 
-Otherwise the route is blocked: a narrow Next.js `proxy` matcher returns **HTTP 404** before the App Router streams a soft-200 shell, and the page still calls `notFound()` as defense in depth. Preview data is not loaded. The existing `/forecast` experimental page is unchanged.
+Otherwise `/forecast/preview` and `/forecast/[label]` are blocked with a hard HTTP 404 from Next.js `proxy` before soft streaming. Bare `/forecast` remains available as the legacy experimental surface when gated data is off.
 
-Server-only loader reads the fixed local path `.data/registration-forecast/experimental-forecast-preview.json` (no query-controlled paths, no `public/` copy, no public API). The accepted preview SHA-256 and source-aggregate pin are validated before projection. The browser receives a trimmed view model only (no absolute host paths or unrelated aggregate blobs).
+### Integrated forecast experience (RIH-FCAST-06)
+
+When the gate is open and the accepted preview is present:
+
+- `/forecast` — searchable overview with Low / Middle / High scenario labels and restrained scenario-band visuals
+- `/forecast/[label]` — per-extension detail (exact proposed DNS string)
+- `/forecast/preview` — redirects to `/forecast`
+- Reusable `ForecastLink` from Applicant portfolio (original and selected strings remain distinct), Explore, and Contention — active only when that label exists in the catalog
+
+Publication candidate (unpublished, ignored under `.data/`):
+
+```bash
+npm run forecast-publish-candidate
+# writes .data/registration-forecast/experimental-forecast-publication-candidate.json
+```
+
+Sanitized fields only: measured counts, scenario values, snapshot/attribution metadata, and source SHA pins. Excludes ActiveDNS domain lists, absolute host paths, and unrelated aggregate blobs. Intended release location after a separate promotion decision: versioned product data under the hub publication pipeline — **not** enabled by this ticket.
 
 ```bash
 RIH_FORECAST_LOCAL_PREVIEW=1 npm run dev
-# open /tools/registry-intelligence-hub/forecast/preview
+# open /tools/registry-intelligence-hub/forecast
+# open /tools/registry-intelligence-hub/forecast/wdo
 ```
 
 ## Validation posture
 
-Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only. Local preview tests use synthetic JSON fixtures for gate, validation, search/sort/pagination, WDO/Brand visibility, null-vs-zero estimates, and missing/corrupt file failure — they do not require the real ignored preview file.
+Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only. Local preview / integrated forecast tests use synthetic JSON fixtures for gate, routing, publication-candidate reproducibility, WDO/Brand visibility, null-vs-zero estimates, accessibility of scenario visuals, and missing/corrupt file failure — they do not require the real ignored preview file for the core unit suite.
