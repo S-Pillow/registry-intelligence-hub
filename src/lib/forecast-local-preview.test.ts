@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  buildForecastLocalPreviewDisabledHttpResponse,
   filterForecastPreviewRows,
   formatUnknownBoolean,
   isForecastLocalPreviewEnabled,
   normalizeExtensionSearch,
   paginateForecastPreviewRows,
   projectForecastLocalPreviewViewModel,
+  resolveForecastLocalPreviewProxy,
   sortForecastPreviewRows,
   type ForecastLocalPreviewRowView,
   type ForecastLocalPreviewViewModel,
@@ -163,6 +165,30 @@ describe("forecast local preview gate", () => {
       }),
     ).toBe(false);
     expect(isForecastLocalPreviewEnabled({ NODE_ENV: "development" })).toBe(false);
+  });
+
+  it("builds a hard HTTP 404 response without forecast payload leakage", async () => {
+    const response = buildForecastLocalPreviewDisabledHttpResponse();
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(body).toMatch(/Not Found/i);
+    expect(body).not.toMatch(/1,431|Measured demand|experimental-forecast-preview/i);
+  });
+
+  it("proxy decision returns HTTP 404 when disabled and pass-through when enabled", async () => {
+    const disabled = resolveForecastLocalPreviewProxy({
+      NODE_ENV: "production",
+      RIH_FORECAST_LOCAL_PREVIEW: "1",
+    });
+    expect(disabled?.status).toBe(404);
+    const body = await disabled!.text();
+    expect(body).not.toMatch(/1,431|Measured demand/i);
+
+    const enabled = resolveForecastLocalPreviewProxy({
+      NODE_ENV: "development",
+      RIH_FORECAST_LOCAL_PREVIEW: "1",
+    });
+    expect(enabled).toBeUndefined();
   });
 });
 

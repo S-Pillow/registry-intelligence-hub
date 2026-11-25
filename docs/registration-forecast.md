@@ -92,7 +92,7 @@ Enable only when **both** are set:
 - `NODE_ENV=development`
 - `RIH_FORECAST_LOCAL_PREVIEW=1`
 
-Otherwise the route returns a genuine 404/`notFound` and does not load preview data. The existing `/forecast` experimental page is unchanged.
+Otherwise the route is blocked: a narrow Next.js `proxy` matcher returns **HTTP 404** before the App Router streams a soft-200 shell, and the page still calls `notFound()` as defense in depth. Preview data is not loaded. The existing `/forecast` experimental page is unchanged.
 
 Server-only loader reads the fixed local path `.data/registration-forecast/experimental-forecast-preview.json` (no query-controlled paths, no `public/` copy, no public API). The accepted preview SHA-256 and source-aggregate pin are validated before projection. The browser receives a trimmed view model only (no absolute host paths or unrelated aggregate blobs).
 

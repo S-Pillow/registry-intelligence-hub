@@ -290,6 +290,12 @@ export function ForecastLocalPreviewContent({ view }: { view: ForecastLocalPrevi
             </tbody>
           </table>
         </div>
+        <p
+          className="mt-1 text-xs text-slate-500 sm:hidden"
+          data-testid="forecast-local-preview-scroll-hint"
+        >
+          Scroll sideways to see measured demand, scenarios, and source columns.
+        </p>
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <button
@@ -344,14 +350,19 @@ function SortHeader({
   onClick: () => void;
   align?: "left" | "right";
 }) {
+  const ariaSort = active ? (dir === "asc" ? "ascending" : "descending") : "none";
   return (
-    <th className={`px-3 py-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}>
+    <th
+      className={`px-3 py-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}
+      aria-sort={ariaSort}
+    >
       <button
         type="button"
         onClick={onClick}
         className={`inline-flex items-center gap-1 ${align === "right" ? "flex-row-reverse" : ""} ${
           active ? "text-[#006a56]" : "text-slate-600"
         }`}
+        aria-label={`Sort by ${label}${active ? `, currently ${dir === "asc" ? "ascending" : "descending"}` : ""}`}
       >
         <span>{label}</span>
         <span aria-hidden className="text-[10px]">

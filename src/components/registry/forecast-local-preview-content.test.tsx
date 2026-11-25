@@ -164,4 +164,12 @@ describe("ForecastLocalPreviewContent", () => {
     expect(zero).toHaveTextContent("0");
     expect(zero).not.toHaveTextContent("—");
   });
+
+  it("exposes a mobile sideways-scroll affordance and sort aria labels", () => {
+    render(<ForecastLocalPreviewContent view={buildView()} />);
+    expect(screen.getByTestId("forecast-local-preview-scroll-hint")).toHaveTextContent(
+      /Scroll sideways/i,
+    );
+    expect(screen.getByRole("button", { name: /Sort by Expected/i })).toBeInTheDocument();
+  });
 });

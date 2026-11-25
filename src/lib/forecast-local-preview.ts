@@ -69,6 +69,29 @@ export function isForecastLocalPreviewEnabled(
   return env.NODE_ENV === "development" && env.RIH_FORECAST_LOCAL_PREVIEW === "1";
 }
 
+/**
+ * Hard HTTP 404 body for Proxy/edge gating when the local preview is disabled.
+ * Intentionally omits forecast data and absolute paths.
+ */
+export function buildForecastLocalPreviewDisabledHttpResponse(): Response {
+  return new Response("Not Found\n\nLocal forecast preview is unavailable.\n", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "x-robots-tag": "noindex",
+      "cache-control": "private, no-store",
+    },
+  });
+}
+
+/** Proxy decision helper: pass-through when enabled, hard 404 when disabled. */
+export function resolveForecastLocalPreviewProxy(
+  env: NodeJS.ProcessEnv = process.env,
+): Response | undefined {
+  if (isForecastLocalPreviewEnabled(env)) return undefined;
+  return buildForecastLocalPreviewDisabledHttpResponse();
+}
+
 export function projectForecastLocalPreviewViewModel(
   doc: ForecastPreviewDocument,
   previewSha256: string,
