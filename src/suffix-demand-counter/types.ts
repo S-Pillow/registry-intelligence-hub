@@ -73,6 +73,28 @@ export type StringDemandCount = {
   };
 };
 
+export type CandidateProvenance = {
+  mode: "examples" | "explicit-list" | "applications-document-v2";
+  candidateListId: string;
+  candidateListSha256: string;
+  candidateCount: number;
+  excludedBrandStrings: number;
+  brandExclusionPolicy: string;
+  applicationSnapshot: null | {
+    snapshotId: string;
+    snapshotContentHash: string;
+    artifactSha256: string;
+    rawSourceSha256: string;
+    payloadVersion: string;
+    publishedAt: string;
+    retrievedAt: string;
+    sourceName: string;
+    sourceUrl: string;
+    officialApplications: number;
+    representedApplications: number;
+  };
+};
+
 export type SuffixDemandAggregate = {
   schemaVersion: 1;
   status: "complete";
@@ -82,6 +104,7 @@ export type SuffixDemandAggregate = {
   snapshotDate: string;
   manifestId: string;
   sourceId: string;
+  candidateProvenance: CandidateProvenance;
   referencePanelTlds: string[];
   matching: MatchingPolicy;
   files: FileVerification[];
