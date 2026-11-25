@@ -1,19 +1,19 @@
 /**
  * Narrow Next.js Proxy for gated forecast detail/preview routes.
- * - Gate off: hard HTTP 404 before App Router soft-200 streaming
+ * - Gate off (neither local preview nor production publication): hard HTTP 404
  * - Gate on + /forecast/preview: hard redirect to /forecast overview
- * Bare `/forecast` remains available when gated data is off.
+ * Bare `/forecast` remains available when gated data is off (legacy fallback UI).
  */
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  buildForecastLocalPreviewDisabledHttpResponse,
-  isForecastLocalPreviewEnabled,
-} from "@/lib/forecast-local-preview";
+  buildForecastRoutesDisabledHttpResponse,
+  isForecastIntegratedCatalogEnabled,
+} from "@/lib/forecast-publication-gate";
 import { forecastOverviewHref } from "@/lib/forecast-routes";
 
 export function proxy(request: NextRequest) {
-  if (!isForecastLocalPreviewEnabled()) {
-    return buildForecastLocalPreviewDisabledHttpResponse();
+  if (!isForecastIntegratedCatalogEnabled()) {
+    return buildForecastRoutesDisabledHttpResponse();
   }
 
   const { pathname } = request.nextUrl;

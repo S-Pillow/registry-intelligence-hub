@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { isForecastLocalPreviewEnabled } from "@/lib/forecast-local-preview";
+import { isForecastIntegratedCatalogEnabled } from "@/lib/forecast-publication-gate";
 import { forecastOverviewHref } from "@/lib/forecast-routes";
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * Proxy issues a hard 307 when enabled; this page remains as defense in depth.
  */
 export default async function ForecastLocalPreviewPage() {
-  if (!isForecastLocalPreviewEnabled()) {
+  if (!isForecastIntegratedCatalogEnabled()) {
     notFound();
   }
   redirect(forecastOverviewHref());

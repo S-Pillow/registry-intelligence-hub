@@ -4,7 +4,6 @@ import { RegistrationForecastContent } from "@/components/registry/registration-
 import { loadForecastCatalog } from "@/lib/forecast-catalog-server";
 import { loadHubRegistryData } from "@/lib/hub-registry-data-server";
 import { loadPromotedClaimActualityState } from "@/lib/claim-actuality-server";
-import { isForecastLocalPreviewEnabled } from "@/lib/forecast-local-preview";
 import {
   buildExampleForecastRows,
   defaultUnavailableSuffixDemandEvidence,
@@ -17,25 +16,33 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RegistrationForecastPage() {
-  if (isForecastLocalPreviewEnabled()) {
-    const loaded = await loadForecastCatalog();
-    if (loaded.status === "ok") {
-      return <ForecastOverviewContent catalog={loaded.catalog} />;
-    }
-    if (loaded.status === "error") {
-      return (
-        <main className="mx-auto max-w-3xl px-4 py-8" data-testid="forecast-catalog-unavailable">
-          <h1 className="text-xl font-bold">Experimental forecast unavailable</h1>
-          <p className="mt-2 text-sm text-slate-700">
-            The local forecast catalog could not be loaded. Confirm the accepted preview file is
-            present and matches the expected SHA-256 pin.
-          </p>
-          <p className="mt-2 font-mono text-xs text-slate-600">{loaded.reason}</p>
-        </main>
-      );
-    }
+  const loaded = await loadForecastCatalog();
+  if (loaded.status === "ok") {
+    return (
+      <ForecastOverviewContent
+        catalog={loaded.catalog}
+        accessLabel={
+          loaded.mode === "production-release"
+            ? "Controlled publication staging"
+            : "Local development preview"
+        }
+      />
+    );
+  }
+  if (loaded.status === "error") {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-8" data-testid="forecast-catalog-unavailable">
+        <h1 className="text-xl font-bold">Experimental forecast unavailable</h1>
+        <p className="mt-2 text-sm text-slate-700">
+          The forecast catalog could not be loaded. Confirm the accepted release or local preview
+          artifact is present and matches the expected SHA-256 pin.
+        </p>
+        <p className="mt-2 font-mono text-xs text-slate-600">{loaded.reason}</p>
+      </main>
+    );
   }
 
+  // Publication/local gates disabled — retain legacy /forecast fallback surface.
   const claim = await loadPromotedClaimActualityState();
   const registry = await loadHubRegistryData(claim);
   const demandEvidence = defaultUnavailableSuffixDemandEvidence();

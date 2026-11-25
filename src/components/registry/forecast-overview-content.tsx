@@ -41,7 +41,14 @@ function formatCount(value: number | null): string {
   return value.toLocaleString("en-US");
 }
 
-export function ForecastOverviewContent({ catalog }: { catalog: ForecastCatalogView }) {
+export function ForecastOverviewContent({
+  catalog,
+  accessLabel = "Local development preview",
+}: {
+  catalog: ForecastCatalogView;
+  /** Display-only access banner (local preview vs staged/production publication). */
+  accessLabel?: string;
+}) {
   const availability: ForecastAvailability = useMemo(
     () => ({ enabled: true, labels: catalog.labelSet }),
     [catalog.labelSet],
@@ -96,15 +103,15 @@ export function ForecastOverviewContent({ catalog }: { catalog: ForecastCatalogV
 
       <main className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006a56]">
-          Local development preview
+          {accessLabel}
         </p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
           {catalog.heading}
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-700">
           Measured domain-name matches and experimental Low / Middle / High registration estimates for
-          observed 2026 proposed strings. Local development preview only — not a production
-          publication.
+          observed 2026 proposed strings. Experimental estimates only — not an award, eligibility
+          decision, or verified market forecast.
         </p>
 
         <section

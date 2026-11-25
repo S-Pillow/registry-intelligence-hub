@@ -116,6 +116,24 @@ RIH_FORECAST_LOCAL_PREVIEW=1 npm run dev
 # open /tools/registry-intelligence-hub/forecast/wdo
 ```
 
+### Production publication preparation (RIH-FCAST-07A)
+
+Separates **local development preview** from an independently controlled **production publication** gate:
+
+| Gate | Enablement | Artifact |
+| --- | --- | --- |
+| Local preview | `NODE_ENV=development` + `RIH_FORECAST_LOCAL_PREVIEW=1` | Unpublished candidate / accepted preview (existing) |
+| Production publication | `RIH_FORECAST_PUBLICATION_ENABLED=1` (any `NODE_ENV`) | SHA-pinned staged release package only |
+
+Production defaults to disabled. Enabling the production gate without a valid approved release artifact fails closed and **never** falls back to local preview files. Stage a release package (private, gitignored):
+
+```bash
+npm run forecast-stage-release -- --source-commit 631b63a3b29dafcf3cd1db188c397d1e76ca683d
+# writes .data/registration-forecast/staging/fcast-07a/{release,manifest}
+```
+
+Operator release/rollback steps: `docs/registration-forecast-production-release.md`. Do not enable the production gate on the live host from this ticket.
+
 ## Validation posture
 
 Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only. Local preview / integrated forecast tests use synthetic JSON fixtures for gate, routing, publication-candidate reproducibility, WDO/Brand visibility, null-vs-zero estimates, accessibility of scenario visuals, and missing/corrupt file failure — they do not require the real ignored preview file for the core unit suite.

@@ -15,6 +15,7 @@ import {
   FORECAST_PUBLICATION_CANDIDATE_EXPECTED_SHA256,
   FORECAST_PUBLICATION_CANDIDATE_RELATIVE_PATH,
 } from "@/lib/forecast-publication-candidate";
+import { FORECAST_RELEASE_ARTIFACT_EXPECTED_SHA256 } from "@/lib/forecast-publication-release";
 
 const enabledEnv = {
   NODE_ENV: "development",
@@ -95,5 +96,62 @@ describe("loadForecastCatalog integrity", () => {
       env: { NODE_ENV: "production", RIH_FORECAST_LOCAL_PREVIEW: "1" } as NodeJS.ProcessEnv,
     });
     expect(result).toEqual({ status: "disabled" });
+  });
+
+  it("loads a pinned production release artifact without falling back to local preview", async () => {
+    const stagingArtifact = path.resolve(
+      process.cwd(),
+      ".data/registration-forecast/staging/fcast-07a/experimental-registration-forecast-release-v1.json",
+    );
+    const result = await loadForecastCatalog({
+      cwd: process.cwd(),
+      env: {
+        NODE_ENV: "production",
+        RIH_FORECAST_PUBLICATION_ENABLED: "1",
+        RIH_FORECAST_PUBLICATION_PATH: stagingArtifact,
+      } as NodeJS.ProcessEnv,
+    });
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.mode).toBe("production-release");
+    expect(result.candidateSha256).toBe(FORECAST_RELEASE_ARTIFACT_EXPECTED_SHA256);
+    expect(result.catalog.labelSet).toContain("wdo");
+  });
+
+  it("fails closed when production gate is on but the release artifact is missing", async () => {
+    const root = await fixtureRootWithPreview();
+    const result = await loadForecastCatalog({
+      cwd: root,
+      env: {
+        NODE_ENV: "production",
+        RIH_FORECAST_PUBLICATION_ENABLED: "1",
+      } as NodeJS.ProcessEnv,
+    });
+    expect(result).toEqual({
+      status: "error",
+      reason: "Forecast release artifact missing",
+    });
+  });
+
+  it("fails closed when a production release artifact is corrupted", async () => {
+    const root = await fixtureRootWithPreview();
+    const artifactPath = path.resolve(
+      root,
+      ".data/registration-forecast/publication/experimental-registration-forecast-release-v1.json",
+    );
+    await mkdir(path.dirname(artifactPath), { recursive: true });
+    await writeFile(artifactPath, '{"schemaVersion":1,"kind":"experimental-registration-forecast-release","status":"staged-unpublished","strings":[]}\n');
+
+    const result = await loadForecastCatalog({
+      cwd: root,
+      env: {
+        NODE_ENV: "production",
+        RIH_FORECAST_PUBLICATION_ENABLED: "1",
+      } as NodeJS.ProcessEnv,
+    });
+    expect(result).toEqual({
+      status: "error",
+      reason: "Forecast release artifact SHA-256 mismatch",
+    });
   });
 });
