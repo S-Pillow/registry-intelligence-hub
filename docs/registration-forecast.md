@@ -83,6 +83,24 @@ npm run forecast-preview -- \
 
 Uses existing factors 0.8 / 1.9 / 3.2 via `estimateRegistrationsFromSuffixDemand`. Retains all measured strings including WDO and Brand; does not apply Brand exclusion. Labels that fail `isCompoundWordCandidate` keep `measuredDomainCount` with `range: null` and `conversion_not_recommended`. Outputs under `.data/registration-forecast/` are offline analysis artifacts only — not website integration or verified market predictions.
 
+### Local data-backed forecast interface (RIH-FCAST-05B)
+
+Development-only preview UI at `/forecast/preview` (with hub `basePath`: `/tools/registry-intelligence-hub/forecast/preview`).
+
+Enable only when **both** are set:
+
+- `NODE_ENV=development`
+- `RIH_FORECAST_LOCAL_PREVIEW=1`
+
+Otherwise the route returns a genuine 404/`notFound` and does not load preview data. The existing `/forecast` experimental page is unchanged.
+
+Server-only loader reads the fixed local path `.data/registration-forecast/experimental-forecast-preview.json` (no query-controlled paths, no `public/` copy, no public API). The accepted preview SHA-256 and source-aggregate pin are validated before projection. The browser receives a trimmed view model only (no absolute host paths or unrelated aggregate blobs).
+
+```bash
+RIH_FORECAST_LOCAL_PREVIEW=1 npm run dev
+# open /tools/registry-intelligence-hub/forecast/preview
+```
+
 ## Validation posture
 
-Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only.
+Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only. Local preview tests use synthetic JSON fixtures for gate, validation, search/sort/pagination, WDO/Brand visibility, null-vs-zero estimates, and missing/corrupt file failure — they do not require the real ignored preview file.
