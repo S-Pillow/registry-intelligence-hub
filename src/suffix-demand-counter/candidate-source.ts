@@ -18,6 +18,16 @@ function requiredText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isOfficialApsUrl(value: unknown): boolean {
+  if (!requiredText(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "newgtldprogram-aps.icann.org";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Load an explicitly supplied, authoritative, complete 2026 browser-document
  * snapshot. Never load the built-in rehearsal/example fixture as a substitute.
@@ -56,11 +66,16 @@ export async function loadAuthoritative2026Candidates(
     !requiredText(doc.publicationSchemaVersion) ||
     doc.publicationSchemaVersion !== "registry-2026-publication/2.0.0" ||
     !requiredText(doc.source?.name) ||
-    !requiredText(doc.source?.url) ||
+    !isOfficialApsUrl(doc.source?.url) ||
+    doc.source?.evidenceClass !== "public-aps-export" ||
+    !isOfficialApsUrl(doc.officialAggregates?.provenance?.sourceUrl) ||
+    !SHA256_RE.test(doc.officialAggregates?.provenance?.contentSha256 ?? "") ||
     !requiredText(doc.publishedAt) ||
     !requiredText(doc.retrievedAt) ||
     !doc.bundleManifest ||
     doc.bundleManifest.applicationGraphContentSha256 !== doc.snapshotContentHash ||
+    !SHA256_RE.test(doc.bundleManifest.officialAggregatesContentSha256 ?? "") ||
+    !SHA256_RE.test(doc.bundleManifest.coverageDescriptorSha256 ?? "") ||
     !coverage ||
     coverage.completeness !== "complete" ||
     !Array.isArray(coverage.knownExcludedRecords) ||
