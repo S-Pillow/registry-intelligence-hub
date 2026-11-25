@@ -72,7 +72,7 @@ describe("offline suffix-demand counter", () => {
           tld: "net",
           domains: ["hub.net", "hub.net", "myhub.net", "other.net", "not-a-domain", "foo.org"],
         },
-        { tld: "org", domains: ["hub.org", "force.org"] },
+        { tld: "org", domains: ["force.org", "hub.org"] },
         { tld: "info", domains: ["connect.info"] },
         { tld: "biz", domains: [] },
         { tld: "app", domains: ["mystack.app"] },
