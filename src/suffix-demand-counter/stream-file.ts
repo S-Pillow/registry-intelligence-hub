@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { Transform } from "node:stream";
 import { createGunzip } from "node:zlib";
-import { sldMatchesCandidate } from "./match";
+import type { SuffixMatcher } from "./suffix-matcher";
 import { parseRegistrableDomainForTld } from "./parse-domain";
 import { SuffixDemandCounterError, type FileVerification, type PanelFileSpec } from "./types";
 
@@ -25,18 +25,18 @@ export type StreamFileResult = {
  * Stream a gzipped ActiveDNS list: hash compressed bytes, parse headers and
  * domain lines, update per-candidate distinct-FQDN counters.
  *
- * `seenDomains` is shared across the panel so repeated FQDNs are suppressed
- * once; different FQDNs that share an SLD remain distinct counts.
+ * ActiveDNS files must be sorted by normalized registrable domain. We
+ * retain only the previous accepted domain per file, rejecting out-of-order
+ * records and suppressing adjacent duplicates. Separate TLDs stay distinct.
  */
 export async function streamPanelFile(options: {
   absolutePath: string;
   spec: PanelFileSpec;
   snapshotDate: string;
-  candidates: readonly string[];
-  seenDomains: Set<string>;
+  matcher: SuffixMatcher;
   matchCounts: Map<string, number>;
 }): Promise<StreamFileResult> {
-  const { absolutePath, spec, snapshotDate, candidates, seenDomains, matchCounts } = options;
+  const { absolutePath, spec, snapshotDate, matcher, matchCounts } = options;
 
   const hasher = new HashThrough();
   const gunzip = createGunzip();
@@ -55,6 +55,7 @@ export async function streamPanelFile(options: {
     method: null,
   };
   let sawBody = false;
+  let previousDomain: string | null = null;
 
   const lineReader = createInterface({
     input: input.pipe(hasher).pipe(gunzip),
@@ -87,18 +88,19 @@ export async function streamPanelFile(options: {
         continue;
       }
 
-      if (seenDomains.has(parsed.domain)) {
+      if (previousDomain !== null && parsed.domain < previousDomain) {
+        throw new SuffixDemandCounterError(
+          `Unsorted ActiveDNS input in ${spec.filename} at record ${bodyLines}`,
+          [`previous=${previousDomain}`, `current=${parsed.domain}`],
+        );
+      }
+      if (parsed.domain === previousDomain) {
         duplicateRecords += 1;
         continue;
       }
-      seenDomains.add(parsed.domain);
+      previousDomain = parsed.domain;
       acceptedRecords += 1;
-
-      for (const candidate of candidates) {
-        if (sldMatchesCandidate(parsed.sld, candidate)) {
-          matchCounts.set(candidate, (matchCounts.get(candidate) ?? 0) + 1);
-        }
-      }
+      matcher.countMatches(parsed.sld, matchCounts);
     }
   } catch (err) {
     throw new SuffixDemandCounterError(`Failed while reading ${spec.filename}`, [
