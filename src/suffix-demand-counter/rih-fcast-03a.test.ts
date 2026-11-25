@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -148,8 +148,6 @@ describe("RIH-FCAST-03A bounded suffix processing", () => {
 
   it("rejects out-of-order normalized domains and removes a stale aggregate", async () => {
     const p = await setup("unsorted", ["z.net", "a.net"]);
-    await writeFile(p.out.replace("suffix-demand/out.json", "placeholder.json"), "old");
-    const { mkdir } = await import("node:fs/promises");
     await mkdir(path.dirname(p.out), { recursive: true });
     await writeFile(p.out, "old-success");
     const result = await runSuffixDemandCounter({
