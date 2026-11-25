@@ -76,16 +76,16 @@ function documentFixture() {
     publicationSchemaVersion: "registry-2026-publication/2.0.0",
     publishedAt: "2026-11-18T00:00:00.000Z",
     retrievedAt: "2026-11-18T00:00:00.000Z",
-    source: { name: "Synthetic ICANN fixture", url: "https://example.test/fixture", evidenceClass: "test-only" },
+    source: { name: "APS Application CSV export (synthetic test)", url: "https://newgtldprogram-aps.icann.org/aps/applications/export/csv", evidenceClass: "public-aps-export" },
     rawSha256: HASH,
-    bundleManifest: { applicationGraphContentSha256: HASH },
+    bundleManifest: { applicationGraphContentSha256: HASH, officialAggregatesContentSha256: HASH, coverageDescriptorSha256: HASH },
     applicationRecordCoverage: {
       observed: count, official: count, completeness: "complete", knownExcludedRecords: [],
     },
     knownExcludedRecords: [],
     officialApplications: count,
     observedApplicationRecords: count,
-    officialAggregates: { officialApplicationCount: count },
+    officialAggregates: { officialApplicationCount: count, provenance: { sourceUrl: "https://newgtldprogram-aps.icann.org/aps/applications/stats", contentSha256: HASH } },
     applications,
   };
 }
