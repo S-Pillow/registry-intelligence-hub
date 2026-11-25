@@ -71,6 +71,18 @@ Matching is an explicit ASCII case-insensitive **equals / literal endsWith** heu
 - **applications-document-v2:** `buildForecastUnits` / selected-string resolution; Brand proxy exclusion; omits knownExcluded-only labels such as WDO.
 - **observed-proposed-strings (04B):** distinct source-backed labels from `appliedString.label`, `replacementString.label`, and `knownExcludedRecords.primaryString` (explicitly including WDO). Does **not** filter by Brand, contention, withdrawal, or selection status. Partial application coverage (e.g. 1614/1615) does not block measurement. Domain-scan `status: complete` is **not** a complete application-census claim.
 
+### Offline experimental forecast preview (RIH-FCAST-05A)
+
+Derives experimental four-year scenario ranges from an existing FCAST-04B measured aggregate (no ActiveDNS download, no recount):
+
+```bash
+npm run forecast-preview -- \
+  --aggregate .data/suffix-demand/rih-fcast-04b-2026-11-07-observed-aggregate.json \
+  --out-dir .data/registration-forecast
+```
+
+Uses existing factors 0.8 / 1.9 / 3.2 via `estimateRegistrationsFromSuffixDemand`. Retains all measured strings including WDO and Brand; does not apply Brand exclusion. Labels that fail `isCompoundWordCandidate` keep `measuredDomainCount` with `range: null` and `conversion_not_recommended`. Outputs under `.data/registration-forecast/` are offline analysis artifacts only — not website integration or verified market predictions.
+
 ## Validation posture
 
 Focused unit tests for conversions, eligibility, brand exclusion, and no-fabrication when demand is missing. No extensive 2012 backtesting in v1. Offline counter tests use synthetic gzip fixtures only.
