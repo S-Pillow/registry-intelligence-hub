@@ -7,7 +7,9 @@ export { buildSuffixMatchIndex } from "./suffix-trie";
 export {
   resolveExampleListCandidates,
   resolveCandidatesFromApplicationsDocument,
+  resolveObservedProposedStringCandidates,
   loadCandidatesFromApplicationsDocumentPath,
+  toMeasurableDnsIdentity,
 } from "./candidates";
 export {
   ACTIVEDNS_SOURCE_NAME,

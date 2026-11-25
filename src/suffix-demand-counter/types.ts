@@ -1,7 +1,7 @@
 /**
- * RIH-FCAST-03 / 03A — Offline ActiveDNS suffix-demand counter types.
+ * RIH-FCAST-03 / 03A / 04B — Offline ActiveDNS suffix-demand counter types.
  *
- * Aggregate output is compatible with SuffixDemandEvidence field shapes
+ * Aggregate output remains compatible with SuffixDemandEvidence field shapes
  * without changing the production forecast data contract.
  */
 
@@ -12,22 +12,74 @@ export const ACTIVEDNS_SOURCE_URL = "https://activedns.net/";
 export const MID_PANEL_TLDS = ["net", "org", "info", "biz", "app", "dev"] as const;
 export type MidPanelTld = (typeof MID_PANEL_TLDS)[number];
 
-export type CandidateMode = "example-list" | "applications-document-v2";
+export type CandidateMode =
+  | "example-list"
+  | "applications-document-v2"
+  | "observed-proposed-strings";
+
+export type ObservedStringOrigin =
+  | "applied-string"
+  | "replacement-string"
+  | "known-excluded-primary-string";
+
+export type ObservedCandidateRecord = {
+  stringLabel: string;
+  origins: ObservedStringOrigin[];
+  sourceApplicationIds: string[];
+  /** True/false when observed on a normalized Application; null when unknown (e.g. WDO). */
+  brandDesignationObserved: boolean | null;
+  /** True/false when contention overlay observed; null when unknown. */
+  contestedObserved: boolean | null;
+  fromNormalizedApplication: boolean;
+  fromKnownExcluded: boolean;
+};
+
+export type UnmeasuredCandidate = {
+  rawLabel: string;
+  reason: string;
+  origins: ObservedStringOrigin[];
+  sourceApplicationIds: string[];
+};
 
 export type CandidateProvenance = {
   mode: CandidateMode;
-  /** Absolute or operator-supplied path for applications mode; null for example-list. */
+  /** Absolute or operator-supplied path for document modes; null for example-list. */
   applicationsDocumentPath: string | null;
   snapshotId: string | null;
   snapshotContentHash: string | null;
   publishedAt: string | null;
   payloadMode: string | null;
   documentSha256: string | null;
+  /** Forecast-unit count for applications-document-v2; observed measurable count otherwise. */
   totalForecastUnits: number;
   eligibleCandidateCount: number;
+  /** applications-document-v2 only: Brand proxy exclusions from forecast eligibility. */
   brandExcludedCount: number;
   brandExcludedLabels: string[];
   note: string;
+  /** Explicit census posture — never infer complete from domain-scan success. */
+  applicationCensusCoverage?: {
+    status: "not-applicable" | "partial-observed" | "complete-asserted";
+    completeness: string | null;
+    observedApplicationRecords: number | null;
+    officialApplications: number | null;
+    knownExcludedRecordCount: number | null;
+    assertsCompleteRoundInventory: false;
+  };
+  observedInventory?: {
+    measurableCount: number;
+    unmeasuredCount: number;
+    fromNormalizedApplicationCount: number;
+    fromKnownExcludedCount: number;
+    brandDesignationObservedTrueCount: number;
+    brandDesignationUnknownCount: number;
+    origins: {
+      appliedString: number;
+      replacementString: number;
+      knownExcludedPrimaryString: number;
+    };
+  };
+  unmeasuredCandidates?: UnmeasuredCandidate[];
 };
 
 export type PanelFileSpec = {
@@ -83,8 +135,18 @@ export type MatchingPolicy = {
 export type StringDemandCount = {
   stringLabel: string;
   domainCount: number;
-  contested: boolean;
+  /** Observed contention when known; null when unknown (must not be inferred false). */
+  contested: boolean | null;
+  /**
+   * Legacy forecast-eligibility Brand exclusion flag.
+   * Always false for measured rows in observed-proposed-strings mode (Brand is not suppressed).
+   */
   brandExcluded: false;
+  brandDesignationObserved: boolean | null;
+  measurementStatus: "measured";
+  origins?: ObservedStringOrigin[];
+  fromNormalizedApplication?: boolean;
+  fromKnownExcluded?: boolean;
   /** Field-compatible with SuffixDemandEvidence when status is available. */
   suffixDemandEvidence: {
     status: "available";
@@ -96,8 +158,22 @@ export type StringDemandCount = {
 };
 
 export type SuffixDemandAggregate = {
-  schemaVersion: 2;
+  schemaVersion: 3;
+  /**
+   * Domain-scan completion only. Must not be read as proof of a complete
+   * ICANN application census — see applicationCensus / candidateProvenance.
+   */
   status: "complete";
+  domainScan: {
+    status: "complete";
+    referencePanelTlds: string[];
+    filesVerified: number;
+  };
+  applicationCensus: {
+    status: "not-applicable" | "partial-observed" | "complete-asserted";
+    assertsCompleteRoundInventory: false;
+    note: string;
+  };
   sourceName: string;
   sourceUrl: string;
   attribution: string;
@@ -115,6 +191,7 @@ export type SuffixDemandAggregate = {
     headerLines: number;
   };
   strings: StringDemandCount[];
+  unmeasuredStrings: UnmeasuredCandidate[];
   limitations: string[];
   /** Explicit: these panel counts are not full-market registration forecasts. */
   forecastConversion: {
@@ -124,7 +201,7 @@ export type SuffixDemandAggregate = {
 };
 
 export type CounterFailure = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   status: "failed";
   reason: string;
   manifestId: string | null;

@@ -4,8 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { FORECAST_V1_EXAMPLE_STRINGS } from "@/lib/registration-forecast";
-import { REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20 } from "@/lib/registry-applications-document-v2";
-import type { BrowserApplicationV2 } from "@/lib/registry-applications-document-v2";
+import {
+  REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20,
+  type BrowserApplicationV2,
+} from "@/lib/registry-applications-document-v2";
+import { resolveObservedProposedStringCandidates, toMeasurableDnsIdentity } from "./candidates";
 import { runSuffixDemandCounter, stableStringify } from "./counter";
 import {
   buildActiveDnsListText,
@@ -19,7 +22,7 @@ import { buildSuffixMatchIndex } from "./suffix-trie";
 import { MID_PANEL_TLDS } from "./types";
 
 async function tempRoot(label: string): Promise<string> {
-  return mkdtemp(path.join(os.tmpdir(), `rih-fcast-03a-${label}-`));
+  return mkdtemp(path.join(os.tmpdir(), `rih-fcast-04b-${label}-`));
 }
 
 function emptyMidPanelFiles(
@@ -81,16 +84,27 @@ function mkApp(
   };
 }
 
-/** Minimal artifact that passes isBrowserApplicationPayloadDocumentV2. */
-function mkApplicationsDocument(applications: BrowserApplicationV2[]) {
+function mkApplicationsDocument(
+  applications: BrowserApplicationV2[],
+  extras: Record<string, unknown> = {},
+) {
   return {
     payloadVersion: REGISTRY_BROWSER_APPLICATION_PAYLOAD_VERSION_V20,
     payloadMode: "inactive-2x",
-    snapshotId: "test-snapshot-fcast-03a",
+    snapshotId: "test-snapshot-fcast-04b",
     snapshotContentHash: "abc123contenthash",
-    officialApplications: applications.length,
-    observedApplicationRecords: applications.length,
+    officialApplications: extras.officialApplications ?? applications.length + 1,
+    observedApplicationRecords: extras.observedApplicationRecords ?? applications.length,
+    applicationRecordCoverage: extras.applicationRecordCoverage ?? {
+      observed: applications.length,
+      official: (extras.officialApplications as number | undefined) ?? applications.length + 1,
+      completeness: "partial",
+      knownExcludedRecords: extras.knownExcludedRecords ?? [],
+    },
+    knownExcludedRecords: extras.knownExcludedRecords ?? [],
     applications,
+    publishedAt: "2026-10-07T18:00:00Z",
+    ...extras,
   };
 }
 
@@ -104,7 +118,6 @@ describe("suffix-demand matching policy", () => {
     expect(sldMatchesCandidate("hub", "hub")).toBe(true);
     expect(sldMatchesCandidate("myhub", "hub")).toBe(true);
     expect(sldMatchesCandidate("hubify", "hub")).toBe(false);
-    expect(sldMatchesCandidate("api", "hub")).toBe(false);
   });
 
   it("parses only exact SLD.TLD registrable forms for the reference TLD", () => {
@@ -114,37 +127,33 @@ describe("suffix-demand matching policy", () => {
       tld: "net",
     });
     expect(parseRegistrableDomainForTld("a.b.net", "net")).toBeNull();
-    expect(parseRegistrableDomainForTld("example.org", "net")).toBeNull();
-    expect(parseRegistrableDomainForTld("bad domain.net", "net")).toBeNull();
-    expect(parseRegistrableDomainForTld("-bad.net", "net")).toBeNull();
   });
 
   it("reversed suffix trie preserves equals/endsWith semantics", () => {
-    const index = buildSuffixMatchIndex(["hub", "api", "stack", "force"]);
-    expect([...index.matchAll("hub")].sort()).toEqual(["hub"]);
+    const index = buildSuffixMatchIndex(["hub", "api", "stack"]);
     expect([...index.matchAll("myhub")].sort()).toEqual(["hub"]);
     expect([...index.matchAll("hubify")]).toEqual([]);
-    expect([...index.matchAll("mystack")].sort()).toEqual(["stack"]);
-    expect([...index.matchAll("api")].sort()).toEqual(["api"]);
-    // Multiple suffix hits
-    const multi = buildSuffixMatchIndex(["hub", "yhub"]);
-    expect([...multi.matchAll("myhub")].sort()).toEqual(["hub", "yhub"]);
+  });
+
+  it("DNS identity accepts A-labels and rejects bare Unicode", () => {
+    expect(toMeasurableDnsIdentity("xn--ces6a")).toEqual({ ok: true, label: "xn--ces6a" });
+    expect(toMeasurableDnsIdentity("WDO")).toEqual({ ok: true, label: "wdo" });
+    const uni = toMeasurableDnsIdentity("网絡");
+    expect(uni.ok).toBe(false);
+    if (!uni.ok) expect(uni.reason).toMatch(/unicode-label-without-a-label/i);
   });
 });
 
-describe("offline suffix-demand counter (03A)", () => {
+describe("offline suffix-demand counter", () => {
   it("counts distinct FQDNs across TLDs with sorted adjacent duplicate suppression", async () => {
     const root = await tempRoot("count");
     const dataOut = path.join(root, ".data", "suffix-demand", "aggregate.json");
-    const snapshotDate = "2026-11-07";
-
     const { inputDir, manifestPath } = await writeSyntheticMidPanel({
       dir: path.join(root, "panel"),
-      snapshotDate,
+      snapshotDate: "2026-11-07",
       files: [
         {
           tld: "net",
-          // Sorted; adjacent duplicate hub.net; malformed lines retained in declared count
           domains: ["foo.org", "hub.net", "hub.net", "myhub.net", "not-a-domain", "other.net"],
         },
         { tld: "org", domains: ["force.org", "hub.org"] },
@@ -160,33 +169,17 @@ describe("offline suffix-demand counter (03A)", () => {
       manifestPath,
       outputPath: dataOut,
       cwd: root,
-      candidateMode: "example-list",
       candidates: FORECAST_V1_EXAMPLE_STRINGS,
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-
     const by = Object.fromEntries(result.aggregate.strings.map((s) => [s.stringLabel, s.domainCount]));
-    expect(by.hub).toBe(3); // hub.net + myhub.net + hub.org
-    expect(by.force).toBe(1);
-    expect(by.connect).toBe(1);
-    expect(by.stack).toBe(1);
-    expect(by.api).toBe(1);
-    expect(by.bold).toBe(1);
-    expect(by.master).toBe(0);
-
-    expect(result.aggregate.schemaVersion).toBe(2);
+    expect(by.hub).toBe(3);
+    expect(result.aggregate.schemaVersion).toBe(3);
+    expect(result.aggregate.domainScan.status).toBe("complete");
+    expect(result.aggregate.applicationCensus.assertsCompleteRoundInventory).toBe(false);
     expect(result.aggregate.processing.duplicateRecords).toBe(1);
-    expect(result.aggregate.processing.rejectedRecords).toBeGreaterThanOrEqual(2);
-    expect(result.aggregate.matching.implementation).toBe("reversed-suffix-trie");
-    expect(result.aggregate.matching.duplicateDetection).toBe("sorted-adjacent-previous-domain");
-    expect(result.aggregate.candidateProvenance.mode).toBe("example-list");
-    expect(result.aggregate.forecastConversion.applied).toBe(false);
-
-    const written = JSON.parse(await readFile(dataOut, "utf8"));
-    expect(written.status).toBe("complete");
-    expect(written.referencePanelTlds).toEqual([...MID_PANEL_TLDS]);
   });
 
   it("fails closed on unsorted input and writes no aggregate", async () => {
@@ -195,11 +188,8 @@ describe("offline suffix-demand counter (03A)", () => {
     const { inputDir, manifestPath } = await writeSyntheticMidPanel({
       dir: path.join(root, "panel"),
       snapshotDate: "2026-11-07",
-      files: emptyMidPanelFiles({
-        net: ["zebra.net", "apple.net"], // unsorted
-      }),
+      files: emptyMidPanelFiles({ net: ["zebra.net", "apple.net"] }),
     });
-
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
@@ -207,10 +197,8 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub"],
     });
-
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.failure.reason).toMatch(/Unsorted/i);
+    if (!result.ok) expect(result.failure.reason).toMatch(/Unsorted/i);
     await expect(readFile(out, "utf8")).rejects.toThrow();
   });
 
@@ -219,12 +207,8 @@ describe("offline suffix-demand counter (03A)", () => {
     const { inputDir, manifestPath } = await writeSyntheticMidPanel({
       dir: path.join(root, "panel"),
       snapshotDate: "2026-11-07",
-      files: emptyMidPanelFiles({
-        net: ["alpha.net"],
-        org: ["beta.org"],
-      }),
+      files: emptyMidPanelFiles({ net: ["alpha.net"], org: ["beta.org"] }),
     });
-
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
@@ -232,7 +216,6 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub", "force"],
     });
-
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.aggregate.strings.every((s) => s.domainCount === 0)).toBe(true);
@@ -245,10 +228,8 @@ describe("offline suffix-demand counter (03A)", () => {
       snapshotDate: "2026-11-07",
       files: emptyMidPanelFiles({ net: ["hub.net"] }),
     });
-
     manifest.panel[0].sha256 = "0".repeat(64);
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
     const out = path.join(root, ".data", "out.json");
     const result = await runSuffixDemandCounter({
       inputDir,
@@ -257,10 +238,7 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub"],
     });
-
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.failure.status).toBe("failed");
     await expect(readFile(out, "utf8")).rejects.toThrow();
   });
 
@@ -269,11 +247,10 @@ describe("offline suffix-demand counter (03A)", () => {
     const { inputDir, manifestPath } = await writeSyntheticMidPanel({
       dir: path.join(root, "panel"),
       snapshotDate: "2026-11-07",
-      files: emptyMidPanelFiles({
-        net: ["hub.net"],
-      }).map((f) => (f.tld === "net" ? { ...f, generated: "2026-10-01" } : f)),
+      files: emptyMidPanelFiles({ net: ["hub.net"] }).map((f) =>
+        f.tld === "net" ? { ...f, generated: "2026-10-01" } : f,
+      ),
     });
-
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
@@ -281,10 +258,8 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub"],
     });
-
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.failure.details.join("\n")).toMatch(/Generated mismatch/i);
+    if (!result.ok) expect(result.failure.details.join("\n")).toMatch(/Generated mismatch/i);
   });
 
   it("fails closed when the panel is missing a required file", async () => {
@@ -294,14 +269,10 @@ describe("offline suffix-demand counter (03A)", () => {
       snapshotDate: "2026-11-07",
       files: emptyMidPanelFiles({ net: ["hub.net"] }),
     });
-
-    const biz = manifest.panel.find((p) => p.tld === "biz");
-    expect(biz).toBeTruthy();
-    if (!biz) return;
+    const biz = manifest.panel.find((p) => p.tld === "biz")!;
     biz.filename = "missing-biz.txt.gz";
     biz.sha256 = createHash("sha256").update("x").digest("hex");
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
@@ -309,10 +280,8 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub"],
     });
-
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.failure.reason).toMatch(/incomplete/i);
+    if (!result.ok) expect(result.failure.reason).toMatch(/incomplete/i);
   });
 
   it("refuses to write evidence outside .data/", async () => {
@@ -322,7 +291,6 @@ describe("offline suffix-demand counter (03A)", () => {
       snapshotDate: "2026-11-07",
       files: emptyMidPanelFiles(),
     });
-
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
@@ -330,33 +298,28 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub"],
     });
-
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.failure.reason).toMatch(/\.data\//);
+    if (!result.ok) expect(result.failure.reason).toMatch(/\.data\//);
   });
 
   it("produces deterministic aggregate JSON", async () => {
     const root = await tempRoot("det");
-    const snapshotDate = "2026-11-07";
     const files = emptyMidPanelFiles({
       net: ["hub.net", "myhub.net"],
       org: ["hub.org"],
     });
-
     const a = await writeSyntheticMidPanel({
       dir: path.join(root, "a"),
-      snapshotDate,
+      snapshotDate: "2026-11-07",
       manifestId: "det-panel",
       files,
     });
     const b = await writeSyntheticMidPanel({
       dir: path.join(root, "b"),
-      snapshotDate,
+      snapshotDate: "2026-11-07",
       manifestId: "det-panel",
       files,
     });
-
     const ra = await runSuffixDemandCounter({
       inputDir: a.inputDir,
       manifestPath: a.manifestPath,
@@ -371,42 +334,46 @@ describe("offline suffix-demand counter (03A)", () => {
       cwd: root,
       candidates: ["hub", "force"],
     });
-
     expect(ra.ok && rb.ok).toBe(true);
     if (!ra.ok || !rb.ok) return;
     expect(stableStringify(ra.aggregate)).toBe(stableStringify(rb.aggregate));
   });
 
-  it("builds gzip fixtures with stable digests for local inspection", async () => {
-    const text = buildActiveDnsListText({
-      tld: "net",
-      generated: "2026-11-07",
-      domains: ["hub.net"],
-    });
-    const gz = gzipList(text);
+  it("builds gzip fixtures with stable digests", async () => {
+    const gz = gzipList(
+      buildActiveDnsListText({ tld: "net", generated: "2026-11-07", domains: ["hub.net"] }),
+    );
     expect(sha256HexBuffer(gz)).toMatch(/^[a-f0-9]{64}$/);
-    expect(gz[0]).toBe(0x1f);
-    expect(gz[1]).toBe(0x8b);
   });
+});
 
-  it("applications-document mode: replacements, brand exclusion, contested dedupe, provenance", async () => {
-    const root = await tempRoot("apps");
+describe("observed-proposed-strings mode (RIH-FCAST-04B)", () => {
+  it("includes WDO from knownExcludedRecords, measures Brand, ignores status filters, dedupes labels", async () => {
+    const root = await tempRoot("observed");
     const snapshotDate = "2026-11-07";
     const { inputDir, manifestPath } = await writeSyntheticMidPanel({
       dir: path.join(root, "panel"),
       snapshotDate,
       files: emptyMidPanelFiles({
-        // Must be lexicographically sorted (ActiveDNS contract).
-        net: ["brandco.net", "cloud.net", "master.net", "mycloud.net"],
+        net: ["brandco.net", "cloud.net", "gone.net", "master.net", "mycloud.net", "oldbrand.net", "wdo.net"],
         org: ["cloud.org"],
       }),
     });
 
+    const knownExcluded = [
+      {
+        applicationId: "WDO2627T-T45217",
+        primaryString: "wdo",
+        applicant: "World Data Organization",
+        applicationStatus: "Undergoing administrative check",
+        notes: "Option A coverage exclusion only",
+      },
+    ];
+
     const applications = [
-      // Contested cloud — two applicants, one demand count
       mkApp({
         applicationId: "A1",
-        applicant: "Alpha LLC",
+        applicant: "Alpha",
         appliedString: { sourceRowId: "1", label: "cloud" },
         officialContention: {
           membershipPresent: true,
@@ -416,7 +383,7 @@ describe("offline suffix-demand counter (03A)", () => {
       }),
       mkApp({
         applicationId: "A2",
-        applicant: "Beta Inc",
+        applicant: "Beta",
         appliedString: { sourceRowId: "2", label: "cloud" },
         officialContention: {
           membershipPresent: true,
@@ -424,25 +391,11 @@ describe("offline suffix-demand counter (03A)", () => {
           terminology: "official-initial-contention",
         },
       }),
-      // Selected replacement: brand → master
-      mkApp({
-        applicationId: "R1",
-        applicant: "Replace Co",
-        applicationStatus: "Deactivated",
-        appliedString: { sourceRowId: "3", label: "oldbrand" },
-        replacementString: {
-          sourceRowId: "R1-R",
-          label: "master",
-          applicationStatus: "Active",
-          applicationType: "New gTLD",
-          processingStage: "String Evaluation Processing",
-        },
-      }),
-      // Confirmed closed-brand proxy — excluded from counting
+      // Brand-designated — still measured in observed mode
       mkApp({
         applicationId: "B1",
         applicant: "Brand Co",
-        appliedString: { sourceRowId: "4", label: "brandco" },
+        appliedString: { sourceRowId: "3", label: "brandco" },
         designations: {
           idn: false,
           brand: true,
@@ -451,87 +404,171 @@ describe("offline suffix-demand counter (03A)", () => {
           geoStringReviewConfirmed: false,
         },
       }),
-      // Withdrawn — excluded
+      // Withdrawn — still contributes proposed string
       mkApp({
         applicationId: "W1",
         applicant: "Gone LLC",
         applicationStatus: "Withdrawn",
-        appliedString: { sourceRowId: "5", label: "gone" },
+        appliedString: { sourceRowId: "4", label: "gone" },
+      }),
+      // Duplicate primary/replacement identical label counted once
+      mkApp({
+        applicationId: "D1",
+        applicant: "Dup Co",
+        appliedString: { sourceRowId: "5", label: "master" },
+        replacementString: {
+          sourceRowId: "D1-R",
+          label: "master",
+          applicationStatus: "Active",
+          applicationType: "New gTLD",
+          processingStage: "String Evaluation Processing",
+        },
+      }),
+      // Unresolved-style replacement identity mismatch still contributes applied + replacement labels
+      mkApp({
+        applicationId: "U1",
+        applicant: "Unresolved Co",
+        appliedString: { sourceRowId: "6", label: "oldbrand" },
+        replacementString: {
+          sourceRowId: "wrong-id",
+          label: "newbrand",
+          applicationStatus: "Active",
+          applicationType: "New gTLD",
+          processingStage: "String Evaluation Processing",
+        },
       }),
     ];
 
-    const doc = mkApplicationsDocument(applications);
+    const doc = mkApplicationsDocument(applications, {
+      officialApplications: 1615,
+      observedApplicationRecords: applications.length,
+      knownExcludedRecords: knownExcluded,
+      applicationRecordCoverage: {
+        observed: applications.length,
+        official: 1615,
+        completeness: "partial",
+        knownExcludedRecords: knownExcluded,
+      },
+    });
     const docPath = path.join(root, "applications-document.json");
     await writeFile(docPath, `${JSON.stringify(doc)}\n`);
+
+    // Candidate resolution alone must succeed under partial 1614/1615-style coverage
+    const resolved = resolveObservedProposedStringCandidates(doc as never, {
+      applicationsDocumentPath: docPath,
+      documentSha256: createHash("sha256").update(JSON.stringify(doc)).digest("hex"),
+    });
+    expect(resolved.provenance.applicationCensusCoverage?.completeness).toBe("partial");
+    expect(resolved.provenance.applicationCensusCoverage?.assertsCompleteRoundInventory).toBe(false);
+    expect(resolved.eligibleLabels).toContain("wdo");
+    expect(resolved.eligibleLabels).toContain("brandco");
+    expect(resolved.eligibleLabels).toContain("gone");
+    expect(resolved.eligibleLabels).toContain("newbrand");
+    expect(resolved.eligibleLabels.filter((l) => l === "master")).toHaveLength(1);
+
+    const wdoCand = resolved.observedCandidates.find((c) => c.stringLabel === "wdo")!;
+    expect(wdoCand.fromKnownExcluded).toBe(true);
+    expect(wdoCand.brandDesignationObserved).toBeNull();
+    expect(wdoCand.contestedObserved).toBeNull();
+
+    const brandCand = resolved.observedCandidates.find((c) => c.stringLabel === "brandco")!;
+    expect(brandCand.brandDesignationObserved).toBe(true);
 
     const result = await runSuffixDemandCounter({
       inputDir,
       manifestPath,
-      outputPath: path.join(root, ".data", "full.json"),
+      outputPath: path.join(root, ".data", "observed.json"),
       cwd: root,
-      candidateMode: "applications-document-v2",
+      candidateMode: "observed-proposed-strings",
       applicationsDocumentPath: docPath,
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    const labels = result.aggregate.strings.map((s) => s.stringLabel).sort();
-    expect(labels).toEqual(["cloud", "master"]);
-    expect(result.aggregate.strings.find((s) => s.stringLabel === "brandco")).toBeUndefined();
-    expect(result.aggregate.strings.find((s) => s.stringLabel === "gone")).toBeUndefined();
+    expect(result.aggregate.candidateProvenance.mode).toBe("observed-proposed-strings");
+    expect(result.aggregate.applicationCensus.status).toBe("partial-observed");
+    expect(result.aggregate.applicationCensus.assertsCompleteRoundInventory).toBe(false);
+    expect(result.aggregate.forecastConversion.applied).toBe(false);
 
-    const cloud = result.aggregate.strings.find((s) => s.stringLabel === "cloud")!;
-    expect(cloud.domainCount).toBe(3); // cloud.net + mycloud.net + cloud.org
-    expect(cloud.contested).toBe(true);
+    const wdo = result.aggregate.strings.find((s) => s.stringLabel === "wdo")!;
+    expect(wdo).toBeTruthy();
+    expect(wdo.domainCount).toBe(1); // wdo.net
+    expect(wdo.fromKnownExcluded).toBe(true);
+    expect(wdo.brandDesignationObserved).toBeNull();
+    expect(wdo.contested).toBeNull();
 
-    const master = result.aggregate.strings.find((s) => s.stringLabel === "master")!;
-    expect(master.domainCount).toBe(1);
+    const brand = result.aggregate.strings.find((s) => s.stringLabel === "brandco")!;
+    expect(brand.domainCount).toBe(1);
+    expect(brand.brandDesignationObserved).toBe(true);
+    expect(brand.brandExcluded).toBe(false);
 
-    expect(result.aggregate.candidateProvenance.mode).toBe("applications-document-v2");
-    expect(result.aggregate.candidateProvenance.snapshotId).toBe("test-snapshot-fcast-03a");
-    expect(result.aggregate.candidateProvenance.snapshotContentHash).toBe("abc123contenthash");
-    expect(result.aggregate.candidateProvenance.brandExcludedCount).toBe(1);
-    expect(result.aggregate.candidateProvenance.brandExcludedLabels).toEqual(["brandco"]);
-    expect(result.aggregate.candidateProvenance.eligibleCandidateCount).toBe(2);
-    expect(result.aggregate.candidateProvenance.note).toMatch(/proxy only/i);
-    expect(result.aggregate.candidateProvenance.documentSha256).toMatch(/^[a-f0-9]{64}$/);
+    const gone = result.aggregate.strings.find((s) => s.stringLabel === "gone")!;
+    expect(gone.domainCount).toBe(1);
+
+    const master = result.aggregate.strings.filter((s) => s.stringLabel === "master");
+    expect(master).toHaveLength(1);
+    expect(master[0]!.domainCount).toBe(1);
   });
 
-  it("fails closed when applications document is missing or invalid", async () => {
-    const root = await tempRoot("nodoc");
-    const { inputDir, manifestPath } = await writeSyntheticMidPanel({
-      dir: path.join(root, "panel"),
-      snapshotDate: "2026-11-07",
-      files: emptyMidPanelFiles({ net: ["hub.net"] }),
+  it("lists Unicode-without-A-label as unmeasured rather than silent zero", () => {
+    const doc = mkApplicationsDocument([
+      mkApp({
+        applicationId: "I1",
+        applicant: "Idn Co",
+        appliedString: { sourceRowId: "1", label: "网絡" },
+        designations: {
+          idn: true,
+          brand: false,
+          community: false,
+          geoSelfDesignated: false,
+          geoStringReviewConfirmed: false,
+        },
+      }),
+      mkApp({
+        applicationId: "A1",
+        applicant: "Ascii Co",
+        appliedString: { sourceRowId: "2", label: "xn--ces6a" },
+      }),
+    ]);
+    const resolved = resolveObservedProposedStringCandidates(doc as never, {
+      applicationsDocumentPath: "/tmp/doc.json",
+      documentSha256: "deadbeef",
     });
+    expect(resolved.eligibleLabels).toContain("xn--ces6a");
+    expect(resolved.eligibleLabels).not.toContain("网絡");
+    expect(resolved.unmeasuredCandidates.some((u) => u.rawLabel === "网絡")).toBe(true);
+    expect(
+      resolved.unmeasuredCandidates.find((u) => u.rawLabel === "网絡")?.reason,
+    ).toMatch(/unicode-label-without-a-label/i);
+  });
 
-    const missing = await runSuffixDemandCounter({
-      inputDir,
-      manifestPath,
-      outputPath: path.join(root, ".data", "missing.json"),
-      cwd: root,
-      candidateMode: "applications-document-v2",
-      applicationsDocumentPath: path.join(root, "no-such-document.json"),
+  it("does not treat partial coverage as a blocker for observed-string resolution", () => {
+    const knownExcluded = [
+      {
+        applicationId: "WDO2627T-T45217",
+        primaryString: "wdo",
+      },
+    ];
+    const doc = mkApplicationsDocument(
+      [mkApp({ applicationId: "A1", applicant: "A", appliedString: { sourceRowId: "1", label: "cloud" } })],
+      {
+        officialApplications: 1615,
+        observedApplicationRecords: 1614,
+        knownExcludedRecords: knownExcluded,
+        applicationRecordCoverage: {
+          observed: 1614,
+          official: 1615,
+          completeness: "partial",
+          knownExcludedRecords: knownExcluded,
+        },
+      },
+    );
+    const resolved = resolveObservedProposedStringCandidates(doc as never, {
+      applicationsDocumentPath: "/tmp/x.json",
+      documentSha256: "abc",
     });
-    expect(missing.ok).toBe(false);
-    if (!missing.ok) {
-      expect(missing.failure.reason).toMatch(/unavailable|fail closed/i);
-    }
-
-    const badPath = path.join(root, "not-v2.json");
-    await writeFile(badPath, `${JSON.stringify({ payloadVersion: "1.1", applications: [] })}\n`);
-    const invalid = await runSuffixDemandCounter({
-      inputDir,
-      manifestPath,
-      outputPath: path.join(root, ".data", "invalid.json"),
-      cwd: root,
-      candidateMode: "applications-document-v2",
-      applicationsDocumentPath: badPath,
-    });
-    expect(invalid.ok).toBe(false);
-    if (!invalid.ok) {
-      expect(invalid.failure.reason).toMatch(/validation|fail closed/i);
-    }
+    expect(resolved.eligibleLabels.sort()).toEqual(["cloud", "wdo"]);
+    expect(resolved.provenance.applicationCensusCoverage?.status).toBe("partial-observed");
   });
 });

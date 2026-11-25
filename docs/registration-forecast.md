@@ -32,7 +32,7 @@ Application identity comes from the active browser publication. Domain-name-leve
 
 Authorize a bounded, redistributable domain-name sample or approved zone-file panel for a fixed set of existing open gTLDs; compute suffix-demand counts against that panel; then emit numeric ranges with the experimental conversions.
 
-### Offline suffix-demand counter (RIH-FCAST-03 / 03A)
+### Offline suffix-demand counter (RIH-FCAST-03 / 03A / 04B)
 
 An offline CLI computes panel-limited observed suffix-demand aggregates from **locally supplied** ActiveDNS gzip lists. It does not download data, does not wire counts into `/forecast`, and does not apply conversion factors.
 
@@ -46,20 +46,30 @@ npm run suffix-demand -- \
   --candidate-mode example-list \
   --out .data/suffix-demand/aggregate.json
 
-# 3b) Full eligible 2026 inventory from an authoritative applications document:
+# 3b) Forecast-eligible selected/current strings (Brand proxy exclusion; omits knownExcluded-only):
 npm run suffix-demand -- \
   --input-dir /path/to/local/lists \
   --manifest /path/to/filled-mid-panel.manifest.json \
   --candidate-mode applications-document-v2 \
   --applications-document /path/to/RegistryApplicationsDocumentV2.json \
   --out .data/suffix-demand/aggregate.json
+
+# 3c) Observed proposed-string demand (includes WDO knownExcluded primaryString; Brand not suppressed):
+npm run suffix-demand -- \
+  --input-dir /path/to/local/lists \
+  --manifest /path/to/filled-mid-panel.manifest.json \
+  --candidate-mode observed-proposed-strings \
+  --applications-document /path/to/RegistryApplicationsDocumentV2.json \
+  --out .data/suffix-demand/rih-fcast-04b-observed-aggregate.json
 ```
 
-Approved mid-panel TLDs: `.net`, `.org`, `.info`, `.biz`, `.app`, `.dev`. Template: `src/suffix-demand-counter/panel/mid-panel.manifest.template.json`. Write evidence only under `.data/`. Never commit raw domain lists.
+Approved mid-panel TLDs: `.net`, `.org`, `.info`, `.biz`, `.app`, `.dev`. Template: `src/suffix-demand-counter/panel/mid-panel.manifest.template.json`. Write evidence only under `.data/`. Never commit raw domain lists. Choose a fresh output path (the CLI refuses to overwrite).
 
 Matching is an explicit ASCII case-insensitive **equals / literal endsWith** heuristic on the registrable second-level label (reversed suffix trie) — not semantic keyword analysis. Duplicate suppression assumes each ActiveDNS list is **sorted** and fails closed otherwise. Memory does not grow with distinct domain cardinality. Observed ActiveDNS domains are not equivalent to all registered domains.
 
-Applications-document mode reuses `buildForecastUnits` / selected-string resolution: one count per unique selected/current string, Brand-designation proxy exclusion (not proof of closed policy), contested dedupe by string. Example-list mode remains for lightweight tests only and is not a full-round inventory.
+- **example-list:** prototype strings only.
+- **applications-document-v2:** `buildForecastUnits` / selected-string resolution; Brand proxy exclusion; omits knownExcluded-only labels such as WDO.
+- **observed-proposed-strings (04B):** distinct source-backed labels from `appliedString.label`, `replacementString.label`, and `knownExcludedRecords.primaryString` (explicitly including WDO). Does **not** filter by Brand, contention, withdrawal, or selection status. Partial application coverage (e.g. 1614/1615) does not block measurement. Domain-scan `status: complete` is **not** a complete application-census claim.
 
 ## Validation posture
 
