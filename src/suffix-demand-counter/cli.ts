@@ -23,11 +23,14 @@ Required:
   --manifest <path>   Panel manifest JSON (TLDs, filenames, SHA-256, snapshot date, counts)
 
 Optional:
+  --applications-document <path>  Authoritative, complete promoted-2026 RegistryApplicationsDocumentV2 JSON
+                                 (required for full-round candidate coverage)
   --out <path>        Aggregate JSON output (default ${DEFAULT_OUT}; must be under .data/)
   --cwd <path>        Working directory (default process.cwd())
 
 Notes:
-  - Candidates default to FORECAST_V1_EXAMPLE_STRINGS (${FORECAST_V1_EXAMPLE_STRINGS.length} strings).
+  - Without --applications-document, uses prototype FORECAST_V1_EXAMPLE_STRINGS (${FORECAST_V1_EXAMPLE_STRINGS.length} strings) ONLY.
+  - Full-round mode fails closed for absent, partial, rehearsal, or invalid application documents.
   - Approved mid-panel TLDs: ${MID_PANEL_TLDS.map((t) => `.${t}`).join(", ")}.
   - No network access. Do not commit raw domain lists.
   - Panel-limited counts are not converted into registration forecasts.
@@ -49,6 +52,12 @@ async function main(): Promise<void> {
   const manifest = argValue(argv, "--manifest");
   const out = argValue(argv, "--out") ?? DEFAULT_OUT;
   const cwd = argValue(argv, "--cwd") ?? process.cwd();
+  const applicationsDocumentPath = argValue(argv, "--applications-document");
+  if (argv.includes("--applications-document") && !applicationsDocumentPath) usage();
+  const allowed = new Set(["--input-dir", "--manifest", "--out", "--cwd", "--applications-document"]);
+  for (let i = 0; i < argv.length; i += 2) {
+    if (!allowed.has(argv[i]!) || !argv[i + 1] || argv[i + 1]!.startsWith("--")) usage();
+  }
 
   if (!inputDir || !manifest) usage();
 
@@ -62,6 +71,7 @@ async function main(): Promise<void> {
     inputDir,
     manifestPath: manifest,
     outputPath: out,
+    applicationsDocumentPath,
     cwd,
   });
 
@@ -80,6 +90,7 @@ async function main(): Promise<void> {
         referencePanelTlds: result.aggregate.referencePanelTlds,
         processing: result.aggregate.processing,
         stringCount: result.aggregate.strings.length,
+        candidateProvenance: result.aggregate.candidateProvenance,
       },
       null,
       2,
