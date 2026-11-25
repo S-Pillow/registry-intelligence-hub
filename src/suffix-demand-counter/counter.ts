@@ -1,13 +1,17 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { access, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { FORECAST_V1_EXAMPLE_STRINGS } from "@/lib/registration-forecast";
 import { MATCHING_POLICY, normalizeAsciiLabel } from "./match";
+import { loadAuthoritative2026Candidates } from "./candidate-source";
+import { createSuffixMatcher } from "./suffix-matcher";
 import { assertMidPanelCoverage, assertPanelManifest, loadPanelManifest } from "./manifest";
 import { streamPanelFile } from "./stream-file";
 import {
   ACTIVEDNS_SOURCE_NAME,
   ACTIVEDNS_SOURCE_URL,
   SuffixDemandCounterError,
+  type CandidateProvenance,
   type CounterFailure,
   type FileVerification,
   type PanelManifest,
@@ -25,7 +29,9 @@ export type RunSuffixDemandCounterOptions = {
    * `allowNonDataOutput` is set (tests only).
    */
   outputPath: string;
-  /** Override candidates (defaults to FORECAST_V1_EXAMPLE_STRINGS). */
+  /** Explicit local authoritative RegistryApplicationsDocumentV2 JSON snapshot. */
+  applicationsDocumentPath?: string;
+  /** Override candidates (defaults to FORECAST_V1_EXAMPLE_STRINGS). Tests/dev only. */
   candidates?: readonly string[];
   /** Require exact mid-panel TLD coverage (default true). */
   requireMidPanel?: boolean;
@@ -46,17 +52,46 @@ export async function runSuffixDemandCounter(
   const manifestPath = path.resolve(cwd, options.manifestPath);
   const outputPath = path.resolve(cwd, options.outputPath);
   const requireMidPanel = options.requireMidPanel !== false;
+  const tempPath = `${outputPath}.tmp-${process.pid}`;
+  let outputAuthorized = false;
 
   try {
     assertOutputUnderData(outputPath, cwd, options.allowNonDataOutput === true);
+    outputAuthorized = true;
+    // Never leave a previously successful aggregate at the path after a failed rerun.
+    await rm(outputPath, { force: true });
+    await rm(tempPath, { force: true });
 
+    if (options.applicationsDocumentPath && options.candidates) {
+      throw new SuffixDemandCounterError(
+        "Cannot combine authoritative applications-document mode with explicit candidates",
+      );
+    }
     const manifest = await loadPanelManifest(manifestPath);
     if (requireMidPanel) assertMidPanelCoverage(manifest);
 
-    const candidates = normalizeCandidates(options.candidates ?? FORECAST_V1_EXAMPLE_STRINGS);
+    const source = options.applicationsDocumentPath
+      ? await loadAuthoritative2026Candidates(path.resolve(cwd, options.applicationsDocumentPath))
+      : null;
+    const candidates = normalizeCandidates(
+      source?.labels ?? options.candidates ?? FORECAST_V1_EXAMPLE_STRINGS,
+    );
+    const candidateProvenance: CandidateProvenance = source
+      ? source.provenance
+      : {
+          mode: options.candidates ? "explicit-list" : "examples",
+          candidateListId: options.candidates
+            ? "explicit-candidate-list"
+            : "FORECAST_V1_EXAMPLE_STRINGS",
+          candidateListSha256: createHash("sha256").update(candidates.join("\n")).digest("hex"),
+          candidateCount: candidates.length,
+          excludedBrandStrings: 0,
+          brandExclusionPolicy: "Not applied to prototype/example candidate lists",
+          applicationSnapshot: null,
+        };
     await assertInputFilesExist(inputDir, manifest);
 
-    const seenDomains = new Set<string>();
+    const matcher = createSuffixMatcher(candidates);
     const matchCounts = new Map<string, number>(candidates.map((c) => [c, 0]));
     const files: FileVerification[] = [];
 
@@ -67,8 +102,7 @@ export async function runSuffixDemandCounter(
         absolutePath,
         spec,
         snapshotDate: manifest.snapshotDate,
-        candidates,
-        seenDomains,
+        matcher,
         matchCounts,
       });
       files.push(result.verification);
@@ -79,13 +113,19 @@ export async function runSuffixDemandCounter(
       candidates,
       matchCounts,
       files,
+      candidateProvenance,
     });
 
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, `${stableStringify(aggregate)}\n`, "utf8");
+    await writeFile(tempPath, `${stableStringify(aggregate)}\n`, "utf8");
+    await rename(tempPath, outputPath);
 
     return { ok: true, aggregate, outputPath };
   } catch (err) {
+    if (outputAuthorized) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+      await rm(outputPath, { force: true }).catch(() => undefined);
+    }
     const failure = toFailure(err, manifestPath);
     return { ok: false, failure };
   }
@@ -96,9 +136,13 @@ export function buildAggregate(options: {
   candidates: readonly string[];
   matchCounts: Map<string, number>;
   files: FileVerification[];
+  candidateProvenance: CandidateProvenance;
 }): SuffixDemandAggregate {
-  const { manifest, candidates, matchCounts, files } = options;
-  const sourceId = `activedns-${manifest.snapshotDate}-panel-${manifest.manifestId}`;
+  const { manifest, candidates, matchCounts, files, candidateProvenance } = options;
+  const sourceId = `activedns-${manifest.snapshotDate}-panel-${manifest.manifestId}` +
+    (candidateProvenance.mode === "applications-document-v2"
+      ? `-candidates-${candidateProvenance.candidateListSha256.slice(0, 12)}`
+      : "");
   const coverageNote = [
     "Observed registrable domains from an ActiveDNS mid-panel subset",
     `(${manifest.panel.map((p) => `.${p.tld}`).join(", ")}).`,
@@ -141,6 +185,7 @@ export function buildAggregate(options: {
     snapshotDate: manifest.snapshotDate,
     manifestId: manifest.manifestId,
     sourceId,
+    candidateProvenance,
     referencePanelTlds: manifest.panel.map((p) => p.tld),
     matching: { ...MATCHING_POLICY },
     files: files.map((f) => ({
