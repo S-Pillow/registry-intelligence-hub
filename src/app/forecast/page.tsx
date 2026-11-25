@@ -10,11 +10,16 @@ import {
 } from "@/lib/registration-forecast";
 
 export const metadata: Metadata = {
-  title: "Registration forecast (experimental)",
+  title: "Experimental Registration Forecast — 2026",
 };
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Overview / legacy fallback.
+ * When the integrated catalog gate is on but the release artifact is missing/corrupt,
+ * `src/proxy.ts` returns HTTP 503 before this page renders.
+ */
 export default async function RegistrationForecastPage() {
   const loaded = await loadForecastCatalog();
   if (loaded.status === "ok") {
@@ -22,27 +27,13 @@ export default async function RegistrationForecastPage() {
       <ForecastOverviewContent
         catalog={loaded.catalog}
         accessLabel={
-          loaded.mode === "production-release"
-            ? "Controlled publication staging"
-            : "Local development preview"
+          loaded.mode === "local-preview" ? "Local development preview" : undefined
         }
       />
     );
   }
-  if (loaded.status === "error") {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-8" data-testid="forecast-catalog-unavailable">
-        <h1 className="text-xl font-bold">Experimental forecast unavailable</h1>
-        <p className="mt-2 text-sm text-slate-700">
-          The forecast catalog could not be loaded. Confirm the accepted release or local preview
-          artifact is present and matches the expected SHA-256 pin.
-        </p>
-        <p className="mt-2 font-mono text-xs text-slate-600">{loaded.reason}</p>
-      </main>
-    );
-  }
 
-  // Publication/local gates disabled — retain legacy /forecast fallback surface.
+  // Publication/local gates disabled (or proxy already failed closed) — legacy fallback.
   const claim = await loadPromotedClaimActualityState();
   const registry = await loadHubRegistryData(claim);
   const demandEvidence = defaultUnavailableSuffixDemandEvidence();

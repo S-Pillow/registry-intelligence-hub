@@ -34,14 +34,14 @@ export function ForecastMethodologyDisclosure({
       </p>
       <ul className="list-disc space-y-1 pl-5 text-xs sm:text-sm">
         <li>
-          ActiveDNS source:{" "}
+          Source: ActiveDNS —{" "}
           <a
             className="font-medium text-[#006a56] underline"
             href={catalog.sourceUrl}
             target="_blank"
             rel="noreferrer"
           >
-            {catalog.sourceUrl}
+            https://activedns.net/
           </a>
         </li>
         <li>Snapshot date: November 7, 2026 ({catalog.snapshotDate})</li>

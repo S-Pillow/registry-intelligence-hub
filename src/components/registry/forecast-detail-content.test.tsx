@@ -52,6 +52,12 @@ describe("ForecastDetailContent", () => {
     const view = catalog();
     render(<ForecastDetailContent catalog={view} row={view.strings[0]!} />);
     expect(screen.getByTestId("forecast-detail-heading")).toHaveTextContent(".wdo");
+    expect(screen.getByTestId("forecast-detail-page")).toHaveTextContent(
+      /experimental estimates, not verified registration demand/i,
+    );
+    expect(screen.getByTestId("forecast-detail-page").textContent?.toLowerCase()).not.toMatch(
+      /production publication|controlled publication staging/,
+    );
     expect(screen.getByTestId("forecast-detail-summary")).toHaveTextContent("62");
     expect(screen.getByTestId("forecast-detail-summary")).toHaveTextContent("Forecast availability");
     expect(screen.getByTestId("forecast-scenario-bars")).toHaveTextContent("50");

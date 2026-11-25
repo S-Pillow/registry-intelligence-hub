@@ -56,8 +56,8 @@ export function ForecastDetailContent({
           {row.extension}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-700">
-          Measured domain-name matches and experimental Low / Middle / High registration estimates.
-          Not an award, eligibility decision, or production publication.
+          These scenarios are experimental estimates, not verified registration demand or a
+          prediction of application approval.
         </p>
 
         <section

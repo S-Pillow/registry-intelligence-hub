@@ -16,9 +16,14 @@ export async function generateMetadata({
   const label = decodeForecastLabelParam(raw);
   return {
     title: label ? `.${label} — experimental forecast` : "Experimental forecast",
+    robots: { index: false, follow: false },
   };
 }
 
+/**
+ * Detail UI. Hard HTTP 404/503 for missing labels and catalog failures are enforced in
+ * `src/proxy.ts` under production serving; notFound() remains defense in depth.
+ */
 export default async function ForecastDetailPage({
   params,
 }: {
@@ -29,15 +34,7 @@ export default async function ForecastDetailPage({
   if (!label) notFound();
 
   const loaded = await loadForecastCatalog();
-  if (loaded.status === "disabled") notFound();
-  if (loaded.status !== "ok") {
-    return (
-      <main className="mx-auto max-w-3xl px-4 py-8" data-testid="forecast-detail-unavailable">
-        <h1 className="text-xl font-bold">Forecast unavailable</h1>
-        <p className="mt-2 text-sm text-slate-700">{loaded.reason}</p>
-      </main>
-    );
-  }
+  if (loaded.status !== "ok") notFound();
 
   const row = findForecastStringView(loaded.catalog, label);
   if (!row) notFound();

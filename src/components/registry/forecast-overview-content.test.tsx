@@ -73,8 +73,17 @@ function catalog(): ForecastCatalogView {
 }
 
 describe("ForecastOverviewContent", () => {
-  it("compares Middle estimates on a shared scale and avoids Top wording", () => {
+  it("compares Middle estimates on a shared scale and uses production-safe copy", () => {
     render(<ForecastOverviewContent catalog={catalog()} />);
+    const page = screen.getByTestId("forecast-overview-page");
+    expect(page).toHaveTextContent("Experimental Registration Forecast — 2026");
+    expect(page).toHaveTextContent(
+      /Explore observed domain-name matches and experimental registration scenarios/i,
+    );
+    expect(page.textContent?.toLowerCase()).not.toMatch(
+      /controlled publication staging|production publication/,
+    );
+    expect(page.textContent?.toLowerCase()).not.toMatch(/local development preview/);
     const spotlight = screen.getByTestId("forecast-overview-spotlight");
     expect(spotlight).toHaveTextContent("Middle scenario comparison (current listing)");
     expect(spotlight.textContent?.toLowerCase()).not.toMatch(/\btop listed\b/);
@@ -87,6 +96,15 @@ describe("ForecastOverviewContent", () => {
     );
     expect(screen.getByTestId("forecast-overview-row-wdo").textContent?.toLowerCase()).not.toMatch(
       /known-excluded/,
+    );
+  });
+
+  it("keeps local development labeling only when explicitly provided", () => {
+    render(
+      <ForecastOverviewContent catalog={catalog()} accessLabel="Local development preview" />,
+    );
+    expect(screen.getByTestId("forecast-overview-page")).toHaveTextContent(
+      "Local development preview",
     );
   });
 });
