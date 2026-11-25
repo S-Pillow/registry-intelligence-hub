@@ -10,11 +10,40 @@ import type { ForecastPreviewDocument, ForecastPreviewRow } from "@/registration
 export const FORECAST_PUBLICATION_CANDIDATE_RELATIVE_PATH =
   ".data/registration-forecast/experimental-forecast-publication-candidate.json";
 
+/** Accepted FCAST-06 unpublished publication-candidate byte-level pin. */
+export const FORECAST_PUBLICATION_CANDIDATE_EXPECTED_SHA256 =
+  "fd439f0465bfb18daf16c3afa0b94d3114a357eb8a3044ce52249fd240fde3eb";
+
 export const FORECAST_PUBLIC_SCENARIO_LABELS = {
   low: "Low scenario",
   middle: "Middle scenario",
   high: "High scenario",
 } as const;
+
+const KNOWN_EXCLUDED_DISPLAY =
+  "Known proposed extension; application details unavailable in the current RIH export";
+
+/**
+ * Display-only origin labels. Underlying provenance tokens are preserved unchanged.
+ */
+export function formatForecastOriginLabel(origin: string): string {
+  switch (origin) {
+    case "applied-string":
+    case "appliedString.label":
+      return "Original proposed extension";
+    case "replacement-string":
+      return "Replacement proposed extension";
+    case "known-excluded-primary-string":
+    case "knownExcludedRecords.primaryString":
+      return KNOWN_EXCLUDED_DISPLAY;
+    case "normalized-app":
+      return "Recorded in an ICANN application";
+    case "known-excluded":
+      return KNOWN_EXCLUDED_DISPLAY;
+    default:
+      return origin;
+  }
+}
 
 export type ForecastPublicationScenarioBand = {
   low: number;
@@ -175,12 +204,34 @@ export function buildForecastPublicationCandidate(options: {
 
 function sourceDetailFor(row: ForecastPublicationString): string {
   const bits: string[] = [];
-  if (row.fromKnownExcluded) bits.push("known-excluded");
-  if (row.fromNormalizedApplication) bits.push("application record");
-  if (row.origins?.length) bits.push(row.origins.join(" + "));
+  if (row.origins?.length) {
+    for (const origin of row.origins) {
+      bits.push(formatForecastOriginLabel(origin));
+    }
+  } else if (row.fromKnownExcluded) {
+    bits.push(KNOWN_EXCLUDED_DISPLAY);
+  }
+  if (row.fromNormalizedApplication) {
+    bits.push("Recorded in an ICANN application");
+  }
   if (row.brandDesignationObserved === true) bits.push("Brand observed");
-  if (row.brandDesignationObserved === null && row.fromKnownExcluded) bits.push("Brand unknown");
-  return bits.length ? bits.join(" · ") : "Observed string";
+  if (row.brandDesignationObserved === null && row.fromKnownExcluded) {
+    bits.push("Brand designation unknown");
+  }
+  const unique = [...new Set(bits)];
+  return unique.length ? unique.join(" · ") : "Observed string";
+}
+
+/** Shared numerical scale for cross-extension Middle scenario comparison. */
+export function sharedMiddleScenarioScaleMax(
+  middles: ReadonlyArray<number | null | undefined>,
+): number | null {
+  let max: number | null = null;
+  for (const value of middles) {
+    if (value == null || !Number.isFinite(value)) continue;
+    max = max == null ? value : Math.max(max, value);
+  }
+  return max;
 }
 
 export function projectForecastCatalogView(

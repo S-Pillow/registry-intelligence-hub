@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ForecastLink, type ForecastAvailability } from "@/components/registry/forecast-link";
+import type { ForecastAvailability } from "@/components/registry/forecast-link";
 import { ForecastMethodologyDisclosure } from "@/components/registry/forecast-methodology-disclosure";
-import { ForecastScenarioBars } from "@/components/registry/forecast-scenario-bars";
+import { ForecastMiddleComparison } from "@/components/registry/forecast-middle-comparison";
 import {
   FORECAST_LOCAL_PREVIEW_PAGE_SIZE,
   filterForecastPreviewRows,
@@ -102,8 +102,9 @@ export function ForecastOverviewContent({ catalog }: { catalog: ForecastCatalogV
           {catalog.heading}
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-700">
-          Browse measured matches and experimental Low / Middle / High registration scenarios for
-          observed 2026 proposed strings. Not a production publication.
+          Measured domain-name matches and experimental Low / Middle / High registration estimates for
+          observed 2026 proposed strings. Local development preview only — not a production
+          publication.
         </p>
 
         <section
@@ -124,40 +125,23 @@ export function ForecastOverviewContent({ catalog }: { catalog: ForecastCatalogV
         </div>
 
         <section className="mt-5 rounded border border-slate-200 bg-white p-4" data-testid="forecast-overview-spotlight">
-          <h2 className="text-sm font-bold text-slate-950">Top listed scenario bands</h2>
+          <h2 className="text-sm font-bold text-slate-950">
+            Middle scenario comparison (current listing)
+          </h2>
           <p className="mt-1 text-xs text-slate-600">
-            Compact comparison for the current sort. Large literal suffix totals can appear without
-            implying commercial intent.
+            First rows of the current search and sort, drawn on one shared Middle scale. Measured
+            matches are shown separately; missing estimates are not charted as zero.
           </p>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            {spotlight.map((row) => {
-              const full = catalog.strings.find((s) => s.stringLabel === row.stringLabel)!;
-              return (
-                <div
-                  key={row.stringLabel}
-                  className="rounded border border-slate-100 p-3"
-                  data-testid={`forecast-spotlight-${row.stringLabel}`}
-                >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <ForecastLink
-                      label={row.stringLabel}
-                      availability={availability}
-                      className="font-mono text-base font-bold text-[#006a56] underline-offset-2 hover:underline"
-                    />
-                    <span className="text-xs tabular-nums text-slate-600">
-                      {formatCount(row.measuredDomainCount)} matches
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <ForecastScenarioBars
-                      scenarios={full.scenarios}
-                      measuredDomainCount={full.measuredDomainCount}
-                      compact
-                    />
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mt-4">
+            <ForecastMiddleComparison
+              availability={availability}
+              rows={spotlight.map((row) => ({
+                stringLabel: row.stringLabel,
+                extension: row.extension,
+                middle: row.expected,
+                measuredDomainCount: row.measuredDomainCount,
+              }))}
+            />
           </div>
         </section>
 
@@ -190,7 +174,7 @@ export function ForecastOverviewContent({ catalog }: { catalog: ForecastCatalogV
                 <th className="px-3 py-2 text-right font-semibold">Low</th>
                 <SortHeader label="Middle" active={sortKey === "expected"} dir={sortDir} onClick={() => toggleSort("expected")} align="right" />
                 <th className="px-3 py-2 text-right font-semibold">High</th>
-                <th className="px-3 py-2 font-semibold">Status</th>
+                <th className="px-3 py-2 font-semibold">Forecast availability</th>
                 <th className="px-3 py-2 font-semibold">Source</th>
               </tr>
             </thead>

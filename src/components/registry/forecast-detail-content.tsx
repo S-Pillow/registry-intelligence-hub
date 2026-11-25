@@ -2,7 +2,11 @@ import Link from "next/link";
 import { ForecastMethodologyDisclosure } from "@/components/registry/forecast-methodology-disclosure";
 import { ForecastScenarioBars } from "@/components/registry/forecast-scenario-bars";
 import { ForecastUnknownValue } from "@/components/registry/forecast-unknown";
-import type { ForecastCatalogView, ForecastStringView } from "@/lib/forecast-publication-candidate";
+import {
+  formatForecastOriginLabel,
+  type ForecastCatalogView,
+  type ForecastStringView,
+} from "@/lib/forecast-publication-candidate";
 import { forecastOverviewHref } from "@/lib/forecast-routes";
 
 function formatCount(value: number): string {
@@ -52,8 +56,8 @@ export function ForecastDetailContent({
           {row.extension}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-700">
-          Local development view of measured matches and experimental four-year registration
-          scenarios. Not an award, eligibility decision, or production publication.
+          Measured domain-name matches and experimental Low / Middle / High registration estimates.
+          Not an award, eligibility decision, or production publication.
         </p>
 
         <section
@@ -73,21 +77,21 @@ export function ForecastDetailContent({
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              Conversion status
+              Forecast availability
             </p>
             <p className="mt-1 text-lg font-bold text-slate-950">
               {row.status === "estimated" ? "Scenarios available" : "Scenarios not recommended"}
             </p>
             <p className="mt-1 text-xs text-slate-600">
               {row.status === "estimated"
-                ? "Low / Middle / High use fixed experimental factors on the measured count."
+                ? "Low / Middle / High apply fixed experimental factors to the measured count."
                 : "Measured matches are shown; numeric scenarios are intentionally withheld."}
             </p>
           </div>
         </section>
 
         <section className="mt-5 rounded border border-slate-200 bg-white p-4" data-testid="forecast-detail-scenarios">
-          <h2 className="text-sm font-bold text-slate-950">Four-year scenarios</h2>
+          <h2 className="text-sm font-bold text-slate-950">Estimated registrations (Low / Middle / High)</h2>
           <div className="mt-3">
             <ForecastScenarioBars
               scenarios={row.scenarios}
@@ -112,19 +116,21 @@ export function ForecastDetailContent({
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold uppercase text-slate-500">Source detail</dt>
+              <dt className="text-xs font-semibold uppercase text-slate-500">Source</dt>
               <dd className="mt-0.5 text-slate-800">{row.sourceDetail}</dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold uppercase text-slate-500">Origins</dt>
+              <dt className="text-xs font-semibold uppercase text-slate-500">Observed origins</dt>
               <dd className="mt-0.5 text-slate-800">
-                {(row.origins ?? []).length ? row.origins!.join(", ") : "Unknown"}
+                {(row.origins ?? []).length
+                  ? row.origins!.map(formatForecastOriginLabel).join("; ")
+                  : "Unknown"}
               </dd>
             </div>
           </dl>
           <p className="mt-3 text-xs text-slate-600">
-            Application status and Brand designation do not suppress measured matches. Neither this
-            page nor the scenarios imply an award or launch decision.
+            Brand designation and contention metadata do not suppress measured matches. Missing
+            application-export details are not a rejection or ineligibility finding.
           </p>
         </section>
 

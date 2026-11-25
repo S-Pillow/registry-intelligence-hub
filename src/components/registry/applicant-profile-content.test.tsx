@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ApplicantProfileContent } from "@/components/registry/applicant-profile-content";
+import { ForecastAvailabilityProvider } from "@/components/registry/forecast-availability-provider";
 import type { ApplicantIntelligenceLookup } from "@/lib/applicant-intelligence";
 import type { ParticipantRow } from "@/lib/participant-intelligence";
 import type { ApplicantRspPosture } from "@/lib/rsp-opportunity-intelligence";
@@ -324,5 +325,88 @@ describe("ApplicantProfileContent", () => {
       /4 Applications · 3 distinct Applicants/i,
     );
     expect(screen.getByTestId("profile-contention-members-10")).toHaveTextContent("Beta Names Inc");
+  });
+
+  it("routes original and replacement strings to distinct forecasts and keeps application details", () => {
+    const profile = baseProfile({
+      portfolio: [
+        {
+          applicationId: "NAV1",
+          appliedForString: "agt",
+          originalAppliedForString: "agt",
+          selectedCurrentString: "master",
+          selectedReplacementApplicationId: "NAV1-R",
+          replacementStringLabel: "master",
+          selectionMode: "selected-replacement",
+          selectionUnresolvedReason: null,
+          currentApplicationStatus: "Active",
+          brand: false,
+          community: false,
+          idn: false,
+          geographic: false,
+          applicationStatus: "Active",
+          processingStage: "IE",
+          region: "NA",
+          country: "US",
+          inInitialContention: false,
+          officialContentionSetIds: [],
+          scdContentionStatus: "unavailable",
+          scdContentionSetId: null,
+          competitors: [],
+          officialAwardOutcome: "not_established",
+          contentionSetHref: null,
+          exploreHref: "/explore?q=NAV1",
+        },
+        {
+          applicationId: "NAV2",
+          appliedForString: "missingfx",
+          originalAppliedForString: "missingfx",
+          selectedCurrentString: "missingfx",
+          selectedReplacementApplicationId: null,
+          replacementStringLabel: null,
+          selectionMode: "original-only",
+          selectionUnresolvedReason: null,
+          currentApplicationStatus: "Active",
+          brand: false,
+          community: false,
+          idn: false,
+          geographic: false,
+          applicationStatus: "Active",
+          processingStage: "IE",
+          region: "NA",
+          country: "US",
+          inInitialContention: false,
+          officialContentionSetIds: [],
+          scdContentionStatus: "unavailable",
+          scdContentionSetId: null,
+          competitors: [],
+          officialAwardOutcome: "not_established",
+          contentionSetHref: null,
+          exploreHref: "/explore?q=NAV2",
+        },
+      ],
+    });
+
+    render(
+      <ForecastAvailabilityProvider enabled labels={["agt", "master"]}>
+        <ApplicantProfileContent lookup={profile} />
+      </ForecastAvailabilityProvider>,
+    );
+
+    const originalLinks = screen.getAllByTestId("portfolio-forecast-original-NAV1");
+    const selectedLinks = screen.getAllByTestId("portfolio-forecast-selected-NAV1");
+    expect(originalLinks[0]).toHaveAttribute("href", "/forecast/agt");
+    expect(selectedLinks[0]).toHaveAttribute("href", "/forecast/master");
+    expect(originalLinks[0]!.getAttribute("href")).not.toBe(selectedLinks[0]!.getAttribute("href"));
+
+    const details = screen.getAllByTestId("portfolio-application-details-NAV1");
+    expect(details[0]).toHaveAttribute("href", "/explore?q=NAV1");
+    expect(details.length).toBeGreaterThan(1);
+
+    expect(screen.queryByTestId("portfolio-forecast-original-NAV2")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("portfolio-forecast-selected-NAV2")).not.toBeInTheDocument();
+    const missingRow = screen.getAllByTestId("portfolio-row-NAV2")[0]!;
+    expect(within(missingRow).getByText(".missingfx")).toBeInTheDocument();
+    expect(within(missingRow).queryByRole("link", { name: ".missingfx" })).not.toBeInTheDocument();
   });
 });

@@ -39,8 +39,9 @@ function catalog(): ForecastCatalogView {
         scenarios: { low: 50, middle: 118, high: 198 },
         brandDesignationObserved: null,
         contested: null,
-        origins: ["knownExcludedRecords.primaryString"],
-        sourceDetail: "known-excluded",
+        origins: ["known-excluded-primary-string"],
+        sourceDetail:
+          "Known proposed extension; application details unavailable in the current RIH export · Brand designation unknown",
       },
     ],
   };
@@ -52,11 +53,18 @@ describe("ForecastDetailContent", () => {
     render(<ForecastDetailContent catalog={view} row={view.strings[0]!} />);
     expect(screen.getByTestId("forecast-detail-heading")).toHaveTextContent(".wdo");
     expect(screen.getByTestId("forecast-detail-summary")).toHaveTextContent("62");
+    expect(screen.getByTestId("forecast-detail-summary")).toHaveTextContent("Forecast availability");
     expect(screen.getByTestId("forecast-scenario-bars")).toHaveTextContent("50");
     expect(screen.getByTestId("forecast-scenario-bars")).toHaveTextContent("118");
     expect(screen.getByTestId("forecast-scenario-bars")).toHaveTextContent("198");
     expect(screen.getByTestId("forecast-scenario-bars")).toHaveTextContent(/Low scenario/i);
     expect(screen.getByTestId("forecast-detail-context")).toHaveTextContent("Unknown");
+    expect(screen.getByTestId("forecast-detail-context")).toHaveTextContent(
+      "Known proposed extension; application details unavailable in the current RIH export",
+    );
+    expect(screen.getByTestId("forecast-detail-context").textContent?.toLowerCase()).not.toMatch(
+      /known-excluded|rejected|ineligible/,
+    );
     expect(screen.getByTestId("forecast-methodology-disclosure")).toHaveTextContent("https://activedns.net/");
     expect(screen.getByTestId("forecast-methodology-disclosure").textContent?.toLowerCase()).not.toMatch(
       /toyroom/,

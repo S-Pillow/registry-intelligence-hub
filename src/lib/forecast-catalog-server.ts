@@ -1,6 +1,7 @@
 /**
- * Server-only forecast catalog loader (RIH-FCAST-06).
+ * Server-only forecast catalog loader (RIH-FCAST-06 / 06A).
  * Prefer an existing publication candidate; otherwise project from the accepted preview.
+ * Present candidate files are fail-closed on SHA / parse / source-pin mismatch.
  * Never exposes absolute host paths to the browser view model.
  */
 import { createHash } from "node:crypto";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/forecast-local-preview";
 import { validateForecastPreviewDocument, sha256Hex } from "@/lib/forecast-local-preview-server";
 import {
+  FORECAST_PUBLICATION_CANDIDATE_EXPECTED_SHA256,
   FORECAST_PUBLICATION_CANDIDATE_RELATIVE_PATH,
   buildForecastPublicationCandidate,
   projectForecastCatalogView,
@@ -35,6 +37,15 @@ function isPublicationCandidate(value: unknown): value is ForecastPublicationCan
     doc.kind === "experimental-registration-forecast-publication-candidate" &&
     doc.status === "unpublished-candidate" &&
     Array.isArray(doc.strings)
+  );
+}
+
+function isMissingFileError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as NodeJS.ErrnoException).code === "ENOENT"
   );
 }
 
@@ -75,6 +86,36 @@ export async function buildAndOptionallyWritePublicationCandidate(options?: {
   return { candidate, sha256, wrote };
 }
 
+function acceptCandidateBytes(rawCandidate: Buffer): LoadForecastCatalogResult {
+  const fileSha = sha256Hex(rawCandidate);
+  if (fileSha !== FORECAST_PUBLICATION_CANDIDATE_EXPECTED_SHA256) {
+    return { status: "error", reason: "Publication candidate SHA-256 mismatch" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawCandidate.toString("utf8")) as unknown;
+  } catch {
+    return { status: "error", reason: "Publication candidate malformed" };
+  }
+
+  if (!isPublicationCandidate(parsed)) {
+    return { status: "error", reason: "Publication candidate malformed" };
+  }
+  if (
+    parsed.sourcePreviewSha256 !== FORECAST_LOCAL_PREVIEW_EXPECTED_SHA256 ||
+    parsed.sourceAggregateSha256 !== FORECAST_LOCAL_PREVIEW_EXPECTED_SOURCE_AGGREGATE_SHA256
+  ) {
+    return { status: "error", reason: "Publication candidate source hash mismatch" };
+  }
+
+  return {
+    status: "ok",
+    catalog: projectForecastCatalogView(parsed),
+    candidateSha256: fileSha,
+  };
+}
+
 export async function loadForecastCatalog(options?: {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -85,28 +126,32 @@ export async function loadForecastCatalog(options?: {
   }
 
   const cwd = options?.cwd ?? process.cwd();
-  try {
-    const candidatePath = path.resolve(cwd, FORECAST_PUBLICATION_CANDIDATE_RELATIVE_PATH);
-    try {
-      const rawCandidate = await readFile(candidatePath);
-      const parsed = JSON.parse(rawCandidate.toString("utf8")) as unknown;
-      if (
-        isPublicationCandidate(parsed) &&
-        parsed.sourcePreviewSha256 === FORECAST_LOCAL_PREVIEW_EXPECTED_SHA256 &&
-        parsed.sourceAggregateSha256 === FORECAST_LOCAL_PREVIEW_EXPECTED_SOURCE_AGGREGATE_SHA256
-      ) {
-        const catalog = projectForecastCatalogView(parsed);
-        return {
-          status: "ok",
-          catalog,
-          candidateSha256: sha256Hex(rawCandidate),
-        };
-      }
-    } catch {
-      // Fall through to project from accepted preview.
-    }
+  const candidatePath = path.resolve(cwd, FORECAST_PUBLICATION_CANDIDATE_RELATIVE_PATH);
 
+  let rawCandidate: Buffer | null = null;
+  try {
+    rawCandidate = await readFile(candidatePath);
+  } catch (err) {
+    if (!isMissingFileError(err)) {
+      return {
+        status: "error",
+        reason: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  if (rawCandidate) {
+    return acceptCandidateBytes(rawCandidate);
+  }
+
+  try {
     const built = await buildAndOptionallyWritePublicationCandidate({ cwd, write: false });
+    if (built.sha256 !== FORECAST_PUBLICATION_CANDIDATE_EXPECTED_SHA256) {
+      return {
+        status: "error",
+        reason: "Derived publication candidate SHA-256 mismatch",
+      };
+    }
     return {
       status: "ok",
       catalog: projectForecastCatalogView(built.candidate),

@@ -5,6 +5,7 @@ import {
   assertConversionFactorsUnchanged,
   buildForecastPublicationCandidate,
   findForecastStringView,
+  formatForecastOriginLabel,
   projectForecastCatalogView,
   stableStringifyForecastCandidate,
 } from "@/lib/forecast-publication-candidate";
@@ -57,7 +58,7 @@ function syntheticPreview(): ForecastPreviewDocument {
         contested: null,
         fromNormalizedApplication: false,
         fromKnownExcluded: true,
-        origins: ["knownExcludedRecords.primaryString"],
+        origins: ["known-excluded-primary-string"],
       },
       {
         stringLabel: "adidas",
@@ -70,7 +71,7 @@ function syntheticPreview(): ForecastPreviewDocument {
         contested: false,
         fromNormalizedApplication: true,
         fromKnownExcluded: false,
-        origins: ["appliedString.label"],
+        origins: ["applied-string"],
       },
       {
         stringLabel: "ab",
@@ -83,7 +84,7 @@ function syntheticPreview(): ForecastPreviewDocument {
         contested: false,
         fromNormalizedApplication: true,
         fromKnownExcluded: false,
-        origins: ["appliedString.label"],
+        origins: ["replacement-string"],
       },
     ],
   };
@@ -110,10 +111,31 @@ describe("forecast publication candidate", () => {
       scenarios: { low: 50, middle: 118, high: 198 },
       brandDesignationObserved: null,
       contested: null,
+      origins: ["known-excluded-primary-string"],
     });
+    expect(wdo?.sourceDetail).toContain(
+      "Known proposed extension; application details unavailable in the current RIH export",
+    );
+    expect(wdo?.sourceDetail.toLowerCase()).not.toMatch(/known-excluded|rejected|ineligible/);
     expect(findForecastStringView(catalog, "adidas")?.brandDesignationObserved).toBe(true);
+    expect(findForecastStringView(catalog, "adidas")?.sourceDetail).toContain(
+      "Original proposed extension",
+    );
+    expect(findForecastStringView(catalog, "adidas")?.sourceDetail).toContain(
+      "Recorded in an ICANN application",
+    );
     expect(findForecastStringView(catalog, "ab")?.scenarios).toBeNull();
     expect(findForecastStringView(catalog, "ab")?.measuredDomainCount).toBe(0);
+    expect(findForecastStringView(catalog, "ab")?.sourceDetail).toContain(
+      "Replacement proposed extension",
+    );
+    expect(formatForecastOriginLabel("applied-string")).toBe("Original proposed extension");
+    expect(candidate.conversionFactors).toEqual({
+      conservative: 0.8,
+      expected: 1.9,
+      optimistic: 3.2,
+    });
+    expect(candidate.conversionFactors).toEqual(FORECAST_CONVERSION_FACTORS);
   });
 
   it("is reproducible for hashing", () => {
