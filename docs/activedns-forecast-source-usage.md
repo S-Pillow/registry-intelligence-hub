@@ -1,4 +1,4 @@
-# ActiveDNS source-usage assessment (RIH-FCAST-07B)
+# ActiveDNS source-usage assessment (RIH-FCAST-07B / PROD-03)
 
 **Purpose:** Operator-facing record of published ActiveDNS terms relevant to the experimental registration forecast. **Not legal advice. Not formal legal approval.**
 
@@ -38,11 +38,18 @@ One prominent attribution per answer or dataset is sufficient.
 - Where practical, keep observation timestamps with the data.
 - Forecast UI retains snapshot date **November 7, 2026** (`2026-11-07`) and six-TLD mid-panel scope.
 
-## Commercial-use uncertainty / owner decision
+## Operator acceptance (production)
 
-- Terms grant broad reuse of public observations with attribution, including derivative datasets, but also instruct that wording be reviewed before **commercial** reliance.
-- This assessment **does not** equate that language with ForgeForward/RIH counsel approval.
-- **Remaining owner decision:** confirm whether the intended public Hub presentation is within the operator’s accepted commercial/compliance posture under Terms v1, and record that sign-off before production activation.
+**Recorded on production host (private ops evidence), 2026-11-26 UTC, for RIH-FCAST-PROD-03:**
+
+> The operator accepts public use of the attributed ActiveDNS-derived aggregate observations in Registry Intelligence Hub. The forecast is intended as a publicly available experimental information resource, not a commercial forecasting product.
+
+This is **operator acceptance** of the attributed experimental Hub presentation. It is **not** formal legal advice, counsel memo, or a broader commercial-licensing clearance beyond that recorded decision.
+
+Terms v1 still instruct that wording be reviewed before commercial reliance; this repository does not equate operator acceptance with counsel approval.
+
+Private host record path (not in git):
+`.data/registration-forecast/ops/operator-activedns-data-use-acceptance.txt` under the production hub root (also mirrored in the activation backup decision file).
 
 ## Does the current UI satisfy published attribution conditions?
 
@@ -57,4 +64,4 @@ One prominent attribution per answer or dataset is sufficient.
 
 **No blocking contradiction identified against the published Terms v1 attribution/reuse text for derived aggregate counts**, provided attribution remains visible.
 
-**Unresolved for activation:** operator commercial/compliance sign-off (Terms themselves defer commercial reliance to review). Do not treat this document as that sign-off.
+**Not claimed:** independent counsel approval, warranty of fitness, or rights beyond the operator’s recorded acceptance of attributed aggregate experimental publication.
