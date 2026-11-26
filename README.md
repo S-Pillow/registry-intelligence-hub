@@ -68,6 +68,7 @@ These are official aggregates, coverage disclosures, and publication-availabilit
 | **Registry Market** | `/market` | ICANN Monthly Registry Report baseline and registrar/TLD trends |
 | **Contention** | `/contention` | Official initial contention structure and relationship intelligence |
 | **Changes** | `/changes` | Public-source Change Intelligence |
+| **Registration Forecast** | [`/forecast`](https://forgeforward.app/tools/registry-intelligence-hub/forecast) | Experimental ActiveDNS-derived match counts and Low/Middle/High scenarios for proposed 2026 extensions — **not** statistically validated market predictions |
 | **Historical / Cross-round** | `/cross-round`, `/historical-cohorts` | 2012 vs 2026 structural and identity views |
 | **Data & Methodology** | `/data-health` | Coverage, provenance, eligibility, source health |
 
@@ -119,17 +120,20 @@ Organization resolution **enriches** Applicant intelligence; it is not a prerequ
 | Layer | Status |
 | --- | --- |
 | Repository | Product README and operational docs may advance independently of deployed application source |
-| Production application source | `62e4edd5ed711e3e8d9148c83b09361c1cdf3d6d` (detached; verified 2026-10-28) |
+| Production application source | `360021d720dd9af0ba2a57d78325714dfcd5d3c5` (detached; verified 2026-11-26 UTC) |
 | Reveal Day applications + official contention | **LIVE** (`REAL_SOURCE_READY`) |
 | Competitive Landscape | **LIVE** |
 | Organization concentration / contention-pair intelligence | **LIVE** (confirmed-subset disclosed) |
 | Change Intelligence | **LIVE** |
 | Registry Market publication | **LIVE** — baseline **1,319 / 1,113 / 206** |
 | Command Center Intelligence Pulse | **LIVE** |
+| Registration Forecast (experimental) | **LIVE** — attributed ActiveDNS-derived scenarios; see [`docs/registration-forecast-production-release.md`](docs/registration-forecast-production-release.md) |
 | Source / licensing notices | **LIVE** — independence, third-party rights, methodology, and Apache-2.0 boundary |
 | MRR refresh automation | **NOT INSTALLED** |
 
 Production URL prefix: `/tools/registry-intelligence-hub` (Next.js on loopback `127.0.0.1:43123`).
+
+Public forecast: https://forgeforward.app/tools/registry-intelligence-hub/forecast
 
 README showcase based on documentation checkpoint `9e18b15a149c05c69b987bbc3798f86c782b8321`.
 
@@ -144,6 +148,7 @@ README showcase based on documentation checkpoint `9e18b15a149c05c69b987bbc3798f
 - ✅ Change Intelligence live
 - ✅ Registry Market live
 - ✅ Intelligence Pulse live
+- ✅ Registration Forecast (experimental) live
 - ✅ Third-party source / independence notices live
 - ⚠️ MRR refresh automation not installed
 
